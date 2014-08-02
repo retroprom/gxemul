@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2006-2011  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2006-2014  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -71,14 +71,13 @@ MACHINE_SETUP(dreamcast)
 	 *  others:
 	 *
 	 *  0x00000000 - 0x001fffff	Boot ROM (2 MB)
-	 *  0x00200000 - 0x003fffff	Flash (256 KB)
+	 *  0x00200000 - 0x003fffff	Flash (256 KB) (or just 128 KB?)
 	 *				The bytes read by the Dreamcast PROM during
 	 *				boot are:
-	 *				    Offset 0x1a000 .. 0x1a004 = 5 bytes
+	 *				    Offset 0x1a000 .. 0x1a004 = 5 bytes debug/startup state?
 	 *					hex digits (maybe limited to 0x30, 0x31, 0x32, or 0x33)
-	 *					0x1a000 could be the machine's region code
-	 *				    Offset 0x1a056 .. 0x1a05d = 8 bytes
-	 *					serial number / machine ID.
+	 *				    Offset 0x1a02d .. 0x1a037 = date/time values.
+	 *				    Offset 0x1a056 .. 0x1a05d = 8 bytes serial number / machine ID.
 	 *  0x005f0000 - ...            ???
 	 *  0x005f6800 - ...		PowerVR2 DMA registers
 	 *  0x005f6900 - ...		ASIC registers

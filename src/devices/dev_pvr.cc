@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2006-2013  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2006-2014  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -560,12 +560,8 @@ static void pvr_vblank_timer_tick(struct timer *t, void *extra)
  */
 void pvr_geometry_updated(struct pvr_data *d)
 {
-	/*  Scrap Z buffer if we have one.  */
-	if (d->vram_z == NULL) {
-		free(d->vram_z);
-		d->vram_z = NULL;
-	}
-		
+	int old_xsize = d->xsize, old_ysize = d->ysize, oldbpp = d->bytes_per_pixel;
+
 	/*  Make sure to redraw border on geometry changes.  */
 	d->border_updated = 1;
 
@@ -591,6 +587,19 @@ void pvr_geometry_updated(struct pvr_data *d)
 	if (d->line_double)
 		d->ysize /= 2;
 
+	bool settingsChanged = d->xsize != old_xsize ||
+	    d->ysize != old_ysize ||
+	    d->bytes_per_pixel != oldbpp;
+
+	if (!settingsChanged)
+		return;
+
+	/*  Scrap Z buffer if we have one.  */
+	if (d->vram_z == NULL) {
+		free(d->vram_z);
+		d->vram_z = NULL;
+	}
+		
 	/*  Only show geometry debug message if output is enabled:  */
 	if (!d->video_enabled || !d->display_enabled)
 		return;
@@ -644,7 +653,7 @@ static void simpleline(struct pvr_data *d, int y, double x1, double x2,
 	for (int x = x1; x <= x2; ++x) {
 		if (x > 0 && y > 0 && x < d->xsize && y < d->ysize) {
 			int ofs = x + y * d->xsize;
-			if (d->vram_z[ofs] > z)
+			if (d->vram_z[ofs] > z && !isnan(d->vram_z[ofs]))
 				continue;
 
 			d->vram_z[ofs] = z;
@@ -694,7 +703,7 @@ static void texturedline(struct pvr_data *d,
 	for (int x = x1; x <= x2; ++x) {
 		if (x > 0 && y > 0 && x < d->xsize && y < d->ysize) {
 			int ofs = x + y * d->xsize;
-			if (d->vram_z[ofs] > z)
+			if (d->vram_z[ofs] > z && !isnan(d->vram_z[ofs]))
 				continue;
 
 			d->vram_z[ofs] = z;
@@ -1001,7 +1010,7 @@ void pvr_render(struct cpu *cpu, struct pvr_data *d)
 	int color_r = 128, color_g = 128, color_b = 128;
 	int wf_x[4], wf_y[4]; double wf_z[4], wf_u[4], wf_v[4];
 
-	debug("[ pvr_render: rendering to FB offset 0x%x ]\n", fb_base);
+	debug("[ pvr_render: rendering to FB offset 0x%x, %i commands ]\n", fb_base, d->n_drawing_commands);
 
 	/*  Clear all pixels first. TODO: Maybe only clear specific tiles?  */
 	memset(d->vram + fb_base, 0, d->xsize * d->ysize * d->bytes_per_pixel);
@@ -1011,7 +1020,8 @@ void pvr_render(struct cpu *cpu, struct pvr_data *d)
 		d->vram_z = (double*) malloc(sizeof(double) * d->xsize * d->ysize);
 	}
 
-	memset(d->vram_z, 0, sizeof(double) * d->xsize * d->ysize);
+	for (int q = 0; q < d->xsize * d->ysize; ++q)
+		d->vram_z[q] = NAN;
 
 	wf_point_nr = 0;
 
