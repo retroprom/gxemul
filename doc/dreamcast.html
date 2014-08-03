@@ -87,7 +87,10 @@ These sometimes work to a certain degree.
 <a name="binaries"></a>
 <h3>Running raw binaries (IP.BIN and 1ST_READ.BIN):</h3>
 
-<b>Note:</b> This is very experimental, as GXemul's Dreamcast emulation is very incomplete.
+<i>(<b>Note:</b> This is very experimental, as GXemul's Dreamcast emulation is very incomplete,
+but in principle it could be used as a help when you are developing your own
+code to run on the Dreamcast. For example, it may be easier to debug things
+in the emulator than on the real Dreamcast.)</i>
 
 <p>According to <a href="http://mc.pp.se/dc/ip.bin.html">http://mc.pp.se/dc/ip.bin.html</a>,
 the Dreamcast loads files from the last data track (from track session 2?). The
@@ -179,6 +182,26 @@ Almost none of the Dreamcast's hardware is actually emulated by GXemul so far
 </ul>
 
 <p>
+Another example is <a href="http://mc.pp.se/dc/serslave.html">Marcus Comstedt's
+"Serial upload slave"</a> program. Extract IP.BIN from
+<a href="http://mc.pp.se/dc/files/serial_slave.tar.gz">http://mc.pp.se/dc/files/serial_slave.tar.gz</a>.
+Then launch it in the emulator like this:
+<pre>
+	gxemul -X Edreamcast 0x8c008000:0:0x8c000140:IP.BIN
+</pre>
+
+According to Marcus' page, <tt>?</tt> prints out the version number (V103 in
+this case), and it handles <tt>S0</tt>, <tt>S3</tt>, and <tt>S7</tt>
+<a href="https://en.wikipedia.org/wiki/SREC_%28file_format%29#mediaviewer/File:Motorola_SREC_Chart.png">SREC
+line entries</a>. <tt>S7</tt> causes it to print <tt>OK</tt> and start the uploaded
+program. Here is a screenshot where a hobby operating system kernel
+(<a href="http://gavare.se/ycx5/">YCX5/dreamcast</a>) is launched this way,
+by pasting the SREC entries into the window called "SH4 SCIF":
+
+<p>
+<a href="20140803-serial-upload-slave.png"><img src="20140803-serial-upload-slave-small.png"></a>
+
+<p>
 Here is another example with a 3D test program ("gltest.bin") from the
 KOS examples, which more or less works:
 
@@ -186,6 +209,8 @@ KOS examples, which more or less works:
 <a href="20110624-dreamcast-gltest.png"><img src="20110624-dreamcast-gltest-small.png"></a>
 &nbsp;&nbsp;
 <a href="20110703-dreamcast-gltest.png"><img src="20110703-dreamcast-gltest-small.png"></a>
+&nbsp;&nbsp;
+<a href="20140803-dreamcast-gltest.png"><img src="20140803-dreamcast-gltest-small.png"></a>
 
 
 
@@ -255,7 +280,9 @@ to patch the BIOS in memory to get past that point.
 </pre>
 
 <p>After getting past the never ending loop, the "set date/time" dialog
-appears. After pressing "U" (for "left") and "A" on the keyboard, the main
+appears. Presumably it finds a mismatch between what it sees in the Flash
+memory (stored date/time) and the emulated RTC chip's date/time.
+After pressing "U" (for "left") and "A" on the keyboard, the main
 menu is reached.
 
 <p>
@@ -264,9 +291,26 @@ menu is reached.
 <a href="20140802-dreamcast-bios-test2.png"><img src="20140802-dreamcast-bios-test2-small.png"></a>
 &nbsp;&nbsp;
 <a href="20140802-dreamcast-bios-test3.png"><img src="20140802-dreamcast-bios-test3-small.png"></a>
+&nbsp;&nbsp;
+<a href="20140803-dreamcast-bios-test4.png"><img src="20140803-dreamcast-bios-test4-small.png"></a>
 
-<p>The graphics is wrong, in particular textures. Top left should
-say "Dreamcast", and top right should display the current date/time.
+<p>The graphics is wrong; it is a work in progress, everything has to be
+reverse-engineered and double-checked both with the BIOS and with homebrew
+programs and developer examples.
+Wire-frames can be turned on by defining <tt>DEBUG_RENDER_AS_WIRE_FRAME</tt>
+in <tt>dev_pvr.cc</tt>.
+It is also exceedingly slow, since it is done in software. (A possible
+future enhancement could be to make use of the host's OpenGL hardware.)
+
+<p>The following keyboard keys correspond to controller inputs:
+<pre>
+	             <b>8</b> <font color="#a00000">Up</font>                          <b>A B X Y</b> = Regular buttons
+	<b>4</b> or <b>U</b> <font color="#a00000">Left</font>               <b>6</b> or <b>O</b> <font color="#a00000">Right</font>     <b>Z</b>       = Z button (?)
+	             <b>2</b> or <b>K</b> <font color="#a00000">Down</font>                   <b>S</b>       = Start button
+</pre>
+
+<p>I don't remember whether these are the analog or digital direction inputs.
+Also, there is no way to use the Left or Right triggers.
 
 <p>It doesn't really do anything more meaningful yet.
 
