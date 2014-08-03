@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2006-2011  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2006-2014  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -371,7 +371,7 @@ void maple_do_dma_xfer(struct cpu *cpu, struct dreamcast_maple_data *d)
 	uint32_t addr = d->dmaaddr;
 
 	if (!d->enable) {
-		fatal("[ maple_do_dma_xfer: not enabled? ]\n");
+		debug("[ maple_do_dma_xfer: not enabled? ]\n");
 		return;
 	}
 
