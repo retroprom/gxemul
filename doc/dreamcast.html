@@ -336,8 +336,8 @@ interface is emulated yet, so root-on-nfs is not possible.
 Dreamcast, and in the emulator. Unfortunately without a keyboard...
 
 <p>Download the kernel here:<pre>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-6.1.1/dreamcast/binary/kernel/netbsd-GENERIC_MD.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-6.1.1/dreamcast/binary/kernel/netbsd-GENERIC_MD.gz</a>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-6.1.1/dreamcast/binary/kernel/netbsd-GENERIC_MD.symbols.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-6.1.1/dreamcast/binary/kernel/netbsd-GENERIC_MD.symbols.gz</a> (optional)
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-6.1.4/dreamcast/binary/kernel/netbsd-GENERIC_MD.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-6.1.4/dreamcast/binary/kernel/netbsd-GENERIC_MD.gz</a>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-6.1.4/dreamcast/binary/kernel/netbsd-GENERIC_MD.symbols.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-6.1.4/dreamcast/binary/kernel/netbsd-GENERIC_MD.symbols.gz</a> (optional)
 </pre>
 
 If you downloaded the symbols, gunzip them before proceeding.
@@ -347,7 +347,7 @@ If you downloaded the symbols, gunzip them before proceeding.
 	<b>gxemul -XEdreamcast netbsd-GENERIC_MD.gz</b>
 
 	# With symbols (makes single-stepping and tracing more meaningful):
-	<b>gxemul -XEdreamcast netbsd-GENERIC_MD.gz netbsd-GENERIC_MD.symbols</b>
+	<b>gxemul -XEdreamcast netbsd-GENERIC_MD.symbols.gz netbsd-GENERIC_MD.gz</b>
 
 </pre>
 
@@ -376,11 +376,10 @@ GXemul:
 	<a href="http://netbsd.student.utwente.nl/rpaulo/">http://netbsd.student.utwente.nl/rpaulo/</a>
 </pre>
 
-<p><font color="#ff0000">NOTE (February 2007):</font>
+<p><i><font color="#ff0000">NOTE (February 2007):</font>
 The ISO image seems to have been removed from the server,
 but you should be able to create one from scratch using
-instructions available at various locations on the Internet.
-
+instructions available at various locations on the Internet.</i>
 
 <p>Only the ISO9660 filesystem image is needed:<pre>
 	<a href="http://netbsd.student.utwente.nl/rpaulo/livecd.raw.bz2">http://netbsd.student.utwente.nl/rpaulo/livecd.raw.bz2</a>
@@ -421,7 +420,10 @@ Enter.
 	<a href="http://ftp.riken.go.jp/pub/misc/Japan/m17n.org/super-h/CD-R/lc2000.iso">http://ftp.riken.go.jp/pub/misc/Japan/m17n.org/super-h/CD-R/lc2000.iso</a>
 </pre>
 
-Once you have downloaded the ISO image, type the following command to 
+<p><i><font color="#ff0000">NOTE (August 2014):</font>
+The ISO image seems to have been removed from the server!</i>
+
+<p>Once you have downloaded the ISO image, type the following command to 
 boot directly from the image:<pre>
 	<b>gxemul -XEdreamcast -d lc2000.iso</b>
 </pre>

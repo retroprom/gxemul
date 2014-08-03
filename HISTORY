@@ -4613,4 +4613,5 @@ Changelog for GXemul:
 20140803	Some cleanup and minor progress of the Dreamcast PVR graphics.
 		(The graphics displayed when attempting to run the original
 		ROM now looks more reasonable.)
+		Updating NetBSD/dreamcast test instructions: 6.1.1 -> 6.1.4.
 
