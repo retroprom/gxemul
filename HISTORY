@@ -4615,4 +4615,5 @@ Changelog for GXemul:
 		ROM now looks more reasonable.)
 		Updating NetBSD/dreamcast test instructions: 6.1.1 -> 6.1.4.
 		Updating NetBSD/pmax install instructions: 6.1.1 -> 6.1.4.
+		Renaming machine mvme187 to mvme187old to avoid collision.
 
