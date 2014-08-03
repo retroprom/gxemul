@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2014  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -99,6 +99,47 @@ int MEMORY_RW(struct cpu *cpu, struct memory *mem, uint64_t vaddr,
 			return MEMORY_ACCESS_FAILED;
 	}
 
+#if 0
+	/*
+	 *  For quick-and-dirty debugging of 32-bit code, typically
+	 *  unknown ROM code:  Write out a summary of accessed memory ranges.
+	 */
+	if (cpu->running && paddr < 0x00300000)
+	{
+		static int swriteflag = -1, lastswriteflag;
+		static int32_t start = -1, stop = -1;
+		static int32_t laststart = -1, laststop = -1;
+
+		if (start == -1)
+		{
+			start = stop = paddr;
+			swriteflag = writeflag;
+		}
+		else
+		{
+			if (paddr == stop + len && writeflag == swriteflag)
+			{
+				stop = paddr;
+			}
+			else
+			{
+				if (start != laststart || stop != laststop || swriteflag != lastswriteflag)
+				{
+					printf("%s  %08x -- %08x  %i-bit\n",
+						swriteflag ? "WRITE" : "READ ",
+						(int)start, (int)(stop + len - 1), (int)len*8);
+				}
+
+				laststart = start; laststop = stop; lastswriteflag = swriteflag;
+
+				start = stop = paddr;
+				swriteflag = writeflag;
+			}
+		}
+
+		ok |= MEMORY_NOT_FULL_PAGE;
+	}
+#endif
 
 	/*
 	 *  Memory mapped device?
