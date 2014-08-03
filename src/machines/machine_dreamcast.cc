@@ -88,8 +88,9 @@ MACHINE_SETUP(dreamcast)
 	 *  0x005f7800 - ...		G2 External DMA registers
 	 *  0x005f7c00 - ...		DMA (?) for some device (PVR related?)
 	 *  0x005f8000 - 0x005f9fff	PVR registers (graphics)
-	 *  0x00600000 - ...		??? some device
-	 *  0x00600400 - 0x0060047f	LAN Adapter (MB86967) registers
+	 *  0x00600000 - 0x006007ff	G2 bus: Modem
+	 *  0x00600400 - 0x0060047f	G2 bus: LAN Adapter (MB86967) registers?
+	 *  0x00620000 - 0x00623fff	G2 bus: Expansion port?
 	 *  0x00606900 - ...		???
 	 *  0x00700000 - ...		SPU registers (sound)
 	 *  0x00702800 - 0x007028ff	???
@@ -97,16 +98,19 @@ MACHINE_SETUP(dreamcast)
 	 *  0x00703xxx - ...		AICA something
 	 *  0x00710000 - 0x00710007	RTC registers
 	 *  0x00800000 - 0x009fffff	AICA (Sound) RAM (2 MB) (*4)
-	 *  0x01000000 - ...		Parallel port registers
+	 *  0x01000000 - 0x01ffffff	G2 bus or Parallel port registers?
 	 *  0x02000000 - ...		CD-ROM port registers
+	 *  0x03000000 - 0x03ffffff	G2 bus (?)
 	 *  0x04000000 - 0x047fffff	Video RAM (*)     (64-bit)
 	 *  0x05000000 - 0x057fffff	Video RAM (8 MB)  (32-bit)
+	 *  0x06000000 - 0x067fffff	Video RAM (*)     (64-bit) (copy)
+	 *  0x07000000 - 0x077fffff	Video RAM (8 MB)  (32-bit) (copy)
 	 *  0x0c000000 - 0x0cffffff	RAM (16 MB)
 	 *  0x0e000000 - 0x0effffff	Copy of RAM? (*2)
-	 *  0x10000000 - ...		Tile accelerator command area
-	 *  0x10800000 - ...		Write-only mirror of Video RAM (?)
-	 *  0x11000000 - ...		PVR DMA area??
-	 *  0x14000000 - ...		G2 (?)  Or Modem/Extension port?
+	 *  0x10000000 - 0x107fffff	Tile Accelerator: command area
+	 *  0x10800000 - 0x10ffffff	Tile Accelerator: YUV data
+	 *  0x11000000 - 0x11ffffff	Tile Accelerator: Texture data
+	 *  0x14000000 - 0x17ffffff	G2 bus (?)
 	 *
 	 *  (*) = with banks 0 and 1 switched; 64-bit read/write access...
 	 *  (*3) = See VOUTC in Linux' drivers/video/pvr2fb.c.
