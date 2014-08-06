@@ -639,7 +639,7 @@ static void simpleline(struct pvr_data *d, int y, double x1, double x2,
 	double dr12 = (x2 - x1 != 0) ? ( (double)(r2 - r1) / (double)(x2 - x1) ) : 0;
 	double dg12 = (x2 - x1 != 0) ? ( (double)(g2 - g1) / (double)(x2 - x1) ) : 0;
 	double db12 = (x2 - x1 != 0) ? ( (double)(b2 - b1) / (double)(x2 - x1) ) : 0;
-	double z = z1, r = r1, g = r1, b = b1;
+	double z = z1, r = r1, g = g1, b = b1;
 	for (int x = x1; x <= x2; ++x) {
 		if (x > 0 && y > 0 && x < d->xsize && y < d->ysize) {
 			int ofs = x + y * d->xsize;
@@ -648,6 +648,9 @@ static void simpleline(struct pvr_data *d, int y, double x1, double x2,
 
 				// NOTE/TODO: Hardcoded for 565 pixelformat.
 				int ri = r, gi = g, bi = b;
+				if (ri < 0) ri = 0; if (ri > 255) ri = 255;
+				if (gi < 0) gi = 0; if (gi > 255) gi = 255;
+				if (bi < 0) bi = 0; if (bi > 255) bi = 255;
 				int color = ((ri >> 3) << 11) + ((gi >> 2) << 5) + (bi >> 3);
 
 				int fbofs = fb_base + ofs * d->bytes_per_pixel;
@@ -1065,17 +1068,21 @@ void pvr_render(struct cpu *cpu, struct pvr_data *d)
 	 *  Clear all pixels first.
 	 *  TODO: Maybe only clear the specific tiles that are in use by
 	 *  the tile accelerator?
-	 *  TODO: What background color to use?
+	 *  TODO: What background color to use? See KOS' pvr_misc.c for
+	 *  how KOS sets the background.
 	 */
-	memset(d->vram + fb_base, 0, d->xsize * d->ysize * d->bytes_per_pixel);
+	memset(d->vram + fb_base, 0x00, d->xsize * d->ysize * d->bytes_per_pixel);
 
 	/*  Clear Z as well:  */
 	if (d->vram_z == NULL) {
 		d->vram_z = (double*) malloc(sizeof(double) * d->xsize * d->ysize);
 	}
 
+	uint32_t bgplaneZ = REG(PVRREG_BGPLANE_Z);
+	struct ieee_float_value backgroundz;
+	ieee_interpret_float_value(bgplaneZ, &backgroundz, IEEE_FMT_S);
 	for (int q = 0; q < d->xsize * d->ysize; ++q)
-		d->vram_z[q] = 0.0;
+		d->vram_z[q] = backgroundz.f;
 
 	// Using names from http://www.ludd.luth.se/~jlo/dc/ta-intro.txt.
 	for (size_t index = 0; index < d->n_ta_commands; ++index) {
@@ -2148,9 +2155,9 @@ DEVICE_ACCESS(pvr)
 		}
 		break;
 
-	// case PVRREG_YUV_STAT:
-	//	// TODO. The "luftvarg" demo accesses this register.
-	//	break;
+	case PVRREG_YUV_STAT:
+		// TODO. The "luftvarg" demo accesses this register.
+		break;
 
 	default:if (writeflag == MEM_READ) {
 			fatal("[ pvr: read from UNIMPLEMENTED addr 0x%x ]\n",

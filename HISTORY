@@ -4617,4 +4617,5 @@ Changelog for GXemul:
 		Updating NetBSD/pmax install instructions: 6.1.1 -> 6.1.4.
 		Renaming machine mvme187 to mvme187old to avoid collision.
 		Enabling ELF file support for 88K experiments.
-
+20140805	Fixing color bug in dev_pvr.cc simpleline, which is used when
+		rendering Gouraud shaded triangles.
