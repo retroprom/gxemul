@@ -71,7 +71,7 @@ MACHINE_SETUP(dreamcast)
 	 *  others:
 	 *
 	 *  0x00000000 - 0x001fffff	Boot ROM (2 MB)
-	 *  0x00200000 - 0x003fffff	Flash (256 KB) (or just 128 KB?)
+	 *  0x00200000 - 0x0021ffff	Flash (128 KB) (perhaps multiple images afterwards?)
 	 *				The bytes read by the Dreamcast PROM during
 	 *				boot are:
 	 *				    Offset 0x1a000 .. 0x1a004 = 5 bytes debug/startup state?
@@ -112,7 +112,8 @@ MACHINE_SETUP(dreamcast)
 	 *  0x11000000 - 0x11ffffff	Tile Accelerator: Texture data
 	 *  0x14000000 - 0x17ffffff	G2 bus (?)
 	 *
-	 *  (*) = with banks 0 and 1 switched; 64-bit read/write access...
+	 *  (*1) = with banks 0 and 1 switched; 64-bit read/write access...
+	 *  (*2) The "luftvarg" 4KB intro uses memory at paddr 0x0ef00000...
 	 *  (*3) = See VOUTC in Linux' drivers/video/pvr2fb.c.
 	 *  (*4) = It seems that ARM machine code is placed here.
 	 */
@@ -120,7 +121,7 @@ MACHINE_SETUP(dreamcast)
 	dev_ram_init(machine, 0x00000000, 2 * 1024 * 1024,
 	    DEV_RAM_RAM /* | DEV_RAM_TRACE_ALL_ACCESSES */, 0x0, "bootrom");
 
-	dev_ram_init(machine, 0x00200000, 256 * 1024,
+	dev_ram_init(machine, 0x00200000, 128 * 1024,
 	    DEV_RAM_RAM /* | DEV_RAM_TRACE_ALL_ACCESSES */, 0x0, "flash");
 
 	dev_ram_init(machine, 0x00600004, 4, DEV_RAM_RAM, 0);
@@ -130,19 +131,20 @@ MACHINE_SETUP(dreamcast)
 	dev_ram_init(machine, 0x00703000, 0x1fff, DEV_RAM_RAM, 0);
 
 	/*  Sound RAM:  */
-	dev_ram_init(machine, 0x00800000, 2 * 1048576, DEV_RAM_RAM, 0);
+	dev_ram_init(machine, 0x00800000, 2 * 1048576, DEV_RAM_RAM, 0, "sound_ram");
 
 	/*
 	 *  HACK!  TODO: Remove this device at 0x00a00000 once NetBSD has
 	 *  been fixed to not clear 6 MB beyound the sound RAM area.
 	 */
-	dev_ram_init(machine, 0x00a00000, 6 * 1048576, DEV_RAM_RAM, 0);
+	dev_ram_init(machine, 0x00a00000, 6 * 1048576, DEV_RAM_RAM, 0, "hack_for_netbsd");
 
+	/*  RAM:  */
 	dev_ram_init(machine, 0x0c000000, 16 * 1048576, DEV_RAM_RAM, 0x0);
 
-	/*  The "luftvarg" 4KB intro uses memory at paddr 0x0ef00000...  */
-	/*  (*2)   (TODO: Make this a _mirror_ of 0x0c000000?)  */
-	dev_ram_init(machine, 0x0e000000, 16 * 1048576, DEV_RAM_RAM, 0);
+	/*  Image of RAM:  */
+	dev_ram_init(machine, 0x0e000000, 16 * 1048576, DEV_RAM_MIRROR
+		| DEV_RAM_MIGHT_POINT_TO_DEVICES, 0x0c000000, "ram_mirror");
 
 	device_add(machine, "pvr");
 /*	device_add(machine, "mb8696x addr=0x600400 addr_mult=4");  */
