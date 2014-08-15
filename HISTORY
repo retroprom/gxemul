@@ -4620,4 +4620,6 @@ Changelog for GXemul:
 20140805	Fixing color bug in dev_pvr.cc simpleline, which is used when
 		rendering Gouraud shaded triangles.
 20140810	Beginning on disassembly of ARM THUMB (16-bit) encoding.
+20140815	Adding rudimentary culling of clockwise / counter-clockwise
+		polygons in the PVR rendering code.
 

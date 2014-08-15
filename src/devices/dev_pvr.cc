@@ -39,7 +39,6 @@
  *	x)  Lots of work on the 3D "Tile Accelerator" engine.
  *		Recognize commands and turn into OpenGL or similar
  *		commands on the host?
- *		Color clipping.
  *		Wire-frame when running on a host without XGL?
  *
  *  Multiple lists of various kinds (6?).
@@ -626,6 +625,10 @@ static void simpleline(struct pvr_data *d, int y, double x1, double x2,
 	double z1, double z2, double r1, double r2, double g1, double g2,
 	double b1, double b2)
 {
+	if (y < 0 || y >= d->ysize || (x1 < 0 && x2 < 0)
+	     || (x1 >= d->xsize && x2 >= d->xsize))
+		return;
+
 	int fb_base = REG(PVRREG_FB_RENDER_ADDR1);
 	if (x1 > x2) {
 		double tmpf = x1; x1 = x2; x2 = tmpf;
@@ -641,7 +644,7 @@ static void simpleline(struct pvr_data *d, int y, double x1, double x2,
 	double db12 = (x2 - x1 != 0) ? ( (double)(b2 - b1) / (double)(x2 - x1) ) : 0;
 	double z = z1, r = r1, g = g1, b = b1;
 	for (int x = x1; x <= x2; ++x) {
-		if (x > 0 && y > 0 && x < d->xsize && y < d->ysize) {
+		if (x > 0 && x < d->xsize) {
 			int ofs = x + y * d->xsize;
 			if (d->vram_z[ofs] <= z) {
 				d->vram_z[ofs] = z;
@@ -669,6 +672,10 @@ static void texturedline(struct pvr_data *d,
 	int y, int x1, int x2, double z1, double z2,
 	double u1, double u2, double v1, double v2)
 {
+	if (y < 0 || y >= d->ysize || (x1 < 0 && x2 < 0)
+	     || (x1 >= d->xsize && x2 >= d->xsize))
+		return;
+
 	int fb_base = REG(PVRREG_FB_RENDER_ADDR1);
 	if (x1 > x2) {
 		int tmp = x1; x1 = x2; x2 = tmp;
@@ -703,7 +710,7 @@ static void texturedline(struct pvr_data *d,
 	double z = z1, u = u1, v = v1;
 
 	for (int x = x1; x <= x2; ++x) {
-		if (x > 0 && y > 0 && x < d->xsize && y < d->ysize) {
+		if (x > 0 && x < d->xsize) {
 			int ofs = x + y * d->xsize;
 			if (d->vram_z[ofs] <= z) {
 				d->vram_z[ofs] = z;
@@ -1036,7 +1043,7 @@ void pvr_render(struct cpu *cpu, struct pvr_data *d)
 
 	// Word 1:
 	int depthmode;
-	int cullingmode;
+	int cullingmode = 0;
 	bool zwrite;
 	bool texture1;
 	bool specular1;
@@ -1274,18 +1281,40 @@ void pvr_render(struct cpu *cpu, struct pvr_data *d)
 
 			if (vertex_index >= 3) {
 				int modulo_mask = REG(PVRREG_TSP_CFG) & TSP_CFG_MODULO_MASK;
-				if (texture)
-					pvr_render_triangle_textured(d,
-					    texture_pixelformat, texture_twiddled, texture_stride ? (32*modulo_mask) : 0,
-					    textureAddr, texture_usize, texture_vsize,
-					    wf_x[0], wf_y[0], wf_z[0], wf_u[0], wf_v[0],
-					    wf_x[1], wf_y[1], wf_z[1], wf_u[1], wf_v[1],
-					    wf_x[2], wf_y[2], wf_z[2], wf_u[2], wf_v[2]);
-				else
-					pvr_render_triangle(d,
-					    wf_x[0], wf_y[0], wf_z[0], wf_r[0], wf_g[0], wf_b[0],
-					    wf_x[1], wf_y[1], wf_z[1], wf_r[1], wf_g[1], wf_b[1],
-					    wf_x[2], wf_y[2], wf_z[2], wf_r[2], wf_g[2], wf_b[2]);
+
+				float crossProduct =
+					((wf_x[1] - wf_x[0])*(wf_y[2] - wf_y[0])) -
+					((wf_y[1] - wf_y[0])*(wf_x[2] - wf_x[0]));
+
+				// Hm. TODO: Instead of flipping back and forth between
+				// clockwise and counter-clockwise culling, perhaps there
+				// is some smarter way of assigning the three points
+				// instead of 012 => 12x...?
+				bool culled = false;
+				if (cullingmode == 2) {
+					if (crossProduct < 0)
+						culled = true;
+					cullingmode = 3;
+				} else if (cullingmode == 3) {
+					if (crossProduct > 0)
+						culled = true;
+					cullingmode = 2;
+				}
+
+				if (!culled) {
+					if (texture)
+						pvr_render_triangle_textured(d,
+						    texture_pixelformat, texture_twiddled, texture_stride ? (32*modulo_mask) : 0,
+						    textureAddr, texture_usize, texture_vsize,
+						    wf_x[0], wf_y[0], wf_z[0], wf_u[0], wf_v[0],
+						    wf_x[1], wf_y[1], wf_z[1], wf_u[1], wf_v[1],
+						    wf_x[2], wf_y[2], wf_z[2], wf_u[2], wf_v[2]);
+					else
+						pvr_render_triangle(d,
+						    wf_x[0], wf_y[0], wf_z[0], wf_r[0], wf_g[0], wf_b[0],
+						    wf_x[1], wf_y[1], wf_z[1], wf_r[1], wf_g[1], wf_b[1],
+						    wf_x[2], wf_y[2], wf_z[2], wf_r[2], wf_g[2], wf_b[2]);
+				}
 
 				if (eos) {
 					// End of strip.
