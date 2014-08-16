@@ -4622,4 +4622,6 @@ Changelog for GXemul:
 20140810	Beginning on disassembly of ARM THUMB (16-bit) encoding.
 20140815	Adding rudimentary culling of clockwise / counter-clockwise
 		polygons in the PVR rendering code.
+20140816	Fixing console.cc so that it doesn't complain about buffer
+		overrun when pasting a lot of data.
 
