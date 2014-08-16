@@ -285,7 +285,8 @@ static void maple_getcond_controller_response(struct dreamcast_maple_data *d,
 	memset(buf, 0, 8);
 	buf[0] = c & 0xff;
 	buf[1] = c >> 8;
-	buf[2] = buf[3] = buf[4] = buf[5] = buf[6] = buf[7] = 0x80;
+	buf[2] = buf[3] = 0;				// 0 = not pressed
+	buf[4] = buf[5] = buf[6] = buf[7] = 128;	// 128 = centered
 
 	cpu->memory_rw(cpu, cpu->mem, receive_addr, (unsigned char *) (void *) &buf, 8,
 	    MEM_WRITE, NO_EXCEPTIONS | PHYSICAL);
