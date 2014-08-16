@@ -148,6 +148,9 @@ DEVICE_TICK(maple)
 		 *  NOTE/TODO:
 		 *
 		 *  Implement the controller in a reasonable way!
+		 *  Theoretically, there are all of these buttons: ABCD XYZ Start
+		 *  and two digital pads, two analog joysticks, and two
+		 *  analog fire buttons (left and right).
 		 */
 
 		int control_bits = 0;
@@ -164,6 +167,11 @@ DEVICE_TICK(maple)
 		case 'C':
 			control_bits = 0x0001;
 			break;
+		case 'd':
+		case 'D':
+			control_bits = 0x0800;
+			break;
+
 		case 'x':
 		case 'X':
 			control_bits = 0x0400;
@@ -176,10 +184,12 @@ DEVICE_TICK(maple)
 		case 'Z':
 			control_bits = 0x0100;
 			break;
+
 		case 's':
 		case 'S':	/*  Start  */
 			control_bits = 0x0008;
 			break;
+
 		case '8':	/*  up  */
 			control_bits = 0x0010;
 			break;
