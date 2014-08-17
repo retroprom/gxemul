@@ -346,7 +346,7 @@ void dreamcast_emul(struct cpu *cpu)
 
 			booting_from_cdrom = 0;
 
-			// Jump to boostrap 1
+			// Jump to bootstrap 1
 			cpu->pc = 0x8c00b800;
 			return;
 		} else {
