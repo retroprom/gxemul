@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2010  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2014  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -248,6 +248,14 @@ int DYNTRANS_RUN_INSTR_DEF(struct cpu *cpu)
 			sh_exception(cpu, 0, cpu->cd.sh.int_to_assert, 0);
 #endif
 	}
+
+#ifdef DYNTRANS_ARM
+	if (cpu->cd.arm.cpsr & ARM_FLAG_T) {
+		fatal("THUMB execution not implemented.\n");
+		cpu->running = false;
+		return 0;
+	}
+#endif
 
 	cached_pc = cpu->pc;
 
