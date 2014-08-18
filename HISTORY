@@ -4625,3 +4625,6 @@ Changelog for GXemul:
 20140816	Fixing console.cc so that it doesn't complain about buffer
 		overrun when pasting a lot of data.
 
+==============  RELEASE 0.6.0.1  ==============
+
+
