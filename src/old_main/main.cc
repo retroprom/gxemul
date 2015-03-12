@@ -610,7 +610,7 @@ int get_cmd_args(int argc, char *argv[], struct emul *emul,
 		quiet_mode = 0;
 
 	if (type == NULL && subtype == NULL &&
-	    (single_step == ENTER_SINGLE_STEPPING || argc > 0)) {
+	    (single_step == ENTER_SINGLE_STEPPING || (argc > 0 && argv[0][0] != '@'))) {
 		int res2 = 0;
 		{
 			GXemul gxemul;
