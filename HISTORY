@@ -4628,4 +4628,4 @@ Changelog for GXemul:
 ==============  RELEASE 0.6.0.1  ==============
 
 20150312	Making old framework config files work again (@filename).
-
+20180203	Reviving the (dummy) Luna 88K machine mode from r5458.

@@ -2,7 +2,7 @@
 #define	MACHINE_H
 
 /*
- *  Copyright (C) 2005-2013  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2018  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -255,6 +255,7 @@ struct machine {
 #define	MACHINE_BAREM88K	7000
 #define	MACHINE_TESTM88K	7001
 #define	MACHINE_MVME88K		7002
+#define	MACHINE_LUNA88K		7003
 
 /*  Other "pseudo"-machines:  */
 #define	MACHINE_NONE		0
@@ -326,6 +327,10 @@ struct machine {
 #define	MACHINE_MVME88K_187		1
 #define	MACHINE_MVME88K_188		2
 #define	MACHINE_MVME88K_197		3
+
+/*  LUNA88K  */
+#define MACHINE_LUNA_88K		1
+#define MACHINE_LUNA_88K2		2
 
 
 /*  For the automachine system:  */
