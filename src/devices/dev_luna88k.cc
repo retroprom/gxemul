@@ -42,11 +42,12 @@
 #include "thirdparty/luna88k_board.h"
 #include "thirdparty/m8820x.h"
 
-#define	LUNA88K_REGISTERS_BASE		0x40000000UL
+#define	LUNA88K_REGISTERS_BASE		0x3ffffff0UL
 #define	LUNA88K_REGISTERS_END		0xff000000UL
 #define	LUNA88K_REGISTERS_LENGTH	(LUNA88K_REGISTERS_END - LUNA88K_REGISTERS_BASE)
 
 #define	MAX_CPUS	4
+
 
 
 struct luna88k_data {
@@ -63,6 +64,11 @@ DEVICE_ACCESS(luna88k)
 	int cpunr;
 
 	switch (addr) {
+
+	case 0x3ffffff0:
+		/*  Accessed by OpenBSD/luna88k to trigger an illegal address  */
+		cpu->cd.m88k.cmmu[1]->reg[CMMU_PFSR] = CMMU_PFSR_BERROR << 16;
+		break;
 
 	case PROM_ADDR:		/*  0x41000000  */
 		/*  OpenBSD/luna88k write here during boot. Ignore for now. (?)  */
