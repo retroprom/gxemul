@@ -28,7 +28,7 @@
  *  COMMENT: LUNA88K machine
  *
  *  This is for experiments with OpenBSD/luna88k. See
- *  openbsd/sys/arch/luna88k/luna88k/locore.S for more information about
+ *  openbsd/sys/arch/luna88k/luna88k/locore0.S for more information about
  *  how OpenBSD starts up on this platform.
  *
  *  RAMDISK kernel used for experiments:
@@ -49,6 +49,8 @@
 #include "memory.h"
 #include "misc.h"
 
+#include "thirdparty/luna88k_board.h"
+
 
 MACHINE_SETUP(luna88k)
 {
@@ -67,10 +69,17 @@ MACHINE_SETUP(luna88k)
 		exit(1);
 	}
 
+	if (machine->ncpus > 4) {
+		fatal("More than 4 CPUs is not supported for LUNA 88K.\n");
+		exit(1);
+	}
+
+	device_add(machine, "luna88k");
+
 	if (!machine->prom_emulation)
 		return;
 
-	/*  TODO  */
+	luna88kprom_init(machine);
 }
 
 
@@ -82,7 +91,8 @@ MACHINE_DEFAULT_CPU(luna88k)
 
 MACHINE_DEFAULT_RAM(luna88k)
 {
-	machine->physical_ram_in_mb = 64;
+	// Two OpenBSD dmesgs found on the Internet for a LUNA-88K2 showed 112 MB of real mem.
+	machine->physical_ram_in_mb = 112;
 }
 
 

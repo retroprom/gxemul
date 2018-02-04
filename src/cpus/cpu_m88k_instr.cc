@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007-2011  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2007-2018  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -1637,9 +1637,15 @@ X(prom_call)
 	}
 
 	switch (cpu->machine->machine_type) {
+
+	case MACHINE_LUNA88K:
+		luna88kprom_emul(cpu);
+		break;
+
 	case MACHINE_MVME88K:
 		mvmeprom_emul(cpu);
 		break;
+
 	default:fatal("m88k prom_call: unimplemented machine type\n");
 		ABORT_EXECUTION;
 	}

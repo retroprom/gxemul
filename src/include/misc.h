@@ -278,6 +278,11 @@ void file_load(struct machine *machine, struct memory *mem,
 	int arch, uint64_t *gpp, int *byte_order, uint64_t *tocp);
 
 
+/*  luna88kprom.c:  */
+void luna88kprom_init(struct machine *machine);
+int luna88kprom_emul(struct cpu *cpu);
+
+
 /*  main.c:  */
 void debug_indentation(int diff);
 void debug(const char *fmt, ...);

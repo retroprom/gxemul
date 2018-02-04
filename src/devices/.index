@@ -46,6 +46,7 @@ dev_kn230.cc  DEC KN230 (MIPSMATE 5100) stuff
 dev_lca.cc  LCA PCI bus, for Alpha machines
 dev_le.cc  LANCE ethernet, as used in DECstations
 dev_lpt.cc  LPT (parallel printer) controller
+dev_luna88k.cc  OMRON Luna 88K-specific devices and control registers
 dev_m8820x.cc  M88200/M88204 CMMU (Cache/Memory Management Unit)
 dev_malta_lcd.cc  Malta (evbmips) LCD display
 dev_mb8696x.cc  Fujitsu MB8696x Ethernet interface (used in the Dreamcast)
