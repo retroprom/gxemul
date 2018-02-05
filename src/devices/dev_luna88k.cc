@@ -33,6 +33,7 @@
 #include <string.h>
 
 #include "cpu.h"
+#include "console.h"
 #include "device.h"
 #include "emul.h"
 #include "machine.h"
@@ -53,6 +54,9 @@
 struct luna88k_data {
 	uint32_t	interrupt_status[MAX_CPUS];
 	uint32_t	software_interrupt_status[MAX_CPUS];
+
+	int		obio_sio_regno;
+	uint8_t		obio_sio_reg[256];
 };
 
 
@@ -62,6 +66,9 @@ DEVICE_ACCESS(luna88k)
 	uint64_t idata = 0, odata = 0;
 	struct luna88k_data *d = (struct luna88k_data *) extra;
 	int cpunr;
+
+	if (writeflag == MEM_WRITE)
+		idata = memory_readmax64(cpu, data, len);
 
 	switch (addr) {
 
@@ -84,6 +91,32 @@ DEVICE_ACCESS(luna88k)
 	case OBIO_PIO1B:	/*  0x4d000004: PIO-0 port B  */
 	case OBIO_PIO1:		/*  0x4d00000C: PIO-0 control  */
 		/*  Ignore for now. (?)  */
+		break;
+
+	case OBIO_SIO + 0:	/*  0x51000000: data  */
+		if (writeflag) {
+			console_putchar(cpu->machine->main_console_handle, idata);
+		} else {
+			fatal("luna88k sio read data: TODO\n");
+			exit(1);
+		}
+		break;
+
+	case OBIO_SIO + 4:	/*  0x51000004: cmd  */
+		/*  TODO: Slightly similar to dev_scc.cc ?  */
+		if (writeflag) {
+			if (d->obio_sio_regno == 0) {
+				d->obio_sio_regno = idata;
+			} else {
+				d->obio_sio_reg[d->obio_sio_regno & 255] = idata;
+				d->obio_sio_regno = 0;
+			}
+		} else {
+			d->obio_sio_reg[0] = 0x04;
+			d->obio_sio_reg[1] = 0x2c;
+			odata = d->obio_sio_reg[d->obio_sio_regno & 255];
+			d->obio_sio_regno = 0;
+		}
 		break;
 
 	case INT_ST_MASK0:	/*  0x65000000: Interrupt status CPU 0.  */

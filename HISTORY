@@ -4629,5 +4629,6 @@ Changelog for GXemul:
 
 20150312	Making old framework config files work again (@filename).
 20180203	Reviving the (dummy) Luna 88K machine mode from r5458.
-20100204	Continuing on LUNA 88K stuff; some initial fake PROM putchar
+20180204	Continuing on LUNA 88K stuff; some initial fake PROM putchar
 		functionality for experimenting with OpenBSD/luna88k.
+20180205	Some initial OpenBSD/luna88k syscnputc() output works (hack).
