@@ -54,6 +54,10 @@
 
 MACHINE_SETUP(luna88k)
 {
+	const char* luna88k2_fuse_string = "MNAME=LUNA88K+";
+
+	device_add(machine, "luna88k");
+
 	switch (machine->machine_subtype) {
 
 	case MACHINE_LUNA_88K:
@@ -62,6 +66,24 @@ MACHINE_SETUP(luna88k)
 
 	case MACHINE_LUNA_88K2:
 		machine->machine_name = strdup("LUNA 88K2");
+
+		/*  According to OpenBSD source code,
+		    the string "MNAME=LUNA88K+" in FUSE_ROM_DATA
+		    is used to determine that this is a 88K2, and
+		    not an 88K.
+	                fuse_rom_data[i] =
+	                    (char)((((p->h) >> 24) & 0x000000f0) |
+	                           (((p->l) >> 28) & 0x0000000f));
+		    where h is first 32-bit word, l is second.
+		*/
+
+		for (int i = 0; i < strlen(luna88k2_fuse_string); ++i) {
+			uint32_t h = luna88k2_fuse_string[i] & 0xf0;
+			uint32_t l = luna88k2_fuse_string[i] & 0x0f;
+			store_32bit_word(cpu, FUSE_ROM_ADDR + i * 8 + 0, h << 24);
+			store_32bit_word(cpu, FUSE_ROM_ADDR + i * 8 + 4, l << 28);
+		}
+
 		break;
 
 	default:fatal("Unimplemented LUNA88K machine subtype %i\n",
@@ -73,8 +95,6 @@ MACHINE_SETUP(luna88k)
 		fatal("More than 4 CPUs is not supported for LUNA 88K.\n");
 		exit(1);
 	}
-
-	device_add(machine, "luna88k");
 
 	if (!machine->prom_emulation)
 		return;

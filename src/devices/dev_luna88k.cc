@@ -57,6 +57,9 @@ struct luna88k_data {
 
 	int		obio_sio_regno;
 	uint8_t		obio_sio_reg[256];
+
+	uint32_t	fuse_rom[FUSE_ROM_SPACE / sizeof(uint32_t)];
+	uint8_t		nvram[NVRAM_SPACE];
 };
 
 
@@ -69,6 +72,49 @@ DEVICE_ACCESS(luna88k)
 
 	if (writeflag == MEM_WRITE)
 		idata = memory_readmax64(cpu, data, len);
+
+	if (addr >= FUSE_ROM_ADDR && len == sizeof(uint32_t) &&
+	    addr < FUSE_ROM_ADDR + FUSE_ROM_SPACE) {
+		if (writeflag == MEM_READ) {
+			odata = d->fuse_rom[(addr - FUSE_ROM_ADDR) / sizeof(uint32_t)];
+			memory_writemax64(cpu, data, len, odata);
+		} else {
+			d->fuse_rom[(addr - FUSE_ROM_ADDR) / sizeof(uint32_t)] = idata;
+		}
+		return 1;
+	}
+
+	if (addr >= FUSE_ROM_ADDR && len == sizeof(uint8_t) &&
+	    addr < FUSE_ROM_ADDR + FUSE_ROM_SPACE) {
+		if (writeflag == MEM_READ) {
+			odata = d->fuse_rom[(addr - FUSE_ROM_ADDR) / sizeof(uint32_t)];
+			odata >>= ((3 - (addr & 3)) * 8);
+			memory_writemax64(cpu, data, len, odata);
+		} else {
+			fatal("TODO: luna88k byte write to fuse\n");
+		}
+		return 1;
+	}
+
+	if (addr >= NVRAM_ADDR && addr < NVRAM_ADDR + NVRAM_SPACE && len == sizeof(uint8_t)) {
+		if (writeflag == MEM_READ) {
+			odata = d->nvram[addr - NVRAM_ADDR];
+			memory_writemax64(cpu, data, len, odata);
+		} else {
+			d->nvram[addr - NVRAM_ADDR] = idata;
+		}
+		return 1;
+	}
+
+	if (addr >= NVRAM_ADDR_88K2 && addr < NVRAM_ADDR_88K2 + NVRAM_SPACE && len == sizeof(uint8_t)) {
+		if (writeflag == MEM_READ) {
+			odata = d->nvram[addr - NVRAM_ADDR_88K2];
+			memory_writemax64(cpu, data, len, odata);
+		} else {
+			d->nvram[addr - NVRAM_ADDR_88K2] = idata;
+		}
+		return 1;
+	}
 
 	switch (addr) {
 
@@ -94,7 +140,7 @@ DEVICE_ACCESS(luna88k)
 		break;
 
 	case OBIO_SIO + 0:	/*  0x51000000: data  */
-		if (writeflag) {
+		if (writeflag == MEM_WRITE) {
 			console_putchar(cpu->machine->main_console_handle, idata);
 		} else {
 			fatal("luna88k sio read data: TODO\n");
@@ -104,7 +150,7 @@ DEVICE_ACCESS(luna88k)
 
 	case OBIO_SIO + 4:	/*  0x51000004: cmd  */
 		/*  TODO: Slightly similar to dev_scc.cc ?  */
-		if (writeflag) {
+		if (writeflag == MEM_WRITE) {
 			if (d->obio_sio_regno == 0) {
 				d->obio_sio_regno = idata;
 			} else {
@@ -143,7 +189,7 @@ DEVICE_ACCESS(luna88k)
 		// Reading status clears it.
 		d->software_interrupt_status[cpunr] = 0;
 
-		if (writeflag) {
+		if (writeflag == MEM_WRITE) {
 			fatal("TODO: luna88k write to software interrupts\n");
 			exit(1);
 		}
@@ -158,7 +204,7 @@ DEVICE_ACCESS(luna88k)
 		    (int) addr);
 		if (writeflag == MEM_WRITE)
 			fatal(": 0x%x", (int)idata);
-		fatal(" ]\n");
+		fatal(" (%i bits) ]\n", len * 8);
 		exit(1);
 	}
 

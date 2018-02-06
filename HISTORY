@@ -4632,3 +4632,5 @@ Changelog for GXemul:
 20180204	Continuing on LUNA 88K stuff; some initial fake PROM putchar
 		functionality for experimenting with OpenBSD/luna88k.
 20180205	Some initial OpenBSD/luna88k syscnputc() output works (hack).
+20180206	Adding enough of a hack to let OpenBSD/luna88k distinguish
+		between LUNA 88K and 88K2, by faking FUSE_ROM string.
