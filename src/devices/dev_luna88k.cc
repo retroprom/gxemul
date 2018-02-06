@@ -128,9 +128,22 @@ DEVICE_ACCESS(luna88k)
 		break;
 
 	case OBIO_PIO0A:	/*  0x49000000: PIO-0 port A  */
+		/*  OpenBSD reads dipswitch settings from PIO0A and B.  */
+		odata = 0;	// high byte
+		if (cpu->machine->x11_md.in_use)
+			odata |= 0x40;
+		odata |= 0x80;	// multi-user mode
+		odata |= 0x20;	// don't ask name
+		odata |= 0x10;	// don't do manual UKC config
+		break;
+
 	case OBIO_PIO0B:	/*  0x49000004: PIO-0 port B  */
+		/*  OpenBSD reads dipswitch settings from PIO0A and B.  */
+		odata = 0x00;	// low byte
+		break;
+
 	case OBIO_PIO0:		/*  0x4900000C: PIO-0 control  */
-		/*  Ignore for now. (?)  */
+		/*  TODO: Implement for real.  */
 		break;
 
 	case OBIO_PIO1A:	/*  0x4d000000: PIO-0 port A  */
