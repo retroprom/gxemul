@@ -4634,3 +4634,4 @@ Changelog for GXemul:
 20180205	Some initial OpenBSD/luna88k syscnputc() output works (hack).
 20180206	Adding enough of a hack to let OpenBSD/luna88k distinguish
 		between LUNA 88K and 88K2, by faking FUSE_ROM string.
+20180207	Adding a semi-broken framebuffer for LUNA 88K.

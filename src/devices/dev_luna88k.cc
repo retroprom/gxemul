@@ -35,6 +35,7 @@
 #include "cpu.h"
 #include "console.h"
 #include "device.h"
+#include "devices.h"
 #include "emul.h"
 #include "machine.h"
 #include "memory.h"
@@ -52,11 +53,14 @@
 
 
 struct luna88k_data {
+	struct vfb_data *fb;
+
 	uint32_t	interrupt_status[MAX_CPUS];
 	uint32_t	software_interrupt_status[MAX_CPUS];
 
-	int		obio_sio_regno;
-	uint8_t		obio_sio_reg[256];
+	/*  Two channels.  */
+	int		obio_sio_regno[2];
+	uint8_t		obio_sio_reg[2][256];
 
 	uint32_t	fuse_rom[FUSE_ROM_SPACE / sizeof(uint32_t)];
 	uint8_t		nvram[NVRAM_SPACE];
@@ -69,6 +73,7 @@ DEVICE_ACCESS(luna88k)
 	uint64_t idata = 0, odata = 0;
 	struct luna88k_data *d = (struct luna88k_data *) extra;
 	int cpunr;
+	int sio_devnr;
 
 	if (writeflag == MEM_WRITE)
 		idata = memory_readmax64(cpu, data, len);
@@ -116,6 +121,32 @@ DEVICE_ACCESS(luna88k)
 		return 1;
 	}
 
+	if (addr >= BMAP_BMP && addr < BMAP_BMP + 0x40000) {
+		size_t s = 1280 * 1024 / 8;
+		addr -= (uint64_t)(uint32_t)BMAP_BMP;
+
+		/*  TODO: bit order swap?  */
+
+		if (addr < s)
+			return dev_fb_access(cpu, cpu->mem, addr, data, len, writeflag, d->fb);
+		else
+			return 1;
+	}
+
+	if (addr >= BMAP_BMAP0 && addr < BMAP_BMAP0 + 0x40000) {
+		size_t s = 1280 * 1024 / 8;
+		addr -= (uint64_t)(uint32_t)BMAP_BMAP0;
+		if (addr < s)
+			return dev_fb_access(cpu, cpu->mem, addr, data, len, writeflag, d->fb);
+		else
+			return 1;
+	}
+
+	if (addr >= BMAP_PALLET2 && addr < BMAP_PALLET2 + 16) {
+		/*  Ignore for now.  */
+		return 1;
+	}
+
 	switch (addr) {
 
 	case 0x3ffffff0:
@@ -152,30 +183,41 @@ DEVICE_ACCESS(luna88k)
 		/*  Ignore for now. (?)  */
 		break;
 
-	case OBIO_SIO + 0:	/*  0x51000000: data  */
-		if (writeflag == MEM_WRITE) {
-			console_putchar(cpu->machine->main_console_handle, idata);
-		} else {
-			fatal("luna88k sio read data: TODO\n");
-			exit(1);
-		}
-		break;
+	case OBIO_SIO + 0:	/*  0x51000000: data channel 0 */
+	case OBIO_SIO + 4:	/*  0x51000004: cmd channel 0 */
+	case OBIO_SIO + 8:	/*  0x51000008: data channel 1 */
+	case OBIO_SIO + 0xc:	/*  0x5100000c: cmd channel 1 */
+		sio_devnr = (addr - OBIO_SIO) / 8;
 
-	case OBIO_SIO + 4:	/*  0x51000004: cmd  */
-		/*  TODO: Slightly similar to dev_scc.cc ?  */
-		if (writeflag == MEM_WRITE) {
-			if (d->obio_sio_regno == 0) {
-				d->obio_sio_regno = idata;
+		if ((addr - OBIO_SIO) & 4) {
+			/*  cmd  */
+
+			/*  TODO: Slightly similar to dev_scc.cc ?  */
+			if (writeflag == MEM_WRITE) {
+				if (d->obio_sio_regno[sio_devnr] == 0) {
+					d->obio_sio_regno[sio_devnr] = idata;
+				} else {
+					d->obio_sio_reg[sio_devnr][d->obio_sio_regno[sio_devnr] & 255] = idata;
+					d->obio_sio_regno[sio_devnr] = 0;
+				}
 			} else {
-				d->obio_sio_reg[d->obio_sio_regno & 255] = idata;
-				d->obio_sio_regno = 0;
+				d->obio_sio_reg[sio_devnr][0] = 0x04;
+				d->obio_sio_reg[sio_devnr][1] = 0x2c;
+				odata = d->obio_sio_reg[sio_devnr][d->obio_sio_regno[sio_devnr] & 255];
+				d->obio_sio_regno[sio_devnr] = 0;
 			}
 		} else {
-			d->obio_sio_reg[0] = 0x04;
-			d->obio_sio_reg[1] = 0x2c;
-			odata = d->obio_sio_reg[d->obio_sio_regno & 255];
-			d->obio_sio_regno = 0;
+			/*  data  */
+			if (writeflag == MEM_WRITE) {
+				if (sio_devnr == 0)
+					console_putchar(cpu->machine->main_console_handle, idata);
+				else
+					fatal("[ luna88k sio dev1 write data: TODO ]\n");
+			} else {
+				fatal("[ luna88k sio dev0 read data: TODO ]\n");
+			}
 		}
+
 		break;
 
 	case INT_ST_MASK0:	/*  0x65000000: Interrupt status CPU 0.  */
@@ -186,8 +228,7 @@ DEVICE_ACCESS(luna88k)
 		odata = d->interrupt_status[cpunr];
 		if (writeflag) {
 			if (idata != 0x00000000) {
-				fatal("TODO: luna88k interrupts\n");
-				exit(1);
+				fatal("[ TODO: luna88k interrupts ]\n");
 			}
 		}
 		break;
@@ -208,8 +249,36 @@ DEVICE_ACCESS(luna88k)
 		}
 		break;
 
-	case SCSI_ADDR + 0x10:	/*  0xe1000010: SCSI INTS  */
+	case BMAP_RFCNT:	/*  0xb1000000: RFCNT register  */
+	case BMAP_BMSEL:	/*  0xb1000000: BMSEL register  */
 		/*  Ignore for now. (?)  */
+		break;
+
+	case BMAP_BMAP1:	/*  0xb1100000: Bitmap plane 1  */
+		odata = 0xc0dec0de;
+		/*  Return dummy value. OpenBSD writes and reads to detect presence
+		    of bitplanes.  */
+		break;
+
+	case BMAP_FN + 0x14:	/*  0xb12c0014: "common bitmap function"  */
+		/*  Function 5 is "ROP copy", according to OpenBSD sources.  */
+		break;
+
+	case SCSI_ADDR + 0x00:	/*  0xe1000000: SCSI ..  */
+	case SCSI_ADDR + 0x04:	/*  0xe1000004: SCSI ..  */
+	case SCSI_ADDR + 0x08:	/*  0xe1000008: SCSI ..  */
+	case SCSI_ADDR + 0x0C:	/*  0xe100000C: SCSI ..  */
+	case SCSI_ADDR + 0x10:	/*  0xe1000010: SCSI INTS  */
+	case SCSI_ADDR + 0x20:	/*  0xe1000020: SCSI ..  */
+	case SCSI_ADDR + 0x2c:	/*  0xe100002c: SCSI ..  */
+	case SCSI_ADDR + 0x30:	/*  0xe1000030: SCSI ..  */
+	case SCSI_ADDR + 0x34:	/*  0xe1000034: SCSI ..  */
+	case SCSI_ADDR + 0x38:	/*  0xe1000038: SCSI ..  */
+		/*  Ignore for now. (?)  */
+		break;
+
+	case 0xf1000000:	/*  Lance Ethernet. TODO.  */
+	case 0xf1000004:	/*  Lance Ethernet. TODO.  */
 		break;
 
 	default:fatal("[ luna88k: unimplemented %s address 0x%x",
@@ -275,14 +344,14 @@ DEVINIT(luna88k)
 
 	if (devinit->machine->x11_md.in_use)
 	{
-		// Not a generic fb, it's luna specific. TODO
-		// dev_fb_init(machine, machine->memory, BMAP_START, VFB_GENERIC,
-		//	1280, 1024, 1280, 1024, 8, machine->machine_name);
+		d->fb = dev_fb_init(devinit->machine, devinit->machine->memory,
+			0x100000000ULL + BMAP_BMAP0, VFB_GENERIC,
+			1280, 1024, 2048, 1024, 1, "LUNA 88K");
 	}
 
-	if (devinit->machine->ncpus != 1)
+	if (devinit->machine->ncpus > 4)
 	{
-		printf("TODO: more than 1 cpu\n");
+		printf("LUNA 88K can't have more than 4 CPUs.\n");
 		exit(1);
 	}
 
