@@ -67,6 +67,23 @@ struct luna88k_data {
 };
 
 
+static void swapBitOrder(uint8_t* data, int len)
+{
+	for (int bo = 0; bo < len; bo ++)
+	{
+		uint8_t b = (uint8_t)data[bo];
+		uint8_t c = 0x00;
+		for (int i = 0; i < 8; i++)
+		{
+			if (b & (128 >> i))
+				c |= (1 << i);
+		}
+
+		data[bo] = c;
+	}
+}
+
+
 DEVICE_ACCESS(luna88k)
 {
 	uint32_t addr = relative_addr + LUNA88K_REGISTERS_BASE;
@@ -125,10 +142,12 @@ DEVICE_ACCESS(luna88k)
 		size_t s = 1280 * 1024 / 8;
 		addr -= (uint64_t)(uint32_t)BMAP_BMP;
 
-		/*  TODO: bit order swap?  */
-
-		if (addr < s)
-			return dev_fb_access(cpu, cpu->mem, addr, data, len, writeflag, d->fb);
+		swapBitOrder(data, len);
+		if (addr + len - 1 < s) {
+			dev_fb_access(cpu, cpu->mem, addr, data, len, writeflag, d->fb);
+			swapBitOrder(data, len);
+			return 1;
+		}
 		else
 			return 1;
 	}
@@ -136,8 +155,12 @@ DEVICE_ACCESS(luna88k)
 	if (addr >= BMAP_BMAP0 && addr < BMAP_BMAP0 + 0x40000) {
 		size_t s = 1280 * 1024 / 8;
 		addr -= (uint64_t)(uint32_t)BMAP_BMAP0;
-		if (addr < s)
-			return dev_fb_access(cpu, cpu->mem, addr, data, len, writeflag, d->fb);
+		swapBitOrder(data, len);
+		if (addr + len - 1 < s) {
+			dev_fb_access(cpu, cpu->mem, addr, data, len, writeflag, d->fb);
+			swapBitOrder(data, len);
+			return 1;
+		}
 		else
 			return 1;
 	}
