@@ -42,7 +42,7 @@
 #include "memory.h"
 #include "misc.h"
 
-#include "vga.h"
+#include "../include/vga.h"
 
 /*  These are generated from binary font files:  */
 #include "fonts/font8x8.cc"
