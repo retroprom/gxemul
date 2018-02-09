@@ -51,6 +51,8 @@
 #define	MAX_CPUS	4
 
 
+#define	BCD(x) ((((x) / 10) << 4) + ((x) % 10))
+
 
 struct luna88k_data {
 	struct vfb_data *fb;
@@ -86,7 +88,9 @@ static void swapBitOrder(uint8_t* data, int len)
 
 DEVICE_ACCESS(luna88k)
 {
-	uint32_t addr = relative_addr + LUNA88K_REGISTERS_BASE;
+	struct tm *tmp;
+	time_t timet;
+ 	uint32_t addr = relative_addr + LUNA88K_REGISTERS_BASE;
 	uint64_t idata = 0, odata = 0;
 	struct luna88k_data *d = (struct luna88k_data *) extra;
 	int cpunr;
@@ -170,6 +174,11 @@ DEVICE_ACCESS(luna88k)
 		return 1;
 	}
 
+	if (addr >= TRI_PORT_RAM && addr < TRI_PORT_RAM + TRI_PORT_RAM_SPACE) {
+		/*  Ignore for now.  */
+		return 1;
+	}
+
 	switch (addr) {
 
 	case 0x3ffffff0:
@@ -179,6 +188,37 @@ DEVICE_ACCESS(luna88k)
 
 	case PROM_ADDR:		/*  0x41000000  */
 		/*  OpenBSD/luna88k write here during boot. Ignore for now. (?)  */
+		break;
+
+	case OBIO_CAL_CTL:	/*  calendar control register  */
+		break;
+	case OBIO_CAL_SEC:
+		timet = time(NULL); tmp = gmtime(&timet);
+		odata = BCD(tmp->tm_sec) << 24;
+		break;
+	case OBIO_CAL_MIN:
+		timet = time(NULL); tmp = gmtime(&timet);
+		odata = BCD(tmp->tm_min) << 24;
+		break;
+	case OBIO_CAL_HOUR:
+		timet = time(NULL); tmp = gmtime(&timet);
+		odata = BCD(tmp->tm_hour) << 24;
+		break;
+	case OBIO_CAL_DOW:
+		timet = time(NULL); tmp = gmtime(&timet);
+		odata = BCD(tmp->tm_wday + 0) << 24;
+		break;
+	case OBIO_CAL_DAY:
+		timet = time(NULL); tmp = gmtime(&timet);
+		odata = BCD(tmp->tm_mday) << 24;
+		break;
+	case OBIO_CAL_MON:
+		timet = time(NULL); tmp = gmtime(&timet);
+		odata = BCD(tmp->tm_mon + 1) << 24;
+		break;
+	case OBIO_CAL_YEAR:
+		timet = time(NULL); tmp = gmtime(&timet);
+		odata = BCD(tmp->tm_year - 1990) << 24;
 		break;
 
 	case OBIO_PIO0A:	/*  0x49000000: PIO-0 port A  */
@@ -250,10 +290,19 @@ DEVICE_ACCESS(luna88k)
 		cpunr = (addr - INT_ST_MASK0) / 4;
 		odata = d->interrupt_status[cpunr];
 		if (writeflag) {
-			if (idata != 0x00000000) {
-				fatal("[ TODO: luna88k interrupts ]\n");
+			if ((idata & 0x03ffffff) != 0x00000000) {
+				fatal("[ TODO: luna88k interrupts, idata = 0x%08x ]\n", (uint32_t)idata);
+				exit(1);
 			}
+
+			// It seems that the top 6 bits correspond to
+			// interrupt 7 through 2, in some odd manner.
+			// TODO.
 		}
+
+		// TODO.
+		odata = (random() & 0xfc) << 24;
+
 		break;
 
 	case SOFT_INT0:		/*  0x69000000: Software Interrupt status CPU 0.  */
@@ -291,13 +340,17 @@ DEVICE_ACCESS(luna88k)
 	case SCSI_ADDR + 0x04:	/*  0xe1000004: SCSI ..  */
 	case SCSI_ADDR + 0x08:	/*  0xe1000008: SCSI ..  */
 	case SCSI_ADDR + 0x0C:	/*  0xe100000C: SCSI ..  */
-	case SCSI_ADDR + 0x10:	/*  0xe1000010: SCSI INTS  */
 	case SCSI_ADDR + 0x20:	/*  0xe1000020: SCSI ..  */
 	case SCSI_ADDR + 0x2c:	/*  0xe100002c: SCSI ..  */
 	case SCSI_ADDR + 0x30:	/*  0xe1000030: SCSI ..  */
 	case SCSI_ADDR + 0x34:	/*  0xe1000034: SCSI ..  */
 	case SCSI_ADDR + 0x38:	/*  0xe1000038: SCSI ..  */
+		/*  MB89352 SCSI Protocol Controller  */
 		/*  Ignore for now. (?)  */
+		break;
+
+	case SCSI_ADDR + 0x10:	/*  0xe1000010: SCSI INTS  */
+		odata = 0xffffffff;
 		break;
 
 	case 0xf1000000:	/*  Lance Ethernet. TODO.  */
