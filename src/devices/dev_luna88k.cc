@@ -26,6 +26,10 @@
  *
  *
  *  COMMENT: OMRON Luna 88K-specific devices and control registers
+ *
+ *  Almost everything in here is just dummy code which returns nonsense,
+ *  just enough to fake hardware well enough to get OpenBSD/luna88k to
+ *  not stop early during bootup. It does not really work yet.
  */
 
 #include <stdio.h>
@@ -354,7 +358,8 @@ DEVICE_ACCESS(luna88k)
 		break;
 
 	case 0xf1000000:	/*  Lance Ethernet. TODO.  */
-	case 0xf1000004:	/*  Lance Ethernet. TODO.  */
+	case 0xf1000004:
+	case 0xf1000008:
 		break;
 
 	default:fatal("[ luna88k: unimplemented %s address 0x%x",
