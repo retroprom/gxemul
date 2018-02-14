@@ -349,6 +349,16 @@ DEVICE_ACCESS(luna88k)
 	case SCSI_ADDR + 0x30:	/*  0xe1000030: SCSI ..  */
 	case SCSI_ADDR + 0x34:	/*  0xe1000034: SCSI ..  */
 	case SCSI_ADDR + 0x38:	/*  0xe1000038: SCSI ..  */
+	case SCSI_ADDR + 0x40:	/*  0xe1000040: SCSI ..  */
+	case SCSI_ADDR + 0x44:	/*  0xe1000044: SCSI ..  */
+	case SCSI_ADDR + 0x48:	/*  0xe1000048: SCSI ..  */
+	case SCSI_ADDR + 0x4c:	/*  0xe100004c: SCSI ..  */
+	case SCSI_ADDR + 0x50:	/*  0xe1000050: SCSI ..  */
+	case SCSI_ADDR + 0x60:	/*  0xe1000060: SCSI ..  */
+	case SCSI_ADDR + 0x6c:	/*  0xe100006c: SCSI ..  */
+	case SCSI_ADDR + 0x70:	/*  0xe1000070: SCSI ..  */
+	case SCSI_ADDR + 0x74:	/*  0xe1000074: SCSI ..  */
+	case SCSI_ADDR + 0x78:	/*  0xe1000078: SCSI ..  */
 		/*  MB89352 SCSI Protocol Controller  */
 		/*  Ignore for now. (?)  */
 		break;
