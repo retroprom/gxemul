@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2018  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -783,15 +783,15 @@ void emul_run(struct emul *emul)
 
 	atexit(fix_console);
 
-	printf("\nNOTE: This is a LEGACY emulation mode.\n\n");
+	debug("\nNOTE: This is a LEGACY emulation mode.\n\n");
 
 	if (emul == NULL) {
-		printf("No emulation defined. Aborting.\n");
+		fatal("No emulation defined. Aborting.\n");
 		return;
 	}
 
 	if (emul->n_machines == 0) {
-		printf("No machine(s) defined. Aborting.\n");
+		fatal("No machine(s) defined. Aborting.\n");
 		return;
 	}
 

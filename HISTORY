@@ -4645,3 +4645,6 @@ Changelog for GXemul:
 		OpenBSD/luna88k 5.2 (an older version) now reaches userland
 		:-) issuing syscalls, but not 6.2 yet :-( and since no
 		interrupts are implemented yet, it doesn't really do much.
+		Removing notes about "legacy modes" in the documentation,
+		since it was too ugly and those modes are pretty much the
+		main focus of end-users of GXemul still.
