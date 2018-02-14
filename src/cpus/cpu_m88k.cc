@@ -981,6 +981,9 @@ int m88k_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
 	case 0x15:	/*  xor.u   */
 	case 0x16:	/*  or      */
 	case 0x17:	/*  or.u    */
+		if (d == M88K_ZERO_REG)
+			debug("nop");
+
 		switch (op26) {
 		case 0x10:
 		case 0x11:	mnem = "and"; break;
@@ -991,8 +994,13 @@ int m88k_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
 		case 0x16:
 		case 0x17:	mnem = "or"; break;
 		}
-		debug("%s%s\t", mnem, op26 & 1? ".u" : "");
-		debug("r%i,r%i,0x%x", d, s1, imm16);
+
+		if (d != M88K_ZERO_REG || op26 != 0x16 || s1 != M88K_ZERO_REG) {
+			if (d == M88K_ZERO_REG)
+				debug("\t\t; weird nop encoding: ");
+			debug("%s%s\t", mnem, op26 & 1? ".u" : "");
+			debug("r%i,r%i,0x%x", d, s1, imm16);
+		}
 
 		if (op26 == 0x16 && d != M88K_ZERO_REG) {
 			/*
@@ -1394,7 +1402,17 @@ int m88k_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
 			case 0xa0: mnem = "mak"; break;
 			case 0xa8: mnem = "rot"; break;
 			}
-			debug("%s\tr%i,r%i,r%i\n", mnem, d, s1, s2);
+
+			if (((iw >> 8) & 0xff) == 0x58 && d == M88K_ZERO_REG)
+				debug("nop");
+
+			if (((iw >> 8) & 0xff) != 0x58 || d != M88K_ZERO_REG) {
+				if (d == M88K_ZERO_REG)
+					debug("\t\t; weird nop encoding: ");
+				debug("%s\tr%i,r%i,r%i", mnem, d, s1, s2);
+			}
+
+			debug("\n");
 			break;
 		case 0xc0:	/*  jmp  */
 		case 0xc4:	/*  jmp.n  */

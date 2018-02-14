@@ -4641,3 +4641,4 @@ Changelog for GXemul:
 20180209	Making OpenBSD/luna88k print some more things, by faking
 		more things in dev_luna88k.cc.
 20180214	Minor fixes for LUNA 88K.
+		88K disasm shows "nop" instead of "or r0,r0,r0" now.
