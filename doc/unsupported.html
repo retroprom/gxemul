@@ -497,7 +497,9 @@ happened on real hardware.
 <a name="openbsdluna88k"></a>
 <h3>OpenBSD/luna88k:</h3>
 
-Not really working yet. These instructions are here mostly for me to remember how to debug/proceed:
+<p><font color="#ff0000">IT DOES <b>NOT</b> WORK YET!</font>
+
+<p>These instructions are here mostly for me to remember how to debug/proceed:
 
 <p>
 Download 
@@ -507,11 +509,15 @@ or
 
 <p>Then:
 <pre>
-gxemul -e luna-88k bsd.rd
+	<b>gxemul -e luna-88k bsd.rd</b>
 </pre>
 
 <p>The 5.9 kernel gets slightly further, running some userland code and syscalls, as can be seen if -v is used.
 From 6.0 and newer, bugs in GXemul are triggered, it seems.
+
+<p><tt>-X</tt> can be used to boot with a graphical framebuffer instead of serial
+console, but it is not working yet.
+
 
 
 
