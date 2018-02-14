@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2018  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -1053,17 +1053,19 @@ int m88k_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
 
 	case 0x20:
 		if ((iw & 0x001ff81f) == 0x00004000) {
-			debug("ldcr\tr%i,%s\n", d,
-			    m88k_cr_name(cpu, cr6));
+			debug("ldcr\tr%i,%s", d, m88k_cr_name(cpu, cr6));
+			if (running)
+				debug("\t\t; %s = 0x%08x", m88k_cr_name(cpu, cr6), cpu->cd.m88k.cr[cr6]);
+			debug("\n");
 		} else if ((iw & 0x001ff81f) == 0x00004800) {
-			debug("fldcr\tr%i,%s\n", d,
-			    m88k_fcr_name(cpu, cr6));
+			debug("fldcr\tr%i,%s\n", d, m88k_fcr_name(cpu, cr6));
 		} else if ((iw & 0x03e0f800) == 0x00008000) {
-			debug("stcr\tr%i,%s", s1,
-			    m88k_cr_name(cpu, cr6));
+			debug("stcr\tr%i,%s", s1, m88k_cr_name(cpu, cr6));
 			if (s1 != s2)
 				debug("\t\t; NOTE: weird encoding: "
 				    "low 5 bits = 0x%02x", s2);
+			if (running)
+				debug("\t\t; r%i = 0x%08x", s1, cpu->cd.m88k.r[s1]);
 			debug("\n");
 		} else if ((iw & 0x03e0f800) == 0x00008800) {
 			debug("fstcr\tr%i,%s", s1,
