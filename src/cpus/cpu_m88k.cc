@@ -677,7 +677,8 @@ void m88k_exception(struct cpu *cpu, int vector, int is_trap)
 		debug("SFU1_PRECISE"); break;
 	case M88K_EXCEPTION_SFU1_IMPRECISE:
 		debug("SFU1_IMPRECISE"); break;
-	case 0x80:
+	case 0x80:	/*  up to OpenBSD 5.2  */
+	case 0x1c2:	/*  from OpenBSD 5.3 and forward...  */
 #if 0
 		fatal("[ syscall %i(", cpu->cd.m88k.r[13]);
 		m88k_cpu_functioncall_trace(cpu, 8);

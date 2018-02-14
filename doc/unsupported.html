@@ -501,25 +501,17 @@ Not really working yet. These instructions are here mostly for me to remember ho
 
 <p>
 Download 
+<a href="https://ftp.eu.openbsd.org/pub/OpenBSD/5.9/luna88k/bsd.rd">https://ftp.eu.openbsd.org/pub/OpenBSD/5.9/luna88k/bsd.rd</a>
+or
 <a href="https://ftp.eu.openbsd.org/pub/OpenBSD/6.2/luna88k/bsd.rd">https://ftp.eu.openbsd.org/pub/OpenBSD/6.2/luna88k/bsd.rd</a>
 
 <p>Then:
 <pre>
-gxemul -e luna-88k2 -tv bsd.rd
+gxemul -e luna-88k bsd.rd
 </pre>
 
-<p>It doesn't work yet. Failure when it is about to copy things to userland for starting /sbin/init.
-
-<p>An older kernel to test with as well:
-
-<a href="https://ftp.eu.openbsd.org/pub/OpenBSD/5.2/luna88k/bsd.rd">https://ftp.eu.openbsd.org/pub/OpenBSD/5.2/luna88k/bsd.rd</a>
-
-<p>In this case:
-<pre>
-gxemul -e luna-88k 0x20000:0x20:bsd.rd
-</pre>
-
-<p>gets slightly further, running some userland code and syscalls, as can be seen if -v is used.
+<p>The 5.9 kernel gets slightly further, running some userland code and syscalls, as can be seen if -v is used.
+From 6.0 and newer, bugs in GXemul are triggered, it seems.
 
 
 
