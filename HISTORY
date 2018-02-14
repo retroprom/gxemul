@@ -4640,3 +4640,4 @@ Changelog for GXemul:
 		Updating NetBSD/pmax install instructions: 6.1.4 -> 7.1.1.
 20180209	Making OpenBSD/luna88k print some more things, by faking
 		more things in dev_luna88k.cc.
+20180214	Minor fixes for LUNA 88K.

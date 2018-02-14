@@ -30,6 +30,9 @@
  *  Almost everything in here is just dummy code which returns nonsense,
  *  just enough to fake hardware well enough to get OpenBSD/luna88k to
  *  not stop early during bootup. It does not really work yet.
+ *
+ *  TODO: Separate out these devices to their own files, so that they can
+ *  potentially be reused for a luna68k mode if necessary.
  */
 
 #include <stdio.h>
@@ -45,8 +48,10 @@
 #include "memory.h"
 #include "misc.h"
 
+#include "thirdparty/hitachi_hm53462_rop.h"
 #include "thirdparty/luna88k_board.h"
 #include "thirdparty/m8820x.h"
+
 
 #define	LUNA88K_REGISTERS_BASE		0x3ffffff0UL
 #define	LUNA88K_REGISTERS_END		0xff000000UL
@@ -126,12 +131,12 @@ DEVICE_ACCESS(luna88k)
 		return 1;
 	}
 
-	if (addr >= NVRAM_ADDR && addr < NVRAM_ADDR + NVRAM_SPACE && len == sizeof(uint8_t)) {
+	if (addr >= NVRAM_ADDR && addr + len <= NVRAM_ADDR + NVRAM_SPACE) {
+		size_t offset = addr - NVRAM_ADDR;
 		if (writeflag == MEM_READ) {
-			odata = d->nvram[addr - NVRAM_ADDR];
-			memory_writemax64(cpu, data, len, odata);
+			memmove(data, d->nvram + offset, len);
 		} else {
-			d->nvram[addr - NVRAM_ADDR] = idata;
+			memmove(d->nvram + offset, data, len);
 		}
 		return 1;
 	}
@@ -325,6 +330,10 @@ DEVICE_ACCESS(luna88k)
 		}
 		break;
 
+	case RESET_CPU_ALL:	/*  0x6d000010: Reset all CPUs  */
+		cpu->running = 0;
+		break;
+
 	case BMAP_RFCNT:	/*  0xb1000000: RFCNT register  */
 	case BMAP_BMSEL:	/*  0xb1000000: BMSEL register  */
 		/*  Ignore for now. (?)  */
@@ -336,8 +345,19 @@ DEVICE_ACCESS(luna88k)
 		    of bitplanes.  */
 		break;
 
-	case BMAP_FN + 0x14:	/*  0xb12c0014: "common bitmap function"  */
+	case BMAP_FN + 4 * ROP_THROUGH:	/*  0xb12c0014: "common bitmap function"  */
 		/*  Function 5 is "ROP copy", according to OpenBSD sources.  */
+		/*  See hitachi_hm53462_rop.h  */
+		if (writeflag == MEM_READ) {
+			fatal("[ TODO: luna88k READ from BMAP_FN ROP register? ]\n");
+			cpu->running = 0;
+			return 0;
+		}
+		if (idata != 0xffffffff) {
+			fatal("[ TODO: luna88k write which does not set ALL bits? ]\n");
+			cpu->running = 0;
+			return 0;
+		}
 		break;
 
 	case SCSI_ADDR + 0x00:	/*  0xe1000000: SCSI ..  */
