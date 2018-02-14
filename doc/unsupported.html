@@ -497,8 +497,7 @@ happened on real hardware.
 <a name="openbsdluna88k"></a>
 <h3>OpenBSD/luna88k:</h3>
 
-Not implemented yet. These instructions are here mostly for me to remember
-how to debug/proceed:
+Not really working yet. These instructions are here mostly for me to remember how to debug/proceed:
 
 <p>
 Download 
@@ -509,7 +508,18 @@ Download
 gxemul -e luna-88k2 -tv bsd.rd
 </pre>
 
-<p>It doesn't work yet.
+<p>It doesn't work yet. Failure when it is about to copy things to userland for starting /sbin/init.
+
+<p>An older kernel to test with as well:
+
+<a href="https://ftp.eu.openbsd.org/pub/OpenBSD/5.2/luna88k/bsd.rd">https://ftp.eu.openbsd.org/pub/OpenBSD/5.2/luna88k/bsd.rd</a>
+
+<p>In this case:
+<pre>
+gxemul -e luna-88k 0x20000:0x20:bsd.rd
+</pre>
+
+<p>gets slightly further, running some userland code and syscalls, as can be seen if -v is used.
 
 
 

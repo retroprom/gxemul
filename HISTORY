@@ -4642,3 +4642,6 @@ Changelog for GXemul:
 		more things in dev_luna88k.cc.
 20180214	Minor fixes for LUNA 88K.
 		88K disasm shows "nop" instead of "or r0,r0,r0" now.
+		OpenBSD/luna88k 5.2 (an older version) now reaches userland
+		:-) issuing syscalls, but not 6.2 yet :-( and since no
+		interrupts are implemented yet, it doesn't really do much.
