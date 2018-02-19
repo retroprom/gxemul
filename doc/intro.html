@@ -134,7 +134,8 @@ been rewritten to use this new framework; almost all emulation modes use the old
 (legacy) framework, which was developed in a more ad-hoc manner. The long-term
 goal is to rewrite everything to use the new framework.
 
-<p>(The documentation still largely refers to how things worked in the old framework.)
+<p>The documentation still largely refers to how things worked in the <i>old</i>
+framework.
 
 <p>The new framework is described <a href="framework.html">here</a>.
 
@@ -300,20 +301,9 @@ operating systems, as long as there is a modern C++ compiler available.
 
 <p>In practice, the ability to reach this goal is limited by the amount of
 spare time available for development.
-Most of the development is done on FreeBSD/amd64 using GNU C++ (various
-versions), but every now and then the code is built on FreeBSD/alpha, Linux,
-and also in NetBSD and OpenBSD inside GXemul itself.
-
-<p>Hopefully there are no GNU-specific parts in the source code. Still,
-the GNU C++ compiler is still the compiler most likely to be useful for
-building GXemul. There is a page on the GXemul homepage,
-<a href="http://gxemul.sourceforge.net/build.html">http://gxemul.sourceforge.net/build.html</a>,
-which lists various platforms, compilers, and which versions of GXemul that
-was built on those platforms.
-
-<p>If it does not build or run on your architecture/platform or with your
-compiler, then it can be considered a bug. Please report it to the development
-mailing list.
+Most of the development is done on FreeBSD/amd64 using clang and/or GNU C++,
+but every now and then the code is built on Linux,
+or NetBSD/OpenBSD inside GXemul itself.
 
 <p>Note 1: The <a href="translation.html">dynamic translation</a> engine 
 does <i>not</i> require backends for native code generation to be written 

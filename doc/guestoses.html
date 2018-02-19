@@ -1894,8 +1894,6 @@ from within the guest OS.
 
 
 
-
-
 <p><br>
 <a name="helenos"></a>
 <h3>HelenOS:</h3>
@@ -1906,31 +1904,22 @@ from within the guest OS.
 <p>To run HelenOS for ARM in GXemul:
 <ol>
   <li>Download the HelenOS kernel:<pre>
-	<a href="http://www.helenos.org/releases/HelenOS-0.4.0-arm32-gxemul.boot">http://www.helenos.org/releases/HelenOS-0.4.0-arm32-gxemul.boot</a>
+	<a href="http://www.helenos.org/releases/HelenOS-0.5.0-arm32-gxemul.boot">http://www.helenos.org/releases/HelenOS-0.5.0-arm32-gxemul.boot</a>
   </pre>
   <li>Start GXemul using the following command line:<pre>
-  	<b>gxemul -X -E testarm HelenOS-0.4.0-arm32-gxemul.boot</b>
+  	<b>gxemul -X -E testarm HelenOS-0.5.0-arm32-gxemul.boot</b>
   </pre>
 </ol>
 
 <p>To run HelenOS for MIPS in GXemul:
 <ol>
   <li>Download the HelenOS kernel:<pre>
-	<a href="http://www.helenos.org/releases/HelenOS-0.4.0-mips32-gxemul.boot">http://www.helenos.org/releases/HelenOS-0.4.0-mips32-gxemul.boot</a>
+	<a href="http://www.helenos.org/releases/HelenOS-0.5.0-mips32-gxemul.boot">http://www.helenos.org/releases/HelenOS-0.5.0-mips32-gxemul.boot</a>
   </pre>
   <li>Start GXemul using the following command line:<pre>
-  	<b>gxemul -X -E oldtestmips -C 5Kc HelenOS-0.4.0-mips32-gxemul.boot</b>
+  	<b>gxemul -X -E oldtestmips HelenOS-0.5.0-mips32-gxemul.boot</b>
   </pre>
-	(Note the <tt>-C 5Kc</tt> option. HelenOS depends on the fact that
-	the MIPS rdhwr instruction should trigger an 'invalid opcode'
-	exception, and the default oldtestmips CPU (5KE) does not treat this
-	as an invalid opcode. It is valid, but not yet implemented.)
 </ol>
-
-<p>Once the kernel has booted, you can press e.g. F3 to get to the
-command line shell, or F12 + Enter to enter the kernel console.
-
-
 
 
 

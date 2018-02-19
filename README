@@ -1,7 +1,7 @@
 
-          --------------------------------------------------------
-            Gavare's eXperimental Emulator   --   GXemul 0.6.0.2
-          --------------------------------------------------------
+           ------------------------------------------------------
+             Gavare's eXperimental Emulator   --   GXemul 0.6.1
+           ------------------------------------------------------
 
 
 Copyright (C) 2003-2018  Anders Gavare
@@ -57,8 +57,8 @@ Use your imagination :-)
 
 
 
-Note regarding the new 0.6 framework
-------------------------------------
+Note regarding the new 0.6.x framework
+--------------------------------------
 
 Only very few emulation modes have been rewritten to use the 0.6 (C++)
 framework; the bulk of GXemul is still made up of legacy emulation modes,
