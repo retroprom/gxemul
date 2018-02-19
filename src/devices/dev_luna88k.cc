@@ -52,6 +52,8 @@
 #include "thirdparty/luna88k_board.h"
 #include "thirdparty/m8820x.h"
 
+#define	TICK_STEPS_SHIFT	14
+
 
 #define	LUNA88K_REGISTERS_BASE		0x3ffffff0UL
 #define	LUNA88K_REGISTERS_END		0xff000000UL
@@ -66,8 +68,13 @@
 struct luna88k_data {
 	struct vfb_data *fb;
 
+	struct interrupt cpu_irq;
+	uint32_t	interrupt_enable[MAX_CPUS];
 	uint32_t	interrupt_status[MAX_CPUS];
+
 	uint32_t	software_interrupt_status[MAX_CPUS];
+
+	struct interrupt timer_irq;
 
 	/*  Two channels.  */
 	int		obio_sio_regno[2];
@@ -76,6 +83,39 @@ struct luna88k_data {
 	uint32_t	fuse_rom[FUSE_ROM_SPACE / sizeof(uint32_t)];
 	uint8_t		nvram[NVRAM_SPACE];
 };
+
+
+static void reassert_interrupts(struct luna88k_data *d)
+{
+	// printf("status = 0x%08x, enable = 0x%08x\n",
+	//	d->interrupt_status[0], d->interrupt_enable[0]);
+
+        if (d->interrupt_status[0] & d->interrupt_enable[0])
+                INTERRUPT_ASSERT(d->cpu_irq);
+	else
+                INTERRUPT_DEASSERT(d->cpu_irq);
+}
+
+static void luna88k_interrupt_assert(struct interrupt *interrupt)
+{
+        struct luna88k_data *d = (struct luna88k_data *) interrupt->extra;
+	d->interrupt_status[0] |= (1 << (interrupt->line + 25));
+	reassert_interrupts(d);
+}
+
+static void luna88k_interrupt_deassert(struct interrupt *interrupt)
+{
+        struct luna88k_data *d = (struct luna88k_data *) interrupt->extra;
+	d->interrupt_status[0] &= ~(1 << (interrupt->line + 25));
+	reassert_interrupts(d);
+}
+
+
+DEVICE_TICK(luna88k)
+{
+	struct luna88k_data *d = (struct luna88k_data *) extra;
+	INTERRUPT_ASSERT(d->timer_irq);
+}
 
 
 static void swapBitOrder(uint8_t* data, int len)
@@ -292,25 +332,43 @@ DEVICE_ACCESS(luna88k)
 
 		break;
 
+	case OBIO_CLOCK0:	/*  0x63000000: Clock ack?  */
+		INTERRUPT_DEASSERT(d->timer_irq);
+		break;
+
 	case INT_ST_MASK0:	/*  0x65000000: Interrupt status CPU 0.  */
 	case INT_ST_MASK1:	/*  0x65000004: Interrupt status CPU 1.  */
 	case INT_ST_MASK2:	/*  0x65000008: Interrupt status CPU 2.  */
 	case INT_ST_MASK3:	/*  0x6500000c: Interrupt status CPU 3.  */
+		/*
+		 *  From OpenBSD/luna88k machdep.c source code:
+		 *
+		 *  On write: Bits 31..26 are used to enable/disable levels 6..1.
+		 *  On read: Bits 31..29 show value 0-7 of current interrupt.
+		 *           Bits 23..18 show current mask.
+		 */
 		cpunr = (addr - INT_ST_MASK0) / 4;
-		odata = d->interrupt_status[cpunr];
-		if (writeflag) {
+		if (writeflag == MEM_WRITE) {
 			if ((idata & 0x03ffffff) != 0x00000000) {
-				fatal("[ TODO: luna88k interrupts, idata = 0x%08x ]\n", (uint32_t)idata);
+				fatal("[ TODO: luna88k interrupts, idata = 0x%08x, what to do with low bits? ]\n", (uint32_t)idata);
 				exit(1);
 			}
 
-			// It seems that the top 6 bits correspond to
-			// interrupt 7 through 2, in some odd manner.
-			// TODO.
-		}
+			d->interrupt_enable[cpunr] = idata;
+		} else {
+			uint32_t currentMask = d->interrupt_enable[cpunr];
+			int highestCurrentStatus = 0;
+			odata = currentMask >> 8;
+			
+			for (int i = 1; i <= 6; ++i) {
+				int m = 1 << (25 + i);
+				if (d->interrupt_status[cpunr] & m)
+					highestCurrentStatus = i;
+			}
 
-		// TODO.
-		odata = (random() & 0xfc) << 24;
+			odata |= (highestCurrentStatus << 29);
+			// printf("highest = %i 0x%08x\n", highestCurrentStatus, (int)odata);
+		}
 
 		break;
 
@@ -443,6 +501,7 @@ void add_cmmu_for_cpu(struct devinit* devinit, int cpunr, uint32_t iaddr, uint32
 
 DEVINIT(luna88k)
 {
+	char n[100];
 	struct luna88k_data *d;
 
 	CHECK_ALLOCATION(d = (struct luna88k_data *) malloc(sizeof(struct luna88k_data)));
@@ -452,6 +511,33 @@ DEVINIT(luna88k)
 	memory_device_register(devinit->machine->memory, devinit->name,
 	    LUNA88K_REGISTERS_BASE, LUNA88K_REGISTERS_LENGTH, dev_luna88k_access, (void *)d,
 	    DM_DEFAULT, NULL);
+
+	/*
+	 *  Connect to the CPU's interrupt pin, and register
+	 *  6 hardware interrupts:
+	 */
+	INTERRUPT_CONNECT(devinit->interrupt_path, d->cpu_irq);
+        for (int i = 1; i <= 6; i++) {
+                struct interrupt templ;
+                snprintf(n, sizeof(n), "%s.luna88k.%i", devinit->interrupt_path, i);
+
+                memset(&templ, 0, sizeof(templ));
+                templ.line = i;
+                templ.name = n;
+                templ.extra = d;
+                templ.interrupt_assert = luna88k_interrupt_assert;
+                templ.interrupt_deassert = luna88k_interrupt_deassert;
+
+		// debug("registering irq: %s\n", n);
+
+                interrupt_handler_register(&templ);
+        }
+
+	/*  Timer.  */
+	snprintf(n, sizeof(n), "%s.luna88k.6", devinit->interrupt_path);
+	INTERRUPT_CONNECT(n, d->timer_irq);
+	machine_add_tickfunction(devinit->machine,
+	    dev_luna88k_tick, d, TICK_STEPS_SHIFT);
 
 	if (devinit->machine->x11_md.in_use)
 	{

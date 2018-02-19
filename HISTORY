@@ -4648,3 +4648,4 @@ Changelog for GXemul:
 		Removing notes about "legacy modes" in the documentation,
 		since it was too ugly and those modes are pretty much the
 		main focus of end-users of GXemul still.
+20180219	Basic interrupt controller and timer interrupt for LUNA88K.
