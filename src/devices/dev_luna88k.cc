@@ -48,6 +48,7 @@
 #include "memory.h"
 #include "misc.h"
 
+#include "thirdparty/sccreg.h"	// similar to sio?
 #include "thirdparty/hitachi_hm53462_rop.h"
 #include "thirdparty/luna88k_board.h"
 #include "thirdparty/m8820x.h"
@@ -75,10 +76,12 @@ struct luna88k_data {
 	uint32_t	software_interrupt_status[MAX_CPUS];
 
 	struct interrupt timer_irq;
+	struct interrupt irq3;
 
 	/*  Two channels.  */
 	int		obio_sio_regno[2];
-	uint8_t		obio_sio_reg[2][256];
+	uint8_t		obio_sio_rr[2][8];
+	uint8_t		obio_sio_wr[2][8];
 
 	uint32_t	fuse_rom[FUSE_ROM_SPACE / sizeof(uint32_t)];
 	uint8_t		nvram[NVRAM_SPACE];
@@ -114,7 +117,16 @@ static void luna88k_interrupt_deassert(struct interrupt *interrupt)
 DEVICE_TICK(luna88k)
 {
 	struct luna88k_data *d = (struct luna88k_data *) extra;
+
 	INTERRUPT_ASSERT(d->timer_irq);
+
+/*	if (
+		(d->obio_sio_wr[0][SCC_WR1] & SCC_WR1_TX_IE ||
+		    d->obio_sio_wr[1][SCC_WR1] & SCC_WR1_TX_IE))
+		INTERRUPT_ASSERT(d->irq3);
+	else
+		INTERRUPT_DEASSERT(d->irq3);
+*/
 }
 
 
@@ -263,11 +275,11 @@ DEVICE_ACCESS(luna88k)
 		break;
 	case OBIO_CAL_MON:
 		timet = time(NULL); tmp = gmtime(&timet);
-		odata = BCD(tmp->tm_mon + 1) << 24;
+		odata = BCD(tmp->tm_mon + 0) << 24;
 		break;
 	case OBIO_CAL_YEAR:
 		timet = time(NULL); tmp = gmtime(&timet);
-		odata = BCD(tmp->tm_year - 1990) << 24;
+		odata = BCD(tmp->tm_year - 2000) << 24;  // ?
 		break;
 
 	case OBIO_PIO0A:	/*  0x49000000: PIO-0 port A  */
@@ -299,23 +311,38 @@ DEVICE_ACCESS(luna88k)
 	case OBIO_SIO + 4:	/*  0x51000004: cmd channel 0 */
 	case OBIO_SIO + 8:	/*  0x51000008: data channel 1 */
 	case OBIO_SIO + 0xc:	/*  0x5100000c: cmd channel 1 */
-		sio_devnr = (addr - OBIO_SIO) / 8;
+		sio_devnr = ((addr - OBIO_SIO) / 8) & 1;
 
 		if ((addr - OBIO_SIO) & 4) {
 			/*  cmd  */
 
-			/*  TODO: Slightly similar to dev_scc.cc ?  */
+			/*  Similar to dev_scc.cc ?  */
 			if (writeflag == MEM_WRITE) {
 				if (d->obio_sio_regno[sio_devnr] == 0) {
-					d->obio_sio_regno[sio_devnr] = idata;
+					int regnr = idata & 7;
+
+					d->obio_sio_regno[sio_devnr] = regnr;
+
+					// printf("[ sio: setting regno for next operation to 0x%02x ]\n", (int)regnr);
+
+					/*  High bits are command.  */
 				} else {
-					d->obio_sio_reg[sio_devnr][d->obio_sio_regno[sio_devnr] & 255] = idata;
+					d->obio_sio_wr[sio_devnr][d->obio_sio_regno[sio_devnr] & 255] = idata;
+
+					// printf("[ sio: setting reg 0x%02x = 0x%02x ]\n", d->obio_sio_regno[sio_devnr], (int)idata);
+
 					d->obio_sio_regno[sio_devnr] = 0;
 				}
 			} else {
-				d->obio_sio_reg[sio_devnr][0] = 0x04;
-				d->obio_sio_reg[sio_devnr][1] = 0x2c;
-				odata = d->obio_sio_reg[sio_devnr][d->obio_sio_regno[sio_devnr] & 255];
+				int regnr = d->obio_sio_regno[sio_devnr] & 7;
+
+				d->obio_sio_rr[sio_devnr][SCC_RR0] = 0x04;
+				d->obio_sio_rr[sio_devnr][SCC_RR1] = 0x2c;
+
+				odata = d->obio_sio_rr[sio_devnr][regnr];
+
+				// printf("[ sio: reading reg 0x%02x: 0x%02x ]\n", regnr, (int)odata);
+
 				d->obio_sio_regno[sio_devnr] = 0;
 			}
 		} else {
@@ -355,6 +382,7 @@ DEVICE_ACCESS(luna88k)
 			}
 
 			d->interrupt_enable[cpunr] = idata;
+			reassert_interrupts(d);
 		} else {
 			uint32_t currentMask = d->interrupt_enable[cpunr];
 			int highestCurrentStatus = 0;
@@ -538,6 +566,10 @@ DEVINIT(luna88k)
 	INTERRUPT_CONNECT(n, d->timer_irq);
 	machine_add_tickfunction(devinit->machine,
 	    dev_luna88k_tick, d, TICK_STEPS_SHIFT);
+
+	/*  IRQ 5,4,3 (?): "autovec" according to OpenBSD  */
+	snprintf(n, sizeof(n), "%s.luna88k.3", devinit->interrupt_path);
+	INTERRUPT_CONNECT(n, d->irq3);
 
 	if (devinit->machine->x11_md.in_use)
 	{
