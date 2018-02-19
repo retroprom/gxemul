@@ -499,12 +499,9 @@ happened on real hardware.
 <p>These instructions are here mostly for me to remember how to debug/proceed:
 
 <p>
-Download 
-<a href="https://ftp.eu.openbsd.org/pub/OpenBSD/5.9/luna88k/bsd.rd">https://ftp.eu.openbsd.org/pub/OpenBSD/5.9/luna88k/bsd.rd</a>
+Download a RAMDISK kernel (<a href="https://ftp.eu.openbsd.org/pub/OpenBSD/5.9/luna88k/bsd.rd">https://ftp.eu.openbsd.org/pub/OpenBSD/5.9/luna88k/bsd.rd</a>
 or
-<a href="https://ftp.eu.openbsd.org/pub/OpenBSD/6.2/luna88k/bsd.rd">https://ftp.eu.openbsd.org/pub/OpenBSD/6.2/luna88k/bsd.rd</a>
-
-<p>Then:
+<a href="https://ftp.eu.openbsd.org/pub/OpenBSD/6.2/luna88k/bsd.rd">https://ftp.eu.openbsd.org/pub/OpenBSD/6.2/luna88k/bsd.rd</a>), and then run:
 <pre>
 	<b>gxemul -e luna-88k bsd.rd</b>
 </pre>
@@ -515,6 +512,13 @@ From 6.0 and newer, bugs in GXemul are triggered, it seems.
 <p><tt>-X</tt> can be used to boot with a graphical framebuffer instead of serial
 console, but it is not working yet.
 
+<p>The following is not needed in order to experiment with booting OpenBSD,
+but can be interesting nonetheless: Download 
+<a href="https://ftp.eu.openbsd.org/pub/OpenBSD/6.2/luna88k/boot">https://ftp.eu.openbsd.org/pub/OpenBSD/6.2/luna88k/boot</a> and try
+
+<pre>
+	<b>gxemul -v -e luna-88k 0x00700000:0x20:0x00700000:boot</b>
+</pre>
 
 
 
