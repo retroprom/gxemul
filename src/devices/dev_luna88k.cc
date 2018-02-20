@@ -75,8 +75,10 @@ struct luna88k_data {
 
 	uint32_t	software_interrupt_status[MAX_CPUS];
 
+	int		timer_tick_counter_bogus;
 	struct interrupt timer_irq;
-	struct interrupt irq3;
+
+	struct interrupt irqX;
 
 	/*  Two channels.  */
 	int		obio_sio_regno[2];
@@ -118,14 +120,19 @@ DEVICE_TICK(luna88k)
 {
 	struct luna88k_data *d = (struct luna88k_data *) extra;
 
-	INTERRUPT_ASSERT(d->timer_irq);
+	/*  TODO: Correct timing.  */
+	if (d->timer_tick_counter_bogus < 3) {
+		if (++d->timer_tick_counter_bogus >= 3)
+			INTERRUPT_ASSERT(d->timer_irq);
+	}
 
-/*	if (
-		(d->obio_sio_wr[0][SCC_WR1] & SCC_WR1_TX_IE ||
+/* TODO: Interrupts for serial, etc.
+
+	if ((d->obio_sio_wr[0][SCC_WR1] & SCC_WR1_TX_IE ||
 		    d->obio_sio_wr[1][SCC_WR1] & SCC_WR1_TX_IE))
-		INTERRUPT_ASSERT(d->irq3);
+		INTERRUPT_ASSERT(d->irqX);
 	else
-		INTERRUPT_DEASSERT(d->irq3);
+		INTERRUPT_DEASSERT(d->irqX);
 */
 }
 
@@ -204,9 +211,9 @@ DEVICE_ACCESS(luna88k)
 	}
 
 	if (addr >= BMAP_BMP && addr < BMAP_BMP + 0x40000) {
-		size_t s = 1280 * 1024 / 8;
-		addr -= (uint64_t)(uint32_t)BMAP_BMP;
-
+		// X resolution is 1280, but stride is 2048.
+		uint32_t s = 2048 * 1024 / 8;
+		addr -= (uint64_t)(uint32_t)(BMAP_BMP);
 		swapBitOrder(data, len);
 		if (addr + len - 1 < s) {
 			dev_fb_access(cpu, cpu->mem, addr, data, len, writeflag, d->fb);
@@ -218,8 +225,9 @@ DEVICE_ACCESS(luna88k)
 	}
 
 	if (addr >= BMAP_BMAP0 && addr < BMAP_BMAP0 + 0x40000) {
-		size_t s = 1280 * 1024 / 8;
-		addr -= (uint64_t)(uint32_t)BMAP_BMAP0;
+		// X resolution is 1280, but stride is 2048.
+		uint32_t s = 2048 * 1024 / 8;
+		addr -= (uint64_t)(uint32_t)(BMAP_BMAP0);
 		swapBitOrder(data, len);
 		if (addr + len - 1 < s) {
 			dev_fb_access(cpu, cpu->mem, addr, data, len, writeflag, d->fb);
@@ -275,7 +283,7 @@ DEVICE_ACCESS(luna88k)
 		break;
 	case OBIO_CAL_MON:
 		timet = time(NULL); tmp = gmtime(&timet);
-		odata = BCD(tmp->tm_mon + 0) << 24;
+		odata = BCD(tmp->tm_mon + 1) << 24;
 		break;
 	case OBIO_CAL_YEAR:
 		timet = time(NULL); tmp = gmtime(&timet);
@@ -360,6 +368,7 @@ DEVICE_ACCESS(luna88k)
 		break;
 
 	case OBIO_CLOCK0:	/*  0x63000000: Clock ack?  */
+		d->timer_tick_counter_bogus = 0;
 		INTERRUPT_DEASSERT(d->timer_irq);
 		break;
 
@@ -568,8 +577,8 @@ DEVINIT(luna88k)
 	    dev_luna88k_tick, d, TICK_STEPS_SHIFT);
 
 	/*  IRQ 5,4,3 (?): "autovec" according to OpenBSD  */
-	snprintf(n, sizeof(n), "%s.luna88k.3", devinit->interrupt_path);
-	INTERRUPT_CONNECT(n, d->irq3);
+	snprintf(n, sizeof(n), "%s.luna88k.5", devinit->interrupt_path);
+	INTERRUPT_CONNECT(n, d->irqX);
 
 	if (devinit->machine->x11_md.in_use)
 	{

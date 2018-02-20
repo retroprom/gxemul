@@ -57,6 +57,9 @@ void luna88kprom_init(struct machine *machine)
          *      0x00000 - 0x00fff = trap vectors
          *      0x01000 - 0x1ffff = ROM monitor work area
          *      0x20000 - ...     = Boot loader jumps here
+	 *
+	 *  The boot loader stage before loading OpenBSD's kernel seems
+	 *  to be loaded at 0x00700000.
          */
  
         /*  0x00001100: ROM function table. See OpenBSD's machdep.c  */

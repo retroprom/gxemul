@@ -4649,3 +4649,4 @@ Changelog for GXemul:
 		since it was too ugly and those modes are pretty much the
 		main focus of end-users of GXemul still.
 20180219	Basic interrupt controller and timer interrupt for LUNA88K.
+20180220	Minor progress on the LUNA88K framebuffer.
