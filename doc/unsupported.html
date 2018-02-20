@@ -510,7 +510,42 @@ or
 From 6.0 and newer, bugs in GXemul are triggered, it seems.
 
 <p><tt>-X</tt> can be used to boot with a graphical framebuffer instead of serial
-console, but it is not working yet.
+console, but it is not working yet. Using a breakpoint
+<tt>-p om1_windowmove</tt> in both OpenBSD 5.9 and 6.2 indicates that 
+5.9 must have been optimized too heavily; it loops when trying to copy
+pixels to scroll up the text, but the loop contains "nothing":
+
+<pre>
+s001553b8: 64e70001	subu	r7,r7,1
+s001553bc: 61270001	addu	r9,r7,1
+s001553c0: ec4c0004	bcnd.n	eq0,r12,0x001553d0	; &lt;om1_windowmove+0x3b0>
+s001553c4: 59600000 (d)	or	r11,r0,0x0
+s001553c8: f1a08832	set	r13,r0,1&lt;18>
+s001553cc: f562600d	addu	r11,r2,r13
+s001553d0: 60420004	addu	r2,r2,4
+s001553d4: eda9fff9	bcnd.n	ne0,r9,0x001553b8	; &lt;om1_windowmove+0x398>
+s001553d8: 616b0004 (d)	addu	r11,r11,4
+s001553b8: 64e70001	subu	r7,r7,1
+...
+</pre>
+
+compared to what it looks like in 6.2:
+
+<pre>
+s001547a4: 64e70001	subu	r7,r7,1
+s001547a8: 61270001	addu	r9,r7,1
+s001547ac: 60420004	addu	r2,r2,4
+s001547b0: eda9fffa	bcnd.n	ne0,r9,0x00154798	; &lt;om1_windowmove+0x398>
+s001547b4: 616b0004 (d)	addu	r11,r11,4
+s00154798: edac003e	bcnd.n	ne0,r12,0x00154890	; &lt;om1_windowmove+0x490>
+s0015479c: f1208832 (d)	set	r9,r0,1&lt;18>
+s00154890: f5021409	ld	r8,r2,r9	; [0xb10c958c]
+s00154894: c7ffffc4	br.n	0x001547a4	; &lt;om1_windowmove+0x3a4>
+s00154898: f500240b (d)	st	r8,r0,r11	; [0xb1087f8c]
+s001547a4: 64e70001	subu	r7,r7,1
+</pre>
+
+<p>Note the actual loads and stores to video ram (0xb10.....).
 
 <p>The following is not needed in order to experiment with booting OpenBSD,
 but can be interesting nonetheless: Download 

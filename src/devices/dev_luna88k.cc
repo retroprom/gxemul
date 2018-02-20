@@ -216,6 +216,8 @@ DEVICE_ACCESS(luna88k)
 		addr -= (uint64_t)(uint32_t)(BMAP_BMP);
 		swapBitOrder(data, len);
 		if (addr + len - 1 < s) {
+			if (addr >= 8)
+				addr -= 8;
 			dev_fb_access(cpu, cpu->mem, addr, data, len, writeflag, d->fb);
 			swapBitOrder(data, len);
 			return 1;
@@ -230,6 +232,8 @@ DEVICE_ACCESS(luna88k)
 		addr -= (uint64_t)(uint32_t)(BMAP_BMAP0);
 		swapBitOrder(data, len);
 		if (addr + len - 1 < s) {
+			if (addr >= 8)
+				addr -= 8;
 			dev_fb_access(cpu, cpu->mem, addr, data, len, writeflag, d->fb);
 			swapBitOrder(data, len);
 			return 1;
@@ -430,6 +434,10 @@ DEVICE_ACCESS(luna88k)
 		break;
 
 	case BMAP_RFCNT:	/*  0xb1000000: RFCNT register  */
+		/*  video h-origin/v-origin, according to OpenBSD  */
+		/*  Ignore for now. (?)  */
+		break;
+
 	case BMAP_BMSEL:	/*  0xb1000000: BMSEL register  */
 		/*  Ignore for now. (?)  */
 		break;
