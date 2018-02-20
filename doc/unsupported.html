@@ -499,18 +499,33 @@ happened on real hardware.
 <p>These instructions are here mostly for me to remember how to debug/proceed:
 
 <p>
-Download a RAMDISK kernel (<a href="https://ftp.eu.openbsd.org/pub/OpenBSD/5.9/luna88k/bsd.rd">https://ftp.eu.openbsd.org/pub/OpenBSD/5.9/luna88k/bsd.rd</a>
-or
-<a href="https://ftp.eu.openbsd.org/pub/OpenBSD/6.2/luna88k/bsd.rd">https://ftp.eu.openbsd.org/pub/OpenBSD/6.2/luna88k/bsd.rd</a>), and then run:
+Download a RAMDISK kernel:
+
+<ul>
+	<li><a href="https://ftp.eu.openbsd.org/pub/OpenBSD/5.4/luna88k/bsd.rd">https://ftp.eu.openbsd.org/pub/OpenBSD/5.4/luna88k/bsd.rd</a>
+	<li><a href="https://ftp.eu.openbsd.org/pub/OpenBSD/5.9/luna88k/bsd.rd">https://ftp.eu.openbsd.org/pub/OpenBSD/5.9/luna88k/bsd.rd</a>
+	<li><a href="https://ftp.eu.openbsd.org/pub/OpenBSD/6.2/luna88k/bsd.rd">https://ftp.eu.openbsd.org/pub/OpenBSD/6.2/luna88k/bsd.rd</a>
+</ul>
+
+<p>For 5.4 and below:
+<pre>
+	<b>gxemul -e luna-88k 0x20000:0x20:bsd.rd</b>
+</pre>
+or for the newer ones:
 <pre>
 	<b>gxemul -e luna-88k bsd.rd</b>
 </pre>
 
-<p>The 5.9 kernel gets slightly further, running some userland code and syscalls, as can be seen if -v is used.
-From 6.0 and newer, bugs in GXemul are triggered, it seems.
+<p>From 6.0 and newer, bugs are triggered (most likely in GXemul):
+<pre>
+	panic: amap_wipeout: corrupt amap
+</pre>
 
-<p><tt>-X</tt> can be used to boot with a graphical framebuffer instead of serial
-console, but it is not working yet. Using a breakpoint
+<p>The 5.9 kernel gets further than 6.0 (reaching userland), but it 
+seems that OpenBSD was compiled with too heavy optimizations, so the 
+framebuffer scroll up routine does not contain any loads or stores.
+
+<p>Using a breakpoint
 <tt>-p om1_windowmove</tt> in both OpenBSD 5.9 and 6.2 indicates that 
 5.9 must have been optimized too heavily; it loops when trying to copy
 pixels to scroll up the text, but the loop contains "nothing":
@@ -546,6 +561,16 @@ s001547a4: 64e70001	subu	r7,r7,1
 </pre>
 
 <p>Note the actual loads and stores to video ram (0xb10.....).
+
+<p>Going back all the way to an old 5.4 kernel allows the framebuffer to 
+be used:
+<pre>
+	<b>gxemul -X -e luna-88k 0x20000:0x20:bsd.rd</b>
+</pre>
+
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<a href="20180220-openbsd-luna88k-5.4.png"><img src="20180220-openbsd-luna88k-5.4-small.png"></a>
+
 
 <p>The following is not needed in order to experiment with booting OpenBSD,
 but can be interesting nonetheless: Download 
