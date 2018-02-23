@@ -70,6 +70,7 @@ struct luna88k_data {
 	struct vfb_data *fb;
 
 	struct interrupt cpu_irq;
+	bool		irqActive;
 	uint32_t	interrupt_enable[MAX_CPUS];
 	uint32_t	interrupt_status[MAX_CPUS];
 
@@ -78,6 +79,8 @@ struct luna88k_data {
 	int		timer_tick_counter_bogus;
 	struct interrupt timer_irq;
 
+	int		console_handle;
+	int		interrupt_delay;
 	struct interrupt irqX;
 
 	/*  Two channels.  */
@@ -95,10 +98,17 @@ static void reassert_interrupts(struct luna88k_data *d)
 	// printf("status = 0x%08x, enable = 0x%08x\n",
 	//	d->interrupt_status[0], d->interrupt_enable[0]);
 
-        if (d->interrupt_status[0] & d->interrupt_enable[0])
-                INTERRUPT_ASSERT(d->cpu_irq);
-	else
-                INTERRUPT_DEASSERT(d->cpu_irq);
+        if (d->interrupt_status[0] & d->interrupt_enable[0]) {
+		if (!d->irqActive)
+	                INTERRUPT_ASSERT(d->cpu_irq);
+
+		d->irqActive = true;
+	} else {
+		if (d->irqActive)
+	                INTERRUPT_DEASSERT(d->cpu_irq);
+
+		d->irqActive = false;
+	}
 }
 
 static void luna88k_interrupt_assert(struct interrupt *interrupt)
@@ -116,6 +126,44 @@ static void luna88k_interrupt_deassert(struct interrupt *interrupt)
 }
 
 
+static void reassert_serial_interrupt(struct luna88k_data* d)
+{
+	bool assertSerial = false;
+
+	if (d->fb != NULL) {
+		/*  Workstation keyboard:  */
+		if ((d->obio_sio_wr[1][SCC_WR1] & SCC_WR1_RXI_ALL_CHAR) ||
+		    (d->obio_sio_wr[1][SCC_WR1] & SCC_WR1_RXI_FIRST_CHAR)) {
+			if (console_charavail(d->console_handle))
+				assertSerial = true;
+		}
+	} else {
+		/*  Serial:  */
+		if ((d->obio_sio_wr[0][SCC_WR1] & SCC_WR1_RXI_ALL_CHAR) ||
+		    (d->obio_sio_wr[0][SCC_WR1] & SCC_WR1_RXI_FIRST_CHAR)) {
+			if (console_charavail(d->console_handle))
+				assertSerial = true;
+		}
+	}
+
+	if (d->obio_sio_wr[0][SCC_WR1] & SCC_WR1_TX_IE) {
+		assertSerial = true;
+	}
+
+	if (d->interrupt_delay > 0) {
+		assertSerial = false;
+		d->interrupt_delay --;
+	}
+
+	if (assertSerial) {
+		INTERRUPT_ASSERT(d->irqX);
+		d->interrupt_delay = 130;
+	} else {
+		INTERRUPT_DEASSERT(d->irqX);
+	}
+}
+
+
 DEVICE_TICK(luna88k)
 {
 	struct luna88k_data *d = (struct luna88k_data *) extra;
@@ -126,14 +174,8 @@ DEVICE_TICK(luna88k)
 			INTERRUPT_ASSERT(d->timer_irq);
 	}
 
-/* TODO: Interrupts for serial, etc.
-
-	if ((d->obio_sio_wr[0][SCC_WR1] & SCC_WR1_TX_IE ||
-		    d->obio_sio_wr[1][SCC_WR1] & SCC_WR1_TX_IE))
-		INTERRUPT_ASSERT(d->irqX);
-	else
-		INTERRUPT_DEASSERT(d->irqX);
-*/
+	/*  Serial:  */
+	reassert_serial_interrupt(d);
 }
 
 
@@ -339,34 +381,48 @@ DEVICE_ACCESS(luna88k)
 
 					/*  High bits are command.  */
 				} else {
-					d->obio_sio_wr[sio_devnr][d->obio_sio_regno[sio_devnr] & 255] = idata;
+					int regnr = d->obio_sio_regno[sio_devnr] & 7;
+					d->obio_sio_wr[sio_devnr][regnr] = idata;
 
 					// printf("[ sio: setting reg 0x%02x = 0x%02x ]\n", d->obio_sio_regno[sio_devnr], (int)idata);
 
 					d->obio_sio_regno[sio_devnr] = 0;
+
+					reassert_serial_interrupt(d);
 				}
 			} else {
+				d->obio_sio_rr[sio_devnr][SCC_RR0] = SCC_RR0_TX_EMPTY | SCC_RR0_DCD | SCC_RR0_CTS;
+
+				if (console_charavail(d->console_handle) &&
+				      ( (d->fb == NULL && sio_devnr == 0) ||
+					(d->fb != NULL && sio_devnr == 1)) )
+					d->obio_sio_rr[sio_devnr][SCC_RR0] |= SCC_RR0_RX_AVAIL;
+
+				d->obio_sio_rr[sio_devnr][SCC_RR1] = SCC_RR1_ALL_SENT;
+
 				int regnr = d->obio_sio_regno[sio_devnr] & 7;
-
-				d->obio_sio_rr[sio_devnr][SCC_RR0] = 0x04;
-				d->obio_sio_rr[sio_devnr][SCC_RR1] = 0x2c;
-
 				odata = d->obio_sio_rr[sio_devnr][regnr];
-
 				// printf("[ sio: reading reg 0x%02x: 0x%02x ]\n", regnr, (int)odata);
-
 				d->obio_sio_regno[sio_devnr] = 0;
 			}
 		} else {
 			/*  data  */
 			if (writeflag == MEM_WRITE) {
-				if (sio_devnr == 0)
+				if (sio_devnr == 0) {
 					console_putchar(cpu->machine->main_console_handle, idata);
-				else
+				} else
 					fatal("[ luna88k sio dev1 write data: TODO ]\n");
 			} else {
-				fatal("[ luna88k sio dev0 read data: TODO ]\n");
+				if (sio_devnr == 0) {
+					if (d->fb == NULL && console_charavail(d->console_handle)) {
+						odata = console_readchar(d->console_handle);
+					}
+				} else {
+					fatal("[ luna88k sio dev1 read data: TODO ]\n");
+				}
 			}
+
+			INTERRUPT_DEASSERT(d->irqX);
 		}
 
 		break;
@@ -587,6 +643,8 @@ DEVINIT(luna88k)
 	/*  IRQ 5,4,3 (?): "autovec" according to OpenBSD  */
 	snprintf(n, sizeof(n), "%s.luna88k.5", devinit->interrupt_path);
 	INTERRUPT_CONNECT(n, d->irqX);
+
+	d->console_handle = console_start_slave(devinit->machine, "SIO", 1);
 
 	if (devinit->machine->x11_md.in_use)
 	{
