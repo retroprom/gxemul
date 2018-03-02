@@ -4653,3 +4653,5 @@ Changelog for GXemul:
 20180223	Serial controller interrupt progress for LUNA88K; some
 		interaction can be done with OpenBSD/luna88k ramdisk user-
 		land but it is shaky.
+20180302	Fixing bug in dev_mp when returning amount of memory (it
+		was truncated to 32 bits). Found during YCX5 development.
