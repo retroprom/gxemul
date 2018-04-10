@@ -22,13 +22,30 @@ This component represents an
 <a href="https://en.wikipedia.org/wiki/Intel_i960">Intel i960</a>-like 
 <a href="component_cpu.html">CPU component</a>.
 
-<p>Features that have been implemented:
+<p>Things that have been implemented:
 
 <ul>
 	<li>None.
 </ul>
 
-<p>TODO: Everything.
+<p>Things that have <b>not yet</b> been implemented: TODOs in approximate priority order:
+
+<ul>
+	<li>Implement disassembly of instructions.
+	<li>Implement register dump functionality, i.e. implement registers.
+	<li>b.out and ECOFF file loaders (not in the CPU component, but related)
+	<li>Start implementing execution of instructions.
+	<li>Machines:
+	<ul>
+		<li>testi960 (similar to testmips?)
+		<li>machine for uClinux/i960 experiments?
+		<li>HP 700/RX X-terminal machine?
+	</ul>
+	<li>Write test programs that pass different number of arguments (and
+		different types), and implement function call trace.
+	<li>Implement some kind of "short diff" format for execution,
+		rather than the verbose format of today.
+</ul>
 
 
 <p>
