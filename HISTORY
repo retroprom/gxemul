@@ -4655,3 +4655,5 @@ Changelog for GXemul:
 		land but it is shaky.
 20180302	Fixing bug in dev_mp when returning amount of memory (it
 		was truncated to 32 bits). Found during YCX5 development.
+20180410	Adding a dummy skeleton for an Intel i960 CPU component
+		using the new framework.
