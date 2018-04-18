@@ -1,0 +1,35 @@
+
+The <tt>cyclonevh</tt> machine template tries to emulate a
+Cyclone/VH i960 evaluation board.
+
+<p>Its only purpose is to allow experiments with uClinux/i960 binaries.
+
+See <a href="https://web.archive.org/web/20010417034914/http://www.cse.ogi.edu/~kma/uClinux.html">https://web.archive.org/web/20010417034914/http://www.cse.ogi.edu/~kma/uClinux.html</a> for more info.
+
+<p><b>NOTE!</b>
+
+<p>A binary (vmlinux) can be found on this page:
+<br>
+<a href="https://web.archive.org/web/20010417034914/http://www.cse.ogi.edu/~kma/uClinux.html">https://web.archive.org/web/20010417034914/http://www.cse.ogi.edu/~kma/uClinux.html</a>
+
+<p>However, there is also a binary at
+<a href="http://www.uclinux.org/pub/uClinux/ports/i960/">http://www.uclinux.org/pub/uClinux/ports/i960/</a>, which is corrupt;
+it seems to have been uploaded/encoded with the wrong character encoding.
+(At least it is broken as of 2016-04-18.)
+
+<p><b>TODO</b>:
+<br>Everything.
+
+<pre>
+$ ./gxemul -V -e cyclonevh
+GXemul (unknown version)      Copyright (C) 2003-2018  Anders Gavare
+
+  mainbus0
+  |-- cpu0  (25 MHz)
+  \-- ram0  (4 MB at offset 0xa3c00000)
+
+</pre>
+
+<p><hr>
+</body>
+</html>

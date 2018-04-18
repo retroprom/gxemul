@@ -39,6 +39,7 @@ I960_CPUComponent::I960_CPUComponent()
 	: CPUDyntransComponent("i960_cpu", "i960")
 {
 	m_frequency = 25e6;
+	m_isBigEndian = false;
 
 	ResetState();
 
@@ -212,7 +213,7 @@ size_t I960_CPUComponent::DisassembleInstruction(uint64_t vaddr, size_t maxLen,
 	}
 
 	// Read the instruction word:
-	uint32_t instructionWord = *((uint32_t *) (void *) instruction);
+	uint32_t instructionWord = ((uint32_t *) (void *) instruction)[0];
 	if (m_isBigEndian)
 		instructionWord = BE32_TO_HOST(instructionWord);
 	else
@@ -220,28 +221,95 @@ size_t I960_CPUComponent::DisassembleInstruction(uint64_t vaddr, size_t maxLen,
 
 	const uint32_t iword = instructionWord;
 
+	bool isMEMBinstruction = false;
+
+	uint32_t displacementWord = ((uint32_t *) (void *) instruction)[1];
+	if (m_isBigEndian)
+		displacementWord = BE32_TO_HOST(displacementWord);
+	else
+		displacementWord = LE32_TO_HOST(displacementWord);
+
 	// ... and add it to the result:
 	{
 		stringstream ss;
 		ss.flags(std::ios::hex);
 		ss << std::setfill('0') << std::setw(8) << (uint32_t) iword;
-		if (PCtoInstructionAddress(m_pc) == vaddr && m_inDelaySlot)
-			ss << " (delayslot)";
+		if (isMEMBinstruction)
+			ss << " " << (uint32_t) displacementWord;
+		else
+			ss << "         ";
 		result.push_back(ss.str());
 	}
 
 	const int opcode = iword >> 24;
+	
+	const int REG_src_dst  = (iword >> 19) & 0x1f;
+	const int REG_src2     = (iword >> 14) & 0x1f;
+	const int REG_m3       = (iword >> 13) & 0x1;
+	const int REG_m2       = (iword >> 12) & 0x1;
+	const int REG_m1       = (iword >> 11) & 0x1;
+	const int REG_opcode2  = (iword >> 7) & 0xf;
+	const int REG_sfr      = (iword >> 5) & 0x3;
+	const int REG_src1     = (iword >> 0) & 0x1f;
+	
+	const int COBR_src_1   = (iword >> 19) & 0x1f;
+	const int COBR_src_2   = (iword >> 14) & 0x1f;
+	const int COBR_m1      = (iword >> 13) & 0x1;
+	const int COBR_disp    = (iword >> 2) & 0x7ff;
+	const int COBR_sfr     = (iword >> 0) & 0x3;
+	
+	const int CTRL_disp    = (iword >> 2) & 0x3fffff;
+	const int CTRL_sfr     = (iword >> 0) & 0x3;
 
+	const int MEMA_src_dst = (iword >> 19) & 0x1f;
+	const int MEMA_abase   = (iword >> 14) & 0x1f;
+	const int MEMA_md      = (iword >> 13) & 0x1;
+	const int MEMA_zero    = (iword >> 12) & 0x1;
+	const int MEMA_offset  = (iword >> 0) & 0xfff;
+
+	const int MEMB_src_dst = (iword >> 19) & 0x1f;
+	const int MEMB_abase   = (iword >> 14) & 0x1f;
+	const int MEMB_mode    = (iword >> 10) & 0xf;
+	const int MEMB_scale   = (iword >> 7) & 0x7;
+	const int MEMB_sfr     = (iword >> 5) & 0x3;
+	const int MEMB_index   = (iword >> 0) & 0x1f;
+
+	stringstream ss;
+	
 	switch (opcode) {
 
-	default:
+	/*
+	 *  REG:
+	 */
+
+	/*
+	 *  COBR:
+	 */
+
+	/*
+	 *  CTRL:
+	 */
+
+	/*
+	 *  MEMA:
+	 */
+
+	case 0x8c:	// lda
 		{
-			stringstream ss;
-			ss << "unimplemented: " << opcode;
-			result.push_back(ss.str());
+			ss << "lda";
 		}
 		break;
+
+	/*
+	 *  MEMB:
+	 */
+
+	default:
+		ss << "unimplemented: " << opcode;
+		break;
 	}
+
+	result.push_back(ss.str());
 
 	return instrSize;
 }
@@ -288,7 +356,7 @@ DYNTRANS_INSTR(I960_CPUComponent,slt)
 
 void I960_CPUComponent::Translate(uint32_t iword, struct DyntransIC* ic)
 {
-	bool singleInstructionLeft = (m_executedCycles == m_nrOfCyclesToExecute - 1);
+	// bool singleInstructionLeft = (m_executedCycles == m_nrOfCyclesToExecute - 1);
 	UI* ui = GetUI();	// for debug messages
 
 	unsigned int opcode = iword >> 24;

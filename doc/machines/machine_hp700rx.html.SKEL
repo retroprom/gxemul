@@ -1,0 +1,20 @@
+
+The <tt>hp700rx</tt> machine template tries to emulate a
+HP 700/RX X-terminal, with an i960CA processor.
+
+<p><b>TODO</b>:
+<br>Everything.
+
+<pre>
+$ ./gxemul -V -e hp700rx
+GXemul (unknown version)      Copyright (C) 2003-2018  Anders Gavare
+
+  mainbus0
+  |-- cpu0  (25 MHz)
+  \-- ram0  (2 MB at offset 0x3fe00000)
+
+</pre>
+
+<p><hr>
+</body>
+</html>

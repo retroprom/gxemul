@@ -4657,3 +4657,5 @@ Changelog for GXemul:
 		was truncated to 32 bits). Found during YCX5 development.
 20180410	Adding a dummy skeleton for an Intel i960 CPU component
 		using the new framework.
+20180418	Adding dummy skeletons for a Cyclone/VH (i960VH) evaluation
+		board, and the HP 700/RX X-terminal (i960CA).
