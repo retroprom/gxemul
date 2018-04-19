@@ -36,26 +36,26 @@
 
 #define	N_I960_REGS		32
 
-
 /*
-
+Register conventions according to
 https://people.cs.clemson.edu/~mark/subroutines/i960.html
-
-Register conventions
-
-        g0-g3    - parameters 0-3  /  return words 0-3
-        g4-g7    - parameters 4-7  /  temporaries
-        g8-g12   - preserved across call if not used for parameters
-        g13      - structure return pointer
-        g14      - argument block pointer  /  leaf return address (hardware)
-        fp (g15) - frame pointer (hardware, aligned on 16-byte boundaries)
-
-        pfp (r0) - previous frame pointer (hardware)
-        sp  (r1) - stack pointer (hardware)
-        rip (r2) - return instruction pointer (hardware)
-        r3-r15   - available as locals for subroutine
-
 */
+
+const char* i960_regnames[N_I960_REGS] = {
+	"pfp",		// r0 = previous frame pointer
+	"sp",		// r1 = stack pointer
+	"rip",		// r2 = return instruction pointer
+	"r3", "r4", "r5", "r6", "r7",
+	"r8", "r9", "r10", "r11", "r12",
+	"r13", "r14", "r15",
+
+	"g0", "g1", "g2", "g3",	// parameters 0-3; return words 0-3
+	"g4", "g5", "g6", "g7", // parameters 4-7; temporaries
+	"g8", "g9", "g10", "g11", "g12",	// preserved accross call
+	"g13",		// structure return pointer
+	"g14",		// argument block pointer; leaf return address (HW)
+	"fp" 		// g15 = frame pointer (16-byte aligned HW)
+};
 
 
 /***********************************************************************/
@@ -132,7 +132,7 @@ private:
 	/*
 	 * State:
 	 */
-	uint32_t	m_r[N_I960_REGS];
+	uint32_t	m_r[N_I960_REGS];	// r and g registers
 };
 
 

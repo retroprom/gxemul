@@ -4660,4 +4660,5 @@ Changelog for GXemul:
 20180418	Adding dummy skeletons for a Cyclone/VH (i960VH) evaluation
 		board, and the HP 700/RX X-terminal (i960CA).
 20180419	Implementing basic disassembly of some i960 instructions
-		(only the CTRL group so far).
+		(only the CTRL group so far), and basic register dump
+		functionality.

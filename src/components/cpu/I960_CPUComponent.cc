@@ -43,13 +43,9 @@ I960_CPUComponent::I960_CPUComponent()
 
 	ResetState();
 
-//	AddVariable("hi", &m_hi);
-//	AddVariable("lo", &m_lo);
-
-	// TODO: This only registers using the new ABI names. How should
-	// this be handled? Custom "aliasing" variables?
-//	for (size_t i=0; i<N_I960_REGS; i++)
-//		AddVariable(regname(i, m_abi), &m_gpr[i]);
+	for (size_t i = 0; i < N_I960_REGS; i++) {
+		AddVariable(i960_regnames[i], &m_r[i]);
+	}
 }
 
 
@@ -108,46 +104,22 @@ void I960_CPUComponent::ShowRegisters(GXemul* gxemul, const vector<string>& argu
 	stringstream ss;
 
 	ss.flags(std::ios::hex);
-	ss << std::setfill('0');
-
-	// Yuck, this is horrible. Is there some portable way to put e.g.
-	// std::setw(16) into an object, and just pass that same object several
-	// times?
-
-	ss << "pc=";
-	ss << std::setw(8);
-	ss << (uint32_t)m_pc;
+	ss << "  ip = 0x" << std::setfill('0') << std::setw(8) << (uint32_t)m_pc;
 
 	string symbol = GetSymbolRegistry().LookupAddress(m_pc, true);
 	if (symbol != "")
 		ss << " <" << symbol << ">";
 	ss << "\n";
-/*
-	ss << "hi=";
-	if (is32bit)
-		ss << std::setw(8);
-	else
-		ss << std::setw(16);
-	ss << Trunc3264(m_hi, is32bit) << " lo=";
-	if (is32bit)
-		ss << std::setw(8);
-	else
-		ss << std::setw(16);
-	ss << Trunc3264(m_lo, is32bit) << "\n";
 
 	for (size_t i=0; i<N_I960_REGS; i++) {
-		ss << regname(i, m_abi) << "=";
-		if (is32bit)
-			ss << std::setw(8);
-		else
-			ss << std::setw(16);
-		ss << Trunc3264(m_gpr[i], is32bit);
+		ss << std::setfill(' ') << std::setw(4) << i960_regnames[i]
+			<< " = 0x" << std::setfill('0') << std::setw(8) << m_r[i];
 		if ((i&3) == 3)
 			ss << "\n";
 		else
 			ss << " ";
 	}
-*/
+
 	gxemul->GetUI()->ShowDebugMessage(ss.str());
 }
 
@@ -232,7 +204,7 @@ size_t I960_CPUComponent::DisassembleInstruction(uint64_t vaddr, size_t maxLen,
 	const int REG_sfr      = (iword >> 5) & 0x3;
 	const int REG_src1     = (iword >> 0) & 0x1f;
 	
-	const int COBR_src_1   = (iword >> 19) & 0x1f;
+	const int COBR_src_dst = (iword >> 19) & 0x1f;
 	const int COBR_src_2   = (iword >> 14) & 0x1f;
 	const int COBR_m1      = (iword >> 13) & 0x1;
 	const int COBR_disp    = (iword >> 2) & 0x7ff;
@@ -240,7 +212,6 @@ size_t I960_CPUComponent::DisassembleInstruction(uint64_t vaddr, size_t maxLen,
 	
 	const int CTRL_disp    = (iword >> 2) & 0x3fffff;
 	const int CTRL_t       = (iword >> 1) & 0x1;
-	const int CTRL_sfr     = (iword >> 0) & 0x3;
 
 	const int MEMA_src_dst = (iword >> 19) & 0x1f;
 	const int MEMA_abase   = (iword >> 14) & 0x1f;
@@ -322,8 +293,10 @@ size_t I960_CPUComponent::DisassembleInstruction(uint64_t vaddr, size_t maxLen,
 
 		ssOpcode << mnemonics[opcode - 0x08];
 
+		/*  Old gas960 code mentions that this bit is set if
+			a branch is _not_ taken, so I guess that means "f":  */
 		if (CTRL_t)
-			ssOpcode << ".t";
+			ssOpcode << ".f";
 
 		bool hasDisplacement = opcode < 0x18 && opcode != 0x0a;
 		if (hasDisplacement) {

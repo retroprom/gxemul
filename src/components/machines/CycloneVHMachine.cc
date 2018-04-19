@@ -76,7 +76,7 @@ refcount_ptr<Component> CycloneVHMachine::Create(const ComponentCreateArgs& args
 
 	machine->AddChild(mainbus);
 
-
+	// TODO: CPU frequency is perhaps 100 MHz?
 	refcount_ptr<Component> cpu =
 	    ComponentFactory::CreateComponent("i960_cpu(model=" + settings["cpu"] + ")");
 	if (cpu.IsNULL())
