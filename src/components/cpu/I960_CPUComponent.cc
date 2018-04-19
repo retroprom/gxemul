@@ -205,7 +205,7 @@ uint64_t I960_CPUComponent::PCtoInstructionAddress(uint64_t pc)
 size_t I960_CPUComponent::DisassembleInstruction(uint64_t vaddr, size_t maxLen,
 	unsigned char *instruction, vector<string>& result)
 {
-	const size_t instrSize = sizeof(uint32_t);
+	size_t instrSize = sizeof(uint32_t);
 
 	if (maxLen < instrSize) {
 		assert(false);
@@ -220,26 +220,6 @@ size_t I960_CPUComponent::DisassembleInstruction(uint64_t vaddr, size_t maxLen,
 		instructionWord = LE32_TO_HOST(instructionWord);
 
 	const uint32_t iword = instructionWord;
-
-	bool isMEMBinstruction = false;
-
-	uint32_t displacementWord = ((uint32_t *) (void *) instruction)[1];
-	if (m_isBigEndian)
-		displacementWord = BE32_TO_HOST(displacementWord);
-	else
-		displacementWord = LE32_TO_HOST(displacementWord);
-
-	// ... and add it to the result:
-	{
-		stringstream ss;
-		ss.flags(std::ios::hex);
-		ss << std::setfill('0') << std::setw(8) << (uint32_t) iword;
-		if (isMEMBinstruction)
-			ss << " " << (uint32_t) displacementWord;
-		else
-			ss << "         ";
-		result.push_back(ss.str());
-	}
 
 	const int opcode = iword >> 24;
 	
@@ -259,6 +239,7 @@ size_t I960_CPUComponent::DisassembleInstruction(uint64_t vaddr, size_t maxLen,
 	const int COBR_sfr     = (iword >> 0) & 0x3;
 	
 	const int CTRL_disp    = (iword >> 2) & 0x3fffff;
+	const int CTRL_t       = (iword >> 1) & 0x1;
 	const int CTRL_sfr     = (iword >> 0) & 0x3;
 
 	const int MEMA_src_dst = (iword >> 19) & 0x1f;
@@ -274,42 +255,109 @@ size_t I960_CPUComponent::DisassembleInstruction(uint64_t vaddr, size_t maxLen,
 	const int MEMB_sfr     = (iword >> 5) & 0x3;
 	const int MEMB_index   = (iword >> 0) & 0x1f;
 
-	stringstream ss;
-	
-	switch (opcode) {
+	bool hasDisplacementWord = false;
 
-	/*
-	 *  REG:
-	 */
-
-	/*
-	 *  COBR:
-	 */
-
-	/*
-	 *  CTRL:
-	 */
-
-	/*
-	 *  MEMA:
-	 */
-
-	case 0x8c:	// lda
-		{
-			ss << "lda";
-		}
-		break;
-
-	/*
-	 *  MEMB:
-	 */
-
-	default:
-		ss << "unimplemented: " << opcode;
-		break;
+	if (opcode >= 0x80 && iword & 0x1000) {
+		/*  Only some MEMB instructions have displacement words:  */
+		int mode = (iword >> 10) & 0xf;
+		if (mode == 0x5 || mode >= 0xc)
+			hasDisplacementWord = true;		
 	}
 
-	result.push_back(ss.str());
+	uint32_t displacementWord = 0;
+	if (hasDisplacementWord) {
+		instrSize += sizeof(uint32_t);
+		if (maxLen < instrSize)
+			return 0;
+
+		displacementWord = ((uint32_t *) (void *) instruction)[1];
+		if (m_isBigEndian)
+			displacementWord = BE32_TO_HOST(displacementWord);
+		else
+			displacementWord = LE32_TO_HOST(displacementWord);
+	}
+
+	stringstream ssHex;
+	ssHex.flags(std::ios::hex);
+	ssHex << std::setfill('0') << std::setw(8) << (uint32_t) iword;
+	if (hasDisplacementWord)
+		ssHex << " " << std::setfill('0') << std::setw(8) << (uint32_t) displacementWord;
+	else
+		ssHex << "         ";
+		result.push_back(ssHex.str());
+
+
+	stringstream ssOpcode;
+	stringstream ssArgs;
+	stringstream ssComments;
+	
+	if (opcode >= 0x08 && opcode <= 0x1f) {
+		/*  CTRL:  */
+		const char* mnemonics[] = {
+				"b",			/*  0x08  */
+				"call",			/*  0x09  */
+				"ret",			/*  0x0a  */
+				"bal",			/*  0x0b  */
+				"unknown_ctrl_0x0c",	/*  0x0c  */
+				"unknown_ctrl_0x0d",	/*  0x0d  */
+				"unknown_ctrl_0x0e",	/*  0x0e  */
+				"unknown_ctrl_0x0f",	/*  0x0f  */
+				"bno",			/*  0x10  */
+				"bg",			/*  0x11  */
+				"be",			/*  0x12  */
+				"bge",			/*  0x13  */
+				"bl",			/*  0x14  */
+				"bne",			/*  0x15  */
+				"ble",			/*  0x16  */
+				"bo",			/*  0x17  */
+				"faultno",		/*  0x18  */
+				"faultg",		/*  0x19  */
+				"faulte",		/*  0x1a  */
+				"faultge",		/*  0x1b  */
+				"faultl",		/*  0x1c  */
+				"faultne",		/*  0x1d  */
+				"faultle",		/*  0x1e  */
+				"faulto"		/*  0x1f  */
+			};
+
+		ssOpcode << mnemonics[opcode - 0x08];
+
+		if (CTRL_t)
+			ssOpcode << ".t";
+
+		bool hasDisplacement = opcode < 0x18 && opcode != 0x0a;
+		if (hasDisplacement) {
+			uint32_t disp = CTRL_disp << 2;
+			if (disp & 0x00800000)
+				disp |= 0xff000000;
+
+			uint32_t addr = vaddr + disp;
+			ssArgs << "0x";
+			ssArgs.flags(std::ios::hex);
+			ssArgs << std::setfill('0') << std::setw(8) << addr;
+		}
+	} else if (opcode >= 0x20 && opcode <= 0x3f) {
+		/*  COBR:  */
+	} else if (opcode >= 0x58 && opcode <= 0x7f) {
+		/*  REG:  */
+	} else if (opcode >= 0x80 && opcode <= 0xca) {
+		/*  MEM:  */
+		if (iword & 0x1000) {
+			/*  MEMB:  */
+		} else {
+			/*  MEMA:  */
+		}
+	} else {
+		ssOpcode << "unknown_0x";
+		ssOpcode.flags(std::ios::hex);
+		ssOpcode << std::setfill('0') << std::setw(2) << (int)opcode;
+	}
+
+	result.push_back(ssOpcode.str());
+	result.push_back(ssArgs.str());
+	string comments = ssComments.str();
+	if (comments.length() > 0)
+		result.push_back(comments);
 
 	return instrSize;
 }
