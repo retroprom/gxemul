@@ -28,6 +28,12 @@
  *  HP 700/RX X-terminal with an i960CA CPU.
  *
  *  Bogus skeleton so far.
+ *
+ *  My machine says:
+ *
+ *  2048 KB Base RAM
+ *  8192 KB Expansion RAM
+ *  2048 KB Video RAM
  */
 
 #include "components/HP700RXMachine.h"
