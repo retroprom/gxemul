@@ -5,14 +5,44 @@ HP 700/RX X-terminal, with an i960CA processor.
 <p><b>TODO</b>:
 <br>Everything.
 
+<p>Note: Loading using 'raw' will not load data and text segments separately,
+only the text segment, so it will not execute correctly. But still, it is
+a start.
+
 <pre>
-$ ./gxemul -V -e hp700rx
+$ ./gxemul -V -e hp700rx raw:0x3fe05000:0x2c:0x3fe05094:C2708A 
 GXemul (unknown version)      Copyright (C) 2003-2018  Anders Gavare
 
   mainbus0
   |-- cpu0  (25 MHz)
   \-- ram0  (2 MB at offset 0x3fe00000)
 
+cpu0: raw:0x3fe05000:0x2c:0x3fe05094:C2708A loaded
+      Raw file: entry point 0x3fe05094
+      loadable chunk at offset 44: vaddr 0x3fe05000, 1605668 bytes
+
+GXemul> cp.u 
+0x3fe05094 <- 8c180100               
+0x3fe05098    6518c483               
+0x3fe0509c    5c201e06               
+0x3fe050a0    8c683000 c0003000      
+0x3fe050a8    82235000               
+0x3fe050ac    5c881e08               
+0x3fe050b0    90745000               
+0x3fe050b4    5cf01e00               
+0x3fe050b8    8c183000 001f0002      
+0x3fe050c0    8c203000 001f0002      
+0x3fe050c8    6520ca80               
+0x3fe050cc    5c103e00               
+0x3fe050d0    5c083e00               
+0x3fe050d4    5c003e00               
+0x3fe050d8    5c001e00               
+0x3fe050dc    8cf80040               
+0x3fe050e0    8c0fe040               
+0x3fe050e4    59185e0c               
+0x3fe050e8    6420c283               
+0x3fe050ec    59805e1e               
+GXemul> q 
 </pre>
 
 <p><hr>
