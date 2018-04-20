@@ -4662,4 +4662,5 @@ Changelog for GXemul:
 20180419	Implementing basic disassembly of some i960 instructions
 		(only the CTRL group so far), and basic register dump
 		functionality.
-20180420	i960 MEM instruction disassembly has now been implemented.
+20180420	i960 MEM and COBR instruction group disassembly has now
+		been implemented.

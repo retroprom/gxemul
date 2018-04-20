@@ -80,10 +80,25 @@ refcount_ptr<Component> I960_CPUComponent::Create(const ComponentCreateArgs& arg
 }
 
 
-static string regname_or_literal(int reg)
+static string regname_or_literal(int reg, int m, int s)
 {
-	// TODO: sfrs, literals etc.
-	return i960_regnames[reg];
+	// Regular g or r registers
+	if (m == 0 && s == 0)
+		return i960_regnames[reg];
+
+	stringstream ss;
+
+	if (m != 0 && s == 0) {
+		// Literal
+		ss << reg;
+	} else if (m == 0 && s != 0) {
+		// Special Function Register
+		ss << "sfr" << reg;
+	} else {
+		ss << "reserved" << reg;
+	}
+	
+	return ss.str();
 }
 
 
@@ -245,7 +260,8 @@ size_t I960_CPUComponent::DisassembleInstruction(uint64_t vaddr, size_t maxLen,
 	const int COBR_src_2   = (iword >> 14) & 0x1f;
 	const int COBR_m1      = (iword >> 13) & 0x1;
 	const int COBR_disp    = (iword >> 2) & 0x7ff;
-	const int COBR_sfr     = (iword >> 0) & 0x3;
+	const int COBR_t       = (iword >> 1) & 0x1;
+	const int COBR_s2      = (iword >> 0) & 0x1;
 	
 	const int CTRL_disp    = (iword >> 2) & 0x3fffff;
 	const int CTRL_t       = (iword >> 1) & 0x1;
@@ -329,9 +345,6 @@ size_t I960_CPUComponent::DisassembleInstruction(uint64_t vaddr, size_t maxLen,
 			};
 
 		ssOpcode << mnemonics[opcode - 0x08];
-
-		/*  Old gas960 code mentions that this bit is set if
-			a branch is _not_ taken, so I guess that means "f":  */
 		if (CTRL_t)
 			ssOpcode << ".f";
 
@@ -348,6 +361,65 @@ size_t I960_CPUComponent::DisassembleInstruction(uint64_t vaddr, size_t maxLen,
 		}
 	} else if (opcode >= 0x20 && opcode <= 0x3f) {
 		/*  COBR:  */
+		const char* mnemonics[] = {
+				"testno",		/*  0x20  */
+				"testg",		/*  0x21  */
+				"teste",		/*  0x22  */
+				"testge",		/*  0x23  */
+				"testl",		/*  0x24  */
+				"testne",		/*  0x25  */
+				"testle",		/*  0x26  */
+				"testo",		/*  0x27  */
+
+				"unknown_cobr_0x28",	/*  0x28  */
+				"unknown_cobr_0x29",	/*  0x29  */
+				"unknown_cobr_0x2a",	/*  0x2a  */
+				"unknown_cobr_0x2b",	/*  0x2b  */
+				"unknown_cobr_0x2c",	/*  0x2c  */
+				"unknown_cobr_0x2d",	/*  0x2d  */
+				"unknown_cobr_0x2e",	/*  0x2e  */
+				"unknown_cobr_0x2f",	/*  0x2f  */
+
+				"bbc",			/*  0x30  */
+				"cmpobg",		/*  0x31  */
+				"cmpobe",		/*  0x32  */
+				"cmpobge",		/*  0x33  */
+				"cmpobl",		/*  0x34  */
+				"cmpobne",		/*  0x35  */
+				"cmpobne",		/*  0x36  */
+				"bbs",			/*  0x37  */
+
+				"cmpibno",		/*  0x38  */
+				"cmpibg",		/*  0x39  */
+				"cmpibe",		/*  0x3a  */
+				"cmpibge",		/*  0x3b  */
+				"cmpibl",		/*  0x3c  */
+				"cmpibne",		/*  0x3d  */
+				"cmpible",		/*  0x3e  */
+				"cmpibo",		/*  0x3f  */
+			};
+
+		ssOpcode << mnemonics[opcode - 0x20];
+		if (COBR_t)
+			ssOpcode << ".f";
+
+		bool src1isBitpos = opcode == 0x30 || opcode == 0x37;
+		bool hasDisplacement = opcode >= 0x30;
+
+		if (opcode <= 0x27) {
+			ssArgs << regname_or_literal(COBR_src_dst, 0, COBR_s2);
+		} else {
+			uint32_t targ = COBR_disp << 2;
+			if (targ & 0x00001000)
+				targ |= 0xffffe000;
+			targ += vaddr;
+
+			ssArgs << regname_or_literal(COBR_src_dst, src1isBitpos ? 1 : COBR_m1, 0) << ",";
+			ssArgs << regname_or_literal(COBR_src_2, 0, COBR_s2) << ",";
+			ssArgs << "0x";
+			ssArgs.flags(std::ios::hex);
+			ssArgs << std::setfill('0') << std::setw(8) << targ;
+		}
 	} else if (opcode >= 0x58 && opcode <= 0x7f) {
 		/*  REG:  */
 	} else if (opcode >= 0x80 && opcode <= 0xcf) {
@@ -466,7 +538,7 @@ size_t I960_CPUComponent::DisassembleInstruction(uint64_t vaddr, size_t maxLen,
 			int scale = 1 << MEMB_scale;
 			switch (MEMB_mode) {
 			case 0x4:
-				ssArgs << "(" << regname_or_literal(MEMB_abase) << ")";
+				ssArgs << "(" << regname_or_literal(MEMB_abase, 0, 0) << ")";
 				break;
 			case 0x5:
 				{
@@ -479,8 +551,8 @@ size_t I960_CPUComponent::DisassembleInstruction(uint64_t vaddr, size_t maxLen,
 				break;
 			case 0x7:
 				// (reg1)[reg2 * scale]
-				ssArgs << "(" << regname_or_literal(MEMB_abase) << ")";
-				ssArgs << "[" << regname_or_literal(MEMB_index) << "*" << scale << "]";
+				ssArgs << "(" << regname_or_literal(MEMB_abase, 0, 0) << ")";
+				ssArgs << "[" << regname_or_literal(MEMB_index, 0, 0) << "*" << scale << "]";
 				break;
 			case 0xc:
 			case 0xd:
@@ -490,7 +562,7 @@ size_t I960_CPUComponent::DisassembleInstruction(uint64_t vaddr, size_t maxLen,
 					ssArgs.flags(std::ios::hex);
 					ssArgs << std::setfill('0') << std::setw(8) << offset;
 					if (MEMB_mode == 0xd)
-						ssArgs << "(" << regname_or_literal(MEMB_abase) << ")";
+						ssArgs << "(" << regname_or_literal(MEMB_abase, 0, 0) << ")";
 				}
 				break;
 			case 0xe:
@@ -501,8 +573,8 @@ size_t I960_CPUComponent::DisassembleInstruction(uint64_t vaddr, size_t maxLen,
 					ssArgs.flags(std::ios::hex);
 					ssArgs << std::setfill('0') << std::setw(8) << offset;
 					if (MEMB_mode == 0xf)
-						ssArgs << "(" << regname_or_literal(MEMB_abase) << ")";
-					ssArgs << "[" << regname_or_literal(MEMB_index) << "*" << scale << "]";
+						ssArgs << "(" << regname_or_literal(MEMB_abase, 0, 0) << ")";
+					ssArgs << "[" << regname_or_literal(MEMB_index, 0, 0) << "*" << scale << "]";
 				}
 				break;
 			default:
@@ -519,13 +591,13 @@ size_t I960_CPUComponent::DisassembleInstruction(uint64_t vaddr, size_t maxLen,
 			ssArgs << std::setfill('0') << std::setw(1) << offset;
 
 			if (MEMA_md)
-				ssArgs << "(" << regname_or_literal(MEMA_abase) << ")";
+				ssArgs << "(" << regname_or_literal(MEMA_abase, 0, 0) << ")";
 		}
 
 		bool usesDst = opcode != 0x84 && opcode != 0x86;
 
 		if (usesDst) {
-			ssArgs << "," << regname_or_literal(MEMB_src_dst);
+			ssArgs << "," << regname_or_literal(MEMB_src_dst, 0, 0);
 		}
 	} else if (iword == 0) {
 		ssOpcode << "--";
