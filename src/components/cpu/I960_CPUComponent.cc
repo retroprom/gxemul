@@ -80,6 +80,13 @@ refcount_ptr<Component> I960_CPUComponent::Create(const ComponentCreateArgs& arg
 }
 
 
+static string regname_or_literal(int reg)
+{
+	// TODO: sfrs, literals etc.
+	return i960_regnames[reg];
+}
+
+
 void I960_CPUComponent::ResetState()
 {
 	m_pageSize = 4096;
@@ -343,12 +350,182 @@ size_t I960_CPUComponent::DisassembleInstruction(uint64_t vaddr, size_t maxLen,
 		/*  COBR:  */
 	} else if (opcode >= 0x58 && opcode <= 0x7f) {
 		/*  REG:  */
-	} else if (opcode >= 0x80 && opcode <= 0xca) {
+	} else if (opcode >= 0x80 && opcode <= 0xcf) {
 		/*  MEM:  */
+		
+		/*  NOTE: These are for i960CA. When implementing support for
+		    other CPU variants, include an enum indicating which CPU
+		    it is for so that a warning can be printed for instructions
+		    that will cause faults on another CPU.  */
+		const char* mnemonics[] = {
+				"ldob",			/*  0x80  */
+				"unknown_mem_0x81",	/*  0x81 BiiN ldvob  */
+				"stob",			/*  0x82  */
+				"unknown_mem_0x83",	/*  0x83 BiiN stvob  */
+				"bx",			/*  0x84  */
+				"balx",			/*  0x85  */
+				"callx",		/*  0x86  */
+				"unknown_mem_0x87",	/*  0x87  */
+
+				"ldos",			/*  0x88  */
+				"unknown_mem_0x89",	/*  0x89 BiiN ldvos  */
+				"stos",			/*  0x8a  */
+				"unknown_mem_0x8b",	/*  0x8b BiiN stvos  */
+				"lda",			/*  0x8c  */
+				"unknown_mem_0x8d",	/*  0x8d  */
+				"unknown_mem_0x8e",	/*  0x8e  */
+				"unknown_mem_0x8f",	/*  0x8f  */
+
+				"ld",			/*  0x90  */
+				"unknown_mem_0x91",	/*  0x91 BiiN ldv  */
+				"st",			/*  0x92  */
+				"unknown_mem_0x93",	/*  0x93 Biin stv  */
+				"unknown_mem_0x94",	/*  0x94  */
+				"unknown_mem_0x95",	/*  0x95  */
+				"unknown_mem_0x96",	/*  0x96  */
+				"unknown_mem_0x97",	/*  0x97  */
+
+				"ldl",			/*  0x98  */
+				"unknown_mem_0x99",	/*  0x99 BiiN ldvl  */
+				"stl",			/*  0x9a  */
+				"unknown_mem_0x9b",	/*  0x9b BiiN stvl  */
+				"unknown_mem_0x9c",	/*  0x9c  */
+				"unknown_mem_0x9d",	/*  0x9d  */
+				"unknown_mem_0x9e",	/*  0x9e  */
+				"unknown_mem_0x9f",	/*  0x9f  */
+
+				"ldt",			/*  0xa0  */
+				"unknown_mem_0xa1",	/*  0xa1 BiiN ldvt  */
+				"stt",			/*  0xa2  */
+				"unknown_mem_0xa3",	/*  0xa3 Biin stvt  */
+				"unknown_mem_0xa4",	/*  0xa4  */
+				"unknown_mem_0xa5",	/*  0xa5  */
+				"unknown_mem_0xa6",	/*  0xa6  */
+				"unknown_mem_0xa7",	/*  0xa7  */
+
+				"unknown_mem_0xa8",	/*  0xa8  */
+				"unknown_mem_0xa9",	/*  0xa9  */
+				"unknown_mem_0xaa",	/*  0xaa  */
+				"unknown_mem_0xab",	/*  0xab  */
+				"unknown_mem_0xac",	/*  0xac  */
+				"unknown_mem_0xad",	/*  0xad  */
+				"unknown_mem_0xae",	/*  0xae  */
+				"unknown_mem_0xaf",	/*  0xaf  */
+
+				"ldq",			/*  0xb0  */
+				"unknown_mem_0xb1",	/*  0xb1 BiiN ldvq  */
+				"stq",			/*  0xb2  */
+				"unknown_mem_0xb3",	/*  0xb3 BiiN stvq  */
+				"unknown_mem_0xb4",	/*  0xb4  */
+				"unknown_mem_0xb5",	/*  0xb5  */
+				"unknown_mem_0xb6",	/*  0xb6  */
+				"unknown_mem_0xb7",	/*  0xb7  */
+
+				"unknown_mem_0xb8",	/*  0xb8  */
+				"unknown_mem_0xb9",	/*  0xb9  */
+				"unknown_mem_0xba",	/*  0xba  */
+				"unknown_mem_0xbb",	/*  0xbb  */
+				"unknown_mem_0xbc",	/*  0xbc  */
+				"unknown_mem_0xbd",	/*  0xbd  */
+				"unknown_mem_0xbe",	/*  0xbe  */
+				"unknown_mem_0xbf",	/*  0xbf  */
+
+				"ldib",			/*  0xc0  */
+				"unknown_mem_0xc1",	/*  0xc1 BiiN ldvib  */
+				"stib",			/*  0xc2  */
+				"unknown_mem_0xc3",	/*  0xc3 Biin stvib  */
+				"unknown_mem_0xc4",	/*  0xc4  */
+				"unknown_mem_0xc5",	/*  0xc5  */
+				"unknown_mem_0xc6",	/*  0xc6  */
+				"unknown_mem_0xc7",	/*  0xc7  */
+
+				"ldis",			/*  0xc8  */
+				"unknown_mem_0xc9",	/*  0xc9 BiiN ldvis  */
+				"stis",			/*  0xca  */
+				"unknown_mem_0xcb",	/*  0xcb BiiN stvis  */
+				"unknown_mem_0xcc",	/*  0xcc  */
+				"unknown_mem_0xcd",	/*  0xcd  */
+				"unknown_mem_0xce",	/*  0xce  */
+				"unknown_mem_0xcf",	/*  0xcf  */
+				
+				/*  BiiN:
+					d0 = ldm
+					d1 = ldvm
+					d2 = stm
+					d3 = stvm
+					d8 = ldml
+					d9 = ldvml
+					da = stml
+					db = stvml */
+			};
+
+		ssOpcode << mnemonics[opcode - 0x80];
+
 		if (iword & 0x1000) {
 			/*  MEMB:  */
+			int scale = 1 << MEMB_scale;
+			switch (MEMB_mode) {
+			case 0x4:
+				ssArgs << "(" << regname_or_literal(MEMB_abase) << ")";
+				break;
+			case 0x5:
+				{
+					uint32_t offset = displacementWord + 8;
+					ssArgs << "0x";
+					ssArgs.flags(std::ios::hex);
+					ssArgs << std::setfill('0') << std::setw(8) << offset;
+					ssArgs << "(ip)";
+				}
+				break;
+			case 0x7:
+				// (reg1)[reg2 * scale]
+				ssArgs << "(" << regname_or_literal(MEMB_abase) << ")";
+				ssArgs << "[" << regname_or_literal(MEMB_index) << "*" << scale << "]";
+				break;
+			case 0xc:
+			case 0xd:
+				{
+					uint32_t offset = displacementWord;
+					ssArgs << "0x";
+					ssArgs.flags(std::ios::hex);
+					ssArgs << std::setfill('0') << std::setw(8) << offset;
+					if (MEMB_mode == 0xd)
+						ssArgs << "(" << regname_or_literal(MEMB_abase) << ")";
+				}
+				break;
+			case 0xe:
+			case 0xf:
+				{
+					uint32_t offset = displacementWord;
+					ssArgs << "0x";
+					ssArgs.flags(std::ios::hex);
+					ssArgs << std::setfill('0') << std::setw(8) << offset;
+					if (MEMB_mode == 0xf)
+						ssArgs << "(" << regname_or_literal(MEMB_abase) << ")";
+					ssArgs << "[" << regname_or_literal(MEMB_index) << "*" << scale << "]";
+				}
+				break;
+			default:
+				ssArgs << "unimplemented MEMB mode!";
+			}
 		} else {
 			/*  MEMA:  */
+			int32_t offset = MEMA_offset;
+			if (offset & 0x00000800)
+				offset |= 0xfffff000;
+
+			ssArgs << "0x";
+			ssArgs.flags(std::ios::hex);
+			ssArgs << std::setfill('0') << std::setw(1) << offset;
+
+			if (MEMA_md)
+				ssArgs << "(" << regname_or_literal(MEMA_abase) << ")";
+		}
+
+		bool usesDst = opcode != 0x84 && opcode != 0x86;
+
+		if (usesDst) {
+			ssArgs << "," << regname_or_literal(MEMB_src_dst);
 		}
 	} else if (iword == 0) {
 		ssOpcode << "--";
