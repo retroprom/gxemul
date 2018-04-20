@@ -35,6 +35,8 @@
 
 
 #define	N_I960_REGS		32
+#define	N_I960_SFRS		32
+
 
 /*
 Register conventions according to
@@ -56,6 +58,8 @@ const char* i960_regnames[N_I960_REGS] = {
 	"g14",		// argument block pointer; leaf return address (HW)
 	"fp" 		// g15 = frame pointer (16-byte aligned HW)
 };
+
+#define	I960_G0		16	// offset to first parameter register
 
 
 /***********************************************************************/
@@ -132,7 +136,18 @@ private:
 	/*
 	 * State:
 	 */
+	string		m_model;
+
 	uint32_t	m_r[N_I960_REGS];	// r and g registers
+
+	// NOTE: The i960 "ip" register is m_pc.
+
+	uint32_t	m_i960_ac;		// Arithmetic control
+	uint32_t	m_i960_pc;		// Process control
+	uint32_t	m_i960_tc;		// Trace control
+
+	uint32_t	m_nr_of_valid_sfrs;	// depends on model
+	uint32_t	m_sfr[N_I960_SFRS];
 };
 
 

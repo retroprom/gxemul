@@ -40,12 +40,26 @@ I960_CPUComponent::I960_CPUComponent()
 {
 	m_frequency = 25e6;
 	m_isBigEndian = false;
+	m_model = "i960CA";
 
 	ResetState();
+
+	AddVariable("model", &m_model);
 
 	for (size_t i = 0; i < N_I960_REGS; i++) {
 		AddVariable(i960_regnames[i], &m_r[i]);
 	}
+
+	for (size_t i = 0; i < N_I960_SFRS; i++) {
+		stringstream ss;
+		ss << "sfr" << i;
+		AddVariable(ss.str(), &m_sfr[i]);
+	}
+
+	AddVariable("i960_ac", &m_i960_ac);
+	AddVariable("i960_pc", &m_i960_pc);
+	AddVariable("i960_tc", &m_i960_tc);
+	AddVariable("nr_of_valid_sfrs", &m_nr_of_valid_sfrs);
 }
 
 
@@ -59,8 +73,8 @@ refcount_ptr<Component> I960_CPUComponent::Create(const ComponentCreateArgs& arg
 		return NULL;
 
 	refcount_ptr<Component> cpu = new I960_CPUComponent();
-//	if (!cpu->SetVariableValue("model", "\"" + settings["model"] + "\""))
-//		return NULL;
+	if (!cpu->SetVariableValue("model", "\"" + settings["model"] + "\""))
+		return NULL;
 
 	return cpu;
 }
@@ -73,7 +87,15 @@ void I960_CPUComponent::ResetState()
 	for (size_t i=0; i<N_I960_REGS; i++)
 		m_r[i] = 0;
 
+	for (size_t i=0; i<N_I960_SFRS; i++)
+		m_sfr[i] = 0;
+
 	m_pc = 0;
+
+	// 0 for most (?) i960 implementations. 3 for i960CA. (TODO: CF etc)
+	m_nr_of_valid_sfrs = 0;
+	if (m_model == "i960CA")
+		m_nr_of_valid_sfrs = 3;
 
 	CPUDyntransComponent::ResetState();
 }
@@ -111,9 +133,20 @@ void I960_CPUComponent::ShowRegisters(GXemul* gxemul, const vector<string>& argu
 		ss << " <" << symbol << ">";
 	ss << "\n";
 
-	for (size_t i=0; i<N_I960_REGS; i++) {
+	for (size_t i = 0; i < N_I960_REGS; i++) {
 		ss << std::setfill(' ') << std::setw(4) << i960_regnames[i]
 			<< " = 0x" << std::setfill('0') << std::setw(8) << m_r[i];
+		if ((i&3) == 3)
+			ss << "\n";
+		else
+			ss << " ";
+	}
+
+	for (size_t i = 0; i < m_nr_of_valid_sfrs; i++) {
+		stringstream name;
+		name << "sfr" << i;
+		ss << std::setfill(' ') << std::setw(6) << name.str()
+			<< " = 0x" << std::setfill('0') << std::setw(8) << m_sfr[i];
 		if ((i&3) == 3)
 			ss << "\n";
 		else
@@ -126,22 +159,19 @@ void I960_CPUComponent::ShowRegisters(GXemul* gxemul, const vector<string>& argu
 
 int I960_CPUComponent::FunctionTraceArgumentCount()
 {
-	// TODO
 	return 8;
 }
 
 
 int64_t I960_CPUComponent::FunctionTraceArgument(int n)
 {
-	// TODO
-	return m_r[n];
+	return m_r[I960_G0 + n];
 }
 
 
 bool I960_CPUComponent::FunctionTraceReturnImpl(int64_t& retval)
 {
-	// TODO
-	retval = m_r[0];
+	retval = m_r[I960_G0];
 	return true;
 }
 
@@ -320,6 +350,8 @@ size_t I960_CPUComponent::DisassembleInstruction(uint64_t vaddr, size_t maxLen,
 		} else {
 			/*  MEMA:  */
 		}
+	} else if (iword == 0) {
+		ssOpcode << "--";
 	} else {
 		ssOpcode << "unknown_0x";
 		ssOpcode.flags(std::ios::hex);
