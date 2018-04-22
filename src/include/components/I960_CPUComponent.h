@@ -43,7 +43,7 @@ Register conventions according to
 https://people.cs.clemson.edu/~mark/subroutines/i960.html
 */
 
-const char* i960_regnames[N_I960_REGS] = {
+static const char* i960_regnames[N_I960_REGS] = {
 	"pfp",		// r0 = previous frame pointer
 	"sp",		// r1 = stack pointer
 	"rip",		// r2 = return instruction pointer

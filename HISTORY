@@ -4664,3 +4664,5 @@ Changelog for GXemul:
 		functionality.
 20180420	i960 MEM and COBR instruction group disassembly has now
 		been implemented.
+20140422	Adding a simple b.out file loader for i960 binaries, but
+		no support for symbols yet.

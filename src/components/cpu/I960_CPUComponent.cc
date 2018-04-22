@@ -702,34 +702,37 @@ static void Test_I960_CPUComponent_Create()
 	refcount_ptr<Component> cpu = ComponentFactory::CreateComponent("i960_cpu");
 	UnitTest::Assert("component was not created?", !cpu.IsNULL());
 
-	const StateVariable * p = cpu->GetVariable("pc");
-	UnitTest::Assert("cpu has no pc state variable?", p != NULL);
-	UnitTest::Assert("initial pc", p->ToString(), "0");
+	const StateVariable * p = cpu->GetVariable("pfp");
+	UnitTest::Assert("cpu has no pfp state variable?", p != NULL);
 }
 
 static void Test_I960_CPUComponent_Disassembly_Basic()
 {
-	refcount_ptr<Component> i960_cpu =
-	    ComponentFactory::CreateComponent("i960_cpu");
+	refcount_ptr<Component> i960_cpu = ComponentFactory::CreateComponent("i960_cpu");
 	CPUComponent* cpu = i960_cpu->AsCPUComponent();
 
 	vector<string> result;
 	size_t len;
-	unsigned char instruction[sizeof(uint32_t)];
-	// This assumes that the default endianness is BigEndian...
-	instruction[0] = 0x27;
-	instruction[1] = 0xbd;
-	instruction[2] = 0xff;
-	instruction[3] = 0xd8;
+	unsigned char instruction[sizeof(uint32_t) * 2];
 
-	len = cpu->DisassembleInstruction(0x12345678, sizeof(uint32_t),
-	    instruction, result);
+	// This assumes that the default endianness is little endian...
+	instruction[0] = 0x00;
+	instruction[1] = 0x30;
+	instruction[2] = 0x68;
+	instruction[3] = 0x8c;
 
-	UnitTest::Assert("disassembled instruction was wrong length?", len, 4);
+	instruction[4] = 0x01;
+	instruction[5] = 0x23;
+	instruction[6] = 0x34;
+	instruction[7] = 0x45;
+
+	len = cpu->DisassembleInstruction(0x12345678, sizeof(instruction), instruction, result);
+
+	UnitTest::Assert("disassembled instruction was wrong length?", len, 8);
 	UnitTest::Assert("disassembly result incomplete?", result.size(), 3);
-	UnitTest::Assert("disassembly result[0]", result[0], "27bdffd8");
-	UnitTest::Assert("disassembly result[1]", result[1], "addiu");
-	UnitTest::Assert("disassembly result[2]", result[2], "sp,sp,-40");
+	UnitTest::Assert("disassembly result[0]", result[0], "8c683000 45342301");
+	UnitTest::Assert("disassembly result[1]", result[1], "lda");
+	UnitTest::Assert("disassembly result[2]", result[2], "0x45342301,r13");
 }
 
 UNITTESTS(I960_CPUComponent)
