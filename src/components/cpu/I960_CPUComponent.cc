@@ -35,6 +35,40 @@
 #include "components/I960_CPUComponent.h"
 
 
+struct reg_instruction {
+	int opcode;
+	const char* mnemonic;
+	bool has_src1;
+	bool has_src2;
+	bool has_dst;
+};
+
+struct reg_instruction reg_instructions[] = {
+	{ 0x581, "and",         true,  true,  true },
+	{ 0x584, "notand",      true,  true,  true },
+	{ 0x58a, "not",         true,  false, true },
+
+	{ 0x590, "addo",        true,  true,  true },
+	{ 0x592, "subo",        true,  true,  true },
+	{ 0x598, "shro",        true,  true,  true },
+	{ 0x59c, "shlo",        true,  true,  true },
+
+	{ 0x5a1, "cmpi",        true,  true,  false },
+	{ 0x5a6, "cmpdeco",     true,  true,  true },
+
+	{ 0x5cc, "mov",         true,  false, true },
+
+	{ 0x645, "modac",       true,  true,  true },
+
+	{ 0x655, "modpc",       true,  true,  true },
+	{ 0x659, "sysctl",      true,  true,  true },
+
+	{ 0x66d, "flushreg",    false, false, false },
+
+	{ 0,     NULL,          false, false, false }
+};
+
+
 I960_CPUComponent::I960_CPUComponent()
 	: CPUDyntransComponent("i960_cpu", "i960")
 {
@@ -422,6 +456,36 @@ size_t I960_CPUComponent::DisassembleInstruction(uint64_t vaddr, size_t maxLen,
 		}
 	} else if (opcode >= 0x58 && opcode <= 0x7f) {
 		/*  REG:  */
+		struct reg_instruction *rinstr = NULL;
+		for (int i = 0; ; ++i) {
+			if (reg_instructions[i].mnemonic == NULL)
+				break;
+			if (reg_instructions[i].opcode == (opcode << 4) + REG_opcode2) {
+				rinstr = &reg_instructions[i];
+				break;
+			}
+		}
+
+		bool has_src1 = true, has_src2 = true, has_dst = true;
+
+		if (rinstr == NULL) {
+			ssOpcode << "unknown_reg_";
+			ssOpcode.flags(std::ios::hex);
+			ssOpcode << std::setfill('0') << std::setw(2) << opcode;
+			ssOpcode << ":" << std::setw(1) << REG_opcode2;
+		} else {
+			ssOpcode << rinstr->mnemonic;
+			has_src1 = rinstr->has_src1;
+			has_src2 = rinstr->has_src2;
+			has_dst = rinstr->has_dst;
+		}
+
+		if (has_src1)
+			ssArgs << regname_or_literal(REG_src1, REG_m1, REG_sfr & 1) << ",";
+		if (has_src2)
+			ssArgs << regname_or_literal(REG_src2, REG_m2, REG_sfr & 2) << ",";
+		if (has_dst)
+			ssArgs << regname_or_literal(REG_src_dst, REG_m3, 0);
 	} else if (opcode >= 0x80 && opcode <= 0xcf) {
 		/*  MEM:  */
 		
@@ -533,6 +597,13 @@ size_t I960_CPUComponent::DisassembleInstruction(uint64_t vaddr, size_t maxLen,
 
 		ssOpcode << mnemonics[opcode - 0x80];
 
+		bool usesDst = opcode != 0x84 && opcode != 0x86;
+		bool isStore = !!(opcode & 2);
+
+		if (usesDst && isStore) {
+			ssArgs << regname_or_literal(MEMB_src_dst, 0, 0) << ",";
+		}
+
 		if (iword & 0x1000) {
 			/*  MEMB:  */
 			int scale = 1 << MEMB_scale;
@@ -594,9 +665,7 @@ size_t I960_CPUComponent::DisassembleInstruction(uint64_t vaddr, size_t maxLen,
 				ssArgs << "(" << regname_or_literal(MEMA_abase, 0, 0) << ")";
 		}
 
-		bool usesDst = opcode != 0x84 && opcode != 0x86;
-
-		if (usesDst) {
+		if (usesDst && !isStore) {
 			ssArgs << "," << regname_or_literal(MEMB_src_dst, 0, 0);
 		}
 	} else if (iword == 0) {
