@@ -41,31 +41,90 @@ struct reg_instruction {
 	bool has_src1;
 	bool has_src2;
 	bool has_dst;
+	bool has_src3;	// true if the dst/src field is used as a source
 };
 
 struct reg_instruction reg_instructions[] = {
-	{ 0x581, "and",         true,  true,  true },
-	{ 0x584, "notand",      true,  true,  true },
-	{ 0x58a, "not",         true,  false, true },
+	{ 0x580, "notbit",      true,  true,  true,  false },
+	{ 0x581, "and",         true,  true,  true,  false },
+	{ 0x582, "andnot",      true,  true,  true,  false },
+	{ 0x583, "setbit",      true,  true,  true,  false },
+	{ 0x584, "notand",      true,  true,  true,  false },
+	{ 0x586, "xor",         true,  true,  true,  false },
+	{ 0x587, "or",          true,  true,  true,  false },
+	{ 0x588, "nor",         true,  true,  true,  false },
+	{ 0x589, "xnor",        true,  true,  true,  false },
+	{ 0x58a, "not",         true,  false, true,  false },
+	{ 0x58b, "ornot",       true,  true,  true,  false },
+	{ 0x58c, "clrbit",      true,  true,  true,  false },
+	{ 0x58d, "notor",       true,  true,  true,  false },
+	{ 0x58e, "nand",        true,  true,  true,  false },
+	{ 0x58f, "alterbit",    true,  true,  true,  false },
 
-	{ 0x590, "addo",        true,  true,  true },
-	{ 0x592, "subo",        true,  true,  true },
-	{ 0x598, "shro",        true,  true,  true },
-	{ 0x59c, "shlo",        true,  true,  true },
+	{ 0x590, "addo",        true,  true,  true,  false },
+	{ 0x591, "addi",        true,  true,  true,  false },
+	{ 0x592, "subo",        true,  true,  true,  false },
+	{ 0x593, "subi",        true,  true,  true,  false },
+	{ 0x598, "shro",        true,  true,  true,  false },
+	{ 0x59a, "shrdi",       true,  true,  true,  false },
+	{ 0x59b, "shri" ,       true,  true,  true,  false },
+	{ 0x59c, "shlo",        true,  true,  true,  false },
+	{ 0x59d, "rotate",      true,  true,  true,  false },
+	{ 0x59e, "shli",        true,  true,  true,  false },
 
-	{ 0x5a1, "cmpi",        true,  true,  false },
-	{ 0x5a6, "cmpdeco",     true,  true,  true },
+	{ 0x5a0, "cmpo",        true,  true,  false, false },
+	{ 0x5a1, "cmpi",        true,  true,  false, false },
+	{ 0x5a2, "concmpo",     true,  true,  false, false },
+	{ 0x5a3, "concmpi",     true,  true,  false, false },
+	{ 0x5a4, "cmpinco",     true,  true,  true,  false },
+	{ 0x5a5, "cmpinci",     true,  true,  true,  false },
+	{ 0x5a6, "cmpdeco",     true,  true,  true,  false },
+	{ 0x5a7, "cmpdeci",     true,  true,  true,  false },
 
-	{ 0x5cc, "mov",         true,  false, true },
+	{ 0x5ac, "scanbyte",    true,  true,  false, false },
+	{ 0x5ae, "chkbit",      true,  true,  false, false },
 
-	{ 0x645, "modac",       true,  true,  true },
+	{ 0x5b0, "addc",        true,  true,  true,  false },
+	{ 0x5b2, "subc",        true,  true,  true,  false },
 
-	{ 0x655, "modpc",       true,  true,  true },
-	{ 0x659, "sysctl",      true,  true,  true },
+	{ 0x5cc, "mov",         true,  false, true,  false },
+	{ 0x5d8, "eshro",       true,  true,  true,  false },
+	{ 0x5dc, "movl",        true,  false, true,  false },
+	{ 0x5ec, "movt",        true,  false, true,  false },
+	{ 0x5fc, "movq",        true,  false, true,  false },
 
-	{ 0x66d, "flushreg",    false, false, false },
+	{ 0x630, "sdma",        true,  true,  true,  true  },
+	{ 0x631, "udma",        false, false, false, false },
 
-	{ 0,     NULL,          false, false, false }
+	{ 0x640, "spanbit",     true,  false, true,  false },
+	{ 0x641, "scanbit",     true,  false, true,  false },
+	{ 0x645, "modac",       true,  true,  true,  true  },
+
+	{ 0x650, "modify",      true,  true,  true,  true  },
+	{ 0x651, "extract",     true,  true,  true,  true  },
+	{ 0x654, "modtc",       true,  true,  true,  true  },
+	{ 0x655, "modpc",       true,  true,  true,  true  },
+	{ 0x659, "sysctl",      true,  true,  true,  true  },
+
+	{ 0x660, "calls",       true,  false, false, false },
+	{ 0x66b, "mark",        false, false, false, false },
+	{ 0x66c, "fmark",       false, false, false, false },
+	{ 0x66d, "flushreg",    false, false, false, false },
+	{ 0x66f, "syncf",       false, false, false, false },
+
+	{ 0x670, "emul",        true,  true,  true,  false },
+	{ 0x671, "ediv",        true,  true,  true,  false },
+
+	{ 0x701, "mulo",        true,  true,  true,  false },
+	{ 0x708, "remo",        true,  true,  true,  false },
+	{ 0x70b, "divo",        true,  true,  true,  false },
+
+	{ 0x741, "muli",        true,  true,  true,  false },
+	{ 0x748, "remi",        true,  true,  true,  false },
+	{ 0x749, "modi",        true,  true,  true,  false },
+	{ 0x74b, "divi",        true,  true,  true,  false },
+
+	{ 0,     NULL,          false, false, false, false }
 };
 
 
@@ -466,7 +525,7 @@ size_t I960_CPUComponent::DisassembleInstruction(uint64_t vaddr, size_t maxLen,
 			}
 		}
 
-		bool has_src1 = true, has_src2 = true, has_dst = true;
+		bool has_src1 = true, has_src2 = true, has_dst = true, has_src3 = false;
 
 		if (rinstr == NULL) {
 			ssOpcode << "unknown_reg_";
@@ -478,14 +537,39 @@ size_t I960_CPUComponent::DisassembleInstruction(uint64_t vaddr, size_t maxLen,
 			has_src1 = rinstr->has_src1;
 			has_src2 = rinstr->has_src2;
 			has_dst = rinstr->has_dst;
+			has_src3 = rinstr->has_src3;
 		}
 
 		if (has_src1)
-			ssArgs << regname_or_literal(REG_src1, REG_m1, REG_sfr & 1) << ",";
-		if (has_src2)
-			ssArgs << regname_or_literal(REG_src2, REG_m2, REG_sfr & 2) << ",";
-		if (has_dst)
-			ssArgs << regname_or_literal(REG_src_dst, REG_m3, 0);
+			ssArgs << regname_or_literal(REG_src1, REG_m1, REG_sfr & 1);
+
+		if (has_src2) {
+			if (ssArgs.str().length() > 0)
+				ssArgs << ",";
+			ssArgs << regname_or_literal(REG_src2, REG_m2, REG_sfr & 2);
+		}
+		
+		if (has_dst) {
+			if (ssArgs.str().length() > 0)
+				ssArgs << ",";
+			if (REG_m3) {
+				/*
+				 *  The manual for i960CA says (when M3 = 1):
+				 *
+				 *  "src/dst is a literal when used as a source
+				 *   or a special function register when used
+				 *   as a destination. M3 may not be 1 when
+				 *   src/dst is used both as a source and 
+				 *   destination in an instruction (atmod,
+				 *   modify, extract, modpc)."
+				 */
+				if (has_src3)
+					ssArgs << regname_or_literal(REG_src_dst, 1, 0);
+				else
+					ssArgs << regname_or_literal(REG_src_dst, 0, 1);
+			} else
+				ssArgs << regname_or_literal(REG_src_dst, 0, 0);
+		}
 	} else if (opcode >= 0x80 && opcode <= 0xcf) {
 		/*  MEM:  */
 		

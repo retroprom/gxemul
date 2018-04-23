@@ -4667,3 +4667,4 @@ Changelog for GXemul:
 20140422	Adding a simple b.out file loader for i960 binaries, but
 		no support for symbols yet.
 		Beginning to add some REG instruction disassembly (i960).
+20140423	Implementing the rest of i960CA REG instruction disasm.
