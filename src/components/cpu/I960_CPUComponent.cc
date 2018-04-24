@@ -346,7 +346,8 @@ size_t I960_CPUComponent::DisassembleInstruction(uint64_t vaddr, size_t maxLen,
 	const int REG_m2       = (iword >> 12) & 0x1;
 	const int REG_m1       = (iword >> 11) & 0x1;
 	const int REG_opcode2  = (iword >> 7) & 0xf;
-	const int REG_sfr      = (iword >> 5) & 0x3;
+	const int REG_sfr2     = (iword >> 6) & 0x1;
+	const int REG_sfr1     = (iword >> 5) & 0x1;
 	const int REG_src1     = (iword >> 0) & 0x1f;
 	
 	const int COBR_src_dst = (iword >> 19) & 0x1f;
@@ -541,12 +542,12 @@ size_t I960_CPUComponent::DisassembleInstruction(uint64_t vaddr, size_t maxLen,
 		}
 
 		if (has_src1)
-			ssArgs << regname_or_literal(REG_src1, REG_m1, REG_sfr & 1);
+			ssArgs << regname_or_literal(REG_src1, REG_m1, REG_sfr1);
 
 		if (has_src2) {
 			if (ssArgs.str().length() > 0)
 				ssArgs << ",";
-			ssArgs << regname_or_literal(REG_src2, REG_m2, REG_sfr & 2);
+			ssArgs << regname_or_literal(REG_src2, REG_m2, REG_sfr2);
 		}
 		
 		if (has_dst) {
@@ -785,25 +786,18 @@ string I960_CPUComponent::GetAttribute(const string& attributeName)
 /*****************************************************************************/
 
 
+DYNTRANS_INSTR(I960_CPUComponent,mov_lit_reg)
+{
+	REG32(ic->arg[2]) = ic->arg[0].u32;
+}
 
-/*
-DYNTRANS_INSTR(I960_CPUComponent,multu)
+
+DYNTRANS_INSTR(I960_CPUComponent,b)
 {
 	DYNTRANS_INSTR_HEAD(I960_CPUComponent)
-
-	uint32_t a = REG64(ic->arg[1]), b = REG64(ic->arg[2]);
-	uint64_t res = (uint64_t)a * (uint64_t)b;
-
-	cpu->m_lo = (int32_t)res;
-	cpu->m_hi = (int32_t)(res >> 32);
+	cpu->m_pc = ic->arg[0].u32;
+	cpu->DyntransPCtoPointers();
 }
-
-
-DYNTRANS_INSTR(I960_CPUComponent,slt)
-{
-	REG64(ic->arg[0]) = (int64_t)REG64(ic->arg[1]) < (int64_t)REG64(ic->arg[2]);
-}
-*/
 
 
 /*****************************************************************************/
@@ -811,20 +805,88 @@ DYNTRANS_INSTR(I960_CPUComponent,slt)
 
 void I960_CPUComponent::Translate(uint32_t iword, struct DyntransIC* ic)
 {
-	// bool singleInstructionLeft = (m_executedCycles == m_nrOfCyclesToExecute - 1);
 	UI* ui = GetUI();	// for debug messages
 
 	unsigned int opcode = iword >> 24;
 
-	switch (opcode) {
+	if (opcode >= 0x08 && opcode <= 0x1f) {
+		/*  CTRL:  */
+		const int CTRL_disp    = (iword >> 2) & 0x3fffff;
+		uint32_t disp = CTRL_disp << 2;
+		if (disp & 0x00800000)
+			disp |= 0xff000000;
 
-	default:
-		if (ui != NULL) {
-			stringstream ss;
-			ss.flags(std::ios::hex);
-			ss << "unimplemented opcode 0x" << opcode;
-			ui->ShowDebugMessage(this, ss.str());
+		ic->arg[0].u32 = disp + m_pc;
+		
+		if (opcode == 0x08) {
+			ic->f = instr_b;
 		}
+	} else if (opcode >= 0x58 && opcode <= 0x7f) {
+		/*  REG:  */
+		const int REG_src_dst  = (iword >> 19) & 0x1f;
+		const int REG_src2     = (iword >> 14) & 0x1f;
+		const int REG_m3       = (iword >> 13) & 0x1;
+		const int REG_m2       = (iword >> 12) & 0x1;
+		const int REG_m1       = (iword >> 11) & 0x1;
+		const int REG_opcode2  = (iword >> 7) & 0xf;
+		const int REG_s2       = (iword >> 6) & 0x1;
+		const int REG_s1       = (iword >> 5) & 0x1;
+		const int REG_src1     = (iword >> 0) & 0x1f;
+
+		int op3 = (opcode << 4) + REG_opcode2;
+
+		if (REG_m1)
+			ic->arg[0].u32 = REG_src1;
+		else {
+			if (REG_s1)
+				ic->arg[0].p = &m_sfr[REG_src1];
+			else
+				ic->arg[0].p = &m_r[REG_src1];
+		}
+		
+		if (REG_m2)
+			ic->arg[1].u32 = REG_src2;
+		else {
+			if (REG_s2)
+				ic->arg[1].p = &m_sfr[REG_src1];
+			else
+				ic->arg[1].p = &m_r[REG_src2];
+		}
+		
+		if (REG_m3) {
+			// TODO: write to sfr.
+			if (ui != NULL)
+				ui->ShowDebugMessage(this, "unimplemented write to sfr");
+			return;
+		} else {
+			ic->arg[2].p = &m_r[REG_src_dst];
+		}
+
+		void (*f_lit_lit_reg)(CPUDyntransComponent*, struct DyntransIC*) = NULL;
+		void (*f_lit_reg_reg)(CPUDyntransComponent*, struct DyntransIC*) = NULL;
+
+		if (op3 == 0x5cc) {
+			// NOTE: mov does not use src2.
+			f_lit_lit_reg = instr_mov_lit_reg;
+			f_lit_reg_reg = instr_mov_lit_reg;
+		}
+
+		if (REG_m3 == 0) {
+			if (REG_m1 && REG_m2)
+				ic->f = f_lit_lit_reg;
+			if (REG_m1 && !REG_m2)
+				ic->f = f_lit_reg_reg;
+		} else {
+			if (ui != NULL)
+				ui->ShowDebugMessage(this, "unimplemented write to sfr");
+		}
+	}
+
+	if (ic->f == NULL && ui != NULL) {
+		stringstream ss;
+		ss.flags(std::ios::hex);
+		ss << "unimplemented opcode 0x" << opcode;
+		ui->ShowDebugMessage(this, ss.str());
 	}
 }
 
@@ -888,10 +950,81 @@ static void Test_I960_CPUComponent_Disassembly_Basic()
 	UnitTest::Assert("disassembly result[2]", result[2], "0x45342301,r13");
 }
 
+static GXemul SimpleMachine()
+{
+	GXemul gxemul;
+	gxemul.GetCommandInterpreter().RunCommand("add mainbus");
+	gxemul.GetCommandInterpreter().RunCommand("add i960_cpu mainbus0");
+	gxemul.GetCommandInterpreter().RunCommand("add ram mainbus0");
+	gxemul.GetCommandInterpreter().RunCommand("ram0.memoryMappedBase = 0x3fe00000");
+	gxemul.GetCommandInterpreter().RunCommand("ram0.memoryMappedSize = 0x1000");
+	return gxemul;
+}
+
+static void Test_I960_CPUComponent_Execute_mov()
+{
+	GXemul gxemul = SimpleMachine();
+
+	refcount_ptr<Component> cpu = gxemul.GetRootComponent()->LookupPath("root.mainbus0.cpu0");
+	AddressDataBus* bus = cpu->AsAddressDataBus();
+
+	uint32_t data32 = 0x5c201e06;			// mov   6,r4
+	bus->AddressSelect(0x3fe00048);
+	bus->WriteData(data32, LittleEndian);
+	bus->AddressSelect(0x3fe0004c);
+	bus->WriteData(data32, LittleEndian);
+
+	cpu->SetVariableValue("pc", "0x3fe00048");
+	cpu->SetVariableValue("r4", "0x1234");
+
+	gxemul.SetRunState(GXemul::Running);
+	gxemul.Execute(1);
+
+	UnitTest::Assert("pc should have increased", cpu->GetVariable("pc")->ToInteger(), 0x3fe0004c);
+	UnitTest::Assert("r4 should have been modified", cpu->GetVariable("r4")->ToInteger(), 6);
+
+	cpu->SetVariableValue("r4", "0x12345");
+
+	gxemul.SetRunState(GXemul::SingleStepping);
+	gxemul.Execute(1);
+
+	UnitTest::Assert("pc should have increased again", cpu->GetVariable("pc")->ToInteger(), 0x3fe00050);
+	UnitTest::Assert("r4 should have been modified again", cpu->GetVariable("r4")->ToInteger(), 6);
+}
+
+static void Test_I960_CPUComponent_Execute_b()
+{
+	GXemul gxemul = SimpleMachine();
+
+	refcount_ptr<Component> cpu = gxemul.GetRootComponent()->LookupPath("root.mainbus0.cpu0");
+	AddressDataBus* bus = cpu->AsAddressDataBus();
+
+	uint32_t data32 = 0x080006c0;			// b 0x3fe006c4
+	bus->AddressSelect(0x3fe00004);
+	bus->WriteData(data32, LittleEndian);
+
+	cpu->SetVariableValue("pc", "0x3fe00004");
+
+	gxemul.SetRunState(GXemul::Running);
+	gxemul.Execute(1);
+
+	UnitTest::Assert("pc should have changed", cpu->GetVariable("pc")->ToInteger(), 0x3fe006c4);
+
+	cpu->SetVariableValue("pc", "0x3fe00004");
+
+	gxemul.SetRunState(GXemul::SingleStepping);
+	gxemul.Execute(1);
+
+	UnitTest::Assert("pc should have changed again", cpu->GetVariable("pc")->ToInteger(), 0x3fe006c4);
+}
+
 UNITTESTS(I960_CPUComponent)
 {
 	UNITTEST(Test_I960_CPUComponent_Create);
 	UNITTEST(Test_I960_CPUComponent_Disassembly_Basic);
+
+	UNITTEST(Test_I960_CPUComponent_Execute_mov);
+	UNITTEST(Test_I960_CPUComponent_Execute_b);
 }
 
 #endif

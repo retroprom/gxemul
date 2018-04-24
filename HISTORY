@@ -4668,3 +4668,5 @@ Changelog for GXemul:
 		no support for symbols yet.
 		Beginning to add some REG instruction disassembly (i960).
 20140423	Implementing the rest of i960CA REG instruction disasm.
+20140424	Beginning to implement i960 dyntrans instructions (a simple
+		'b' branch and a simple 'mov lit,reg' so far).

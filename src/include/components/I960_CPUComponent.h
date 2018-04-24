@@ -121,13 +121,8 @@ protected:
 	virtual void ShowRegisters(GXemul* gxemul, const vector<string>& arguments) const;
 
 private:
-	template<int op, bool samepage, bool singlestep> static void instr_b(CPUDyntransComponent* cpubase, DyntransIC* ic);
-	template<bool link, bool singlestep> static void instr_j(CPUDyntransComponent* cpubase, DyntransIC* ic);
-	template<bool link, bool singlestep> static void instr_jr(CPUDyntransComponent* cpubase, DyntransIC* ic);
-
-	DECLARE_DYNTRANS_INSTR(multu);
-
-	template<bool store, typename addressType, typename T, bool signedLoad> static void instr_loadstore(CPUDyntransComponent* cpubase, DyntransIC* ic);
+	DECLARE_DYNTRANS_INSTR(b);
+	DECLARE_DYNTRANS_INSTR(mov_lit_reg);
 
 	void Translate(uint32_t iword, struct DyntransIC* ic);
 	DECLARE_DYNTRANS_INSTR(ToBeTranslated);
