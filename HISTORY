@@ -4664,9 +4664,12 @@ Changelog for GXemul:
 		functionality.
 20180420	i960 MEM and COBR instruction group disassembly has now
 		been implemented.
-20140422	Adding a simple b.out file loader for i960 binaries, but
+20180422	Adding a simple b.out file loader for i960 binaries, but
 		no support for symbols yet.
 		Beginning to add some REG instruction disassembly (i960).
-20140423	Implementing the rest of i960CA REG instruction disasm.
-20140424	Beginning to implement i960 dyntrans instructions (a simple
+20180423	Implementing the rest of i960CA REG instruction disasm.
+20180424	Beginning to implement i960 dyntrans instructions (a simple
 		'b' branch and a simple 'mov lit,reg' so far).
+20180428	Implementing happy case of an "lda" i960 instruction which has
+		an extra displacement word, i.e. non-standard dyntrans
+		instruction length.

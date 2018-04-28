@@ -123,8 +123,9 @@ protected:
 private:
 	DECLARE_DYNTRANS_INSTR(b);
 	DECLARE_DYNTRANS_INSTR(mov_lit_reg);
+	DECLARE_DYNTRANS_INSTR(lda_displacement);
 
-	void Translate(uint32_t iword, struct DyntransIC* ic);
+	void Translate(uint32_t iword, uint32_t iword2, struct DyntransIC* ic);
 	DECLARE_DYNTRANS_INSTR(ToBeTranslated);
 
 private:

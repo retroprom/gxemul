@@ -360,17 +360,17 @@ size_t I960_CPUComponent::DisassembleInstruction(uint64_t vaddr, size_t maxLen,
 	const int CTRL_disp    = (iword >> 2) & 0x3fffff;
 	const int CTRL_t       = (iword >> 1) & 0x1;
 
-	const int MEMA_src_dst = (iword >> 19) & 0x1f;
+	// const int MEMA_src_dst = (iword >> 19) & 0x1f; Same as MEMB_src_dst
 	const int MEMA_abase   = (iword >> 14) & 0x1f;
 	const int MEMA_md      = (iword >> 13) & 0x1;
-	const int MEMA_zero    = (iword >> 12) & 0x1;
+	// const int MEMA_zero    = (iword >> 12) & 0x1;  0 for MEMA, 1 for MEMB
 	const int MEMA_offset  = (iword >> 0) & 0xfff;
 
 	const int MEMB_src_dst = (iword >> 19) & 0x1f;
 	const int MEMB_abase   = (iword >> 14) & 0x1f;
 	const int MEMB_mode    = (iword >> 10) & 0xf;
 	const int MEMB_scale   = (iword >> 7) & 0x7;
-	const int MEMB_sfr     = (iword >> 5) & 0x3;
+	// const int MEMB_sfr     = (iword >> 5) & 0x3;  Should be 00?
 	const int MEMB_index   = (iword >> 0) & 0x1f;
 
 	bool hasDisplacementWord = false;
@@ -498,7 +498,6 @@ size_t I960_CPUComponent::DisassembleInstruction(uint64_t vaddr, size_t maxLen,
 			ssOpcode << ".f";
 
 		bool src1isBitpos = opcode == 0x30 || opcode == 0x37;
-		bool hasDisplacement = opcode >= 0x30;
 
 		if (opcode <= 0x27) {
 			ssArgs << regname_or_literal(COBR_src_dst, 0, COBR_s2);
@@ -792,6 +791,14 @@ DYNTRANS_INSTR(I960_CPUComponent,mov_lit_reg)
 }
 
 
+DYNTRANS_INSTR(I960_CPUComponent,lda_displacement)
+{
+	DYNTRANS_INSTR_HEAD(I960_CPUComponent)
+	REG32(ic->arg[2]) = ic->arg[0].u32;
+	cpu->m_nextIC = ic + 2;
+}
+
+
 DYNTRANS_INSTR(I960_CPUComponent,b)
 {
 	DYNTRANS_INSTR_HEAD(I960_CPUComponent)
@@ -803,7 +810,7 @@ DYNTRANS_INSTR(I960_CPUComponent,b)
 /*****************************************************************************/
 
 
-void I960_CPUComponent::Translate(uint32_t iword, struct DyntransIC* ic)
+void I960_CPUComponent::Translate(uint32_t iword, uint32_t iword2, struct DyntransIC* ic)
 {
 	UI* ui = GetUI();	// for debug messages
 
@@ -880,6 +887,33 @@ void I960_CPUComponent::Translate(uint32_t iword, struct DyntransIC* ic)
 			if (ui != NULL)
 				ui->ShowDebugMessage(this, "unimplemented write to sfr");
 		}
+	} else if (opcode >= 0x80 && opcode <= 0xcf) {
+		/*  MEM:  */
+		const int MEMA_abase   = (iword >> 14) & 0x1f;
+		const int MEMA_md      = (iword >> 13) & 0x1;
+		const int MEMA_offset  = (iword >> 0) & 0xfff;
+		const int MEMB_src_dst = (iword >> 19) & 0x1f;
+		const int MEMB_abase   = (iword >> 14) & 0x1f;
+		const int MEMB_mode    = (iword >> 10) & 0xf;
+		const int MEMB_scale   = (iword >> 7) & 0x7;
+		const int MEMB_index   = (iword >> 0) & 0x1f;
+
+		ic->arg[2].p = &m_r[MEMB_src_dst];
+
+		if (iword & 0x1000) {
+			/*  MEMB:  */
+			switch (MEMB_mode) {
+			case 0xc:
+				ic->arg[0].u32 = iword2;			
+				ic->f = instr_lda_displacement;
+				break;
+			default:
+				ui->ShowDebugMessage(this, "unimplemented MEMB_mode");
+			}
+		} else {
+			/*  MEMA:  */
+			ui->ShowDebugMessage(this, "TODO: MEMA");
+		}
 	}
 
 	if (ic->f == NULL && ui != NULL) {
@@ -898,8 +932,24 @@ DYNTRANS_INSTR(I960_CPUComponent,ToBeTranslated)
 	cpu->DyntransToBeTranslatedBegin(ic);
 
 	uint32_t iword;
-	if (cpu->DyntransReadInstruction(iword))
-		cpu->Translate(iword, ic);
+	if (cpu->DyntransReadInstruction(iword)) {
+		bool readCompleteInstruction = true;
+		uint32_t iword2 = 0;
+		uint32_t opcode = iword >> 24;
+		if (opcode >= 0x80 && opcode <= 0xcf) {
+			/*  Only some MEMB instructions have displacement words:  */
+			int mode = (iword >> 10) & 0xf;
+			if (mode == 0x5 || mode >= 0xc)
+				readCompleteInstruction = cpu->DyntransReadInstruction(iword2, 4);
+			if (!readCompleteInstruction) {
+				UI* ui = cpu->GetUI();
+				ui->ShowDebugMessage(cpu, "last part of instruction could not be read: TODO");
+			}
+		}
+		
+		if (readCompleteInstruction)
+			cpu->Translate(iword, iword2, ic);
+	}
 
 	cpu->DyntransToBeTranslatedDone(ic);
 }
@@ -964,15 +1014,13 @@ static GXemul SimpleMachine()
 static void Test_I960_CPUComponent_Execute_mov()
 {
 	GXemul gxemul = SimpleMachine();
-
 	refcount_ptr<Component> cpu = gxemul.GetRootComponent()->LookupPath("root.mainbus0.cpu0");
 	AddressDataBus* bus = cpu->AsAddressDataBus();
 
-	uint32_t data32 = 0x5c201e06;			// mov   6,r4
 	bus->AddressSelect(0x3fe00048);
-	bus->WriteData(data32, LittleEndian);
+	bus->WriteData((uint32_t)0x5c201e06, LittleEndian);	// mov   6,r4
 	bus->AddressSelect(0x3fe0004c);
-	bus->WriteData(data32, LittleEndian);
+	bus->WriteData((uint32_t)0x5c201e06, LittleEndian);	// mov   6,r4
 
 	cpu->SetVariableValue("pc", "0x3fe00048");
 	cpu->SetVariableValue("r4", "0x1234");
@@ -995,13 +1043,11 @@ static void Test_I960_CPUComponent_Execute_mov()
 static void Test_I960_CPUComponent_Execute_b()
 {
 	GXemul gxemul = SimpleMachine();
-
 	refcount_ptr<Component> cpu = gxemul.GetRootComponent()->LookupPath("root.mainbus0.cpu0");
 	AddressDataBus* bus = cpu->AsAddressDataBus();
 
-	uint32_t data32 = 0x080006c0;			// b 0x3fe006c4
 	bus->AddressSelect(0x3fe00004);
-	bus->WriteData(data32, LittleEndian);
+	bus->WriteData((uint32_t)0x080006c0, LittleEndian);	// b 0x3fe006c4
 
 	cpu->SetVariableValue("pc", "0x3fe00004");
 
@@ -1018,6 +1064,24 @@ static void Test_I960_CPUComponent_Execute_b()
 	UnitTest::Assert("pc should have changed again", cpu->GetVariable("pc")->ToInteger(), 0x3fe006c4);
 }
 
+static void Test_I960_CPUComponent_Execute_lda_with_displacement()
+{
+	GXemul gxemul = SimpleMachine();
+	refcount_ptr<Component> cpu = gxemul.GetRootComponent()->LookupPath("root.mainbus0.cpu0");
+	AddressDataBus* bus = cpu->AsAddressDataBus();
+
+	bus->AddressSelect(0x3fe00010);
+	bus->WriteData((uint32_t)0x8cf03000, LittleEndian);	// lda
+	bus->AddressSelect(0x3fe00014);
+	bus->WriteData((uint32_t)0x3fe0507c, LittleEndian);	//     0x3fe0507c, g14
+
+	cpu->SetVariableValue("pc", "0x3fe00010");
+	gxemul.SetRunState(GXemul::Running);
+	gxemul.Execute(1);
+	UnitTest::Assert("lda length", cpu->GetVariable("pc")->ToInteger(), 0x3fe00018);
+	UnitTest::Assert("lda", cpu->GetVariable("g14")->ToInteger(), 0x3fe0507c);
+}
+
 UNITTESTS(I960_CPUComponent)
 {
 	UNITTEST(Test_I960_CPUComponent_Create);
@@ -1025,6 +1089,7 @@ UNITTESTS(I960_CPUComponent)
 
 	UNITTEST(Test_I960_CPUComponent_Execute_mov);
 	UNITTEST(Test_I960_CPUComponent_Execute_b);
+	UNITTEST(Test_I960_CPUComponent_Execute_lda_with_displacement);
 }
 
 #endif

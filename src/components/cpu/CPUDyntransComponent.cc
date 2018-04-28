@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2008-2010  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2008-2018  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -333,11 +333,11 @@ bool CPUDyntransComponent::DyntransReadInstruction(uint16_t& iword)
 }
 
 
-bool CPUDyntransComponent::DyntransReadInstruction(uint32_t& iword)
+bool CPUDyntransComponent::DyntransReadInstruction(uint32_t& iword, int offset)
 {
 	// TODO: Fast lookup.
 
-	AddressSelect(PCtoInstructionAddress(m_pc));
+	AddressSelect(PCtoInstructionAddress(m_pc + offset));
 	bool readable = ReadData(iword, m_isBigEndian? BigEndian : LittleEndian);
 
 	if (!readable) {
@@ -345,7 +345,7 @@ bool CPUDyntransComponent::DyntransReadInstruction(uint32_t& iword)
 		if (ui != NULL) {
 			stringstream ss;
 			ss.flags(std::ios::hex);
-			ss << "instruction at 0x" << PCtoInstructionAddress(m_pc)
+			ss << "instruction at 0x" << PCtoInstructionAddress(m_pc + offset)
 			    << " could not be read!";
 			ui->ShowDebugMessage(this, ss.str());
 		}

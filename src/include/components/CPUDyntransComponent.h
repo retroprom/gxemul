@@ -2,7 +2,7 @@
 #define	CPUDYNTRANSCOMPONENT_H
 
 /*
- *  Copyright (C) 2008-2010  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2008-2018  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -109,7 +109,7 @@ protected:
 
 	void DyntransToBeTranslatedBegin(struct DyntransIC*);
 	bool DyntransReadInstruction(uint16_t& iword);
-	bool DyntransReadInstruction(uint32_t& iword);
+	bool DyntransReadInstruction(uint32_t& iword, int offset = 0);
 	void DyntransToBeTranslatedDone(struct DyntransIC*);
 
 	/**
