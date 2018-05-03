@@ -4673,4 +4673,5 @@ Changelog for GXemul:
 20180428	Implementing happy case of an "lda" i960 instruction which has
 		an extra displacement word, i.e. non-standard dyntrans
 		instruction length.
-20180503	Implementing i960 lda with immediate offset.
+20180503	Implementing i960 lda with immediate 12-bit offset, and
+		dummy (nop) sysctl cache invalidation (msg type 0x01).

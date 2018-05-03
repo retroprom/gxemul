@@ -781,9 +781,11 @@ string I960_CPUComponent::GetAttribute(const string& attributeName)
 /*****************************************************************************/
 
 
-DYNTRANS_INSTR(I960_CPUComponent,mov_lit_reg)
+DYNTRANS_INSTR(I960_CPUComponent,b)
 {
-	REG32(ic->arg[2]) = ic->arg[0].u32;
+	DYNTRANS_INSTR_HEAD(I960_CPUComponent)
+	cpu->m_pc = ic->arg[0].u32;
+	cpu->DyntransPCtoPointers();
 }
 
 
@@ -795,11 +797,35 @@ DYNTRANS_INSTR(I960_CPUComponent,lda_displacement)
 }
 
 
-DYNTRANS_INSTR(I960_CPUComponent,b)
+DYNTRANS_INSTR(I960_CPUComponent,mov_lit_reg)
 {
-	DYNTRANS_INSTR_HEAD(I960_CPUComponent)
-	cpu->m_pc = ic->arg[0].u32;
-	cpu->DyntransPCtoPointers();
+	REG32(ic->arg[2]) = ic->arg[0].u32;
+}
+
+
+DYNTRANS_INSTR(I960_CPUComponent,sysctl)
+{
+	uint32_t message = REG32(ic->arg[0]);
+	int type = (message >> 8) & 0xff;
+	
+	if (type == 0x01) {
+		// Invalidate cache.
+		// Right now in GXemul, this is a NOP.
+	} else {
+		DYNTRANS_INSTR_HEAD(I960_CPUComponent)
+		
+		// We didn't actually do anything in this instruction.
+		cpu->m_executedCycles --;
+
+		// Point to this instruction...
+		DYNTRANS_SYNCH_PC;
+
+		// ... and then abort.
+		cpu->m_nextIC = &cpu->m_abortIC;
+	
+		UI* ui = cpu->GetUI();
+		ui->ShowDebugMessage(cpu, "unimplemented sysctl message type");
+	}
 }
 
 
@@ -867,11 +893,16 @@ void I960_CPUComponent::Translate(uint32_t iword, uint32_t iword2, struct Dyntra
 
 		void (*f_lit_lit_reg)(CPUDyntransComponent*, struct DyntransIC*) = NULL;
 		void (*f_lit_reg_reg)(CPUDyntransComponent*, struct DyntransIC*) = NULL;
+		void (*f_reg_lit_reg)(CPUDyntransComponent*, struct DyntransIC*) = NULL;
+		void (*f_reg_reg_reg)(CPUDyntransComponent*, struct DyntransIC*) = NULL;
 
 		if (op3 == 0x5cc) {
-			// NOTE: mov does not use src2.
+			// mov		NOTE: mov does not use src2.
 			f_lit_lit_reg = instr_mov_lit_reg;
 			f_lit_reg_reg = instr_mov_lit_reg;
+		} else if (op3 == 0x659) {
+			// sysctl
+			f_reg_reg_reg = instr_sysctl;
 		}
 
 		if (REG_m3 == 0) {
@@ -879,6 +910,10 @@ void I960_CPUComponent::Translate(uint32_t iword, uint32_t iword2, struct Dyntra
 				ic->f = f_lit_lit_reg;
 			if (REG_m1 && !REG_m2)
 				ic->f = f_lit_reg_reg;
+			if (!REG_m1 && REG_m2)
+				ic->f = f_reg_lit_reg;
+			if (!REG_m1 && !REG_m2)
+				ic->f = f_reg_reg_reg;
 		} else {
 			if (ui != NULL)
 				ui->ShowDebugMessage(this, "unimplemented write to sfr");
