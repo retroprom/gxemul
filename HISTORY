@@ -4673,3 +4673,4 @@ Changelog for GXemul:
 20180428	Implementing happy case of an "lda" i960 instruction which has
 		an extra displacement word, i.e. non-standard dyntrans
 		instruction length.
+20180503	Implementing i960 lda with immediate offset.

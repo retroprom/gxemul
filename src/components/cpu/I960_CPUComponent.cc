@@ -737,13 +737,9 @@ size_t I960_CPUComponent::DisassembleInstruction(uint64_t vaddr, size_t maxLen,
 			}
 		} else {
 			/*  MEMA:  */
-			int32_t offset = MEMA_offset;
-			if (offset & 0x00000800)
-				offset |= 0xfffff000;
-
 			ssArgs << "0x";
 			ssArgs.flags(std::ios::hex);
-			ssArgs << std::setfill('0') << std::setw(1) << offset;
+			ssArgs << std::setfill('0') << std::setw(1) << MEMA_offset;
 
 			if (MEMA_md)
 				ssArgs << "(" << regname_or_literal(MEMA_abase, 0, 0) << ")";
@@ -912,7 +908,12 @@ void I960_CPUComponent::Translate(uint32_t iword, uint32_t iword2, struct Dyntra
 			}
 		} else {
 			/*  MEMA:  */
-			ui->ShowDebugMessage(this, "TODO: MEMA");
+			if (MEMA_md)
+				ui->ShowDebugMessage(this, "TODO: MEMA");
+			else {
+				ic->arg[0].u32 = MEMA_offset;
+				ic->f = instr_mov_lit_reg;
+			}
 		}
 	}
 
@@ -1064,6 +1065,22 @@ static void Test_I960_CPUComponent_Execute_b()
 	UnitTest::Assert("pc should have changed again", cpu->GetVariable("pc")->ToInteger(), 0x3fe006c4);
 }
 
+static void Test_I960_CPUComponent_Execute_lda_with_offset()
+{
+	GXemul gxemul = SimpleMachine();
+	refcount_ptr<Component> cpu = gxemul.GetRootComponent()->LookupPath("root.mainbus0.cpu0");
+	AddressDataBus* bus = cpu->AsAddressDataBus();
+
+	bus->AddressSelect(0x3fe00010);
+	bus->WriteData((uint32_t)0x8c180f13, LittleEndian);	// lda r3, 0xf13
+
+	cpu->SetVariableValue("pc", "0x3fe00010");
+	gxemul.SetRunState(GXemul::Running);
+	gxemul.Execute(1);
+	UnitTest::Assert("lda length", cpu->GetVariable("pc")->ToInteger(), 0x3fe00014);
+	UnitTest::Assert("lda", cpu->GetVariable("r3")->ToInteger(), 0xf13);
+}
+
 static void Test_I960_CPUComponent_Execute_lda_with_displacement()
 {
 	GXemul gxemul = SimpleMachine();
@@ -1089,6 +1106,7 @@ UNITTESTS(I960_CPUComponent)
 
 	UNITTEST(Test_I960_CPUComponent_Execute_mov);
 	UNITTEST(Test_I960_CPUComponent_Execute_b);
+	UNITTEST(Test_I960_CPUComponent_Execute_lda_with_offset);
 	UNITTEST(Test_I960_CPUComponent_Execute_lda_with_displacement);
 }
 
