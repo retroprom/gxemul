@@ -529,12 +529,12 @@ void mips_cpu_tlbdump(struct machine *m, int x, int rawflag)
 			    nr_of_tlb_entries; j++) {
 				if (m->cpus[i]->cd.mips.cpu_type.mmu_model ==
 				    MMU3K)
-					printf("%3i: hi=0x%08"PRIx32" lo=0x%08"
+					printf(" %02x: hi=0x%08"PRIx32" lo=0x%08"
 					    PRIx32"\n", j,
 					    (uint32_t) cop0->tlbs[j].hi,
 					    (uint32_t) cop0->tlbs[j].lo0);
 				else if (m->cpus[i]->is_32bit)
-					printf("%3i: hi=0x%08"PRIx32" mask=0x"
+					printf(" %02x: hi=0x%08"PRIx32" mask=0x"
 					    "%08"PRIx32" lo0=0x%08"PRIx32
 					    " lo1=0x%08"PRIx32"\n", j,
 					    (uint32_t) cop0->tlbs[j].hi,
@@ -542,7 +542,7 @@ void mips_cpu_tlbdump(struct machine *m, int x, int rawflag)
 					    (uint32_t) cop0->tlbs[j].lo0,
 					    (uint32_t) cop0->tlbs[j].lo1);
 				else
-					printf("%3i: hi=0x%016"PRIx64" mask="
+					printf(" %02x: hi=0x%016"PRIx64" mask="
 					    "0x%016"PRIx64" lo0=0x%016"PRIx64
 					    " lo1=0x%016"PRIx64"\n", j,
 					    (uint64_t) cop0->tlbs[j].hi,
@@ -596,7 +596,7 @@ void mips_cpu_tlbdump(struct machine *m, int x, int rawflag)
 			mask |= (1 << (pageshift+1)) - 1;
 			/*  here mask = e.g. 0x1fff for 4KB pages  */
 
-			printf("%3i: ", j);
+			printf(" %02x: ", j);
 
 			switch (m->cpus[i]->cd.mips.cpu_type.mmu_model) {
 			case MMU3K:
