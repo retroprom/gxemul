@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2010  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2018  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -1497,8 +1497,12 @@ void coproc_tlbpr(struct cpu *cpu, int readflag)
 		} else {
 			/*  R4000:  */
 			i = cp->reg[COP0_INDEX] & INDEX_MASK;
-			if (i >= cp->nr_of_tlbs)	/*  TODO:  exception  */
+			if (i >= cp->nr_of_tlbs) {
+				/*  TODO:  exception?  */
+				fatal("[ warning: tlbr from index %i (too "
+				    "high) ]\n", i);
 				return;
+			}
 
 			cp->reg[COP0_PAGEMASK] = cp->tlbs[i].mask;
 			cp->reg[COP0_ENTRYHI]  = cp->tlbs[i].hi;
@@ -1689,15 +1693,25 @@ void coproc_tlbwri(struct cpu *cpu, int randomflag)
 				oldvaddr |= 0x3fffff0000000000ULL;
 		}
 
-		/*
-		 *  TODO: non-4KB page sizes!
-		 */
-		if (cp->tlbs[index].lo0 & ENTRYLO_V)
-			cpu->invalidate_translation_caches(cpu, oldvaddr,
-			    INVALIDATE_VADDR);
-		if (cp->tlbs[index].lo1 & ENTRYLO_V)
-			cpu->invalidate_translation_caches(cpu, oldvaddr|0x1000,
-			    INVALIDATE_VADDR);
+		{
+			uint64_t mask = cp->tlbs[index].mask | 0x1000;
+			uint64_t pagesize = 0x800;
+			uint64_t tmp = mask >> 12;
+			while ((tmp & 1)) {
+				tmp >>= 1;
+				pagesize <<= 1;
+			}
+			
+			// printf("pagesize = %016llx mask = %016llx\n", pagesize, mask);
+			if (cp->tlbs[index].lo0 & ENTRYLO_V) {
+				for (uint64_t ofs = 0; ofs < pagesize; ofs += 0x1000)
+					cpu->invalidate_translation_caches(cpu, oldvaddr + ofs, INVALIDATE_VADDR);
+			}
+			
+			if (cp->tlbs[index].lo1 & ENTRYLO_V)
+				for (uint64_t ofs = 0; ofs <= pagesize; ofs += 0x1000)
+					cpu->invalidate_translation_caches(cpu, oldvaddr + ofs + pagesize, INVALIDATE_VADDR);
+		}
 	}
 
 #if 0
@@ -1825,6 +1839,8 @@ void coproc_tlbwri(struct cpu *cpu, int randomflag)
 			exit(1);
 		}
 
+		pfn_shift = vpn_shift;
+
 		paddr0 = ((cp->tlbs[index].lo0 & ENTRYLO_PFN_MASK)
 		    >> ENTRYLO_PFN_SHIFT) << pfn_shift
 		    >> vpn_shift << vpn_shift;
@@ -1871,14 +1887,17 @@ void coproc_tlbwri(struct cpu *cpu, int randomflag)
 
 		/*
 		 *  Invalidate any code translations, if we are writing Dirty
-		 *  pages to the TLB:  (TODO: 4KB hardcoded... ugly)
+		 *  pages to the TLB:
 		 */
 		psize = 1 << pfn_shift;
-		for (ptmp = 0; ptmp < psize; ptmp += 0x2000) {
-			if (wf0)
+
+		if (wf0) {
+			for (ptmp = 0; ptmp < psize; ptmp += 0x1000)
 				cpu->invalidate_code_translation(cpu,
 				    paddr0 + ptmp, INVALIDATE_PADDR);
-			if (wf1)
+		}
+		if (wf1) {
+			for (ptmp = 0; ptmp < psize; ptmp += 0x1000)
 				cpu->invalidate_code_translation(cpu,
 				    paddr1 + ptmp, INVALIDATE_PADDR);
 		}
@@ -1893,14 +1912,16 @@ void coproc_tlbwri(struct cpu *cpu, int randomflag)
 		 *             be too expensive to add e.g. 16MB pages like
 		 *             this.
 		 */
-		memblock = memory_paddr_to_hostaddr(cpu->mem, paddr0, 0);
-		if (memblock != NULL && cp->reg[COP0_ENTRYLO0] & ENTRYLO_V)
-			cpu->update_translation_table(cpu, vaddr0, memblock,
-			    wf0, paddr0);
-		memblock = memory_paddr_to_hostaddr(cpu->mem, paddr1, 0);
-		if (memblock != NULL && cp->reg[COP0_ENTRYLO1] & ENTRYLO_V)
-			cpu->update_translation_table(cpu, vaddr1, memblock,
-			    wf1, paddr1);
+		if (psize == 0x1000) {
+			memblock = memory_paddr_to_hostaddr(cpu->mem, paddr0, 0);
+			if (memblock != NULL && cp->reg[COP0_ENTRYLO0] & ENTRYLO_V)
+				cpu->update_translation_table(cpu, vaddr0, memblock,
+				    wf0, paddr0);
+			memblock = memory_paddr_to_hostaddr(cpu->mem, paddr1, 0);
+			if (memblock != NULL && cp->reg[COP0_ENTRYLO1] & ENTRYLO_V)
+				cpu->update_translation_table(cpu, vaddr1, memblock,
+				    wf1, paddr1);
+		}
 
 		/*  Set new last_written_tlb_index hint:  */
 		cpu->cd.mips.last_written_tlb_index = index;

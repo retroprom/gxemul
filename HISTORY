@@ -4675,3 +4675,7 @@ Changelog for GXemul:
 		instruction length.
 20180503	Implementing i960 lda with immediate 12-bit offset, and
 		dummy (nop) sysctl cache invalidation (msg type 0x01).
+20180613	Fixing an old TODO for invalidating translation caches when
+		using non-4KB pages for MIPS. This makes HelenOS 0.7.1/malta
+		boot further than before.
+
