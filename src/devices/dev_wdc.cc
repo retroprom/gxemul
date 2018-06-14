@@ -552,7 +552,7 @@ DEVICE_ACCESS(wdc)
 			idata = memory_readmax64(cpu, data, len);
 		else {
 			if (len != 1)
-				fatal("[ wdc: WARNING! non-8-bit access! ]\n");
+				fatal("[ wdc: WARNING! non-8-bit access on WRITE! ]\n");
 			idata = data[0];
 		}
 	}
@@ -892,8 +892,11 @@ ret:
 	if (writeflag == MEM_READ) {
 		if (relative_addr == wd_data)
 			memory_writemax64(cpu, data, len, odata);
-		else
+		else {
+			if (len != 1)
+				fatal("[ wdc: WARNING! non-8-bit access on READ! ]\n");
 			data[0] = odata;
+		}
 	}
 
 	return 1;
