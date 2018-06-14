@@ -45,18 +45,19 @@ SUCH DAMAGE.
 
 <p><br>
 <ul>
-  <li><a href="unsupported.html#mach">Mach/PMAX</a>
-  <li><a href="unsupported.html#declinuxredhat">Redhat Linux for DECstation</a>
-  <li><a href="unsupported.html#openbsdsgiinstall">OpenBSD/sgi</a>
-  <li><a href="unsupported.html#openbsdarcinstall">OpenBSD/arc 2.3</a>
-  <li><a href="unsupported.html#openbsdluna88k">OpenBSD/luna88k</a>
-  <li><a href="unsupported.html#debiancats">Debian GNU/Linux for CATS</a>
-  <li><a href="unsupported.html#linux_malta">Linux/Malta</a> (variant 1)
-  <li><a href="unsupported.html#linux_malta2">Linux/Malta</a> (variant 2)
-  <li><a href="unsupported.html#linux_qemu_mips">Linux/QEMU_MIPS</a>
-  <li><a href="unsupported.html#windows_nt_mips">Windows NT/MIPS</a>
-  <li><a href="unsupported.html#netbsdplaystation2">NetBSD/playstation2</a>
-  <li><a href="unsupported.html#netbsdrpi">NetBSD/raspberrypi</a>
+  <li><a href="#helenosmaltabe">HelenOS/maltabe 0.7.1</a>
+  <li><a href="#mach">Mach/PMAX</a>
+  <li><a href="#declinuxredhat">Redhat Linux for DECstation</a>
+  <li><a href="#openbsdsgiinstall">OpenBSD/sgi</a>
+  <li><a href="#openbsdarcinstall">OpenBSD/arc 2.3</a>
+  <li><a href="#openbsdluna88k">OpenBSD/luna88k</a>
+  <li><a href="#debiancats">Debian GNU/Linux for CATS</a>
+  <li><a href="#linux_malta">Linux/Malta</a> (variant 1)
+  <li><a href="#linux_malta2">Linux/Malta</a> (variant 2)
+  <li><a href="#linux_qemu_mips">Linux/QEMU_MIPS</a>
+  <li><a href="#windows_nt_mips">Windows NT/MIPS</a>
+  <li><a href="#netbsdplaystation2">NetBSD/playstation2</a>
+  <li><a href="#netbsdrpi">NetBSD/raspberrypi</a>
 </ul>
 
 <p>NOTE: The guest operating systems listed on this page are here because
@@ -71,6 +72,32 @@ cases, it contains notes about starting guest OSes that are not complete
 
 
 <p><hr>
+
+
+
+
+
+
+
+<p><br>
+<a name="helenosmaltabe"></a>
+<h3>HelenOS/maltabe:</h3>
+
+<p>Modern versions of helenOS <i>almost</i> run in GXemul,
+using the Malta big-endian emulation mode, without a graphical framebuffer.
+(As of 2018-06-13, big-endian PCI is not working properly, and there may
+be other crashes.)
+
+<p>To run HelenOS for Malta in GXemul:
+<ol>
+  <li>Download the HelenOS kernel:<pre>
+	<a href="http://www.helenos.org/releases/HelenOS-0.7.1-mips32-malta-be.boot">http://www.helenos.org/releases/HelenOS-0.7.1-mips32-malta-be.boot</a>
+  </pre>
+  <li>Start GXemul using the following command line:<pre>
+  	<b>gxemul -e maltabe HelenOS-0.7.1-mips32-malta-be.boot</b>
+  </pre>
+</ol>
+
 
 
 

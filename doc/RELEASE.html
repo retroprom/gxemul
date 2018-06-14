@@ -9,7 +9,7 @@
 
 <!-- 10 lines header.  -->
 
-<h1>Release notes for GXemul 0.6.1</h1>
+<h1>Release notes for GXemul 0.6.0.2</h1>
 
 <p><i>Copyright (C) 2003-2018  Anders Gavare</i>
 
@@ -34,10 +34,37 @@ still one of the guest OSes that works best.
 
 
 
-<p><br>The main change between release 0.6.1 and 0.6.0.x is:
+<p><br>The changes between release 0.6.0.2 and 0.6.0.1 are relatively
+minor. They include:
 
+<p>General:
 <ul>
-	TODO.
+	<li>Minor fixes to make it possible to build GXemul using
+		relatively modern compilers (GCC 6.4.0 and clang 3.4.1).
+</ul>
+
+<p>Old framework:
+<ul>
+	<li><b>MIPS:</b>
+	<ul>
+		<li>Bug fix for the case when a guest OS used larger-than-4KB
+			pages, when it comes to invalidating previous
+			translations. This makes e.g. recent versions of
+			<a href="unsupported.html#helenosmaltabe">HelenOS
+			on Malta</a> run further than before.
+	</ul>
+</ul>
+
+<p>New framework:
+<ul>	
+	<li><b>Intel i960:</b>
+	<ul>
+		<li>Only disassembly of i960CA instructions has been
+			implemented, no actual execution yet. This may
+			still be useful when
+			debugging or inspecting i960 binaries.
+		<li>Intel b.out file format loader.
+	</ul>
 </ul>
 
 
@@ -52,7 +79,7 @@ still one of the guest OSes that works best.
     demos/                        Tutorial-like demos of testmachine functionality.
     <a href="index.html">doc/</a>                          Documentation.
     doc/RELEASE.html              This file.
-    <a href="TODO.html">doc/TODO</a>                      TODO notes.
+    <a href="TODO.html">doc/TODO.html</a>                 TODO notes.
     experiments/                  Experimental code. (Usually not needed.)
     man/                          Man page.
     src/                          Source code.
