@@ -805,14 +805,17 @@ DYNTRANS_INSTR(I960_CPUComponent,mov_lit_reg)
 
 DYNTRANS_INSTR(I960_CPUComponent,sysctl)
 {
+	DYNTRANS_INSTR_HEAD(I960_CPUComponent)
+
 	uint32_t message = REG32(ic->arg[0]);
 	int type = (message >> 8) & 0xff;
 	
 	if (type == 0x01) {
 		// Invalidate cache.
 		// Right now in GXemul, this is a NOP.
+		UI* ui = cpu->GetUI();
+		ui->ShowDebugMessage(cpu, "invalidating cache (no-op for now)");
 	} else {
-		DYNTRANS_INSTR_HEAD(I960_CPUComponent)
 		
 		// We didn't actually do anything in this instruction.
 		cpu->m_executedCycles --;
