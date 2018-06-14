@@ -773,10 +773,15 @@ void coproc_register_write(struct cpu *cpu,
 				else
 					hz = (double)cpu->machine->emulated_hz
 					    / (double)compare_diff;
-/*
- *  TODO: DON'T HARDCODE THIS!
- */
-hz = 100.0;
+
+				/*
+ 				 *  TODO: DON'T HARDCODE THIS!
+ 				 *
+ 				 *  This was for NetBSD/malta, Linux/malta,
+ 				 *  and/or NetBSD/cobalt, but it causes
+ 				 *  HelenOS/maltabe to not work properly.
+				 */
+				// hz = 100.0;
 
 				/*  Initialize or re-set the periodic timer:  */
 				if (hz > 0) {

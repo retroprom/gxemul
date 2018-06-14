@@ -4678,4 +4678,7 @@ Changelog for GXemul:
 20180613	Fixing an old TODO for invalidating translation caches when
 		using non-4KB pages for MIPS. This makes HelenOS 0.7.1/malta
 		boot further than before.
-
+20180614	Removing an old TODO regarding MIPS count/compare interrupts;
+		this causes HelenOS on Malta to run much faster (while
+		NetBSD/evbmips (malta) and /cobalt are not worse off than
+		before).
