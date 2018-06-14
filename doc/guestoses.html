@@ -49,8 +49,8 @@ SUCH DAMAGE.
   <li><a href="#netbsdpmaxinstall">NetBSD/pmax 7.1.1</a>
   <li><a href="#netbsdarcinstall">NetBSD/arc 5.0.1</a>
   <li><a href="#netbsdhpcmipsinstall">NetBSD/hpcmips 5.0.2</a>
-  <li><a href="#netbsdcobaltinstall">NetBSD/cobalt 5.1.1</a>
-  <li><a href="#netbsdevbmipsinstall">NetBSD/evbmips 5.0.2</a>
+  <li><a href="#netbsdcobaltinstall">NetBSD/cobalt 7.1.2</a>
+  <li><a href="#netbsdevbmipsinstall">NetBSD/evbmips 7.1.2</a>
   <li><a href="#netbsdalgorinstall">NetBSD/algor 5.0.2</a>
   <li><a href="#netbsdsgimips">NetBSD/sgimips 5.0</a>
   <li><a href="#netbsdcatsinstall">NetBSD/cats 5.0</a>
@@ -354,12 +354,12 @@ image:
 
 </pre>
   <li>Download the generic kernel for Cobalt and the ISO image:<pre>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.1.1/cobalt/binary/kernel/netbsd-GENERIC.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.1.1/cobalt/binary/kernel/netbsd-GENERIC.gz</a>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/iso/5.1.1/cobaltcd-5.1.1.iso">ftp://ftp.netbsd.org/pub/NetBSD/iso/5.1.1/cobaltcd-5.1.1.iso</a>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/cobalt/binary/kernel/netbsd-GENERIC.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/cobalt/binary/kernel/netbsd-GENERIC.gz</a>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/iso/NetBSD-7.1.2-cobalt.iso">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/iso/NetBSD-7.1.2-cobalt.iso</a>
 
 </pre>
   <li>Start the installation like this:<pre>
-  	<b>gxemul -x -E cobalt -d nbsd_cobalt.img -d bd:cobaltcd-5.1.1.iso -j cobalt/binary/kernel/netbsd-RAMDISK</b>
+  	<b>gxemul -x -E cobalt -d nbsd_cobalt.img -d bd:NetBSD-7.1.2-cobalt.iso -j cobalt/binary/kernel/netbsd-RAMDISK</b>
 
 </pre>
 	and proceed like you would do if you were installing NetBSD on a real
@@ -372,7 +372,9 @@ You should now be able to boot NetBSD/cobalt like this:<pre>
 	<b>gxemul -x -E cobalt -d nbsd_cobalt.img netbsd-GENERIC.gz</b>
 </pre>
 
-
+<p>The clock may go too fast inside the emulator. If it hangs during
+boot-up, before the login prompt has appeared, type CTRL-C in the xterm
+window.
 
 
 
@@ -399,7 +401,7 @@ image, from an emulated DECstation 3MAX machine:
 <p>
 <ol>
   <li>Download a NetBSD/pmax (DECstation) install RAMDISK kernel:<pre>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-4.0.1/pmax/binary/kernel/netbsd-INSTALL.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-4.0.1/pmax/binary/kernel/netbsd-INSTALL.gz</a>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/pmax/binary/kernel/netbsd-INSTALL.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/pmax/binary/kernel/netbsd-INSTALL.gz</a>
 </pre>
   <p>
   <li>Create an empty harddisk image, which will be the disk image
@@ -408,20 +410,20 @@ image, from an emulated DECstation 3MAX machine:
 
 </pre>
   <li>Download the Malta kernel and the ISO image:<pre>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/evbmips/binary/kernel/netbsd-MALTA.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/evbmips/binary/kernel/netbsd-MALTA.gz</a>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/iso/5.0.2/evbmips-mipselcd-5.0.2.iso">ftp://ftp.netbsd.org/pub/NetBSD/iso/5.0.2/evbmips-mipselcd-5.0.2.iso</a>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/evbmips-mipsel/binary/kernel/netbsd-MALTA.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/evbmips-mipsel/binary/kernel/netbsd-MALTA.gz</a>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/iso/NetBSD-7.1.2-evbmips-mipsel.iso">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/iso/NetBSD-7.1.2-evbmips-mipsel.iso</a>
 
 </pre>
   <p>
   <li>Start the emulated DECstation machine like this:<pre>
-	<b>gxemul -e 3max -d nbsd_malta.img -d evbmips-mipselcd-5.0.2.iso netbsd-INSTALL.gz</b>
+	<b>gxemul -e 3max -d nbsd_malta.img -d NetBSD-7.1.2-evbmips-mipsel.iso netbsd-INSTALL.gz</b>
 
 </pre>
   <li>At the <tt>Terminal type? [vt100]</tt> prompt, type <b>CTRL-B</b>
 to simulate a CTRL-C sent to NetBSD/pmax. Then execute the following commands:
 <p><table border="0"><tr><td><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td><pre>
 <b>newfs /dev/sd0c
-mount /dev/cd0c /mnt
+mount -t cd9660 /dev/cd0c /mnt
 mkdir /mnt2; mount /dev/sd0c /mnt2
 cd /mnt2; sh
 for a in /mnt/*/binary/sets/[bcemt]*.tgz; do echo $a; tar zxfp $a; done
@@ -438,10 +440,8 @@ cd /; umount /mnt; umount /mnt2; halt</b>
 </pre>
 
 <p>NOTE: To select a 4Kc (MIPS32) CPU instead of the default 5Kc 
-(MIPS64) CPU, add <tt><b>-C 4Kc</b></tt> to the command line. With current
-NetBSD design, however, there will be little or no difference in functionality, as
-NetBSD still runs in 32-bit mode on 64-bit MIPS CPUs. There are two things
-that differ:<ol>
+(MIPS64) CPU, add <tt><b>-C 4Kc</b></tt> to the command line.
+There are at least two things that differ:<ol>
   <li>The dynamic translation core runs faster when emulating 32-bit
 	processors, so <tt><b>-C 4Kc</b></tt> might make things go faster.
   <li>4Kc only has 16 TLB entries, whereas 5Kc has 48. This makes 4Kc
@@ -458,7 +458,10 @@ generic kernel:<pre>
 	init path (default /sbin/init):		<i>(just press enter)</i>
 </pre>
 
-
+<p>The clock is probably wrong (showing the year 2118 instead of 2018),
+and it goes too fast inside the emulator. If it hangs during
+boot-up, before the login prompt has appeared, type CTRL-C in the xterm
+window.
 
 
 

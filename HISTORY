@@ -4682,3 +4682,5 @@ Changelog for GXemul:
 		this causes HelenOS on Malta to run much faster (while
 		NetBSD/evbmips (malta) and /cobalt are not worse off than
 		before).
+		Updating NetBSD/evmbips and /cobalt installation instructions
+		to 7.1.2 (with a note about clock not being correct).
