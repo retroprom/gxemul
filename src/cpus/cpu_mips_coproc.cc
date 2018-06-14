@@ -516,7 +516,7 @@ static void invalidate_asid(struct cpu *cpu, unsigned int asid)
 	struct mips_tlb *tlb = cp->tlbs;
 
 	if (cpu->cd.mips.cpu_type.mmu_model == MMU3K) {
-		for (i=0; i<ntlbs; i++)
+		for (i = 0; i < ntlbs; i++)
 			if ((tlb[i].hi & R2K3K_ENTRYHI_ASID_MASK) == asid
 			    && (tlb[i].lo0 & R2K3K_ENTRYLO_V)
 			    && !(tlb[i].lo0 & R2K3K_ENTRYLO_G)) {
@@ -525,53 +525,51 @@ static void invalidate_asid(struct cpu *cpu, unsigned int asid)
 				    INVALIDATE_VADDR);
 			}
 	} else {
-		int non4kpages = 0;
-		uint64_t topbit = 1, fillmask = 0xffffff0000000000ULL;
-
-		if (cpu->is_32bit) {
-			topbit = 0x80000000;
-			fillmask = 0xffffffff00000000ULL;
-		} else if (cpu->cd.mips.cpu_type.mmu_model == MMU10K) {
-			topbit <<= 43;
-			fillmask <<= 4;
-		} else {
-			topbit <<= 39;
-		}
-
-		for (i=0; i<ntlbs; i++) {
-			// printf("A %02i: %016llx\n", i, (long long)tlb[i].mask);
-			uint64_t mask = tlb[i].mask & ~ 0x7ff;
-			if (mask != 0 && mask != 0x1800) {
-				non4kpages = 1;
-				//printf("non4kpages!\n");exit(1);
+		for (i = 0; i < ntlbs; i++) {
+			if ((tlb[i].hi & ENTRYHI_ASID) != asid || (tlb[i].hi & TLB_G))
 				continue;
+
+			uint64_t mask = cp->tlbs[i].mask;
+			uint64_t pagesize = 0x1000;
+			uint64_t tmp = mask >> 13;
+			while ((tmp & 1)) {
+				tmp >>= 1;
+				pagesize <<= 1;
+			}
+			
+			uint64_t oldvaddr;
+
+			if (cpu->cd.mips.cpu_type.mmu_model == MMU10K) {
+				oldvaddr = cp->tlbs[i].hi &
+					    (ENTRYHI_VPN2_MASK_R10K | ENTRYHI_R_MASK);
+				/*  44 addressable bits:  */
+				if (oldvaddr & 0x80000000000ULL)
+					oldvaddr |= 0x3ffff00000000000ULL;
+			} else if (cpu->is_32bit) {
+				/*  MIPS32 etc.:  */
+				oldvaddr = cp->tlbs[i].hi & ENTRYHI_VPN2_MASK;
+				oldvaddr = (int32_t)oldvaddr;
+			} else {
+				/*  Assume MMU4K  */
+				oldvaddr = cp->tlbs[i].hi &
+				    (ENTRYHI_R_MASK | ENTRYHI_VPN2_MASK);
+				/*  40 addressable bits:  */
+				if (oldvaddr & 0x8000000000ULL)
+					oldvaddr |= 0x3fffff0000000000ULL;
 			}
 
-//			if ((tlb[i].hi & ENTRYHI_ASID) == asid &&
-//			    !(tlb[i].hi & TLB_G)) {
-//				uint64_t vaddr0, vaddr1;
-//				vaddr0 = cp->tlbs[i].hi & ~fillmask & ~mask & ~ENTRYHI_ASID;
+			mask |= 0x1fff;
+			oldvaddr &= ~mask;
 
-			if ((tlb[i].hi & ENTRYHI_ASID) == asid &&
-			    !(tlb[i].hi & TLB_G)) {
-				uint64_t vaddr0, vaddr1;
-				vaddr0 = cp->tlbs[i].hi & ~fillmask;
-				if (vaddr0 & topbit)
-					vaddr0 |= fillmask;
-				vaddr1 = vaddr0 | 0x1000;  /*  TODO: mask  */
-
-				if (tlb[i].lo0 & ENTRYLO_V)
-					cpu->invalidate_translation_caches(cpu,
-					    vaddr0, INVALIDATE_VADDR);
-				if (tlb[i].lo1 & ENTRYLO_V)
-					cpu->invalidate_translation_caches(cpu,
-					    vaddr1, INVALIDATE_VADDR);
-			}
-		}
-
-		if (non4kpages) {
-			cpu->invalidate_translation_caches(cpu,
-			    0, INVALIDATE_ALL);
+			// printf("pagesize = %016llx mask = %016llx\n", pagesize, mask);
+			
+			if (cp->tlbs[i].lo0 & ENTRYLO_V)
+				for (uint64_t ofs = 0; ofs < pagesize; ofs += 0x1000)
+					cpu->invalidate_translation_caches(cpu, oldvaddr + ofs, INVALIDATE_VADDR);
+			
+			if (cp->tlbs[i].lo1 & ENTRYLO_V)
+				for (uint64_t ofs = 0; ofs < pagesize; ofs += 0x1000)
+					cpu->invalidate_translation_caches(cpu, oldvaddr + ofs + pagesize, INVALIDATE_VADDR);
 		}
 	}
 }
@@ -1699,22 +1697,25 @@ void coproc_tlbwri(struct cpu *cpu, int randomflag)
 		}
 
 		{
-			uint64_t mask = cp->tlbs[index].mask | 0x1000;
-			uint64_t pagesize = 0x800;
-			uint64_t tmp = mask >> 12;
+			uint64_t mask = cp->tlbs[index].mask;
+			uint64_t pagesize = 0x1000;
+			uint64_t tmp = mask >> 13;
 			while ((tmp & 1)) {
 				tmp >>= 1;
 				pagesize <<= 1;
 			}
 			
+			mask |= 0x1fff;
+			oldvaddr &= ~mask;
+
 			// printf("pagesize = %016llx mask = %016llx\n", pagesize, mask);
-			if (cp->tlbs[index].lo0 & ENTRYLO_V) {
+			
+			if (cp->tlbs[index].lo0 & ENTRYLO_V)
 				for (uint64_t ofs = 0; ofs < pagesize; ofs += 0x1000)
 					cpu->invalidate_translation_caches(cpu, oldvaddr + ofs, INVALIDATE_VADDR);
-			}
 			
 			if (cp->tlbs[index].lo1 & ENTRYLO_V)
-				for (uint64_t ofs = 0; ofs <= pagesize; ofs += 0x1000)
+				for (uint64_t ofs = 0; ofs < pagesize; ofs += 0x1000)
 					cpu->invalidate_translation_caches(cpu, oldvaddr + ofs + pagesize, INVALIDATE_VADDR);
 		}
 	}

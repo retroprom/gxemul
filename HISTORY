@@ -4684,3 +4684,4 @@ Changelog for GXemul:
 		before).
 		Updating NetBSD/evmbips and /cobalt installation instructions
 		to 7.1.2 (with a note about clock not being correct).
+		More work on the other-than-4KB bug fix.
