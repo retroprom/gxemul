@@ -46,6 +46,8 @@ SUCH DAMAGE.
 <p><br>
 <ul>
   <li><a href="#helenosmaltabe">HelenOS/maltabe 0.7.1</a>
+  <li><a href="#helenosrpi">HelenOS/rpi 0.7.1</a>
+  <li><a href="#helenosppc">HelenOS/ppc 0.7.1</a>
   <li><a href="#mach">Mach/PMAX</a>
   <li><a href="#declinuxredhat">Redhat Linux for DECstation</a>
   <li><a href="#openbsdsgiinstall">OpenBSD/sgi</a>
@@ -83,10 +85,9 @@ cases, it contains notes about starting guest OSes that are not complete
 <a name="helenosmaltabe"></a>
 <h3>HelenOS/maltabe:</h3>
 
-<p>Modern versions of helenOS <i>almost</i> run in GXemul,
+<p>Modern versions of HelenOS <i>almost</i> run in GXemul,
 using the Malta big-endian emulation mode, without a graphical framebuffer.
-(As of 2018-06-13, big-endian PCI is not working properly, and there may
-be other crashes.)
+The PCI devices in GXemul are not detected/supported yet.
 
 <p>To run HelenOS for Malta in GXemul:
 <ol>
@@ -98,6 +99,45 @@ be other crashes.)
   </pre>
 </ol>
 
+
+
+
+<p><br>
+<a name="helenosrpi"></a>
+<h3>HelenOS/rpi:</h3>
+
+<p>The Raspberry Pi mode in GXemul is just a dummy so far.
+These instructions are used as a reminder for me when I wish
+to experiment with the HelenOS kernel:
+
+<p>
+<ol>
+  <li>Download the HelenOS kernel:<pre>
+	<a href="http://www.helenos.org/releases/HelenOS-0.7.1-arm32-raspberrypi.bin">http://www.helenos.org/releases/HelenOS-0.7.1-arm32-raspberrypi.bin</a>
+  </pre>
+  <li>Start GXemul using the following command line:<pre>
+  	<b>gxemul -VE rpi -tv 0x8000:0x40:0x8000:HelenOS-0.7.1-arm32-raspberrypi.bin</b>
+  </pre>
+</ol>
+
+
+
+
+<p><br>
+<a name="helenosppc"></a>
+<h3>HelenOS/ppc:</h3>
+
+<p>This does not work yet.
+
+<p>
+<ol>
+  <li>Download the HelenOS PPC ISO image:<pre>
+	<a href="http://www.helenos.org/releases/HelenOS-0.7.1-ppc32.iso">http://www.helenos.org/releases/HelenOS-0.7.1-ppc32.iso</a>
+  </pre>
+  <li>Start GXemul using the following command line:<pre>
+  	<b>gxemul -M 256 -v -x -e g4 -d HelenOS-0.7.1-ppc32.iso  -j BOOT/image.boot</b>
+  </pre>
+</ol>
 
 
 
