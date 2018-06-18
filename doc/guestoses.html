@@ -1991,11 +1991,12 @@ Ultrix from the harddisk image:<pre>
 <p>If you have a very fast host machine, you might experience a weird
 timer related bug, which makes it impossible to logon to the system. It is
 triggered when the emulation goes faster than any real DECstation machine
-was capable of running. A temporary workaround is to add
+was capable of running.
+The first thing to try is to re-attempt the login a couple of times.
+If that doesn't work, a workaround is to add
 <b><tt>-I33000000</tt></b> to fix the emulated clock speed to 33 million
 instructions per emulated second.
-
-<p>If the workaround above doesn't work, you can also start up other 
+If the workaround above doesn't work, you can also start up other 
 processes on the host, apart from the emulator, so that the emulator runs 
 more slowly. This is an ugly workaround, but seems to work. Once you have 
 logged in into Ultrix, you can kill the extra processes.
