@@ -243,7 +243,7 @@ static void usage(int longusage)
 		printf("  -H           Display a list of available machine templates.\n");
 		printf("  -e name      Start with a machine based on template 'name'.\n");
 		printf("  -q           Quiet mode (suppress debug messages).\n");
-		printf("  -V           Start up in interactive mode, paused.\n");
+		printf("  -V           Start up in interactive debugging mode, paused.\n");
 		printf("\n");
 	}
 
@@ -257,7 +257,7 @@ static void usage(int longusage)
 		return;
 	}
 
-	printf("\n--------------------- The following are LEGACY options: ---------------------\n");
+	printf("\nThe following are options for the Old framework:\n");
 
 	printf("\nLegacy usage: %s [machine, other, and general options] [file "
 	    "[...]]\n", progname);

@@ -4685,3 +4685,4 @@ Changelog for GXemul:
 		Updating NetBSD/evmbips and /cobalt installation instructions
 		to 7.1.2 (with a note about clock not being correct).
 		More work on the other-than-4KB bug fix.
+20180618	Doubling DEFAULT_DYNTRANS_CACHE_SIZE from 48 to 96 MB.

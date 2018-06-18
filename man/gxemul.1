@@ -29,7 +29,7 @@
 .\"
 .\"     groff -man -Tascii gxemul.1    or    nroff -man gxemul.1
 .\"
-.Dd FEBRUARY 2018
+.Dd JUNE 2018
 .Dt GXEMUL 1
 .Os
 .Sh NAME
@@ -48,7 +48,7 @@
 .Fl V
 .Nm
 .Fl H
-.Sh SYNOPSIS (LEGACY)
+.Sh SYNOPSIS (OLD FRAMEWORK)
 .Nm
 .Op machine, other, and general options
 .Op file Ar ...
@@ -152,7 +152,7 @@ Here, the existing component name (the framebuffer) and the component to add
 .Sh RUNNING GUEST OPERATING SYSTEMS
 Please read the HTML documentation for more details on how to run complete
 guest operating systems in the emulator.
-.Sh DESCRIPTION (LEGACY)
+.Sh DESCRIPTION (OLD FRAMEWORK)
 The emulator can be invoked in the following ways:
 .Pp
 1. When emulating a complete machine, configuration options can be
@@ -509,7 +509,7 @@ For more information, please read the HTML documentation in the doc/
 subdirectory of the
 .Nm
 distribution.
-.Sh LEGACY EXAMPLES
+.Sh OLD FRAMEWORK EXAMPLES
 The following command will start NetBSD/pmax on an emulated DECstation 
 5000/200 (3MAX):
 .Pp
@@ -556,7 +556,8 @@ file in the
 .Nm
 source distribution, some are marked as TODO in the source code itself.
 .Pp
-Most emulation modes are LEGACY modes, which have not yet been rewritten
+Most emulation modes are legacy (Old framework)
+modes, which have not yet been rewritten
 to use the new framework. The documentation is most likely buggy, in the
 sense that it describes things from the old framework when the new one
 applies, and/or vice versa.
