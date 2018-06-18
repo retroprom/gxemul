@@ -46,8 +46,8 @@ SUCH DAMAGE.
 <p><br>
 <ul>
   <li><a href="#generalnotes">General notes on running "guest OSes"</a>
-  <li><a href="#netbsdpmaxinstall">NetBSD/pmax 7.1.1</a>
-  <li><a href="#netbsdarcinstall">NetBSD/arc 5.0.1</a>
+  <li><a href="#netbsdpmaxinstall">NetBSD/pmax 7.1.2</a>
+  <li><a href="#netbsdarcinstall">NetBSD/arc 7.1.2</a>
   <li><a href="#netbsdhpcmipsinstall">NetBSD/hpcmips 5.0.2</a>
   <li><a href="#netbsdcobaltinstall">NetBSD/cobalt 7.1.2</a>
   <li><a href="#netbsdevbmipsinstall">NetBSD/evbmips 7.1.2</a>
@@ -80,7 +80,7 @@ SUCH DAMAGE.
 <h3>General notes on running "guest OSes":</h3>
 
 The emulator works well enough to run complete operating systems. These 
-are often refered to as <i>guest</i> operating systems, in contrast to the 
+are referred to as <i>guest</i> operating systems, in contrast to the 
 <i>host</i> operating system which the emulator is running under.
 
 <p>The emulation, however, is not necessarily complete enough to support
@@ -96,12 +96,20 @@ What this usually means is:
 	<li>A full installation from scratch should work (usually from
 		a CD-ROM image or via the network).
 	<li>Logging in to the installed guest OS after install.
-	<li>Doing something non-trivial.
+</ul>
+
+<p>Usually (but not always, due to lack of spare time for testing),
+it also means:
+
+<p>
+<ul>
+	<li>Doing something non-trivial inside the guest OS.
 </ul>
 
 <p>
 Printing "Hello world" is considered trivial, whereas e.g. building GXemul
 itself inside the emulated guest operating system is considered non-trivial.
+As this takes quite some time, this is not always done.
 
 
 
@@ -123,7 +131,7 @@ a real disk.
 
 <p><b>Unsupported guest operating systems, or experimental install instructions:</b>
 
-<p>In addition to the "working" guest operating systems listed above,
+<p>In addition to the "working" guest operating systems listed on this page,
 there is a page about <a href="unsupported.html">unsupported modes or guest operating
 systems</a>, which you may find interesting. These are either mode that are
 not-yet-working, or modes that did work at some point in time but are now
@@ -134,8 +142,10 @@ broken.
 
 <p>The version numbers of the various operating systems were the latest 
 versions that worked satisfactory with GXemul at the time this page was 
-updated; if new versions have been released since then, they might work as 
-well.
+updated; if new versions have been released since then, they could work too,
+but there is no guarantee. New versions of guest operating systems may
+trigger previously untriggered bugs in the emulator, or they may make use
+of devices in the machine that the emulator simply doesn't have yet.
 
 <p>Some operating systems are listed with a version number <i>less</i> 
 than what was available at the time of this GXemul release (e.g. 
@@ -228,17 +238,17 @@ harddisk image, follow these instructions:
 <ol start="1">
   <li>Create an empty harddisk image, which will be the root disk
 	that NetBSD installs itself onto:<pre>
-	<b>dd if=/dev/zero of=nbsd_arc.img bs=1024 count=1 seek=1000000</b>
+	<b>dd if=/dev/zero of=nbsd_arc.img bs=1024 count=1 seek=2000000</b>
 
 </pre>
   <li>Download a NetBSD/arc CDROM image, and the generic + ramdisk NetBSD/arc kernels:<pre>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/iso/5.0.1/arccd-5.0.1.iso">ftp://ftp.netbsd.org/pub/NetBSD/iso/5.0.1/arccd-5.0.1.iso</a>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.1/arc/binary/kernel/netbsd-GENERIC.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.1/arc/binary/kernel/netbsd-GENERIC.gz</a>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.1/arc/binary/kernel/netbsd-RAMDISK.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.1/arc/binary/kernel/netbsd-RAMDISK.gz</a>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/iso/NetBSD-7.1.2-arc.iso">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/iso/NetBSD-7.1.2-arc.iso</a>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/arc/binary/kernel/netbsd-GENERIC.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/arc/binary/kernel/netbsd-GENERIC.gz</a>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/arc/binary/kernel/netbsd-RAMDISK.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/arc/binary/kernel/netbsd-RAMDISK.gz</a>
 
 </pre>
   <li>Start the emulator using this command line:<pre>
-	<b>gxemul -x -e pica -d nbsd_arc.img -d b:arccd-5.0.1.iso netbsd-RAMDISK.gz</b>
+	<b>gxemul -x -e pica -d nbsd_arc.img -d b:NetBSD-7.1.2-arc.iso netbsd-RAMDISK.gz</b>
 
 </pre>
 	and proceed like you would do if you were installing NetBSD on a real
@@ -256,7 +266,7 @@ image, using the following command:<pre>
 
 </pre>
 
-
+<p>Known issue: The clock may be running too fast inside the emulated machine.
 
 
 
@@ -371,9 +381,7 @@ You should now be able to boot NetBSD/cobalt like this:<pre>
 	<b>gxemul -x -E cobalt -d nbsd_cobalt.img netbsd-GENERIC.gz</b>
 </pre>
 
-<p>The clock may go too fast inside the emulator. If it hangs during
-boot-up, before the login prompt has appeared, type CTRL-C in the xterm
-window.
+<p>Known issues: The clock may go too fast inside the emulator.
 
 
 
