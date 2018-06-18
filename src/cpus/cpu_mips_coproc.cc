@@ -735,15 +735,15 @@ void coproc_register_write(struct cpu *cpu,
 			    tmp2 != 0x0ff &&
 			    tmp2 != 0x3ff &&
 			    tmp2 != 0xfff)
-				fatal("cpu%i: trying to write an invalid"
-				    " pagemask 0x%08lx to COP0_PAGEMASK\n",
+				fatal("[ cpu%i: trying to write an invalid"
+				    " pagemask 0x%08lx to COP0_PAGEMASK ]\n",
 				    cpu->cpu_id, (long)tmp);
 			unimpl = 0;
 			break;
 		case COP0_WIRED:
 			if (cpu->cd.mips.cpu_type.mmu_model == MMU3K) {
-				fatal("cpu%i: r2k/r3k wired register must "
-				    "always be 8\n", cpu->cpu_id);
+				fatal("[ cpu%i: r2k/r3k wired register must "
+				    "always be 8 ]\n", cpu->cpu_id);
 				tmp = 8;
 			}
 			cp->reg[COP0_RANDOM] = cp->nr_of_tlbs-1;
@@ -752,8 +752,8 @@ void coproc_register_write(struct cpu *cpu,
 			break;
 		case COP0_COUNT:
 			if (tmp != (uint64_t)(int64_t)(int32_t)tmp)
-				fatal("WARNING: trying to write a 64-bit value"
-				    " to the COUNT register!\n");
+				fatal("[ WARNING: trying to write a 64-bit value"
+				    " to the COUNT register! ]\n");
 			tmp = (int64_t)(int32_t)tmp;
 			unimpl = 0;
 			break;
@@ -771,15 +771,6 @@ void coproc_register_write(struct cpu *cpu,
 				else
 					hz = (double)cpu->machine->emulated_hz
 					    / (double)compare_diff;
-
-				/*
- 				 *  TODO: DON'T HARDCODE THIS!
- 				 *
- 				 *  This was for NetBSD/malta, Linux/malta,
- 				 *  and/or NetBSD/cobalt, but it causes
- 				 *  HelenOS/maltabe to not work properly.
-				 */
-				// hz = 100.0;
 
 				/*  Initialize or re-set the periodic timer:  */
 				if (hz > 0) {
@@ -801,8 +792,8 @@ void coproc_register_write(struct cpu *cpu,
 			cp->reg[COP0_CAUSE] &= ~0x8000;
 
 			if (tmp != (uint64_t)(int64_t)(int32_t)tmp)
-				fatal("WARNING: trying to write a 64-bit value"
-				    " to the COMPARE register!\n");
+				fatal("[ WARNING: trying to write a 64-bit value"
+				    " to the COMPARE register! ]\n");
 
 			tmp = (int64_t)(int32_t)tmp;
 			cpu->cd.mips.compare_register_set = 1;
@@ -870,9 +861,9 @@ void coproc_register_write(struct cpu *cpu,
 				switch (select) {
 				case 1:	cpu->cd.mips.cop0_config_select1 = tmp;
 					break;
-				default:fatal("coproc_register_write(): unimpl"
+				default:fatal("[ coproc_register_write(): unimpl"
 					    "emented config register select "
-					    "%i\n", select);
+					    "%i ]\n", select);
 					exit(1);
 				}
 				return;
@@ -960,8 +951,8 @@ void coproc_register_write(struct cpu *cpu,
 	}
 
 	if (unimpl) {
-		fatal("cpu%i: warning: write to unimplemented coproc%i "
-		    "register %i (%s), data = 0x%016llx\n", cpu->cpu_id,
+		fatal("[ cpu%i: warning: write to unimplemented coproc%i "
+		    "register %i (%s), data = 0x%016llx ]\n", cpu->cpu_id,
 		    cp->coproc_nr, reg_nr, cp->coproc_nr==0?
 		    cop0_names[reg_nr] : "?", (long long)tmp);
 
@@ -971,8 +962,8 @@ void coproc_register_write(struct cpu *cpu,
 	}
 
 	if (readonly) {
-		fatal("cpu%i: warning: write to READONLY coproc%i register "
-		    "%i ignored\n", cpu->cpu_id, cp->coproc_nr, reg_nr);
+		fatal("[ cpu%i: warning: write to READONLY coproc%i register "
+		    "%i ignored ]\n", cpu->cpu_id, cp->coproc_nr, reg_nr);
 		return;
 	}
 
