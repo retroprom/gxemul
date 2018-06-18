@@ -783,8 +783,6 @@ void emul_run(struct emul *emul)
 
 	atexit(fix_console);
 
-	debug("\nNOTE: This is a LEGACY emulation mode.\n\n");
-
 	if (emul == NULL) {
 		fatal("No emulation defined. Aborting.\n");
 		return;
