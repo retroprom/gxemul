@@ -4690,3 +4690,5 @@ Changelog for GXemul:
 20180619	When reading disk sectors from the 'disk' device (for e.g.
 		testmips), automatically move to the next sector after
 		reading (or writing).
+		Allow testmips programs to detect whether the X11 framebuffer
+		is in use or not (returns 0x0 as resolution if not).
