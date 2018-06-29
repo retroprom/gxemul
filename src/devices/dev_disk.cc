@@ -89,9 +89,9 @@ DEVICE_ACCESS(disk)
 			d->offset = idata;
 		}
 		
-		if (d->offset & ~SECTOR_SIZE)
-			fatal("[ disk: WARNING! offset must be %i-byte aligned ]\n",
-				SECTOR_SIZE);
+		if (d->offset & (SECTOR_SIZE-1))
+			fatal("[ disk: WARNING! offset (%lli) must be %i-byte aligned ]\n",
+				(long long)d->offset, SECTOR_SIZE);
 		
 		break;
 
