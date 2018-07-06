@@ -4692,3 +4692,5 @@ Changelog for GXemul:
 		reading (or writing).
 		Allow testmips programs to detect whether the X11 framebuffer
 		is in use or not (returns 0x0 as resolution if not).
+20180706	Adding a dummy VoCore machine skeleton using the old framework
+		(with the wrong CPU type 4KEc instead of 24K).

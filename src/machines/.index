@@ -24,3 +24,4 @@ machine_qemu.cc  Machine mimicing QEMU's default MIPS emulation mode
 machine_rpi.cc  Raspberry Pi
 machine_sgi.cc  Silicon Graphics' MIPS-based machines
 machine_test.cc  Various test machines
+machine_vocore.cc  VoCore

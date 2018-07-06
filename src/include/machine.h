@@ -219,6 +219,7 @@ struct machine {
 #define	MACHINE_EVBMIPS		1008
 #define	MACHINE_ALGOR		1009
 #define	MACHINE_QEMU_MIPS	1010
+#define	MACHINE_VOCORE		1011
 
 /*  PPC:  */
 #define	MACHINE_BAREPPC		2000
