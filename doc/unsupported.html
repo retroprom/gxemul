@@ -60,6 +60,7 @@ SUCH DAMAGE.
   <li><a href="#windows_nt_mips">Windows NT/MIPS</a>
   <li><a href="#netbsdplaystation2">NetBSD/playstation2</a>
   <li><a href="#netbsdrpi">NetBSD/raspberrypi</a>
+  <li><a href="#linux_vocore">Linux/VoCore</a>
 </ul>
 
 <p>NOTE: The guest operating systems listed on this page are here because
@@ -979,6 +980,42 @@ mdconfig -d -u 0
 
 
 </p>
+
+
+
+
+
+
+
+<p><br>
+<a name="linux_vocore"></a>
+<h3>Linux/VoCore:</h3>
+
+<p>This doesn't work yet. Starting point for development:
+
+<p>See <a href="http://vocore.io/v1d.html">http://vocore.io/v1d.html</a> for info about the first VoCore model. (There are some newer ones too.)
+
+<p>See <a href="https://openwrt.org/toh/vocore/vocore?datasrt=model">https://openwrt.org/toh/vocore/vocore?datasrt=model</a> for downloadable Linux kernel files etc.
+
+<p>To start debugging/development:
+<ol>
+	<li>Download <a href="http://downloads.lede-project.org/releases/17.01.4/targets/ramips/rt305x/lede-17.01.4-ramips-rt305x-vocore-16M-initramfs-kernel.bin">http://downloads.lede-project.org/releases/17.01.4/targets/ramips/rt305x/lede-17.01.4-ramips-rt305x-vocore-16M-initramfs-kernel.bin</a>
+
+	<li><pre>dd if=lede-17.01.4-ramips-rt305x-vocore-16M-initramfs-kernel.bin of=apa bs=64 iseek=1 oseek=0
+lzma -d < apa > apa2</pre>
+
+	<li><tt><b>gxemul -viE vocore 0x80000000:0:0x80000000:apa2</b></tt>
+</pre>
+</ol>
+
+<p>TODO: Everything.
+<pre>
+8018f1a8: 02221046	rorv	v0,v0,s1
+to_be_translated(): TODO: unimplemented instruction at 0x8018f1a8
+</pre>
+
+
+
 
 <p><br>
 <hr>
