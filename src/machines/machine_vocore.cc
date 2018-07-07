@@ -42,12 +42,24 @@
 
 MACHINE_SETUP(vocore)
 {
-	char tmpstr[300];
-	struct pci_data *pci_bus;
-
 	machine->machine_name = strdup("VoCore");
 
 	machine->emulated_hz = 360000000;
+
+	/*  Some devices (?) mentioned in the Linux kernel
+		(as shown using strings):
+
+	i/palmbus@10000000/spi@b00
+	n/palmbus@10000000/spi@b40
+	s/palmbus@10000000/uartlite@c00
+	palmbus@10000000
+	timer@100
+	ethernet@10100000
+	esw@10110000
+	wmac@10180000
+	ehci@101c0000
+	ohci@101c1000
+	*/
 
 	if (!machine->prom_emulation)
 		return;
@@ -59,7 +71,7 @@ MACHINE_SETUP(vocore)
 MACHINE_DEFAULT_CPU(vocore)
 {
 	// According to http://vocore.io/v1d.html: RT5350, 360 MHz, MIPS 24K
-
+	// "mips24KEc" according to strings on the Linux kernel.
 	// TODO: Add 24K. For now, use 4KEc.
 	machine->cpu_name = strdup("4KEc");
 }
