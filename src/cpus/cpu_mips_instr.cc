@@ -1585,6 +1585,16 @@ X(ror)
 	reg(ic->arg[2]) = (int32_t) result;
 }
 
+X(rorv)
+{
+	uint32_t result = reg(ic->arg[0]);
+	int sa = reg(ic->arg[1]);
+
+	result = (result >> sa) | (result << (32-sa));
+
+	reg(ic->arg[2]) = (int32_t) result;
+}
+
 
 /*
  *  p*:  128-bit C790/TX79/R5900 stuff
@@ -3602,7 +3612,7 @@ X(to_be_translated)
 				switch (rs) {
 				case 0x01:
 					switch (s6) {
-					case SPECIAL_SRL:	/*  ror  */
+					case SPECIAL_SRL:	/*  ror (aka. rotr?) */
 						ic->f = instr(ror);
 						break;
 					default:goto bad;
@@ -3612,10 +3622,17 @@ X(to_be_translated)
 				}
 			}
 			if (sa < 0 && (s10 & 0x1f) != 0) {
-				switch (s10 & 0x1f) {
-				/*  TODO: [d]rorv, etc.  */
+				int orig_sa = (iword >>  6) & 31;
+				switch (s6) {
+				case SPECIAL_SRLV:	/*  rorv (aka. rotrv?) */
+					if (orig_sa == 0x01) {
+						ic->arg[1] = (size_t)&cpu->cd.mips.gpr[rs];
+						ic->f = instr(rorv);
+					}
+					break;
 				default:goto bad;
 				}
+				break;
 			}
 
 			if (rd == MIPS_GPR_ZERO)
