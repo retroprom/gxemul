@@ -4741,6 +4741,10 @@ X(to_be_translated)
 					ic->f = instr(nop);
 				break;
 
+			/* case 2:	// TODO.
+				ic->f = instr(nop);
+				break;*/
+
                         case 29: ic->f = instr(reserved);
                                  break;
 
