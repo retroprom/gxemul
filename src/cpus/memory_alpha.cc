@@ -172,7 +172,7 @@ if (vaddr == 0xfffffffd80000000ULL) fatal("AYONA3\n");
 
 not_found:
 	/*  No match.  */
-	fatal("[ alpha_translate_v2p: 0x%016"PRIx64" wasn't found ]\n", vaddr);
+	fatal("[ alpha_translate_v2p: 0x%016" PRIx64" wasn't found ]\n", vaddr);
 abort();
 	exit(1);
 	return 0;

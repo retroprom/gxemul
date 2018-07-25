@@ -4695,3 +4695,4 @@ Changelog for GXemul:
 20180706	Adding a dummy VoCore machine skeleton using the old framework
 		(with the wrong CPU type 4KEc instead of 24K).
 20180707	Implementing the rorv (aka rotrv?) MIPS instruction.
+20180725	More clang fixes.

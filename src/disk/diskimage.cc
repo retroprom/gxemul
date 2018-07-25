@@ -732,7 +732,7 @@ int diskimage_add(struct machine *machine, char *fname)
 				if (*fname == ':' || *fname == ';')
 					fname ++;
 				if (override_base_offset < 0) {
-					fatal("Bad base offset: %"PRIi64
+					fatal("Bad base offset: %" PRIi64
 					    "\n", override_base_offset);
 					exit(1);
 				}

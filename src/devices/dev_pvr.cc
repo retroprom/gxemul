@@ -1621,11 +1621,11 @@ DEVICE_ACCESS(pvr)
 
 	case PVRREG_OB_ADDR:
 		if (writeflag == MEM_WRITE) {
-			debug("[ pvr: OB_ADDR set to 0x%08"PRIx32" ]\n",
+			debug("[ pvr: OB_ADDR set to 0x%08" PRIx32" ]\n",
 			    (uint32_t)(idata & PVR_OB_ADDR_MASK));
 			if (idata & ~PVR_OB_ADDR_MASK) {
 				fatal("[ pvr: OB_ADDR: Fatal error: Unknown"
-				    " bits set: 0x%08"PRIx32" ]\n",
+				    " bits set: 0x%08" PRIx32" ]\n",
 				    (uint32_t)(idata & ~PVR_OB_ADDR_MASK));
 				exit(1);
 			}
@@ -1636,11 +1636,11 @@ DEVICE_ACCESS(pvr)
 
 	case PVRREG_TILEBUF_ADDR:
 		if (writeflag == MEM_WRITE) {
-			debug("[ pvr: TILEBUF_ADDR set to 0x%08"PRIx32" ]\n",
+			debug("[ pvr: TILEBUF_ADDR set to 0x%08" PRIx32" ]\n",
 			    (uint32_t)(idata & PVR_TILEBUF_ADDR_MASK));
 			if (idata & ~PVR_TILEBUF_ADDR_MASK) {
 				fatal("[ pvr: TILEBUF_ADDR: Unknown"
-				    " bits set: 0x%08"PRIx32" ]\n",
+				    " bits set: 0x%08" PRIx32" ]\n",
 				    (uint32_t)(idata & ~PVR_TILEBUF_ADDR_MASK));
 				exit(1);
 			}
@@ -1666,7 +1666,7 @@ DEVICE_ACCESS(pvr)
 
 	case PVRREG_BRDCOLR:
 		if (writeflag == MEM_WRITE) {
-			debug("[ pvr: BRDCOLR set to 0x%06"PRIx32" ]\n",
+			debug("[ pvr: BRDCOLR set to 0x%06" PRIx32" ]\n",
 			    (int)idata);
 			DEFAULT_WRITE;
 			d->border_updated = 1;
@@ -1727,7 +1727,7 @@ DEVICE_ACCESS(pvr)
 
 	case PVRREG_FB_RENDER_ADDR1:
 		if (writeflag == MEM_WRITE) {
-			debug("[ pvr: FB_RENDER_ADDR1 set to 0x%08"PRIx32
+			debug("[ pvr: FB_RENDER_ADDR1 set to 0x%08" PRIx32
 			    " ]\n", (int) idata);
 			DEFAULT_WRITE;
 		}
@@ -1735,7 +1735,7 @@ DEVICE_ACCESS(pvr)
 
 	case PVRREG_FB_RENDER_ADDR2:
 		if (writeflag == MEM_WRITE) {
-			debug("[ pvr: FB_RENDER_ADDR2 set to 0x%08"PRIx32
+			debug("[ pvr: FB_RENDER_ADDR2 set to 0x%08" PRIx32
 			    " ]\n", (int) idata);
 			DEFAULT_WRITE;
 		}
@@ -1828,10 +1828,10 @@ DEVICE_ACCESS(pvr)
 
 	case PVRREG_VRAM_CFG1:
 		if (writeflag == MEM_WRITE) {
-			debug("[ pvr: VRAM_CFG1 set to 0x%08"PRIx32,
+			debug("[ pvr: VRAM_CFG1 set to 0x%08" PRIx32,
 			    (int) idata);
 			if (idata != VRAM_CFG1_GOOD_REFRESH_VALUE)
-				fatal("{ VRAM_CFG1 = 0x%08"PRIx32" is not "
+				fatal("{ VRAM_CFG1 = 0x%08" PRIx32" is not "
 				    "yet implemented! }", (int) idata);
 			debug(" ]\n");
 			DEFAULT_WRITE;
@@ -1840,10 +1840,10 @@ DEVICE_ACCESS(pvr)
 
 	case PVRREG_VRAM_CFG2:
 		if (writeflag == MEM_WRITE) {
-			debug("[ pvr: VRAM_CFG2 set to 0x%08"PRIx32,
+			debug("[ pvr: VRAM_CFG2 set to 0x%08" PRIx32,
 			    (int) idata);
 			if (idata != VRAM_CFG2_UNKNOWN_MAGIC)
-				fatal("{ VRAM_CFG2 = 0x%08"PRIx32" is not "
+				fatal("{ VRAM_CFG2 = 0x%08" PRIx32" is not "
 				    "yet implemented! }", (int) idata);
 			debug(" ]\n");
 			DEFAULT_WRITE;
@@ -1852,10 +1852,10 @@ DEVICE_ACCESS(pvr)
 
 	case PVRREG_VRAM_CFG3:
 		if (writeflag == MEM_WRITE) {
-			debug("[ pvr: VRAM_CFG3 set to 0x%08"PRIx32,
+			debug("[ pvr: VRAM_CFG3 set to 0x%08" PRIx32,
 			    (int) idata);
 			if (idata != VRAM_CFG3_UNKNOWN_MAGIC)
-				fatal("{ VRAM_CFG3 = 0x%08"PRIx32" is not "
+				fatal("{ VRAM_CFG3 = 0x%08" PRIx32" is not "
 				    "yet implemented! }", (int) idata);
 			debug(" ]\n");
 			DEFAULT_WRITE;
@@ -1865,7 +1865,7 @@ DEVICE_ACCESS(pvr)
 	case PVRREG_FOG_TABLE_COL:
 		// e.g. 0x007f7f7f
 		if (writeflag == MEM_WRITE) {
-			debug("[ pvr: FOG_TABLE_COL set to 0x%06"PRIx32" ]\n",
+			debug("[ pvr: FOG_TABLE_COL set to 0x%06" PRIx32" ]\n",
 			    (int) idata);
 			DEFAULT_WRITE;
 		}
@@ -1874,7 +1874,7 @@ DEVICE_ACCESS(pvr)
 	case PVRREG_FOG_VERTEX_COL:
 		// e.g. 0x007f7f7f
 		if (writeflag == MEM_WRITE) {
-			debug("[ pvr: FOG_VERTEX_COL set to 0x%06"PRIx32" ]\n",
+			debug("[ pvr: FOG_VERTEX_COL set to 0x%06" PRIx32" ]\n",
 			    (int) idata);
 			DEFAULT_WRITE;
 		}
@@ -1883,7 +1883,7 @@ DEVICE_ACCESS(pvr)
 	case PVRREG_FOG_DENSITY:
 		// e.g. 0x0000ff07
 		if (writeflag == MEM_WRITE) {
-			debug("[ pvr: FOG_DENSITY set to 0x%08"PRIx32" ]\n",
+			debug("[ pvr: FOG_DENSITY set to 0x%08" PRIx32" ]\n",
 			    (int) idata);
 			DEFAULT_WRITE;
 		}
@@ -1892,7 +1892,7 @@ DEVICE_ACCESS(pvr)
 	case PVRREG_CLAMP_MAX:
 		// e.g. 0xffffffff
 		if (writeflag == MEM_WRITE) {
-			debug("[ pvr: CLAMP_MAX set to 0x%06"PRIx32" ]\n",
+			debug("[ pvr: CLAMP_MAX set to 0x%06" PRIx32" ]\n",
 			    (int) idata);
 			DEFAULT_WRITE;
 		}
@@ -1901,7 +1901,7 @@ DEVICE_ACCESS(pvr)
 	case PVRREG_CLAMP_MIN:
 		// e.g. 0x00000000
 		if (writeflag == MEM_WRITE) {
-			debug("[ pvr: CLAMP_MIN set to 0x%06"PRIx32" ]\n",
+			debug("[ pvr: CLAMP_MIN set to 0x%06" PRIx32" ]\n",
 			    (int) idata);
 			DEFAULT_WRITE;
 		}
@@ -1927,7 +1927,7 @@ DEVICE_ACCESS(pvr)
 
 	case PVRREG_DIWADDRL:
 		if (writeflag == MEM_WRITE) {
-			debug("[ pvr: DIWADDRL set to 0x%08"PRIx32" ]\n",
+			debug("[ pvr: DIWADDRL set to 0x%08" PRIx32" ]\n",
 			    (int) idata);
 			pvr_fb_invalidate(d, -1, -1);
 			DEFAULT_WRITE;
@@ -1936,7 +1936,7 @@ DEVICE_ACCESS(pvr)
 
 	case PVRREG_DIWADDRS:
 		if (writeflag == MEM_WRITE) {
-			debug("[ pvr: DIWADDRS set to 0x%08"PRIx32" ]\n",
+			debug("[ pvr: DIWADDRS set to 0x%08" PRIx32" ]\n",
 			    (int) idata);
 			pvr_fb_invalidate(d, -1, -1);
 			DEFAULT_WRITE;
@@ -2087,10 +2087,10 @@ DEVICE_ACCESS(pvr)
 
 	case PVRREG_MAGIC_110:
 		if (writeflag == MEM_WRITE) {
-			debug("[ pvr: MAGIC_110 set to 0x%08"PRIx32,
+			debug("[ pvr: MAGIC_110 set to 0x%08" PRIx32,
 			    (int) idata);
 			if (idata != MAGIC_110_VALUE)
-				fatal("{ MAGIC_110 = 0x%08"PRIx32" is not "
+				fatal("{ MAGIC_110 = 0x%08" PRIx32" is not "
 				    "yet implemented! }", (int) idata);
 			debug(" ]\n");
 			DEFAULT_WRITE;
@@ -2099,7 +2099,7 @@ DEVICE_ACCESS(pvr)
 
 	case PVRREG_TA_LUMINANCE:
 		if (writeflag == MEM_WRITE) {
-			debug("[ pvr: TA_LUMINANCE set to 0x%08"PRIx32" ]\n",
+			debug("[ pvr: TA_LUMINANCE set to 0x%08" PRIx32" ]\n",
 			    (int) idata);
 			DEFAULT_WRITE;
 		}
@@ -2206,7 +2206,7 @@ DEVICE_ACCESS(pvr)
 				pvr_ta_init(cpu, d);
 
 			if (idata != PVR_TA_INIT && idata != 0)
-				fatal("{ TA_INIT = 0x%08"PRIx32" is not "
+				fatal("{ TA_INIT = 0x%08" PRIx32" is not "
 				    "yet implemented! }", (int) idata);
 
 			/*  Always reset to 0.  */
