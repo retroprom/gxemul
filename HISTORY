@@ -4696,3 +4696,5 @@ Changelog for GXemul:
 		(with the wrong CPU type 4KEc instead of 24K).
 20180707	Implementing the rorv (aka rotrv?) MIPS instruction.
 20180725	More clang fixes.
+20180726	Minor progress on booting Linux/VoCore. MIPS rdhwr CC is
+		implemented as reading the COP0_COUNT register.

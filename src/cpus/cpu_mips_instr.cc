@@ -2253,13 +2253,24 @@ X(wait)
 
 
 /*
- *  rdhwr: Read hardware register into gpr (MIPS32/64 rev 2).
+ *  rdhwr: Read CPUNum hardware register into gpr (MIPS32/64 rev 2).
  *
  *  arg[0] = ptr to rt (destination register)
  */
 X(rdhwr_cpunum)
 {
 	reg(ic->arg[0]) = cpu->cpu_id;
+}
+
+
+/*
+ *  rdhwr: Read CC (cycle count) register into gpr (MIPS32/64 rev 2).
+ *
+ *  arg[0] = ptr to rt (destination register)
+ */
+X(rdhwr_cc)
+{
+	reg(ic->arg[0]) = cpu->cd.mips.coproc[0]->reg[COP0_COUNT];
 }
 
 
@@ -4741,9 +4752,10 @@ X(to_be_translated)
 					ic->f = instr(nop);
 				break;
 
-			/* case 2:	// TODO.
-				ic->f = instr(nop);
-				break;*/
+			case 2:	ic->f = instr(rdhwr_cc);
+				if (rt == MIPS_GPR_ZERO)
+					ic->f = instr(nop);
+				break;
 
                         case 29: ic->f = instr(reserved);
                                  break;

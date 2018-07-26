@@ -1004,13 +1004,9 @@ mdconfig -d -u 0
 	<li><pre>dd if=lede-17.01.4-ramips-rt305x-vocore-16M-initramfs-kernel.bin of=apa bs=64 iseek=1 oseek=0
 lzma -d &lt; apa &gt; apa2</pre>
 
-	<li><tt><b>gxemul -M 3072 -c 'put w 0xb0000000,0x30335452' -c 'put w 0xb0000004,0x20203235' -c 'put w 0xb0000c1c,0x20' -vtE vocore 0x80000000:0:0x80000000:apa2</b></tt>
+	<li><tt><b>gxemul -vE vocore 0x80000000:0:0x80000000:apa2</b></tt>
 </pre>
 </ol>
-
-<p>It actually has 16 MB of RAM, but specifying 3072 (a large value) allows put
-commands to be used instead of implementing devices. The first two words are
-what makes Linux detect the SoC, and the second one is some device.
 
 <p>TODO: Pretty much Everything.
 

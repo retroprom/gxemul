@@ -46,20 +46,28 @@ MACHINE_SETUP(vocore)
 
 	machine->emulated_hz = 360000000;
 
-	/*  Some devices (?) mentioned in the Linux kernel
-		(as shown using strings):
+	/*  Some devices mentioned in the Linux kernel (as shown using strings):
 
-	i/palmbus@10000000/spi@b00
-	n/palmbus@10000000/spi@b40
-	s/palmbus@10000000/uartlite@c00
-	palmbus@10000000
-	timer@100
-	ethernet@10100000
-	esw@10110000
-	wmac@10180000
-	ehci@101c0000
-	ohci@101c1000
+		i/palmbus@10000000/spi@b00
+		n/palmbus@10000000/spi@b40
+		s/palmbus@10000000/uartlite@c00
+		palmbus@10000000
+		timer@100
+		ethernet@10100000
+		esw@10110000
+		wmac@10180000
+		ehci@101c0000
+		ohci@101c1000
 	*/
+
+	/*  SoC ID etc?  */
+	dev_ram_init(machine, 0x10000000, 8, DEV_RAM_RAM, 0);
+	store_32bit_word(cpu, 0xb0000000, 0x30335452);
+	store_32bit_word(cpu, 0xb0000004, 0x20203235);
+
+	/*  Serial "uartlite":  */
+	dev_ram_init(machine, 0x10000c1c, 4, DEV_RAM_RAM, 0);
+	store_32bit_word(cpu, 0xb0000c1c, 0x20);
 
 	if (!machine->prom_emulation)
 		return;
