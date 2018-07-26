@@ -25,7 +25,9 @@
  *  SUCH DAMAGE.
  *   
  *
- *  COMMENT: VoCore
+ *  COMMENT: VoCore Palmbus
+ *
+ *  TODO
  */
 
 #include <stdio.h>
@@ -33,63 +35,85 @@
 #include <string.h>
 
 #include "cpu.h"
+#include "console.h"
 #include "device.h"
-#include "devices.h"
+#include "emul.h"
 #include "machine.h"
 #include "memory.h"
 #include "misc.h"
 
 
-MACHINE_SETUP(vocore)
+#define	DEV_PALMBUS_LENGTH		0x1000
+
+struct palmbus_data {
+	// struct interrupt irq;
+	int console_handle;
+};
+
+
+DEVICE_ACCESS(palmbus)
 {
-	machine->machine_name = strdup("VoCore");
+	struct palmbus_data *d = (struct palmbus_data *) extra;
+	uint64_t idata = 0, odata = 0;
+	int regnr;
 
-	machine->emulated_hz = 360000000;
+	if (writeflag == MEM_WRITE)
+		idata = memory_readmax64(cpu, data, len);
 
-	/*  Some devices mentioned in the Linux kernel (as shown using strings):
+	switch (relative_addr) {
 
-		i/palmbus@10000000/spi@b00
-		n/palmbus@10000000/spi@b40
-		s/palmbus@10000000/uartlite@c00
-		palmbus@10000000
-		timer@100
-		ethernet@10100000
-		esw@10110000
-		wmac@10180000
-		ehci@101c0000
-		ohci@101c1000
-	*/
+	case 0x0000:
+		odata = 0x30335452;
+		break;
+	
+	case 0x0004:
+		odata = 0x20203235;
+		break;
 
-	device_add(machine, "palmbus addr=0x10000000");
+	case 0x0c04:
+		console_putchar(d->console_handle, idata);
+		break;
 
-	if (!machine->prom_emulation)
-		return;
+	case 0x0c1c:
+		odata = 0x20;	// Serial ready (?)
+		break;
 
-	// TODO: uboot emulation?
+	default:
+		if (writeflag == MEM_WRITE) {
+			fatal("[ palmbus: unimplemented write to address 0x%x"
+			    ", data=0x%02x ]\n",
+			    (int)relative_addr, (int)idata);
+		} else {
+			fatal("[ palmbus: unimplemented read from address 0x%x "
+			    "]\n", (int)relative_addr);
+		}
+		/*  exit(1);  */
+	}
+
+	if (writeflag == MEM_READ)
+		memory_writemax64(cpu, data, len, odata);
+
+	return 1;
 }
 
 
-MACHINE_DEFAULT_CPU(vocore)
+DEVINIT(palmbus)
 {
-	// According to http://vocore.io/v1d.html: RT5350, 360 MHz, MIPS 24K
-	// "mips24KEc" according to strings on the Linux kernel.
-	// TODO: Add 24K. For now, use 4KEc.
-	machine->cpu_name = strdup("4KEc");
-}
+	char *name2;
+	size_t nlen = 55;
+	struct palmbus_data *d;
 
+	CHECK_ALLOCATION(d = (struct palmbus_data *) malloc(sizeof(struct palmbus_data)));
+	memset(d, 0, sizeof(struct palmbus_data));
 
-MACHINE_DEFAULT_RAM(vocore)
-{
-	machine->physical_ram_in_mb = 32;
-}
+	// INTERRUPT_CONNECT(devinit->interrupt_path, d->irq);
 
+	d->console_handle = console_start_slave(devinit->machine, "uartlite", 1);
 
-MACHINE_REGISTER(vocore)
-{
-	MR_DEFAULT(vocore, "VoCore", ARCH_MIPS, MACHINE_VOCORE);
+	memory_device_register(devinit->machine->memory, name2,
+	    devinit->addr, DEV_PALMBUS_LENGTH,
+	    dev_palmbus_access, (void *)d, DM_DEFAULT, NULL);
 
-	machine_entry_add_alias(me, "vocore");
-
-	me->set_default_ram = machine_default_ram_vocore;
+	return 1;
 }
 

@@ -991,7 +991,8 @@ mdconfig -d -u 0
 <a name="linux_vocore"></a>
 <h3>Linux/VoCore:</h3>
 
-<p>This doesn't work yet. Starting point for development:
+<p>This doesn't work yet. Only serial console output is implemented,
+nothing else. Starting point for development:
 
 <p>See <a href="http://vocore.io/v1d.html">http://vocore.io/v1d.html</a> for info about the first VoCore model. (There are some newer ones too.)
 
@@ -1004,7 +1005,7 @@ mdconfig -d -u 0
 	<li><pre>dd if=lede-17.01.4-ramips-rt305x-vocore-16M-initramfs-kernel.bin of=apa bs=64 iseek=1 oseek=0
 lzma -d &lt; apa &gt; apa2</pre>
 
-	<li><tt><b>gxemul -vE vocore 0x80000000:0:0x80000000:apa2</b></tt>
+	<li><tt><b>gxemul -E vocore 0x80000000:0:0x80000000:apa2</b></tt>
 </pre>
 </ol>
 

@@ -57,6 +57,7 @@ dev_mvme187.cc  MVME187-specific devices and control registers
 dev_ns16550.cc  NS16550 serial controller
 dev_ohci.cc  USB Open Host Controller Interface
 dev_osiop.cc  NCR 53C710 SCSI I/O Processor (SIOP)
+dev_palmbus.cc  VoCore Palmbus
 dev_pcc2.cc  Peripheral Channel Controller (PCC2) bus (used in MVME machines)
 dev_pccmos.cc  PC CMOS/RTC device (ISA ports 0x70 and 0x71)
 dev_pcic.cc  Intel 82365SL PC Card Interface Controller
