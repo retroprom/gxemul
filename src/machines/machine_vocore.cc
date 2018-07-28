@@ -72,9 +72,11 @@ MACHINE_SETUP(vocore)
 MACHINE_DEFAULT_CPU(vocore)
 {
 	// According to http://vocore.io/v1d.html: RT5350, 360 MHz, MIPS 24K
-	// "mips24KEc" according to strings on the Linux kernel.
-	// TODO: Add 24K. For now, use 4KEc.
-	machine->cpu_name = strdup("4KEc");
+	// According to Linux booting on my real machine:
+	//	CPU revision is: 0001964c (MIPS 24KEc)
+	//	Primary instruction cache 32kB, VIPT, 4-way, linesize 32 bytes.
+	//	Primary data cache 16kB, 4-way, VIPT, no aliases, linesize 32 bytes
+	machine->cpu_name = strdup("24KEc");
 }
 
 

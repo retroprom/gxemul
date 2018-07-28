@@ -70,6 +70,11 @@ DEVICE_ACCESS(palmbus)
 		odata = 0x20203235;
 		break;
 
+	case 0x000c:
+		/*  Linux boot message says "SoC Type: Ralink RT5350 id:1 rev:3"  */
+		odata = 0x00000103;
+		break;
+
 	case 0x0c04:
 		console_putchar(d->console_handle, idata);
 		break;
