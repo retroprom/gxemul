@@ -61,6 +61,7 @@ SUCH DAMAGE.
   <li><a href="#netbsdplaystation2">NetBSD/playstation2</a>
   <li><a href="#netbsdrpi">NetBSD/raspberrypi</a>
   <li><a href="#linux_vocore">Linux/VoCore</a>
+  <li><a href="#freebsd_vocore">FreeBSD/VoCore</a>
 </ul>
 
 <p>NOTE: The guest operating systems listed on this page are here because
@@ -1008,6 +1009,30 @@ lzma -d &lt; apa &gt; apa2</pre>
 	<li><tt><b>gxemul -E vocore 0x80000000:0:0x80000000:apa2</b></tt>
 </pre>
 </ol>
+
+<p>TODO: Pretty much Everything.
+
+
+
+
+
+<p><br>
+<a name="vreebsd_vocore"></a>
+<h3>FreeBSD/VoCore:</h3>
+
+<p>This doesn't work yet. See comments about Linux above.
+
+<p>According to <a href="https://lists.freebsd.org/pipermail/freebsd-mips/2016-January/004332.html">https://lists.freebsd.org/pipermail/freebsd-mips/2016-January/004332.html</a>,
+a kernel at <a href="https://www.dropbox.com/s/nkwzx5omtx3ye7t/kernel.uboot.rt5350?dl=0">https://www.dropbox.com/s/nkwzx5omtx3ye7t/kernel.uboot.rt5350?dl=0</a> can be experimented with:
+
+<pre>
+kernel.uboot.rt5350: u-boot legacy uImage, FreeBSD Kernel Image, Linux/MIPS, OS Kernel Image (gzip), 1467294 bytes, Tue Dec 29 17:04:13 2015, Load Address: 0x80001120, Entry Point: 0x80001120, Header CRC: 0x3F6D1694, Data CRC: 0x6AF182B5
+
+dd if=kernel.uboot.rt5350 of=apa3 bs=64 iseek=1 oseek=0
+gunzip &lt; apa3 &gt; apa4
+
+<b>gxemul -VEvocore 0x80001120:0:0x80001120:apa4</b>
+</pre>
 
 <p>TODO: Pretty much Everything.
 
