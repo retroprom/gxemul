@@ -1010,6 +1010,18 @@ lzma -d &lt; apa &gt; apa2</pre>
 </pre>
 </ol>
 
+<p>ORIGINAL kernel (from vocore.io):
+<ol>
+	<li>Download <a href="http://vonger.cn/upload/vocore.dock2.bin">http://vonger.cn/upload/vocore.dock2.bin</a> (which may be corrupt? lzma complains...)
+
+	<li><pre>dd if=vocore.dock2.bin of=apa5 bs=64 iseek=1 oseek=0
+lzma -dv &lt; apa5 &gt; apa6</pre>
+
+	<li><tt><b>gxemul -E vocore 0x80000000:0:0x80000000:apa6</b></tt>
+</pre>
+</ol>
+
+
 <p>TODO: Pretty much Everything.
 
 
