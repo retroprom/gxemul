@@ -1262,6 +1262,8 @@ X(div)
 	int32_t res, rem;
 	if (b == 0)
 		res = 0, rem = a;
+	else if (a == (int32_t)0x80000000U && b == -1)
+		res = 0, rem = 0;
 	else
 		res = a / b, rem = a - b*res;
 	cpu->cd.mips.lo = (int32_t)res;
@@ -1283,6 +1285,8 @@ X(ddiv)
 	int64_t a = reg(ic->arg[0]), b = reg(ic->arg[1]);
 	int64_t res, rem;
 	if (b == 0)
+		res = 0;
+	else if (a == (int64_t)0x8000000000000000ULL && b == -1)
 		res = 0;
 	else
 		res = a / b;
