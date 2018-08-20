@@ -4701,3 +4701,4 @@ Changelog for GXemul:
 20180819	Applying a patch from Andreas Gustafsson (gson) for the MIPS
 		div and ddiv instructions, which checks for divide overflow
 		manually before doing the divide.
+20180820	Updating the Sprite/DECstation URLs.

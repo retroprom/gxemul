@@ -2050,8 +2050,8 @@ that file as a disk image file in the emulator.
 <p>Sprite was a research operating system at the University of Berkeley.
 A copy of a Sprite harddisk image for a DECstation 5000/200 is still
 available. If you want to find out more about Sprite in general, read
-<a href="http://www.cs.berkeley.edu/projects/sprite/retrospective.html">
-http://www.cs.berkeley.edu/projects/sprite/retrospective.html</a>.
+<a href="https://web.stanford.edu/~ouster/cgi-bin/spriteRetrospective.php">
+https://web.stanford.edu/~ouster/cgi-bin/spriteRetrospective.php</a>.
 
 <p>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
@@ -2065,11 +2065,11 @@ The following instructions should let you run Sprite in the emulator:
 <p>
 <ol>
   <li>Download the Sprite harddisk image:<pre>
-	<a href="ftp://ftp.es.embnet.org/pub/misc/os/cluster/Sprite/">ftp://ftp.es.embnet.org/pub/misc/os/cluster/Sprite</a>/<a href="ftp://ftp.es.embnet.org/pub/misc/os/cluster/Sprite/ds5000.bt">ds5000.bt</a>
-	83973120 bytes, MD5 = ec84eeeb20fe77b758370d5e312e4a5e
+<a href="https://github.com/OSPreservProject/sprite/raw/master/ds5000.bt">https://github.com/OSPreservProject/sprite/raw/master/ds5000.bt</a>
+
+(83973120 bytes, MD5 = ec84eeeb20fe77b758370d5e312e4a5e)
 </pre>
-  <p>(A big thank you to José R. Valverde for maintaining the OS archives
-  	at ftp.embnet.org.)
+
   <li>Start the emulator with the following command line:<pre>
 	<b>gxemul -X -e 3max -M128 -d ds5000.bt -j vmsprite -o ''</b>
 
@@ -2089,8 +2089,7 @@ values, then you should use the following:
 </pre>
 
 <p>
-Unfortunately, at the end of <a href="ftp://ftp.es.embnet.org/pub/misc/os/cluster/Sprite/boot.txt">ftp://ftp.es.embnet.org/pub/misc/os/cluster/Sprite/boot.txt</a>,
-the following sad statement can be found:
+Unfortunately, at the end of <a href="https://raw.githubusercontent.com/OSPreservProject/sprite/master/boot.txt">https://raw.githubusercontent.com/OSPreservProject/sprite/master/boot.txt</a>, the following sad statement can be found:
 <pre>
     The bootable Sprite image is meant to be a demonstration of Sprite, not
     a robust Sprite system.  There are several missing things, such as 
