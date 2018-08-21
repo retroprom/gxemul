@@ -4702,3 +4702,5 @@ Changelog for GXemul:
 		div and ddiv instructions, which checks for divide overflow
 		manually before doing the divide.
 20180820	Updating the Sprite/DECstation URLs.
+20180821	DECstation 5000/125 "3MIN" mode has been broken for quite
+		a while; attempting to rewrite/resurrect it.

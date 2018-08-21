@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2004-2018  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -36,6 +36,7 @@
 
 #include "cpu.h"
 #include "devices.h"
+#include "interrupt.h"
 #include "memory.h"
 #include "misc.h"
 
@@ -45,6 +46,22 @@
 
 #define IOASIC_DEBUG
 /* #define debug fatal */
+
+
+void dec_ioasic_reassert(struct dec_ioasic_data* d)
+{
+	uint32_t intr = d->reg[(IOASIC_INTR - IOASIC_SLOT_1_START) / 0x10];
+	uint32_t imsk = d->reg[(IOASIC_IMSK - IOASIC_SLOT_1_START) / 0x10];
+
+	if (intr & imsk && !d->int_asserted) {
+		d->int_asserted = 1;
+		d->irq->interrupt_assert(d->irq);
+	}
+	if (!(intr & imsk) && d->int_asserted) {
+		d->int_asserted = 0;
+		d->irq->interrupt_deassert(d->irq);
+	}
+}
 
 
 DEVICE_ACCESS(dec_ioasic)
@@ -177,16 +194,11 @@ DEVICE_ACCESS(dec_ioasic)
 			if (!d->rackmount_flag)
 				odata |= KN03_INTR_PROD_JUMPER;
 		} else {
-			/*  Clear bits on write.  */
+			/*  Clear bits on write?  */
 			d->reg[(IOASIC_INTR - IOASIC_SLOT_1_START) / 0x10] &=
 			    ~idata;
 
-			/*  Make sure that the CPU interrupt is deasserted as
-			    well:  */
-fatal("TODO: interrupt rewrite!\n");
-abort();
-//			if (idata != 0)
-//				cpu_interrupt_ack(cpu, 8 + idata);
+			dec_ioasic_reassert(d);
 		}
 		break;
 
@@ -194,9 +206,7 @@ abort();
 		if (writeflag == MEM_WRITE) {
 			d->reg[(IOASIC_IMSK - IOASIC_SLOT_1_START) / 0x10] =
 			    idata;
-fatal("TODO: interrupt rewrite!\n");
-abort();
-//			cpu_interrupt_ack(cpu, 8 + 0);
+			dec_ioasic_reassert(d);
 		} else
 			odata = d->reg[(IOASIC_IMSK - IOASIC_SLOT_1_START) /
 			    0x10];
@@ -207,18 +217,18 @@ abort();
 			odata = 0;
 		break;
 
-	case 0x80000:
-	case 0x80004:
-	case 0x80008:
-	case 0x8000c:
-	case 0x80010:
-	case 0x80014:
+	case IOASIC_SYS_ETHER_ADDRESS(0) + 0x00:
+	case IOASIC_SYS_ETHER_ADDRESS(0) + 0x04:
+	case IOASIC_SYS_ETHER_ADDRESS(0) + 0x08:
+	case IOASIC_SYS_ETHER_ADDRESS(0) + 0x0c:
+	case IOASIC_SYS_ETHER_ADDRESS(0) + 0x10:
+	case IOASIC_SYS_ETHER_ADDRESS(0) + 0x14:
 		/*  Station's ethernet address:  */
 		if (writeflag == MEM_WRITE) {
 			fatal("[ dec_ioasic: attempt to write to the station's"
 			    " ethernet address? ]\n");
 		} else {
-			odata = ((relative_addr - 0x80000) / 4 + 1) * 0x10;
+			odata = ((relative_addr - IOASIC_SYS_ETHER_ADDRESS(0)) / 4 + 1) * 0x10;
 		}
 		break;
 
@@ -248,7 +258,7 @@ abort();
  *  type 4.
  */
 struct dec_ioasic_data *dev_dec_ioasic_init(struct cpu *cpu,
-	struct memory *mem, uint64_t baseaddr, int rackmount_flag)
+	struct memory *mem, uint64_t baseaddr, int rackmount_flag, struct interrupt* irqp)
 {
 	struct dec_ioasic_data *d;
 
@@ -256,6 +266,7 @@ struct dec_ioasic_data *dev_dec_ioasic_init(struct cpu *cpu,
 	memset(d, 0, sizeof(struct dec_ioasic_data));
 
 	d->rackmount_flag = rackmount_flag;
+	d->irq = irqp;
 
 	memory_device_register(mem, "dec_ioasic", baseaddr,
 	    DEV_DEC_IOASIC_LENGTH, dev_dec_ioasic_access, (void *)d,

@@ -41,6 +41,7 @@ dev_irqc.cc  Generic IRQ controller for the test machines
 dev_jazz.cc  Microsoft Jazz-related stuff (Acer PICA-61, etc)
 dev_kn01.cc  DEC KN01 ("PMAX", DECstation type 1) control register and VDAC
 dev_kn02.cc  DEC KN02 mainbus (TurboChannel interrupt controller)
+dev_kn02ba.cc  DEC KN02BA "3min" TurboChannel interrupt controller
 dev_kn220.cc  DEC KN220 (DECsystem 5500) devices
 dev_kn230.cc  DEC KN230 (MIPSMATE 5100) stuff
 dev_lca.cc  LCA PCI bus, for Alpha machines
