@@ -185,7 +185,7 @@ DEVICE_TICK(scc)
 				    & SCC_RR3_TX_IP_A ||
 				    d->scc_register_r[i * N_SCC_REGS + SCC_RR3]
 				    & SCC_RR3_TX_IP_B) {
-fatal("TODO: legacy rewrite!\n");
+fatal("TODO: legacy rewrite A!\n");
 abort();
 //					cpu_interrupt(cpu, d->irq_nr);
 				}
@@ -208,8 +208,8 @@ abort();
 				    & SCC_RR3_RX_IP_A ||
 				    d->scc_register_r[i * N_SCC_REGS + SCC_RR3]
 				    & SCC_RR3_RX_IP_B) {
-fatal("TODO: legacy rewrite!\n");
-abort();
+//fatal("TODO: legacy rewrite B!\n");
+// abort();
 //					cpu_interrupt(cpu, d->irq_nr);
 				}
 			}
@@ -233,7 +233,7 @@ abort();
 				    d->scc_register_r[i * N_SCC_REGS + SCC_RR3]
 				    & SCC_RR3_EXT_IP_B)
 {
-fatal("TODO: legacy rewrite!\n");
+fatal("TODO: legacy rewrite C!\n");
 abort();
 //					cpu_interrupt(cpu, d->irq_nr);
 /*  TODO: huh?  */
@@ -355,8 +355,8 @@ DEVICE_ACCESS(scc)
 				d->scc_register_r[port * N_SCC_REGS +
 				    SCC_RR3] = 0;
 
-fatal("TODO: legacy rewrite!\n");
-abort();
+//fatal("TODO: legacy rewrite D!\n");
+// abort();
 //				cpu_interrupt_ack(cpu, d->irq_nr);
 			}
 
@@ -405,8 +405,8 @@ abort();
 			/*  TODO:  perhaps only clear the RX part of RR3?  */
 			d->scc_register_r[N_SCC_REGS + SCC_RR3] = 0;
 
-fatal("TODO: legacy rewrite!\n");
-abort();
+// fatal("TODO: legacy rewrite E!\n");
+// abort();
 //			cpu_interrupt_ack(cpu, d->irq_nr);
 
 //			debug("[ scc: (port %i) read from 0x%08lx: 0x%02x ]\n",

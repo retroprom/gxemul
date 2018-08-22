@@ -416,6 +416,21 @@ DEVICE_ACCESS(dec_ioasic)
 		}
 		break;
 
+	/*  The DECstation 5000/125's PROM uses these for cache testing. TODO.  */
+	case 0x0f004:
+	case 0x1f008:
+	case 0x2f00c:
+	case 0x3f010:
+	case 0x4f014:
+	case 0x5f018:
+	case 0x6f01c:
+	case 0x7f020:
+	case 0x8f024:
+	case 0x9f028:
+	case 0xaf02c:
+	case 0xbf030:
+		break;
+
 	default:
 		if (writeflag == MEM_WRITE)
 			fatal("[ dec_ioasic: unimplemented write to address "
@@ -424,7 +439,7 @@ DEVICE_ACCESS(dec_ioasic)
 		else
 			fatal("[ dec_ioasic: unimplemented read from address "
 			    "0x%llx ]\n", (long long)relative_addr);
-		exit(1);
+		// exit(1);
 	}
 
 	if (writeflag == MEM_READ)
