@@ -45,12 +45,12 @@
 #include "thirdparty/dec_kmin.h"
 
 
-#define	DEV_KN02BA_DUMMYADDR	0x100000000
-#define	DEV_KN02BA_DUMMYLENGTH	0x1000
-
-
 struct kn02ba_data {
 	struct dec_ioasic_data *dec_ioasic;
+
+	uint32_t	mer;	/*  Memory Error Register  */
+	uint32_t	msr;	/*  Memory Size Register  */
+
 	struct interrupt irq;
 };
 
@@ -64,19 +64,19 @@ void kn02ba_interrupt_assert(struct interrupt *interrupt)
 {
 	struct kn02ba_data *d = (struct kn02ba_data *) interrupt->extra;
 	struct dec_ioasic_data *r = (struct dec_ioasic_data *) d->dec_ioasic;
-	r->reg[(IOASIC_INTR - IOASIC_SLOT_1_START) / 0x10] |= interrupt->line;
+	r->intr |= interrupt->line;
 	dec_ioasic_reassert(r);
 }
 void kn02ba_interrupt_deassert(struct interrupt *interrupt)
 {
 	struct kn02ba_data *d = (struct kn02ba_data *) interrupt->extra;
 	struct dec_ioasic_data *r = (struct dec_ioasic_data *) d->dec_ioasic;
-	r->reg[(IOASIC_INTR - IOASIC_SLOT_1_START) / 0x10] &= ~interrupt->line;
+	r->intr &= ~interrupt->line;
 	dec_ioasic_reassert(r);
 }
 
 
-DEVICE_ACCESS(kn02ba)
+DEVICE_ACCESS(kn02ba_mer)
 {
 	struct kn02ba_data *d = (struct kn02ba_data *) extra;
 	uint64_t idata = 0, odata = 0;
@@ -85,14 +85,76 @@ DEVICE_ACCESS(kn02ba)
 		idata = memory_readmax64(cpu, data, len);
 
 	switch (relative_addr) {
+	case 0:
+		if (writeflag == MEM_WRITE)
+			d->mer = idata;
+		else
+			odata = d->mer;
+
+		debug("[ kn02ba_mer: %s MER, data=0x%08x (%s %s %s %s %s %s %s) ]\n",
+			writeflag == MEM_WRITE ? "write to" : "read from",
+			d->mer,
+			d->mer & KMIN_MER_PAGE_BRY ? "PAGE_BRY" : "--",
+			d->mer & KMIN_MER_TLEN ? "TLEN" : "--",
+			d->mer & KMIN_MER_PARDIS ? "PARDIS" : "--",
+			d->mer & KMIN_LASTB31 ? "LASTB31" : "--",
+			d->mer & KMIN_LASTB23 ? "LASTB23" : "--",
+			d->mer & KMIN_LASTB15 ? "LASTB15" : "--",
+			d->mer & KMIN_LASTB07 ? "LASTB07" : "--"
+			);
+
+		break;
+
 	default:
-		if (writeflag==MEM_READ) {
-			fatal("[ kn02ba: read from 0x%08lx ]\n",
+		if (writeflag == MEM_READ) {
+			fatal("[ kn02ba_mer: read from offset 0x%08lx ]\n",
 			    (long)relative_addr);
 		} else {
-			fatal("[ kn02ba: write to  0x%08lx: 0x%08x ]\n",
+			fatal("[ kn02ba_mer: write to offset 0x%08lx: 0x%08x ]\n",
 			    (long)relative_addr, (int)idata);
 		}
+		exit(1);
+	}
+
+	if (writeflag == MEM_READ)
+		memory_writemax64(cpu, data, len, odata);
+
+	return 1;
+}
+
+
+DEVICE_ACCESS(kn02ba_msr)
+{
+	struct kn02ba_data *d = (struct kn02ba_data *) extra;
+	uint64_t idata = 0, odata = 0;
+
+	if (writeflag == MEM_WRITE)
+		idata = memory_readmax64(cpu, data, len);
+
+	switch (relative_addr) {
+	case 0:
+		if (writeflag == MEM_WRITE)
+			d->msr = idata;
+		else
+			odata = d->msr;
+
+		debug("[ kn02ba_msr: %s MSR, data=0x%08x (%s) ]\n",
+			writeflag == MEM_WRITE ? "write to" : "read from",
+			d->msr,
+			d->msr & KMIN_MSR_SIZE_16Mb ? "16Mb" : "--"
+			);
+
+		break;
+
+	default:
+		if (writeflag == MEM_READ) {
+			fatal("[ kn02ba_msr: read from offset 0x%08lx ]\n",
+			    (long)relative_addr);
+		} else {
+			fatal("[ kn02ba_msr: write to offset 0x%08lx: 0x%08x ]\n",
+			    (long)relative_addr, (int)idata);
+		}
+		exit(1);
 	}
 
 	if (writeflag == MEM_READ)
@@ -119,7 +181,7 @@ DEVINIT(kn02ba)
 		char tmpstr[300];
 		snprintf(tmpstr, sizeof(tmpstr), "%s.kn02ba.0x%x",
 		    devinit->interrupt_path, 1 << i);
-		printf("registering '%s'\n", tmpstr);
+		// printf("registering '%s'\n", tmpstr);
 		memset(&templ, 0, sizeof(templ));
 		templ.line = 1 << i;
 		templ.name = tmpstr;
@@ -129,12 +191,18 @@ DEVINIT(kn02ba)
 		interrupt_handler_register(&templ);
 	}
 
-	memory_device_register(devinit->machine->memory, devinit->name,
-	    DEV_KN02BA_DUMMYADDR, DEV_KN02BA_DUMMYLENGTH, dev_kn02ba_access, d,
+	memory_device_register(devinit->machine->memory, "kn02ba_mer",
+	    KMIN_REG_MER, sizeof(uint32_t), dev_kn02ba_mer_access, d,
+	    DM_DEFAULT, NULL);
+
+	memory_device_register(devinit->machine->memory, "kn02ba_msr",
+	    KMIN_REG_MSR, sizeof(uint32_t), dev_kn02ba_msr_access, d,
 	    DM_DEFAULT, NULL);
 
 	d->dec_ioasic = dev_dec_ioasic_init(devinit->machine->cpus[0],
 		devinit->machine->memory, KMIN_SYS_ASIC, 0, &d->irq);
+
+	d->msr = KMIN_MSR_SIZE_16Mb;
 
 	return 1;
 }

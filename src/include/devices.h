@@ -75,11 +75,31 @@ struct pic8259_data {
 };
 
 /*  dev_dec_ioasic.c:  */
-#define	DEV_DEC_IOASIC_LENGTH		0x80100
-#define	N_DEC_IOASIC_REGS	(0x1f0 / 0x10)
+#define	DEV_DEC_IOASIC_LENGTH		0xc0000
 #define	MAX_IOASIC_DMA_FUNCTIONS	8
 struct dec_ioasic_data {
-	uint32_t	reg[N_DEC_IOASIC_REGS];
+	uint32_t	scsi_dmaptr;		/*  0x000  */
+	uint32_t	scsi_nextptr;		/*  0x010  */
+	uint32_t	lance_dmaptr;		/*  0x020  */
+	uint32_t	floppy_dmaptr;		/*  0x070  */
+	uint32_t	isdn_x_dmaptr;		/*  0x080  */
+	uint32_t	isdn_x_nextptr;		/*  0x090  */
+	uint32_t	isdn_r_dmaptr;		/*  0x0a0  */
+	uint32_t	isdn_r_nextptr;		/*  0x0b0  */
+	uint32_t	csr;			/*  0x100  */
+	uint32_t	intr;			/*  0x110  */
+	uint32_t	imsk;			/*  0x120  */
+	uint32_t	isdn_x_data;		/*  0x140  */
+	uint32_t	isdn_r_data;		/*  0x150  */
+	uint32_t	lance_decode;		/*  0x160  */
+	uint32_t	scsi_decode;		/*  0x170  */
+	uint32_t	scc0_decode;		/*  0x180  */
+	uint32_t	scc1_decode;		/*  0x190  */
+	uint32_t	floppy_decode;		/*  0x1a0  */
+	uint32_t	scsi_scr;		/*  0x1b0  */
+	uint32_t	scsi_sdr0;		/*  0x1c0  */
+	uint32_t	scsi_sdr1;		/*  0x1d0  */
+
 	int		(*(dma_func[MAX_IOASIC_DMA_FUNCTIONS]))(struct cpu *, void *, uint64_t addr, size_t dma_len, int tx);
 	void		*dma_func_extra[MAX_IOASIC_DMA_FUNCTIONS];
 	int		rackmount_flag;

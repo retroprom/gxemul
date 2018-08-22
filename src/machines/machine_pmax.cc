@@ -285,10 +285,11 @@ MACHINE_SETUP(pmax)
 ////abort();
 //		dev_le_init(machine, mem, 0x1c0c0000, 0, 0,
 //		    KMIN_INTR_LANCE + 8, 4 * 65536);
+
 //		dev_scc_init(machine, mem, 0x1c100000, KMIN_INTR_SCC_0,
 //		    machine->x11_md.in_use, 0, 1);
-//		dev_scc_init(machine, mem, 0x1c180000, KMIN_INTR_SCC_1,
-//		    machine->x11_md.in_use, 1, 1);
+		dev_scc_init(machine, mem, 0x1c180000, KMIN_INTR_SCC_1,
+		    machine->x11_md.in_use, 1, 1);
 
 
 		snprintf(tmpstr, sizeof(tmpstr), "%s.cpu[%i].%i.kn02ba.0x%x",

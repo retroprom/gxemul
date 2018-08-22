@@ -4704,3 +4704,6 @@ Changelog for GXemul:
 20180820	Updating the Sprite/DECstation URLs.
 20180821	DECstation 5000/125 "3MIN" mode has been broken for quite
 		a while; attempting to rewrite/resurrect it.
+20180822	Rewrote/refactored enough of the dec_ioasic code to make the
+		5000/125's original PROM output its first boot messages again
+		(and NetBSD/pmax and OpenBSD/pmax too).

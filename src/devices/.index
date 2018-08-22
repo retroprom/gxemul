@@ -18,7 +18,7 @@ dev_dc7085.cc  DC7085 serial controller, used in some DECstation models
 dev_dec21030.cc  DEC 21030 "TGA" graphics card
 dev_dec21143.cc  DEC 21143 "Tulip" ethernet controller
 dev_dec5800.cc  DECsystem 58x0 devices
-dev_dec_ioasic.cc  IOASIC device used in the DECstation "3MIN" and "3MAX" machines
+dev_dec_ioasic.cc  IOASIC device used in some DECstation machines
 dev_disk.cc  A simple disk controller device, for the test machines
 dev_dreamcast_asic.cc  Dreamcast-specific ASIC
 dev_dreamcast_g2.cc  Dreamcast G2 bus
