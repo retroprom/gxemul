@@ -119,8 +119,11 @@ MACHINE_SETUP(sgi)
 		    " (Everest IP19)", MACHINE_NAME_MAXBUF);
 		machine->main_console_handle = (size_t)device_add(machine,
 		    "z8530 addr=0x1fbd9830 irq=0 addr_mult=4");
-		dev_scc_init(machine, mem, 0x10086000, 0,
-		    machine->x11_md.in_use, 0, 8);	/*  serial? irix?  */
+
+		fatal("TODO ip19 interrupt rewrite\n");
+		abort();
+		//dev_scc_init(machine, mem, 0x10086000, 0,
+		//    machine->x11_md.in_use, 0, 8);	/*  serial? irix?  */
 
 		device_add(machine, "sgi_ip19 addr=0x18000000");
 
@@ -305,8 +308,10 @@ j = 0;
 		strlcat(machineName, " (Everest IP25)", MACHINE_NAME_MAXBUF);
 
 		 /*  serial? irix?  */
-		dev_scc_init(machine, mem,
-		    0x400086000ULL, 0, machine->x11_md.in_use, 0, 8);
+		fatal("TODO ip25 interrupt rewrite\n");
+		abort();
+		//dev_scc_init(machine, mem,
+		//    0x400086000ULL, 0, machine->x11_md.in_use, 0, 8);
 
 		/*  NOTE: ip19! (perhaps not really the same  */
 		device_add(machine, "sgi_ip19 addr=0x18000000");

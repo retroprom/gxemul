@@ -286,9 +286,14 @@ MACHINE_SETUP(pmax)
 //		dev_le_init(machine, mem, 0x1c0c0000, 0, 0,
 //		    KMIN_INTR_LANCE + 8, 4 * 65536);
 
-//		dev_scc_init(machine, mem, 0x1c100000, KMIN_INTR_SCC_0,
-//		    machine->x11_md.in_use, 0, 1);
-		dev_scc_init(machine, mem, 0x1c180000, KMIN_INTR_SCC_1,
+		snprintf(tmpstr, sizeof(tmpstr), "%s.cpu[%i].%i.kn02ba.0x%x",
+		    machine->path, machine->bootstrap_cpu, KMIN_INT_TC3, KMIN_INTR_SCC_0);
+		dev_scc_init(machine, mem, 0x1c100000, tmpstr,
+		    machine->x11_md.in_use, 0, 1);
+
+		snprintf(tmpstr, sizeof(tmpstr), "%s.cpu[%i].%i.kn02ba.0x%x",
+		    machine->path, machine->bootstrap_cpu, KMIN_INT_TC3, KMIN_INTR_SCC_1);
+		dev_scc_init(machine, mem, 0x1c180000, tmpstr,
 		    machine->x11_md.in_use, 1, 1);
 
 
@@ -309,21 +314,31 @@ MACHINE_SETUP(pmax)
 		 *
 		 *  TODO: irqs 
 		 */
-////fatal("TODO: turbochannel init rewrite!\n");
-////abort();
-#if 0
-		dev_turbochannel_init(machine, mem, 0, 0x10000000, 0x103fffff,
+
+		snprintf(tmpstr, sizeof(tmpstr), "%s.cpu[%i].%i",
+		    machine->path, machine->bootstrap_cpu, KMIN_INT_TC0);
+		dev_turbochannel_init(machine, mem, 0,
+		    KMIN_PHYS_TC_0_START, KMIN_PHYS_TC_0_END,
 		    machine->n_gfx_cards >= 1?
-			turbochannel_default_gfx_card : "", KMIN_INT_TC0);
+			turbochannel_default_gfx_card : "",
+		    tmpstr);
 
-		dev_turbochannel_init(machine, mem, 1, 0x14000000, 0x143fffff,
+		snprintf(tmpstr, sizeof(tmpstr), "%s.cpu[%i].%i",
+		    machine->path, machine->bootstrap_cpu, KMIN_INT_TC1);
+		dev_turbochannel_init(machine, mem, 0,
+		    KMIN_PHYS_TC_1_START, KMIN_PHYS_TC_1_END,
 		    machine->n_gfx_cards >= 2?
-		    turbochannel_default_gfx_card : "", KMIN_INT_TC1);
+			turbochannel_default_gfx_card : "",
+		    tmpstr);
 
-		dev_turbochannel_init(machine, mem, 2, 0x18000000, 0x183fffff,
+		snprintf(tmpstr, sizeof(tmpstr), "%s.cpu[%i].%i",
+		    machine->path, machine->bootstrap_cpu, KMIN_INT_TC2);
+		dev_turbochannel_init(machine, mem, 0,
+		    KMIN_PHYS_TC_2_START, KMIN_PHYS_TC_2_END,
 		    machine->n_gfx_cards >= 3?
-			turbochannel_default_gfx_card : "", KMIN_INT_TC2);
-#endif
+			turbochannel_default_gfx_card : "",
+		    tmpstr);
+
 		/*  (kmin shared irq numbers (IP) are offset by +8 in the
 		    emulator)  */
 		/*  kmin_csr = dev_kmin_init(cpu, mem, KMIN_REG_INTR);  */
@@ -579,8 +594,8 @@ fatal("TODO: xine dev_le_init rewrite\n");
 abort();
 //		dev_le_init(machine, mem, 0x1c0c0000, 0, 0,
 //		    XINE_INTR_LANCE +8, 4*65536);
-		dev_scc_init(machine, mem, 0x1c100000,
-		    XINE_INTR_SCC_0 +8, machine->x11_md.in_use, 0, 1);
+//		dev_scc_init(machine, mem, 0x1c100000,
+//		    XINE_INTR_SCC_0 +8, machine->x11_md.in_use, 0, 1);
 fatal("TODO: mc146818 irq\n");
 abort();
 //		dev_mc146818_init(machine, mem, 0x1c200000,

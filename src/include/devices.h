@@ -377,7 +377,7 @@ int dev_scc_access(struct cpu *cpu, struct memory *mem, uint64_t relative_addr,
 int dev_scc_dma_func(struct cpu *cpu, void *extra, uint64_t addr,
 	size_t dma_len, int tx);
 void *dev_scc_init(struct machine *machine, struct memory *mem,
-	uint64_t baseaddr, int irq_nr, int use_fb, int scc_nr, int addrmul);
+	uint64_t baseaddr, char* irq_path, int use_fb, int scc_nr, int addrmul);
 
 /*  dev_sfb.c:  */
 #define	DEV_SFB_LENGTH		0x400000

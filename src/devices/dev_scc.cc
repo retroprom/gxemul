@@ -75,7 +75,8 @@
 
 
 struct scc_data {
-	int		irq_nr;
+	struct interrupt	irq;
+
 	int		use_fb;
 	int		console_handle;
 
@@ -154,9 +155,11 @@ DEVICE_TICK(scc)
 
 	/*  Add keystrokes to the rx queue:  */
 	if (d->use_fb == 0 && d->scc_nr == 1) {
-		if (console_charavail(d->console_handle))
+		if (console_charavail(d->console_handle)) {
+printf("urk B\n");
 			dev_scc_add_to_rx_queue(extra, console_readchar(
 			    d->console_handle), 2);
+		}
 	}
 	if (d->use_fb == 1 && d->scc_nr == 1)
 		lk201_tick(cpu->machine, &d->lk201);
@@ -185,9 +188,7 @@ DEVICE_TICK(scc)
 				    & SCC_RR3_TX_IP_A ||
 				    d->scc_register_r[i * N_SCC_REGS + SCC_RR3]
 				    & SCC_RR3_TX_IP_B) {
-fatal("TODO: legacy rewrite A!\n");
-abort();
-//					cpu_interrupt(cpu, d->irq_nr);
+					INTERRUPT_ASSERT(d->irq);
 				}
 			}
 
@@ -208,9 +209,7 @@ abort();
 				    & SCC_RR3_RX_IP_A ||
 				    d->scc_register_r[i * N_SCC_REGS + SCC_RR3]
 				    & SCC_RR3_RX_IP_B) {
-//fatal("TODO: legacy rewrite B!\n");
-// abort();
-//					cpu_interrupt(cpu, d->irq_nr);
+					INTERRUPT_ASSERT(d->irq);
 				}
 			}
 
@@ -231,14 +230,9 @@ abort();
 				if (d->scc_register_r[i * N_SCC_REGS + SCC_RR3]
 				    & SCC_RR3_EXT_IP_A ||
 				    d->scc_register_r[i * N_SCC_REGS + SCC_RR3]
-				    & SCC_RR3_EXT_IP_B)
-{
-fatal("TODO: legacy rewrite C!\n");
-abort();
-//					cpu_interrupt(cpu, d->irq_nr);
-/*  TODO: huh?  */
-//cpu_interrupt(cpu, 8 + 0x02000000);
-}
+				    & SCC_RR3_EXT_IP_B) {
+					INTERRUPT_ASSERT(d->irq);
+				}
 			}
 		}
 	}
@@ -355,9 +349,7 @@ DEVICE_ACCESS(scc)
 				d->scc_register_r[port * N_SCC_REGS +
 				    SCC_RR3] = 0;
 
-//fatal("TODO: legacy rewrite D!\n");
-// abort();
-//				cpu_interrupt_ack(cpu, d->irq_nr);
+				INTERRUPT_DEASSERT(d->irq);
 			}
 
 #ifdef SCC_DEBUG
@@ -405,9 +397,7 @@ DEVICE_ACCESS(scc)
 			/*  TODO:  perhaps only clear the RX part of RR3?  */
 			d->scc_register_r[N_SCC_REGS + SCC_RR3] = 0;
 
-// fatal("TODO: legacy rewrite E!\n");
-// abort();
-//			cpu_interrupt_ack(cpu, d->irq_nr);
+			INTERRUPT_DEASSERT(d->irq);
 
 //			debug("[ scc: (port %i) read from 0x%08lx: 0x%02x ]\n",
 //			    port, (long)relative_addr, (int)odata);
@@ -470,18 +460,20 @@ DEVICE_ACCESS(scc)
  *	addmul = 1 in most cases, 8 on SGI?
  */
 void *dev_scc_init(struct machine *machine, struct memory *mem,
-	uint64_t baseaddr, int irq_nr, int use_fb, int scc_nr, int addrmul)
+	uint64_t baseaddr, char* irq_path, int use_fb, int scc_nr, int addrmul)
 {
 	struct scc_data *d;
 
 	CHECK_ALLOCATION(d = (struct scc_data *) malloc(sizeof(struct scc_data)));
 	memset(d, 0, sizeof(struct scc_data));
 
-	d->irq_nr  = irq_nr;
+	INTERRUPT_CONNECT(irq_path, d->irq);
 	d->scc_nr  = scc_nr;
 	d->use_fb  = use_fb;
 	d->addrmul = addrmul;
 	d->console_handle = console_start_slave(machine, "SCC", 1);
+
+	d->scc_register_r[SCC_RR0] |= SCC_RR0_TX_UNDERRUN;
 
 	lk201_init(&d->lk201, use_fb, dev_scc_add_to_rx_queue,
 	    d->console_handle, d);
