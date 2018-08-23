@@ -1,7 +1,7 @@
 /*  This file contains two files from netbsd, lk201.h and lk201.c.  */
 
 #ifndef LK201_H
-#define LK201_h
+#define LK201_H
 
 /*	$NetBSD: lk201.h,v 1.7 1999/03/19 18:34:01 ad Exp $	*/
 
@@ -293,5 +293,3 @@ static u_char shiftedAscii[] = {
 };
 
 #endif	/*  LK201_H  */
-
-

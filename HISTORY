@@ -4710,3 +4710,5 @@ Changelog for GXemul:
 20180823	Continuing on making 5000/125 emulation work again: rewriting
 		the interrupt code for the scc serial controller, and
 		connecting TURBOchannel graphics cards.
+		Fixing the LK201 keyboard self-test codes so that the 5000/125
+		PROM doesn't complain.

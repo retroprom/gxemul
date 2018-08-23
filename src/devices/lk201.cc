@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2018  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -39,6 +39,9 @@
 
 #include "thirdparty/dc7085.h"	/*  for port names  */
 #include "thirdparty/lk201.h"
+
+
+#define debug fatal
 
 
 /*
@@ -290,6 +293,7 @@ void lk201_tx_data(struct lk201_data *d, int port, int idata)
 			/*  Simply print the character to stdout:  */
 			console_putchar(d->console_handle, idata);
 		} else {
+			debug("[ lk201: writing data to KBD: 0x%02x ]\n", idata);
 			switch (idata) {
 			case LK_LED_DISABLE:	/*  0x11  */
 				break;
@@ -318,12 +322,11 @@ void lk201_tx_data(struct lk201_data *d, int port, int idata)
 				 *	3 = LK443
 				 *	4 = LK421
 				 *
-				 *  TODO: What about the second byte?
+				 *  TODO: What about the second byte? 0x22 or
+				 *  0x00?
 				 */
-				d->add_to_rx_queue(d->add_data,
-				    0x01, DCKBD_PORT);
-				d->add_to_rx_queue(d->add_data,
-				    0x22, DCKBD_PORT);
+				d->add_to_rx_queue(d->add_data, 0x01, DCKBD_PORT);
+				d->add_to_rx_queue(d->add_data, 0x00, DCKBD_PORT);
 				break;
 			case LK_DEFAULTS:	/*  0xd3  */
 				/*  TODO?  */
@@ -341,7 +344,7 @@ void lk201_tx_data(struct lk201_data *d, int port, int idata)
 				    0x00, DCKBD_PORT);
 				break;
 			default:
-				debug("[ lk201: keyboard control: 0x%x ]\n",
+				debug("[ lk201: unimplemented keyboard control: 0x%x ]\n",
 				    idata);
 			}
 		}
@@ -395,5 +398,17 @@ void lk201_init(struct lk201_data *d, int use_fb,
 	d->mouse_mode = 0;
 	d->mouse_revision = 0;	/*  0..15  */
 	d->console_handle = console_handle;
+
+	/*
+	 *  Power up self-test result, as per
+	 *  https://www.netbsd.org/docs/Hardware/Machines/DEC/lk201.html#power_up
+	 */
+	if (d->use_fb) {
+		d->add_to_rx_queue(d->add_data, 0x01, DCKBD_PORT);
+		d->add_to_rx_queue(d->add_data, 0x00, DCKBD_PORT);
+		d->add_to_rx_queue(d->add_data, 0x00, DCKBD_PORT);
+		d->add_to_rx_queue(d->add_data, 0x00, DCKBD_PORT);
+	}
 }
+
 

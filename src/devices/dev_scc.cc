@@ -154,15 +154,14 @@ DEVICE_TICK(scc)
 	int i;
 
 	/*  Add keystrokes to the rx queue:  */
-	if (d->use_fb == 0 && d->scc_nr == 1) {
-		if (console_charavail(d->console_handle)) {
-printf("urk B\n");
-			dev_scc_add_to_rx_queue(extra, console_readchar(
+	if (d->scc_nr == 1) {
+		if (d->use_fb == 0) {
+			if (console_charavail(d->console_handle))
+				dev_scc_add_to_rx_queue(extra, console_readchar(
 			    d->console_handle), 2);
-		}
+		} else if (d->use_fb == 1)
+			lk201_tick(cpu->machine, &d->lk201);
 	}
-	if (d->use_fb == 1 && d->scc_nr == 1)
-		lk201_tick(cpu->machine, &d->lk201);
 
 	for (i=0; i<N_SCC_PORTS; i++) {
 		d->scc_register_r[i * N_SCC_REGS + SCC_RR0] |= SCC_RR0_TX_EMPTY;
