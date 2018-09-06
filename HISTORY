@@ -4712,3 +4712,6 @@ Changelog for GXemul:
 		connecting TURBOchannel graphics cards.
 		Fixing the LK201 keyboard self-test codes so that the 5000/125
 		PROM doesn't complain.
+
+==============  RELEASE 0.6.0.2  ==============
+

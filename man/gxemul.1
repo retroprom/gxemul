@@ -29,7 +29,7 @@
 .\"
 .\"     groff -man -Tascii gxemul.1    or    nroff -man gxemul.1
 .\"
-.Dd JUNE 2018
+.Dd SEPTEMBER 2018
 .Dt GXEMUL 1
 .Os
 .Sh NAME
@@ -72,7 +72,9 @@ controllers.
 Note: Only very few emulated machine modes have been rewritten to use the new
 emulation framework introduced in version 0.6.x, so there are two different
 ways to use the emulator. (Most emulation modes and machines are only valid
-in the old framework.) The options available for the new framework are:
+in the old framework.)
+.Pp
+The options available for the new framework are:
 .Pp
 .Bl -tag -width Ds
 .It Fl B
@@ -529,7 +531,7 @@ If you have compiled the small Hello World program mentioned in the
 documentation, the following command will start up an
 emulated test machine in "paused" mode:
 .Pp
-.Dl "gxemul -E testmips -V hello_mips"
+.Dl "gxemul -E oldtestmips -V hello_mips"
 .Pp
 Paused mode means that you enter the interactive single-step debugger
 directly at startup, instead of launching the Hello World program.
