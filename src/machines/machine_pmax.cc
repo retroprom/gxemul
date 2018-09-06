@@ -302,10 +302,10 @@ MACHINE_SETUP(pmax)
 		dev_mc146818_init(machine, mem,
 		    KMIN_SYS_CLOCK, tmpstr, MC146818_DEC, 1);
 		    
-////fatal("TODO: kmin asc init\n");
-////abort();
-//		dev_asc_init(machine, mem, 0x1c300000, KMIN_INTR_SCSI +8,
-//		    NULL, DEV_ASC_DEC, NULL, NULL);
+		snprintf(tmpstr, sizeof(tmpstr), "%s.cpu[%i].%i.kn02ba.0x%x",
+		    machine->path, machine->bootstrap_cpu, KMIN_INT_TC3, KMIN_INTR_SCSI);
+		dev_asc_init(machine, mem, 0x1c300000, tmpstr,
+		    NULL, DEV_ASC_DEC, NULL, NULL);
 
 		/*
 		 *  TURBOchannel slots 0, 1, and 2 are free for
