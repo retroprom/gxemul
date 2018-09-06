@@ -41,7 +41,7 @@
 #include "thirdparty/lk201.h"
 
 
-#define debug fatal
+// #define debug fatal
 
 
 /*
@@ -301,6 +301,12 @@ void lk201_tx_data(struct lk201_data *d, int port, int idata)
 				break;
 			case LK_BELL_ENABLE:	/*  0x23  */
 				break;
+			case 0x41:
+				d->add_to_rx_queue(d->add_data, 0xa, DCKBD_PORT);
+				d->add_to_rx_queue(d->add_data, 0xb, DCKBD_PORT);
+				d->add_to_rx_queue(d->add_data, 0xc, DCKBD_PORT);
+				d->add_to_rx_queue(d->add_data, 0xd, DCKBD_PORT);
+				break;
 			case LED_1:
 			case LED_2:
 				break;
@@ -350,10 +356,12 @@ void lk201_tx_data(struct lk201_data *d, int port, int idata)
 		}
 		break;
 	case DCMOUSE_PORT:		/*  port 1  */
-		debug("[ lk201: writing data to MOUSE: 0x%x", idata);
-		if (idata == MOUSE_INCREMENTAL) {
+		debug("[ lk201: writing data to MOUSE: 0x%x ", idata);
+		switch (idata) {
+		case MOUSE_INCREMENTAL:
 			d->mouse_mode = MOUSE_INCREMENTAL;
-		} else if (idata == MOUSE_SELF_TEST) {
+			break;
+		case MOUSE_SELF_TEST:
 			/*
 			 *  Mouse self-test:
 			 *
@@ -362,14 +370,16 @@ void lk201_tx_data(struct lk201_data *d, int port, int idata)
 			 *        0x2, according to NetBSD/pmax. But the
 			 *        other bits and bytes?
 			 */
-			debug(" (mouse self-test request)");
+			debug("(mouse self-test request)");
 			d->add_to_rx_queue(d->add_data,
 			    0xa0 | d->mouse_revision, DCMOUSE_PORT);
 			d->add_to_rx_queue(d->add_data, 0x02, DCMOUSE_PORT);
 			d->add_to_rx_queue(d->add_data, 0x00, DCMOUSE_PORT);
 			d->add_to_rx_queue(d->add_data, 0x00, DCMOUSE_PORT);
-		} else
-			debug(" UNKNOWN byte; TODO");
+			break;
+		default:
+			debug("UNKNOWN byte; TODO");
+		}
 		debug(" ]\n");
 		break;
 	case DCCOMM_PORT:		/*  port 2  */
