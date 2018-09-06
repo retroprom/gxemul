@@ -1105,9 +1105,11 @@ static int fpu_op(struct cpu *cpu, struct mips_coproc *cp, int op, int fmt,
 		if (fabs(float_value[1].f) > 0.00000000001)
 			nf = float_value[0].f / float_value[1].f;
 		else {
-			fatal("DIV by zero !!!!\n");
-			nf = 0.0;	/*  TODO  */
-			nan = 1;
+			fatal("DIV by zero !!!! TODO\n");
+			// nf = 0.0;	/*  TODO  */
+			// nan = 1;
+			mips_cpu_exception(cpu, EXCEPTION_FPE, 0, 0, 1, 0, 0, 0);
+			return 0;
 		}
 		/*  debug("  div: %f / %f = %f\n",
 		    float_value[0].f, float_value[1].f, nf);  */
@@ -1260,7 +1262,7 @@ static int fpu_function(struct cpu *cpu, struct mips_coproc *cp,
 
 		if (cpu->machine->instruction_trace || unassemble_only)
 			debug("%s\t%i,0x%016llx\n", instr_mnem, cc,
-			    (long long) (cpu->pc + (imm << 2)));
+			    (long long) (cpu->pc + 4 + (imm << 2)));
 		if (unassemble_only)
 			return 1;
 
