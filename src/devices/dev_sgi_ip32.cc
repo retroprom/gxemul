@@ -1127,7 +1127,7 @@ DEVICE_ACCESS(sgi_ust)
 
 	switch (relative_addr) {
 	case 0:
-		d->reg[regnr] += 0x2710;
+		d->reg[regnr] += 0x2710;	// HUH?
 		break;
 	default:
 		if (writeflag == MEM_WRITE)
