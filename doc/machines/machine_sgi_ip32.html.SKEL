@@ -21,22 +21,9 @@ time to write a converter tool yourself, there is an example converter in
 the GXemul source code distribution: <tt>experiments/sgiprom_to_bin</tt>.)
 
 <p>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-<a href="../sgi-o2-real.jpg"><img src="../sgi-o2-real_small.jpg"></a>
-&nbsp;&nbsp;&nbsp;
-<a href="../20050817-sgi-o2-success-7.png"><img src="../20050817-sgi-o2-success-7_small.png"></a>
-&nbsp;&nbsp;&nbsp;
-<a href="../20050817-sgi-o2-success-8.png"><img src="../20050817-sgi-o2-success-8_small.png"></a>
-
-<p>The photo on the left is from the real machine. The other two are
-screenshots of the PROM running experimentally in and older version of GXemul,
-using <tt>-Y2</tt> framebuffer scaledown.
-
-<p><font color="#ff0000">
-NOTE: Running the O2 PROM image broke somewhere between release
-0.3.8 and 0.4.0. (Running with graphics broke between 0.3.7 and 0.3.8.)
-The goal is to write a new SGI O2 emulation mode using the new 0.6.0
-framework, which will be able to run the PROM image.</font>
+<font color="#ff0000">NOTE: RUNNING THE PROM DOES NOT WORK YET! These are preliminary
+instructions on how it <i>may</i> work when the new GXemul framework, and the SGI O2
+emulation in that framework, is complete enough.</font>
 
 <p>Assuming you have extracted the PROM from your real machine into a
 file called <tt>prom</tt>, the following example shows how to start up the
@@ -58,9 +45,60 @@ cpu0: raw:0xffffffffbfc00000:prom loaded
 GXemul>
 </pre>
 
-<font color="#ff0000">NOTE: RUNNING THE PROM DOES NOT WORK YET! These are preliminary
-instructions on how it may work when the new GXemul framework, and the SGI O2
-emulation in that framework, is complete enough.</font>
+
+
+<p><br><b>Legacy framework</b>
+
+<p>As the new framework is not working yet, and especially the SGI O2
+emulation mode in it, the following notes about the <i>legacy framework</i>
+may also be of interest.
+
+<p>In order to experiment with a raw PROM dump using the legacy framework,
+the following command line may be used as a starting point:
+
+<pre>
+$ <b>gxemul -Q -X -e o2 0xbfc00000:prom</b>
+</pre>
+
+<p>-Q turns off GXemul's built-in PROM emulation, allowing raw PROM images
+to be used. -X is used to display the graphical framebuffer. (-X can be
+omitted if only serial console is what you want.) And finally, -e o2 selects
+the emulation mode. 0xbfc00000 is the standard ROM address for MIPS-based
+systems.
+
+<p>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<a href="../sgi-o2-real.jpg"><img src="../sgi-o2-real_small.jpg"></a>
+&nbsp;&nbsp;&nbsp;
+<a href="../20050817-sgi-o2-success-7.png"><img src="../20050817-sgi-o2-success-7_small.png"></a>
+&nbsp;&nbsp;&nbsp;
+<a href="../20050817-sgi-o2-success-8.png"><img src="../20050817-sgi-o2-success-8_small.png"></a>
+
+<p>The photo on the left is from the real machine. The other two are
+screenshots of the PROM running experimentally in an older version of GXemul
+from 2005, using <tt>-Y2</tt> framebuffer scaledown.
+
+<p><font color="#ff0000">
+NOTE: Running the O2 PROM image broke somewhere between release
+0.3.8 and 0.4.0. Running with graphics broke between 0.3.7 and 0.3.8.
+The screenshots above show what it looked like back then, but right now
+nothing works due to bit rot.</font>
+
+<p>Devices in today's GXemul are not implemented well enough to let the PROM run.
+As of 2018-09-06, with a IP32 PROM version 4.13 for example, it hangs with
+the above command line, unless a loop is patched with a "nop".
+
+<pre>
+$ <b>gxemul -QXe o2 <font color="darkgreen">-c 'put w 0xbfc058d8, 0'</font> 0xbfc00000:prom</b>
+</pre>
+
+<p>This causes the PROM to at least output a prompt on the serial port:
+
+<pre>SL-9600-8E>
+</pre>
+
+<p>but nothing else works.
+
 
 
 <p><hr>
