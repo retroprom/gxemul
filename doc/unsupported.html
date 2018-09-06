@@ -185,8 +185,9 @@ for DECstation in the emulator:
 </pre>
   <li>Load the contents of pmax.tar.Z onto the disk image. This is
 	complicated, and should be described in more detail some time.
-	For now, use your imagination. (For example using OpenBSD/pmax:
-	<i>disklabel -E rz1; newfs -O /dev/rz1a;
+	For now, use your imagination, for example using
+	<a href="guestoses.html#openbsdpmaxinstall">OpenBSD/pmax</a>:
+	<pre>	disklabel -E rz1; newfs -O /dev/rz1a;
 	mount /dev/rz1a /mnt; cd /mnt; download pmax.tar.Z using ftp;
 	tar xzvf pmax.tar.Z; mv pmax_mach/* .; rmdir pmax_mach;
 	mkdir mach_servers;
@@ -194,7 +195,7 @@ for DECstation in the emulator:
 	cp ../etc/mach_init .;
 	cp ../tests/test_service startup;
 	dd if=/dev/zero of=paging_file bs=65536 count=400;
-	cd /; sync; umount /mnt</i>)
+	cd /; sync; umount /mnt</pre>
 	<p>
   <li>Start the emulator with the following command:<pre>
 	<b>gxemul -c 'put w 0x800990e0, 0' -c 'put w 0x80099144, 0' \
