@@ -79,27 +79,36 @@ screenshots of the PROM running experimentally in an older version of GXemul
 from 2005, using <tt>-Y2</tt> framebuffer scaledown.
 
 <p><font color="#ff0000">
-NOTE: Running the O2 PROM image broke somewhere between release
-0.3.8 and 0.4.0. Running with graphics broke between 0.3.7 and 0.3.8.
-The screenshots above show what it looked like back then, but right now
-nothing works due to bit rot.</font>
+NOTE: The SGI O2 PROM does some hardware tests during startup that fail in
+GXemul, in particular cache detection. So right now (2018-09-10), it
+can not boot without further invervention.</font>
 
-<p>Devices in today's GXemul are not implemented well enough to let the PROM run.
-As of 2018-09-06, with a IP32 PROM version 4.13 for example, it hangs with
-the above command line, unless a loop is patched with a "nop".
+<p>With a IP32 PROM version 4.13 for example, the cache detection routine
+at 0xbfc05180 must be skipped:
 
 <pre>
-$ <b>gxemul -QXe o2 <font color="darkgreen">-c 'put w 0xbfc058d8, 0'</font> 0xbfc00000:prom</b>
+$ <b>gxemul -p 0xffffffffbfc05180 -X -Q -e o2 0xbfc00000:prom-4.13</b>
+
+<i>...
+when the breakpoint is hit, type:</i>
+
+pc = ra
+continue
 </pre>
 
-<p>This causes the PROM to at least output a prompt on the serial port:
+<p>This causes the PROM to output some messages to the serial port.
+Setting the console environment variable to 'g' (for graphics), and
+setting autoload to 'no', and then using the 'init' command to "reboot"
+without leaving the debugger, will bring up the graphical boot screen:
 
-<pre>SL-9600-8E>
-</pre>
+<p>
+<a href="../20180910-sgiip32prom-4.13.png">
+<img src="../20180910-sgiip32prom-4.13.png" width=250>
+</a>
 
-<p>but nothing else works.
-
-
+<p>Note however that many devices do not work. The keyboard code has 
+not been rewritten to the new interrupt framework, and SCSI is not
+implemented for the SGI O2, so it is rather meaningless.
 
 <p><hr>
 </body>

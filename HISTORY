@@ -4715,3 +4715,5 @@ Changelog for GXemul:
 
 ==============  RELEASE 0.6.0.2  ==============
 
+20180910	Running the SGI O2 PROM works a little bit again, with some
+		hacks (updating the documentation).

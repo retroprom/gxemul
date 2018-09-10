@@ -411,8 +411,21 @@ abort();
 	case 32:
 		strlcat(machineName, " (O2)", MACHINE_NAME_MAXBUF);
 
-		/*  TODO: Find out where the phys ram is actually located.  */
-		dev_ram_init(machine, 0x07ffff00ULL,           256,
+		/*
+		 *  TODO: Find out where the phys ram is actually located.
+		 *
+		 *  The IP32 prom seems to probe "bank 0" with the following
+		 *  TLB entries:
+		 *
+		 *  00: vaddr=0000000000000000 (global):  p0=0x040000000 D p1=0x041000000 D (16MB)
+		 *  01: vaddr=0000000002000000 (global):  p0=0x042000000 D p1=0x043000000 D (16MB)
+		 *  02: vaddr=0000000004000000 (global):  p0=0x044000000 D p1=0x045000000 D (16MB)
+		 *  03: vaddr=0000000006000000 (global):  p0=0x046000000 D p1=0x047000000 D (16MB)
+		 *
+		 *  Possibly, it expects 128 MB per bank (?).
+ 		 */
+
+/*		dev_ram_init(machine, 0x07ffff00ULL,           256,
 		    DEV_RAM_MIRROR, 0x03ffff00);
 		dev_ram_init(machine, 0x10000000ULL,           256,
 		    DEV_RAM_MIRROR, 0x00000000);
@@ -424,8 +437,9 @@ abort();
 		    DEV_RAM_MIRROR, 0x03ffff00);
 		dev_ram_init(machine, 0x20000000ULL, 128 * 1048576,
 		    DEV_RAM_MIRROR, 0x00000000);
+*/
 		dev_ram_init(machine, 0x40000000ULL, 128 * 1048576,
-		    DEV_RAM_MIRROR, 0x10000000);
+		    DEV_RAM_RAM, 0);
 
 		/*  Connect CRIME (Interrupt Controller) to MIPS irq 2:  */
 		snprintf(tmpstr, sizeof(tmpstr), "%s.cpu[%i].2",
@@ -438,6 +452,9 @@ abort();
 		/*
 		 *  A combination of NetBSD and Linux info:
 		 *
+		 *	14000000	crime (interrupt/memory controller?)
+		 *	15000000	mte (memory transfer engine?)
+		 *	16000000	gbe (graphics)
 		 *      17000000	vice (Video Image Compression Engine)
 		 *	1f000000	mace
 		 *	1f080000	macepci
@@ -504,18 +521,26 @@ abort();
 
 		/*  TODO: Once this works, it should be enabled
 		    always, not just when using X!  */
-#if 0
-fatal("TODO: legacy SGI rewrite\n");
-abort();
 		if (machine->x11_md.in_use) {
+			char tmpstr1[1000];
+			char tmpstr2[1000];
+			snprintf(tmpstr1, sizeof(tmpstr1),
+			    "%s.cpu[%i].2.crime.0x%x.mace.%i",
+			    machine->path, machine->bootstrap_cpu,
+			    MACE_PERIPH_MISC, 9);
+
+			snprintf(tmpstr2, sizeof(tmpstr2),
+			    "%s.cpu[%i].2.crime.0x%x.mace.%i",
+			    machine->path, machine->bootstrap_cpu,
+			    MACE_PERIPH_MISC, 11);
+
 			i = dev_pckbc_init(machine, mem, 0x1f320000,
-			    PCKBC_8242, 0x200 + MACE_PERIPH_MISC,
-			    0x800 + MACE_PERIPH_MISC, machine->x11_md.in_use,
-				0);
-				/*  keyb+mouse (mace irq numbers)  */
+			    PCKBC_8242, tmpstr1,
+			    tmpstr2, machine->x11_md.in_use,
+			    0);
+			/*  keyb+mouse (mace irq numbers)  */
 			machine->main_console_handle = i;
 		}
-#endif
 
 		snprintf(tmpstr, sizeof(tmpstr),
 		    "%s.cpu[%i].2.crime.0x%x.mace.%i",
