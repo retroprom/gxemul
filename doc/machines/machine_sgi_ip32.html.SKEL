@@ -81,7 +81,7 @@ from 2005, using <tt>-Y2</tt> framebuffer scaledown.
 <p><font color="#ff0000">
 NOTE: The SGI O2 PROM does some hardware tests during startup that fail in
 GXemul, in particular cache detection. So right now (2018-09-10), it
-can not boot without further invervention.</font>
+can not boot without further intervention.</font>
 
 <p>With a IP32 PROM version 4.13 for example, the cache detection routine
 at 0xbfc05180 must be skipped:
