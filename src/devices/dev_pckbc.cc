@@ -912,7 +912,7 @@ int dev_pckbc_init(struct machine *machine, struct memory *mem,
 	memset(d, 0, sizeof(struct pckbc_data));
 
 	if (type == PCKBC_8242)
-		len = 0x18;
+		len = 0x40;
 
 	if (type == PCKBC_JAZZ) {
 		type = PCKBC_8042;
