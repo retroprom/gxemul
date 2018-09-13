@@ -98,17 +98,19 @@ continue
 
 <p>This causes the PROM to output some messages to the serial port.
 Setting the console environment variable to 'g' (for graphics), and
-setting autoload to 'no', and then using the 'init' command to "reboot"
-without leaving the debugger, will bring up the graphical boot screen:
+setting autoload to 'no', and then using the 'init' command to restart the
+emulated machine without leaving the debugger, will bring up the graphical
+boot screen (after performing the above mentioned pc=ra + continue again):
 
 <p>
 <a href="../20180910-sgiip32prom-4.13.png">
 <img src="../20180910-sgiip32prom-4.13.png" width=250>
 </a>
 
-<p>Note however that many devices do not work. The keyboard code has 
-not been rewritten to the new interrupt framework, and SCSI is not
-implemented for the SGI O2, so it is rather meaningless.
+<p>Note however that many devices do not work. Most importantly, SCSI is not
+implemented for the SGI O2, so the emulated machine will not be that
+meaningful. Also, the graphics is only <i>barely</i> emulated; when the PROM
+attempts to scroll up, nothing happens.
 
 <p><hr>
 </body>
