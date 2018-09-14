@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2018  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -267,7 +267,7 @@ DEVICE_ACCESS(sgi_gbe)
 			odata = ((random() % (d->yres + 10)) << 12)
 			    + (random() % (d->xres + 10)) +
 			    (d->freeze? ((uint32_t)1 << 31) : 0);
-odata = random();	/*  testhack for the ip32 prom  */
+//odata = random();	/*  testhack for the ip32 prom  */
 		}
 		break;
 

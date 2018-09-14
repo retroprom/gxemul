@@ -362,14 +362,10 @@ j = 0;
 		strlcat(machineName, " (Octane)",
 		    MACHINE_NAME_MAXBUF);
 
-fatal("TODO: SGI legacy interrupt system rewrite!\n");
-abort();
-//		machine->md_int.sgi_ip30_data =
-//		    dev_sgi_ip30_init(machine, mem, 0x0ff00000);
-
-fatal("TODO: Legacy rewrite\n");
-abort();
-//		machine->md_interrupt = sgi_ip30_interrupt;
+		// TODO: Interrupts!
+		snprintf(tmpstr, sizeof(tmpstr),
+		    "sgi_ip30 addr=0x0ff00000");
+		device_add(machine, tmpstr);
 
 		dev_ram_init(machine, 0xa0000000ULL, 128 * 1048576,
 		    DEV_RAM_MIRROR | DEV_RAM_MIGHT_POINT_TO_DEVICES,
@@ -394,13 +390,15 @@ abort();
 		 */
 
 		/*  TODO: irq!  */
-		snprintf(tmpstr, sizeof(tmpstr), "ns16550 irq=0 addr="
+		snprintf(tmpstr, sizeof(tmpstr), "ns16550 irq=%s.cpu[%i].2 addr="
 		    "0x1f620170 name2=tty0 in_use=%i",
+		    machine->path, machine->bootstrap_cpu,
 		    machine->x11_md.in_use? 0 : 1);
 		machine->main_console_handle = (size_t)device_add(machine,
 		    tmpstr);
-		snprintf(tmpstr, sizeof(tmpstr), "ns16550 irq=0 addr="
-		    "0x1f620178 name2=tty1 in_use=0");
+		snprintf(tmpstr, sizeof(tmpstr), "ns16550 irq=%s.cpu[%i].2 addr="
+		    "0x1f620178 name2=tty1 in_use=0",
+		    machine->path, machine->bootstrap_cpu);
 		device_add(machine, tmpstr);
 
 		/*  MardiGras graphics:  */

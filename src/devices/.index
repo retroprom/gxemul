@@ -84,7 +84,7 @@ dev_sgi_gbe.cc  SGI "gbe", graphics controller + framebuffer
 dev_sgi_ip19.cc  SGI IP19 (and IP25) stuff
 dev_sgi_ip20.cc  SGI IP20 stuff
 dev_sgi_ip22.cc  SGI IP22 stuff
-dev_sgi_ip30.cc  SGI IP30 stuff
+dev_sgi_ip30.cc  SGI IP30 ("Octane") stuff
 dev_sgi_ip32.cc  SGI IP32 stuff (CRIME, MACE, MACEPCI, mec, ust, mte)
 dev_sgi_mardigras.cc  MardiGras graphics controller on SGI IP30 (Octane)
 dev_sh4.cc  SH4-specific memory mapped registers (0xf0000000 - 0xffffffff)
