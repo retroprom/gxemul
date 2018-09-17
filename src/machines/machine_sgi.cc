@@ -597,8 +597,11 @@ j = 0;
 		strlcat(machineName, " (Origin 3000)", MACHINE_NAME_MAXBUF);
 		/*  4 cpus per node  */
 
-		machine->main_console_handle = (size_t)device_add(machine,
-		    "z8530 addr=0x1fbd9830 irq=0 addr_mult=4");
+		// TODO: Correct Interrupt!
+		snprintf(tmpstr, sizeof(tmpstr), "z8530 addr=0x1fbd9830 irq=%s.cpu[%i].2",
+		    machine->path, machine->bootstrap_cpu);
+		machine->main_console_handle = (size_t)device_add(machine, tmpstr);
+
 		break;
 
 	case 53:

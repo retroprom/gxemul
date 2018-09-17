@@ -259,15 +259,27 @@ DEVICE_ACCESS(sgi_gbe)
 		}
 		break;
 
-	case 0x10000:		/*  vt_xy, according to Linux  */
+	case 0x10000:
 		if (writeflag == MEM_WRITE)
 			d->freeze = idata & ((uint32_t)1<<31)? 1 : 0;
 		else {
-			/*  bit 31 = freeze, 23..12 = cury, 11.0 = curx  */
-			odata = ((random() % (d->yres + 10)) << 12)
+			/*
+			 *  vt_xy, according to Linux:
+			 *
+			 * bit 31 = freeze, 23..12 = cury, 11.0 = curx
+			 */
+			/*  odata = ((random() % (d->yres + 10)) << 12)
 			    + (random() % (d->xres + 10)) +
-			    (d->freeze? ((uint32_t)1 << 31) : 0);
-//odata = random();	/*  testhack for the ip32 prom  */
+			    (d->freeze? ((uint32_t)1 << 31) : 0);  */
+
+			/*
+			 *  Hack for IRIX/IP32. During startup, it waits for
+			 *  the value to be over 0x400 (in "gbeRun").
+			 *
+			 *  Hack for the IP32 PROM: During startup, it waits
+			 *  for the value to be above 0x500 (I think).
+			 */
+			odata = random() & 1 ? 0x3ff : 0x501;
 		}
 		break;
 
@@ -287,10 +299,22 @@ DEVICE_ACCESS(sgi_gbe)
 		break;
 
 	case 0x20004:
+		/*
+		 *  Unknown. Hacks to get the IP32 PROM and IRIX to
+		 *  get slightly further than without these values.
+		 *
+		 *  However, IRIX says
+		 *
+		 *  "WARNING: crime idle timeout after xxxx us"
+		 *
+		 *  so perhaps it expects some form of interrupt instead.
+		 */
 		odata = random();	/*  IP32 prom test hack. TODO  */
 		/*  IRIX wants 0x20, it seems.  */
 		if (random() & 1)
 			odata = 0x20;
+		if (random() & 1)
+			odata = 0x3bf6a0;
 		break;
 
 	case 0x30000:	/*  normal plane ctrl 0  */
