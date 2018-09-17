@@ -734,7 +734,9 @@ void coproc_register_write(struct cpu *cpu,
 			    tmp2 != 0x03f &&
 			    tmp2 != 0x0ff &&
 			    tmp2 != 0x3ff &&
-			    tmp2 != 0xfff)
+			    tmp2 != 0xfff &&
+			    tmp2 != 0x3fff &&
+			    tmp2 != 0xffff)
 				fatal("[ cpu%i: trying to write an invalid"
 				    " pagemask 0x%08lx to COP0_PAGEMASK ]\n",
 				    cpu->cpu_id, (long)tmp);
