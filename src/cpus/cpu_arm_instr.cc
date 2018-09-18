@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2014  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2018  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -2888,7 +2888,7 @@ X(to_be_translated)
 			while (r8-- > 0)
 				imm = (imm >> 2) | ((imm & 3) << 30);
 
-			if (steps != 0 && imm < 256) {
+			if (steps != 0 && (imm != 0 && imm < 256)) {
 				if (!cpu->translation_readahead)
 					fatal("TODO: see cpu_arm_instr_dpi; non-zero steps but still under 256 is not implemented yet\n");
 				goto bad;

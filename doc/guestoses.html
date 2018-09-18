@@ -1520,10 +1520,10 @@ enter <b><tt>rcons</tt></b> if you are using the graphical framebuffer,
 
 <p>It is possible to install and run
 <a href="http://www.openbsd.org/cats.html">OpenBSD/cats</a>
-in GXemul. Unfortunately, "The OpenBSD/cats port has been discontinued 
-after the 4.0 release." according to
+in GXemul. Unfortunately, <i>"The OpenBSD/cats port was discontinued after the 4.0 release"</i> according to
 <a href="http://www.openbsd.org/cats.html">http://www.openbsd.org/cats.html</a>,
-but 4.0 should run fine.
+so from a security perspective it is not up to date, but it is still
+possible to run for experimental purposes.
 
 <p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 <a href="20051007-openbsd-cats-installed.png"><img src="20051007-openbsd-cats-installed_small.png"></a>
@@ -1539,9 +1539,9 @@ follow these instructions:
 
 </pre>
   <li>Download the entire cats directory from the ftp server:<pre>
-	<b>wget -np -l 0 -r <a href="ftp://ftp.se.openbsd.org/pub/OpenBSD/4.0/cats/">ftp://ftp.se.openbsd.org/pub/OpenBSD/4.0/cats/</a></b>
-	<b>cp ftp.se.openbsd.org/pub/OpenBSD/4.0/cats/bsd .</b>
-	<b>cp ftp.se.openbsd.org/pub/OpenBSD/4.0/cats/bsd.rd .</b>
+	<b>wget -np -l 0 -r <a href="https://ftp.nluug.nl/OpenBSD/4.0/cats/">https://ftp.nluug.nl/OpenBSD/4.0/cats/</a></b>
+	<b>cp ftp.nluug.nl/OpenBSD/4.0/cats/bsd .</b>
+	<b>cp ftp.nluug.nl/OpenBSD/4.0/cats/bsd.rd .</b>
 
 </pre>
 	(Replace ftp.se.openbsd.org with a server closer to you, for
@@ -1551,8 +1551,8 @@ follow these instructions:
 	(I recommend using <tt>mkisofs</tt> for that purpose. If you don't
 	already have <tt>mkisofs</tt> installed on your system, you need
 	to install it in order to do this.)<pre>
-	<b>mkisofs -allow-lowercase -o openbsd_cats_4.0.iso ftp.se.openbsd.org/pub/OpenBSD/</b>
-	<b>rm -rf ftp.se.openbsd.org</b>      <i>(this directory is not needed anymore)</i>
+	<b>mkisofs -allow-lowercase -o openbsd_cats_4.0.iso ftp.nluug.nl/OpenBSD/</b>
+	<b>rm -rf ftp.nluug.nl</b>      <i>(this directory is not needed anymore)</i>
 
 </pre>
   <li>Start the emulator using this command line:<pre>
@@ -1560,7 +1560,7 @@ follow these instructions:
 
 </pre>
 	and proceed like you would do if you were installing OpenBSD
-	on a real CATS. (Install onto <tt>wd0</tt>, don't configure the
+	on a real CATS. (Install onto <tt>wd0</tt>, <i>don't</i> configure the
 	network, install from CD.)
 </ol>
 
@@ -1607,16 +1607,18 @@ follow these instructions:
 <ol>
   <li>Create an empty harddisk image, which will be the root disk
 	that OpenBSD installs itself onto:<pre>
-	<b>dd if=/dev/zero of=obsd_landisk.img bs=1024 count=1 seek=1500000</b>
+	<b>dd if=/dev/zero of=obsd_landisk.img bs=1024 count=1 seek=3500000</b>
 
 </pre>
   <li>Download the Landisk RAMDISK kernel, the regular kernel, and the files
   	needed to produce a working .iso from the ftp server, and create the .iso
   	using the <tt>mkisofs</tt> tool (may be part of the cdrtools package):<pre>
-	<b>wget http://ftp.openbsd.org/pub/OpenBSD/6.3/landisk/SHA256.sig http://ftp.openbsd.org/pub/OpenBSD/6.3/landisk/INSTALL.landisk http://ftp.openbsd.org/pub/OpenBSD/6.3/landisk/base63.tgz http://ftp.openbsd.org/pub/OpenBSD/6.3/landisk/comp63.tgz http://ftp.openbsd.org/pub/OpenBSD/6.3/landisk/man63.tgz http://ftp.openbsd.org/pub/OpenBSD/6.3/landisk/bsd http://ftp.openbsd.org/pub/OpenBSD/6.3/landisk/bsd.rd
-	mkisofs -J -o openbsd_landisk.iso base63.tgz comp63.tgz man63.tgz bsd INSTALL.landisk SHA256.sig</b>
-
+	<b>wget http://ftp.openbsd.org/pub/OpenBSD/6.3/landisk/base63.tgz http://ftp.openbsd.org/pub/OpenBSD/6.3/landisk/comp63.tgz http://ftp.openbsd.org/pub/OpenBSD/6.3/landisk/man63.tgz http://ftp.openbsd.org/pub/OpenBSD/6.3/landisk/bsd http://ftp.openbsd.org/pub/OpenBSD/6.3/landisk/bsd.rd
+	mkisofs -J -o openbsd_landisk.iso base63.tgz comp63.tgz man63.tgz</b>
 </pre>
+	<p>(The installer will complain about missing INSTALL.landisk and SHA256.sig
+		files, but it seems to work anyway.)
+
   <li>Start the emulator using this command line (<b>note the <tt>d:</tt> prefix</b>):<pre>
 	<b>gxemul -E landisk -d obsd_landisk.img -d d:openbsd_landisk.iso bsd.rd</b>
 
@@ -1624,6 +1626,7 @@ follow these instructions:
 	and proceed like you would do if you were installing OpenBSD
 	on a real landisk. The following hints are useful to get you
 	through the installation:
+	<p>
 	<ul>
 	  <li>Terminal type = <b>xterm</b>
 	  <li>Do <b>not</b> configure the network. (The Realtek NIC
@@ -1638,6 +1641,9 @@ follow these instructions:
 		disk containing the install media = <b>wd1</b>
 	  <li>Pathname to the sets = <b>/</b>
 	</ul>
+	
+	<p>Ignore the warning about missing 'bsd' file by the installer, we
+	are supplying the bsd kernel file directly on the GXemul command line.
 </ol>
 
 <p>Once the install has finished, the following command should let you 

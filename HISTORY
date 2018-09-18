@@ -4718,3 +4718,6 @@ Changelog for GXemul:
 20180910	Running the SGI O2 PROM works a little bit again, with some
 		hacks (updating the documentation).
 20180917	OpenBSD/landisk 6.3 guest OS install instruction update.
+20180918	Fixing a regression bug which was introduced September 2012
+		(svn r5805), regarding shifted immediate values, which caused
+		OpenBSD/cats to fail during install.
