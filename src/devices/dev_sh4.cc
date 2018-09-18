@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2006-2011  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2006-2018  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -115,6 +115,7 @@ struct sh4_data {
 	/*  Bus State Controller:  */
 	uint32_t	bsc_bcr1;
 	uint16_t	bsc_bcr2;
+	uint16_t	bsc_bcr3;	/*  SH7751R  */
 	uint32_t	bsc_wcr1;
 	uint32_t	bsc_wcr2;
 	uint32_t	bsc_wcr3;
@@ -1363,6 +1364,17 @@ DEVICE_ACCESS(sh4)
 			odata = d->bsc_bcr2;
 		break;
 
+	case SH4_BCR3:
+		if (len != sizeof(uint16_t)) {
+			fatal("Non-16-bit SH4_BCR3 access?\n");
+			exit(1);
+		}
+		if (writeflag == MEM_WRITE)
+			d->bsc_bcr3 = idata;
+		else
+			odata = d->bsc_bcr3;
+		break;
+
 	case SH4_WCR1:
 		if (writeflag == MEM_WRITE)
 			d->bsc_wcr1 = idata & 0x77777777;
@@ -1875,7 +1887,7 @@ DEVINIT(sh4)
 	 *  0xf4000000	SH4_CCDA	D-Cache address array
 	 *  0xf5000000	SH4_CCDD	D-Cache data array
 	 *
-	 *  TODO: Implement more correct cache behaviour?
+	 *  TODO: Implement more correct cache behavior?
 	 */
 
 	dev_ram_init(machine, SH4_CCIA, SH4_ICACHE_SIZE * 2, DEV_RAM_RAM, 0x0);
