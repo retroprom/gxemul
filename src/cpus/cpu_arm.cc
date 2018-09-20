@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2014  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2018  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -959,7 +959,7 @@ int arm_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
 
 	debug("%08x:  ", (int)dumpaddr);
 
-	if (cpu->cd.arm.cpsr & ARM_FLAG_T)
+	if (cpu->cd.arm.cpsr & ARM_FLAG_T || dumpaddr & 1)
 		return arm_cpu_disassemble_instr_thumb(cpu, ib, running, dumpaddr);
 
 	if (cpu->byte_order == EMUL_LITTLE_ENDIAN)

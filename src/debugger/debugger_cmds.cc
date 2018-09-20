@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2004-2018  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -1105,10 +1105,6 @@ static void debugger_cmd_unassemble(struct machine *m, char *cmd_line)
 	if (addr_start == MAGIC_UNTOUCHED)
 		addr_start = c->pc;
 
-	// Hack for ARM (THUMB):
-	if (m->arch == ARCH_ARM)
-		addr_start &= ~1;
-
 	addr_end = addr_start + 1000;
 
 	/*  endaddr:  */
@@ -1135,7 +1131,13 @@ static void debugger_cmd_unassemble(struct machine *m, char *cmd_line)
 		memset(buf, 0, sizeof(buf));
 
 		for (i=0; i<sizeof(buf); i++) {
-			if (c->memory_rw(c, mem, addr+i, buf+i, 1, MEM_READ,
+			uint64_t actualaddr = addr;
+
+			// Hack for ARM (THUMB): (Lowest bit = 1 means 16-bit encoding)
+			if (m->arch == ARCH_ARM)
+				actualaddr &= ~1;
+
+			if (c->memory_rw(c, mem, actualaddr+i, buf+i, 1, MEM_READ,
 			    CACHE_NONE | NO_EXCEPTIONS) == MEMORY_ACCESS_FAILED)
 				failed ++;
 		}
