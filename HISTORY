@@ -4723,3 +4723,4 @@ Changelog for GXemul:
 		OpenBSD/cats to fail during install.
 20180920	Making ARM disassembly show THUMB instructions, if the lowest
 		bit of the address is 1. (They can not be executed yet though.)
+		Fixing broken "print" command. Oops.
