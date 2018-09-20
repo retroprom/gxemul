@@ -4721,3 +4721,5 @@ Changelog for GXemul:
 20180918	Fixing a regression bug which was introduced September 2012
 		(svn r5805), regarding shifted immediate values, which caused
 		OpenBSD/cats to fail during install.
+20180920	Making ARM disassembly show THUMB instructions, if the lowest
+		bit of the address is 1. (They can not be executed yet though.)

@@ -901,25 +901,23 @@ Malta:
 		2. Implement the NIC.
 
 SGI O2:
-	Play around with the SGI O2 PROM image again, from the real O2.
+	Experiment with the SGI O2 PROM image again, from the real O2.
+	Right now (September 2018), it hangs during cache detection, but if that is
+	skipped it works with graphics and serial console. Graphics must be entered
+	by setting the 'console' environment variable to 'g', running 'init' and
+	skipping the cache detection again.
 
-	0.3.7: Ok, starts up with graphics (_IF_ the cache detection is skipped)
-
-	20051112: Ok with graphics
-	20051127: Ok
-	20051201: Ok			-- Somewhere between 20051201 and 20051203
-	20051203: Not work.		   I apparently lost the graphical boot
-	20051211: Does NOT work.
-
-	0.3.8: Boots but switches to serial console ("could not open console") (also with
-	       cache detection skipped manually)
-	0.4.0: The cache detection breakpoint is not triggered :(
+	The most obvious hardware component that is not emulated is SCSI.
 
 HPCmips:
 	x)  Mouse/pad support! :)
 	x)  A NIC? (As a PCMCIA device?)
 
 ARM:
+	o)  Big endian does not really work: loads and stores are little endian!
+	o)  THUMB disassembly
+	o)  THUMB execution
+	o)  0xf "condition" execution: see http://engold.ui.ac.ir/~nikmehr/Appendix_B2.pdf
 	o)  See netwinder_reset() in NetBSD; the current "an internal error
 	    occured" message after reboot/halt is too ugly.
 	o)  Generic ARM "wait"-like instruction?
