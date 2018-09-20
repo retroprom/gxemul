@@ -1267,6 +1267,9 @@ static struct cmd cmds[] = {
 	{ "trace", "[on|off]", 0, debugger_cmd_trace,
 		"toggle show_trace_tree on or off" },
 
+	/*  NOTE: Try to keep 'u' down to only one command. Having 'unassemble'
+	    available as a one-letter command is very convenient.  */
+
 	{ "unassemble", "[addr [endaddr]]", 0, debugger_cmd_unassemble,
 		"dump memory contents as instructions" },
 
