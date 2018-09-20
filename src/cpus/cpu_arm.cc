@@ -28,8 +28,10 @@
  *  ARM CPU emulation.
  *
  *  A good source of quick info on ARM instruction encoding:
+ *  http://www.pinknoise.demon.co.uk/ARMinstrs/ARMinstrs.html
  *
- *	http://www.pinknoise.demon.co.uk/ARMinstrs/ARMinstrs.html
+ *  Another one, with details about THUMB:
+ *  http://engold.ui.ac.ir/~nikmehr/Appendix_B2.pdf
  */
 
 #include <stdio.h>
@@ -60,6 +62,8 @@ static const char *arm_condition_string[16] = ARM_CONDITION_STRINGS;
 static const char *arm_dpiname[16] = ARM_DPI_NAMES;
 static int arm_dpi_uses_d[16] = { 1,1,1,1,1,1,1,1,0,0,0,0,1,1,1,1 };
 static int arm_dpi_uses_n[16] = { 1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,0 };
+
+static const char *arm_thumb_dpiname[16] = ARM_THUMB_DPI_NAMES;
 
 static int arm_exception_to_mode[N_ARM_EXCEPTIONS] = ARM_EXCEPTION_TO_MODE;
 
@@ -352,6 +356,9 @@ void arm_cpu_register_dump(struct cpu *cpu, int gprs, int coprocs)
 		    (cpu->cd.arm.cpsr & ARM_FLAG_C)? "C" : "c",
 		    (cpu->cd.arm.cpsr & ARM_FLAG_V)? "V" : "v",
 		    (cpu->cd.arm.cpsr & ARM_FLAG_Q)? "Q" : "q",
+		    (cpu->cd.arm.cpsr & ARM_FLAG_J)? "J" : "j",
+		    (cpu->cd.arm.cpsr & ARM_FLAG_E)? "E" : "e",
+		    (cpu->cd.arm.cpsr & ARM_FLAG_A)? "A" : "a",
 		    (cpu->cd.arm.cpsr & ARM_FLAG_I)? "I" : "i",
 		    (cpu->cd.arm.cpsr & ARM_FLAG_F)? "F" : "f",
     		    (cpu->cd.arm.cpsr & ARM_FLAG_T)? "T" : "t");
@@ -765,6 +772,7 @@ int arm_cpu_disassemble_instr_thumb(struct cpu *cpu, unsigned char *ib,
 	int addsub_immediate = (iw >> 10) & 1;
 	int op11 = (iw >> 11) & 3;
 	int op10 = (iw >> 10) & 3;
+	int rd8 = (iw >> 8) & 7;
 	int op8 = (iw >> 8) & 3;
 	int h1 = (iw >> 7) & 1;
 	int h2 = (iw >> 6) & 1;
@@ -773,7 +781,8 @@ int arm_cpu_disassemble_instr_thumb(struct cpu *cpu, unsigned char *ib,
 	const char* symbol;
 	uint64_t offset;
 	int tmp;
-
+	uint32_t tmp32;
+	
 	switch (main_opcode)
 	{
 	case 0x0:
@@ -817,7 +826,11 @@ int arm_cpu_disassemble_instr_thumb(struct cpu *cpu, unsigned char *ib,
 		switch (op10) {
 		case 0:
 			// ALU operations.
-			debug("TODO main_opcode = %i, op10 = %i\n", main_opcode, op10);
+			debug("%s\t%s,%s\n",
+				arm_thumb_dpiname[(iw >> 6) & 15],
+				arm_regname[rd],
+				arm_regname[rs_rb]);
+			
 			break;
 
 		case 1:
@@ -844,7 +857,7 @@ int arm_cpu_disassemble_instr_thumb(struct cpu *cpu, unsigned char *ib,
 				if (h1 == 1) {
 					debug("TODO main_opcode = %i, op10 = %i, h1 set for BX?!\n", main_opcode, op10);
 				} else {
-					debug("bx\tr%i\n", rs_rb);
+					debug("bx\t%s\n", arm_regname[rs_rb]);
 				}
 				break;
 			}
@@ -853,7 +866,17 @@ int arm_cpu_disassemble_instr_thumb(struct cpu *cpu, unsigned char *ib,
 		case 2:
 		case 3:
 			// PC-relative load.
-			debug("TODO main_opcode = %i, op10 = %i\n", main_opcode, op10);
+			debug("ldr\t%s,[pc,#%i]\t; ",
+				arm_regname[rd8],
+				(iw & 0xff) * 4);
+
+			tmp = dumpaddr + 2 + (iw & 0xff) * 4;
+			debug("0x%x", (int)tmp);
+			symbol = get_symbol_name(&cpu->machine->symbol_context,
+			    tmp, &offset);
+			if (symbol != NULL)
+				debug(" <%s>", symbol);
+			debug("\n");
 			break;
 		}
 		break;
@@ -878,6 +901,45 @@ int arm_cpu_disassemble_instr_thumb(struct cpu *cpu, unsigned char *ib,
 			offset5 * sizeof(uint16_t));
 		break;
 
+	case 0x9:
+		// Load/Store stack pointer relative.
+		debug("%s\t%s,[sp,#%i]\n",
+			l_bit ? "ldr" : "str",
+			arm_regname[rd8],
+			4 * (iw & 0xff));
+		break;
+
+	case 0xb:
+		/*  Bits 11..8:  */
+		switch (condition_code) {
+		case 0x0:
+			tmp = (iw & 0x7f) << 2;
+			debug(iw & 0x80 ? "sub" : "add");
+			debug("\tsp,#%i\n", tmp);
+			break;
+		case 0x4:
+		case 0x5:
+		case 0xc:
+		case 0xd:
+			debug(condition_code & 8 ? "pop" : "push");
+			debug("\t{");
+			for (tmp=0; tmp<8; ++tmp) {
+				if (iw & (1 << tmp))
+					debug("%s,", arm_regname[tmp]);
+			}
+			if (condition_code & 1) {			
+				if (condition_code & 8)
+					debug("pc");
+				else
+					debug("lr");
+			}
+			debug("}\n");
+			break;
+		default:
+			debug("TODO: unimplemented opcode 0x%x,0x%x\n", main_opcode, condition_code);
+		}
+		break;
+		
 	case 0xd:
 		if (condition_code < 0xe) {
 			// Conditional branch.
@@ -902,13 +964,13 @@ int arm_cpu_disassemble_instr_thumb(struct cpu *cpu, unsigned char *ib,
 	case 0xe:
 		// Unconditional branch.
 		if (iw & 0x0800) {
-			debug("UNKNOWN encoding?\n");
+			debug("blx\tTODO: prefix + ((instruction+4+(poff<<12)+offset*4) &~ 3)\n");
 		} else {
 			tmp = (iw & 0x7ff) << 1;
 			if (tmp & 0x800)
 				tmp |= 0xfffff000;
 			tmp = (int32_t)(dumpaddr + 4 + tmp);
-			debug("bal\t0x%x", (int)tmp);
+			debug("b\t0x%x", (int)tmp);
 			symbol = get_symbol_name(&cpu->machine->symbol_context,
 			    tmp, &offset);
 			if (symbol != NULL)
@@ -917,8 +979,20 @@ int arm_cpu_disassemble_instr_thumb(struct cpu *cpu, unsigned char *ib,
 		}
 		break;
 
+	case 0xf:
+		if (iw & 0x0800) {
+			debug("bl\tTODO: prefix + (low 11 bits)<<1 relative to pc+4\n");
+		} else {
+			tmp32 = iw & 0x07ff;
+			if (tmp32 & 0x0400)
+				tmp32 |= 0xfffff800;
+			tmp32 <<= 12;
+			debug("bprefix\t0x%x\n", tmp32);
+		}
+		break;
+
 	default:
-		debug("TODO: unimplemented opcode %i\n", main_opcode);
+		debug("TODO: unimplemented opcode 0x%x\n", main_opcode);
 	}
 
 	return sizeof(uint16_t);
@@ -957,7 +1031,7 @@ int arm_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
 	if (cpu->machine->ncpus > 1 && running)
 		debug("cpu%i:\t", cpu->cpu_id);
 
-	debug("%08x:  ", (int)dumpaddr);
+	debug("%08x:  ", (int)dumpaddr & ~1);
 
 	if (cpu->cd.arm.cpsr & ARM_FLAG_T || dumpaddr & 1)
 		return arm_cpu_disassemble_instr_thumb(cpu, ib, running, dumpaddr);
@@ -978,6 +1052,13 @@ int arm_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
 	r16 = (iw >> 16) & 15;
 	r12 = (iw >> 12) & 15;
 	r8 = (iw >> 8) & 15;
+
+	if ((iw >> 28) == 0xf) {
+		switch (main_opcode) {
+		default:debug("UNIMPLEMENTED\n");
+		}
+		return sizeof(uint32_t);
+	}
 
 	switch (main_opcode) {
 	case 0x0:

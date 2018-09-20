@@ -194,7 +194,7 @@ uint8_t condition_gt[16] = { 1,0,1,0, 0,0,0,0, 0,1,0,1, 0,0,0,0 };
 		arm_instr_ ## n ## __hi, arm_instr_ ## n ## __ls,	\
 		arm_instr_ ## n ## __ge, arm_instr_ ## n ## __lt,	\
 		arm_instr_ ## n ## __gt, arm_instr_ ## n ## __le,	\
-		arm_instr_ ## n , arm_instr_nop };
+		arm_instr_ ## n , arm_instr_never };
 
 #define cond_instr(n)	( arm_cond_instr_ ## n  [condition_code] )
 
@@ -217,6 +217,24 @@ X(invalid) {
 	    " dyntrans code. Please contact the author with detailed"
 	    " repro steps on how to trigger this bug. pc = 0x%08" PRIx32"\n",
 	    (uint32_t)cpu->pc);
+
+	cpu->cd.arm.next_ic = &nothing_call;
+}
+
+
+/*
+ *  never:  So far unimplemented "never" instructions end up here.
+ *  (Those are the ones using the "0xf" condition prefix.)
+ */
+X(never) {
+	uint32_t low_pc;
+	low_pc = ((size_t)ic - (size_t)
+	    cpu->cd.arm.cur_ic_page) / sizeof(struct arm_instr_call);
+	cpu->pc &= ~((ARM_IC_ENTRIES_PER_PAGE-1)
+	    << ARM_INSTR_ALIGNMENT_SHIFT);
+	cpu->pc += (low_pc << ARM_INSTR_ALIGNMENT_SHIFT);
+
+	fatal("[ ARM: unimplemented 0xf instruction at pc = 0x%08" PRIx32" ]\n", (uint32_t)cpu->pc);
 
 	cpu->cd.arm.next_ic = &nothing_call;
 }
@@ -2594,23 +2612,24 @@ X(to_be_translated)
 	// t     = (iword >> 4) & 7;
 	rm    = iword & 15;
 
-	if (condition_code == 0xf) {
-//		if ((iword & 0xfc70f000) == 0xf450f000) {
-			/*  Preload:  TODO.  Treat as NOP for now.  */
-			ic->f = instr(nop);
-			goto okay;
-//		}
-//
-//		if (!cpu->translation_readahead)
-//			fatal("TODO: ARM condition code 0x%x\n",
-//			    condition_code);
-//		goto bad;
-	}
-
-
 	/*
 	 *  Translate the instruction:
 	 */
+
+	if ((iword >> 28) == 0xf) {
+		/*  The "never" condition is nowadays used for special encodings.  */
+		if ((iword & 0xfc70f000) == 0xf450f000) {
+			/*  Preload:  TODO.  Treat as NOP for now.  */
+			ic->f = instr(nop);
+			goto okay;
+		}
+
+		switch (main_opcode) {
+		default:
+			goto bad;
+		}
+		goto okay;
+	}
 
 	switch (main_opcode) {
 

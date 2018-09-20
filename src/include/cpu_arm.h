@@ -2,7 +2,7 @@
 #define	CPU_ARM_H
 
 /*
- *  Copyright (C) 2005-2010  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2018  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -69,6 +69,10 @@ struct arm_cpu_type_def {
 	"and", "eor", "sub", "rsb", "add", "adc", "sbc", "rsc",	\
 	"tst", "teq", "cmp", "cmn", "orr", "mov", "bic", "mvn" }
 
+#define	ARM_THUMB_DPI_NAMES		{			\
+	"and", "eors", "lsl", "lsr", "asr", "adc", "sbc", "ror",	\
+	"tst", "neg", "cmp", "cmn", "orr", "muls", "bic", "mvn" }
+
 #define	ARM_IC_ENTRIES_SHIFT		10
 
 #define	ARM_N_IC_ARGS			3
@@ -89,6 +93,9 @@ struct arm_cpu_type_def {
 #define	ARM_FLAG_C	0x20000000	/*  Carry flag  */
 #define	ARM_FLAG_V	0x10000000	/*  Overflow flag  */
 #define	ARM_FLAG_Q	0x08000000	/*  DSP saturation overflow  */
+#define	ARM_FLAG_J	0x01000000	/*  Java flag (BXJ instruction ARMv5J)  */
+#define	ARM_FLAG_E	0x00000200	/*  Data Endianness (SETEND instruction ARMv6)  */
+#define	ARM_FLAG_A	0x00000100	/*  A = 1 disables Imprecise Data Aborts (ARMv6)  */
 #define	ARM_FLAG_I	0x00000080	/*  Interrupt disable  */
 #define	ARM_FLAG_F	0x00000040	/*  Fast Interrupt disable  */
 #define	ARM_FLAG_T	0x00000020	/*  Thumb mode  */
