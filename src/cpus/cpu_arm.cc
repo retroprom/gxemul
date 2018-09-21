@@ -1036,7 +1036,7 @@ int arm_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
 
 	debug("%08x:  ", (int)dumpaddr & ~1);
 
-	if (cpu->cd.arm.cpsr & ARM_FLAG_T || dumpaddr & 1)
+	if (dumpaddr & 1)
 		return arm_cpu_disassemble_instr_thumb(cpu, ib, running, dumpaddr);
 
 	if (cpu->byte_order == EMUL_LITTLE_ENDIAN)
