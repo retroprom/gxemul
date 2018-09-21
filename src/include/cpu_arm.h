@@ -70,8 +70,8 @@ struct arm_cpu_type_def {
 	"tst", "teq", "cmp", "cmn", "orr", "mov", "bic", "mvn" }
 
 #define	ARM_THUMB_DPI_NAMES		{			\
-	"and", "eors", "lsl", "lsr", "asr", "adc", "sbc", "ror",	\
-	"tst", "neg", "cmp", "cmn", "orr", "muls", "bic", "mvn" }
+	"ands", "eors", "lsls", "lsrs", "asrs", "adcs", "sbcs", "rors",	\
+	"tst", "negs", "cmp", "cmn", "orrs", "muls", "bics", "mvns" }
 
 #define	ARM_IC_ENTRIES_SHIFT		10
 
@@ -162,6 +162,7 @@ struct arm_cpu {
 	uint32_t		und_r13_r14[2];
 
 	uint32_t		tmp_pc;		/*  Used for load/stores  */
+	uint32_t		tmp_branch;	/*  Set by THUMB branch prefix instruction  */
 
 	/*
 	 *  Flag/status registers:

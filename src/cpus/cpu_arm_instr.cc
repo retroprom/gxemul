@@ -413,6 +413,7 @@ Y(bx_trace)
  *  bl:  Branch and Link (to a different translated page)
  *
  *  arg[0] = relative address
+ *  arg[1] = offset within current page to the instruction
  */
 X(bl)
 {
@@ -429,11 +430,53 @@ Y(bl)
 
 
 /*
- *  blx:  Branch and Link, potentially exchanging Thumb/ARM encoding
+ *  blx_imm:  Branch and Link, always switching to THUMB encoding
+ *
+ *  arg[0] = relative address
+ *  arg[1] = offset within current page to the current instruction
+ */
+X(blx_imm)
+{
+	uint32_t pc = ((uint32_t)cpu->pc & 0xfffff000) + (int32_t)ic->arg[1];
+	uint32_t old_cpsr = cpu->cd.arm.cpsr;
+	cpu->cd.arm.r[ARM_LR] = pc + 4;
+
+	/*  Calculate new PC from this instruction + arg[0]  */
+	cpu->pc = pc + (int32_t)ic->arg[0];
+
+	if (cpu->pc & 1)
+		cpu->cd.arm.cpsr |= ARM_FLAG_T;
+	else {
+		fatal("[ blx_imm internal error. Should have switched to THUMB! 0x%08x ]\n", (int)cpu->pc);
+		cpu->running = 0;
+		cpu->n_translated_instrs --;
+		cpu->cd.arm.next_ic = &nothing_call;
+		return;
+	}
+
+	if (cpu->cd.arm.cpsr != old_cpsr)
+		cpu->invalidate_translation_caches(cpu, 0, INVALIDATE_ALL);
+
+	if (cpu->pc & 2 && ((cpu->pc & 1) == 0)) {
+		fatal("[ ARM pc misaligned? 0x%08x ]\n", (int)cpu->pc);
+		cpu->running = 0;
+		cpu->n_translated_instrs --;
+		cpu->cd.arm.next_ic = &nothing_call;
+		return;
+	}
+
+	/*  Find the new physical page and update the translation pointers:  */
+	quick_pc_to_pointers_arm(cpu);
+}
+
+
+/*
+ *  blx_reg:  Branch and Link, potentially exchanging Thumb/ARM encoding
  *
  *  arg[0] = ptr to rm
+ *  arg[2] = offset within current page to the instruction to return to
  */
-X(blx)
+X(blx_reg)
 {
 	uint32_t lr = ((uint32_t)cpu->pc & 0xfffff000) + (int32_t)ic->arg[2];
 	cpu->cd.arm.r[ARM_LR] = lr;
@@ -459,7 +502,7 @@ X(blx)
 	/*  Find the new physical page and update the translation pointers:  */
 	quick_pc_to_pointers_arm(cpu);
 }
-Y(blx)
+Y(blx_reg)
 
 
 /*
@@ -2625,6 +2668,22 @@ X(to_be_translated)
 		}
 
 		switch (main_opcode) {
+		case 0xa:
+		case 0xb:
+			ic->f = instr(blx_imm);
+
+			/*  arg 1 = offset of current instruction  */
+			ic->arg[1] = addr & 0xffc;
+
+			/*  arg 0 = relative jump distance + 1 (to enable THUMB)  */
+			ic->arg[0] = (iword & 0x00ffffff) << 2;
+			/*  Sign-extend:  */
+			if (ic->arg[0] & 0x02000000)
+				ic->arg[0] |= 0xfc000000;
+			if (main_opcode == 0xb)
+				ic->arg[0] += 2;
+			ic->arg[0] = (int32_t)(ic->arg[0] + 8 + 1);
+			break;
 		default:
 			goto bad;
 		}
@@ -2680,7 +2739,7 @@ X(to_be_translated)
 		if ((iword & 0x0ff000d0) == 0x01200010) {
 			/*  bx or blx  */
 			if (iword & 0x20)
-				ic->f = cond_instr(blx);
+				ic->f = cond_instr(blx_reg);
 			else {
 				if (cpu->machine->show_trace_tree &&
 				    rm == ARM_LR)
@@ -2689,6 +2748,7 @@ X(to_be_translated)
 					ic->f = cond_instr(bx);
 			}
 			ic->arg[0] = (size_t)(&cpu->cd.arm.r[rm]);
+			ic->arg[2] = (addr & 0xffc) + 4;
                         break;
                 }
 		if ((iword & 0x0fb00ff0) == 0x1000090) {

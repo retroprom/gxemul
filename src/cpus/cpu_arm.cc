@@ -350,7 +350,7 @@ void arm_cpu_register_dump(struct cpu *cpu, int gprs, int coprocs)
 		symbol = get_symbol_name(&cpu->machine->symbol_context,
 		    cpu->pc, &offset);
 		debug("cpu%i:  cpsr = ", x);
-		debug("%s%s%s%s%s%s%s%s",
+		debug("%s%s%s%s%s%s%s%s%s%s%s",
 		    (cpu->cd.arm.cpsr & ARM_FLAG_N)? "N" : "n",
 		    (cpu->cd.arm.cpsr & ARM_FLAG_Z)? "Z" : "z",
 		    (cpu->cd.arm.cpsr & ARM_FLAG_C)? "C" : "c",
