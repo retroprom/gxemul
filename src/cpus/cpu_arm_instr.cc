@@ -465,6 +465,9 @@ X(blx_imm)
 		return;
 	}
 
+	if (cpu->machine->show_trace_tree)
+		cpu_functioncall_trace(cpu, cpu->pc);
+
 	/*  Find the new physical page and update the translation pointers:  */
 	quick_pc_to_pointers_arm(cpu);
 }
