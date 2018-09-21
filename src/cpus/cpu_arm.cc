@@ -1003,6 +1003,121 @@ int arm_cpu_disassemble_instr_thumb(struct cpu *cpu, unsigned char *ib,
 
 
 /*
+ *  arm_cpu_interpret_thumb_SLOW():
+ *
+ *  Slow interpretation of THUMB instructions.
+ *
+ *  TODO: Either replace this with dyntrans in the old framework, or
+ *  implement ARM (including THUMB) in the new framework. :-)
+ *  For now, this is better than nothing.
+ */
+int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
+{
+	uint16_t iw;
+	uint8_t ib[sizeof(uint16_t)];
+	uint32_t addr = cpu->pc & ~1;
+
+	if (!(cpu->pc & 1) || !(cpu->cd.arm.cpsr & ARM_FLAG_T)) {
+		fatal("arm_cpu_interpret_thumb_SLOW called when not in "
+			"THUMB mode?\n");
+		cpu->running = 0;
+		return 0;
+	}
+
+	if (!cpu->memory_rw(cpu, cpu->mem, addr, &ib[0],
+			sizeof(ib), MEM_READ, CACHE_INSTRUCTION)) {
+		fatal("arm_cpu_interpret_thumb_SLOW(): could not read "
+			"the instruction\n");
+		cpu->running = 0;
+		return 0;
+	}
+	
+	if (cpu->machine->instruction_trace) {
+		uint64_t offset;
+		char* symbol = get_symbol_name(&cpu->machine->symbol_context,
+		    addr, &offset);
+		if (symbol != NULL && offset == 0)
+			debug("<%s>\n", symbol);
+
+		if (cpu->machine->ncpus > 1)
+			debug("cpu%i:\t", cpu->cpu_id);
+
+		debug("%08x:  ", (int)addr & ~1);
+		arm_cpu_disassemble_instr_thumb(cpu, ib, 1, cpu->pc);
+	}
+
+	if (cpu->byte_order == EMUL_LITTLE_ENDIAN)
+		iw = ib[0] + (ib[1]<<8);
+	else
+		iw = ib[1] + (ib[0]<<8);
+
+	int main_opcode = (iw >> 12) & 15;
+	int op10 = (iw >> 10) & 3;
+	int rd8 = (iw >> 8) & 7;
+	uint8_t word[sizeof(uint32_t)];
+	uint32_t tmp;
+
+	switch (main_opcode)
+	{
+	case 0x4:
+		switch (op10) {
+		case 1:
+			if ((iw & 0xff87) == 0x4700) {
+				//  bx
+				int rm = (iw >> 3) & 15;
+				//  Note: pc will be increased by 2 further down!
+				cpu->pc = cpu->cd.arm.r[rm] - sizeof(uint16_t);
+				if (!(cpu->pc & 1))
+					cpu->cd.arm.cpsr &= ~ARM_FLAG_T;
+				if (rm == ARM_LR && cpu->machine->show_trace_tree)
+					cpu_functioncall_trace_return(cpu);
+			} else {
+				debug("TODO: unimplemented opcode 0x%x,%i at pc 0x%08x\n", main_opcode, op10, (int)cpu->pc);
+			}
+			break;
+
+		case 2:
+		case 3:
+			// PC-relative load.
+			// Is this address calculation correct?
+			// It works with real code, but is not the same as that of
+			// http://engold.ui.ac.ir/~nikmehr/Appendix_B2.pdf
+			tmp = (addr & ~3) + 4 + (iw & 0xff) * 4;
+printf("tmp = %08x\n", (int)tmp);
+			if (!cpu->memory_rw(cpu, cpu->mem, tmp, &word[0],
+					sizeof(ib), MEM_READ, CACHE_INSTRUCTION)) {
+				fatal("arm_cpu_interpret_thumb_SLOW(): could not load pc-relative word\n");
+				cpu->running = 0;
+				return 0;
+			}
+
+			if (cpu->byte_order == EMUL_LITTLE_ENDIAN)
+				tmp = word[0] + (word[1]<<8) + (word[2]<<16) + (word[3]<<24);
+			else
+				tmp = word[3] + (word[2]<<8) + (word[1]<<16) + (word[0]<<24);
+
+			cpu->cd.arm.r[rd8] = tmp;
+			break;
+
+		default:
+			debug("TODO: unimplemented opcode 0x%x,%i at pc 0x%08x\n", main_opcode, op10, (int)cpu->pc);
+			cpu->running = 0;
+			return 0;
+		}
+		break;
+	default:
+		debug("TODO: unimplemented opcode 0x%x at pc 0x%08x\n", main_opcode, (int)cpu->pc);
+		cpu->running = 0;
+		return 0;
+	}
+
+	cpu->pc += sizeof(uint16_t);
+
+	return 1;
+}
+
+
+/*
  *  arm_cpu_disassemble_instr():
  *
  *  Convert an instruction word into human readable format, for instruction

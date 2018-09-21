@@ -251,9 +251,12 @@ int DYNTRANS_RUN_INSTR_DEF(struct cpu *cpu)
 
 #ifdef DYNTRANS_ARM
 	if (cpu->cd.arm.cpsr & ARM_FLAG_T) {
-		fatal("THUMB execution not implemented.\n");
-		cpu->running = false;
-		return 0;
+		// fatal("THUMB execution not implemented.\n");
+		// cpu->running = false;
+		// return 0;
+		
+		arm_cpu_interpret_thumb_SLOW(cpu);
+		return 1;
 	}
 #endif
 
@@ -288,7 +291,7 @@ int DYNTRANS_RUN_INSTR_DEF(struct cpu *cpu)
 				int len =
 #endif
 				    cpu_disassemble_instr(
-				    cpu->machine, cpu, instr, 1, 0);
+				    cpu->machine, cpu, instr, 1, cpu->pc);
 #ifdef DYNTRANS_DELAYSLOT
 				/*  Show the instruction in the delay slot,
 				    if any:  */
@@ -305,7 +308,7 @@ int DYNTRANS_RUN_INSTR_DEF(struct cpu *cpu)
 					cpu->delay_slot = DELAYED;
 					cpu->pc += len;
 					cpu_disassemble_instr(cpu->machine,
-					    cpu, instr, 1, 0);
+					    cpu, instr, 1, cpu->pc);
 					cpu->delay_slot = saved_delayslot;
 					cpu->pc -= len;
 				}

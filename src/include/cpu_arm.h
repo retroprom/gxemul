@@ -296,6 +296,7 @@ void arm_translation_table_set_l1(struct cpu *cpu, uint32_t vaddr,
 void arm_translation_table_set_l1_b(struct cpu *cpu, uint32_t vaddr,
 	uint32_t paddr);
 void arm_exception(struct cpu *, int);
+int arm_cpu_interpret_thumb_SLOW(struct cpu*);
 int arm_run_instr(struct cpu *cpu);
 void arm_update_translation_table(struct cpu *cpu, uint64_t vaddr_page,
 	unsigned char *host_page, int writeflag, uint64_t paddr_page);
