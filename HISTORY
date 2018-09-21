@@ -4728,3 +4728,4 @@ Changelog for GXemul:
 		Fail rather than silently treating ARM instructions beginning
 		with 0xf as nops.
 		Allow the emulator to start in THUMB mode (lowest pc bit set).
+20180921        Continuing on ARM THUMB disassembly.

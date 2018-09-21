@@ -870,7 +870,10 @@ int arm_cpu_disassemble_instr_thumb(struct cpu *cpu, unsigned char *ib,
 				arm_regname[rd8],
 				(iw & 0xff) * 4);
 
-			tmp = dumpaddr + 2 + (iw & 0xff) * 4;
+			// Is this address calculation correct?
+			// It works with real code, but is not the same as that of
+			// http://engold.ui.ac.ir/~nikmehr/Appendix_B2.pdf
+			tmp = (dumpaddr & ~3) + 4 + (iw & 0xff) * 4;
 			debug("0x%x", (int)tmp);
 			symbol = get_symbol_name(&cpu->machine->symbol_context,
 			    tmp, &offset);
@@ -1055,6 +1058,19 @@ int arm_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
 
 	if ((iw >> 28) == 0xf) {
 		switch (main_opcode) {
+		case 0xa:
+		case 0xb:
+			tmp = (iw & 0xffffff);
+			if (tmp & 0x800000)
+				tmp |= 0xff000000;
+			tmp = (int32_t)(dumpaddr + 8 + 4*tmp + (main_opcode == 0xb? 2 : 0)) + 1;
+			debug("blx\t0x%x", (int)tmp);
+			symbol = get_symbol_name(&cpu->machine->symbol_context,
+			    tmp, &offset);
+			if (symbol != NULL)
+				debug(" \t<%s>", symbol);
+			debug("\n");
+			break;
 		default:debug("UNIMPLEMENTED\n");
 		}
 		return sizeof(uint32_t);
