@@ -4731,3 +4731,4 @@ Changelog for GXemul:
 20180921        Continuing on ARM THUMB disassembly.
 		Beginning to implement very slow THUMB interpretation (not
 		dyntrans). Horrible performance-wise, but better than nothing.
+20180924	Oops, forgot to add machine_rpi.cc back in 20131006.
