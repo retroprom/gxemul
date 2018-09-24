@@ -1111,35 +1111,15 @@ X(cmps_regshort);
 
 
 /*
- *  bdt_load:  Block Data Transfer, Load
- *
- *  arg[0] = pointer to uint32_t in host memory, pointing to the base register
- *  arg[1] = 32-bit instruction word. Most bits are read from this.
+ *  Shared between regular ARM and the THUMB encoded 'pop'.
  */
-X(bdt_load)
+void arm_pop(struct cpu* cpu, uint32_t* np, int p_bit, int u_bit, int s_bit, int w_bit, uint32_t iw)
 {
+	uint32_t value, addr = *np;
 	unsigned char data[4];
-	uint32_t *np = (uint32_t *)ic->arg[0];
-	uint32_t addr = *np, low_pc;
 	unsigned char *page;
-	uint32_t iw = ic->arg[1];  /*  xxxx100P USWLnnnn llllllll llllllll  */
-	int p_bit = iw & 0x01000000;
-	int u_bit = iw & 0x00800000;
-	int s_bit = iw & 0x00400000;
-	int w_bit = iw & 0x00200000;
 	int i, return_flag = 0;
 	uint32_t new_values[16];
-
-#ifdef GATHER_BDT_STATISTICS
-	if (!s_bit)
-		update_bdt_statistics(iw);
-#endif
-
-	/*  Synchronize the program counter:  */
-	low_pc = ((size_t)ic - (size_t)
-	    cpu->cd.arm.cur_ic_page) / sizeof(struct arm_instr_call);
-	cpu->pc &= ~((ARM_IC_ENTRIES_PER_PAGE-1) << ARM_INSTR_ALIGNMENT_SHIFT);
-	cpu->pc += (low_pc << ARM_INSTR_ALIGNMENT_SHIFT);
 
 	if (s_bit) {
 		/*  Load to USR registers:  */
@@ -1294,41 +1274,20 @@ X(bdt_load)
 		quick_pc_to_pointers_arm(cpu);
 	}
 }
-Y(bdt_load)
 
 
 /*
- *  bdt_store:  Block Data Transfer, Store
- *
- *  arg[0] = pointer to uint32_t in host memory, pointing to the base register
- *  arg[1] = 32-bit instruction word. Most bits are read from this.
+ *  Shared between regular ARM and the THUMB encoded 'push'.
  */
-X(bdt_store)
+void arm_push(struct cpu* cpu, uint32_t* np, int p_bit, int u_bit, int s_bit, int w_bit, uint16_t regs)
 {
-	unsigned char data[4];
-	uint32_t *np = (uint32_t *)ic->arg[0];
-	uint32_t low_pc, value, addr = *np;
-	uint32_t iw = ic->arg[1];  /*  xxxx100P USWLnnnn llllllll llllllll  */
-	unsigned char *page;
-	int p_bit = iw & 0x01000000;
-	int u_bit = iw & 0x00800000;
-	int s_bit = iw & 0x00400000;
-	int w_bit = iw & 0x00200000;
 	int i;
-
-#ifdef GATHER_BDT_STATISTICS
-	if (!s_bit)
-		update_bdt_statistics(iw);
-#endif
-
-	/*  Synchronize the program counter:  */
-	low_pc = ((size_t)ic - (size_t)
-	    cpu->cd.arm.cur_ic_page) / sizeof(struct arm_instr_call);
-	cpu->pc &= ~((ARM_IC_ENTRIES_PER_PAGE-1) << ARM_INSTR_ALIGNMENT_SHIFT);
-	cpu->pc += (low_pc << ARM_INSTR_ALIGNMENT_SHIFT);
+	uint32_t value, addr = *np;
+	unsigned char data[4];
+	unsigned char *page;
 
 	for (i=(u_bit? 0 : 15); i>=0 && i<=15; i+=(u_bit? 1 : -1)) {
-		if (!((iw >> i) & 1)) {
+		if (!((regs >> i) & 1)) {
 			/*  Skip register i:  */
 			continue;
 		}
@@ -1409,6 +1368,73 @@ X(bdt_store)
 
 	if (w_bit)
 		*np = addr;
+}
+
+
+/*
+ *  bdt_load:  Block Data Transfer, Load
+ *
+ *  arg[0] = pointer to uint32_t in host memory, pointing to the base register
+ *  arg[1] = 32-bit instruction word. Most bits are read from this.
+ */
+X(bdt_load)
+{
+	unsigned char data[4];
+	uint32_t *np = (uint32_t *)ic->arg[0];
+	uint32_t addr = *np, low_pc;
+	unsigned char *page;
+	uint32_t iw = ic->arg[1];  /*  xxxx100P USWLnnnn llllllll llllllll  */
+	int p_bit = iw & 0x01000000;
+	int u_bit = iw & 0x00800000;
+	int s_bit = iw & 0x00400000;
+	int w_bit = iw & 0x00200000;
+	int i, return_flag = 0;
+	uint32_t new_values[16];
+
+#ifdef GATHER_BDT_STATISTICS
+	if (!s_bit)
+		update_bdt_statistics(iw);
+#endif
+
+	/*  Synchronize the program counter:  */
+	low_pc = ((size_t)ic - (size_t)
+	    cpu->cd.arm.cur_ic_page) / sizeof(struct arm_instr_call);
+	cpu->pc &= ~((ARM_IC_ENTRIES_PER_PAGE-1) << ARM_INSTR_ALIGNMENT_SHIFT);
+	cpu->pc += (low_pc << ARM_INSTR_ALIGNMENT_SHIFT);
+
+	arm_pop(cpu, np, p_bit, u_bit, s_bit, w_bit, (uint16_t)iw);
+}
+Y(bdt_load)
+
+
+/*
+ *  bdt_store:  Block Data Transfer, Store
+ *
+ *  arg[0] = pointer to uint32_t in host memory, pointing to the base register
+ *  arg[1] = 32-bit instruction word. Most bits are read from this.
+ */
+X(bdt_store)
+{
+	uint32_t *np = (uint32_t *)ic->arg[0];
+	uint32_t low_pc;
+	uint32_t iw = ic->arg[1];  /*  xxxx100P USWLnnnn llllllll llllllll  */
+	int p_bit = iw & 0x01000000;
+	int u_bit = iw & 0x00800000;
+	int s_bit = iw & 0x00400000;
+	int w_bit = iw & 0x00200000;
+
+#ifdef GATHER_BDT_STATISTICS
+	if (!s_bit)
+		update_bdt_statistics(iw);
+#endif
+
+	/*  Synchronize the program counter:  */
+	low_pc = ((size_t)ic - (size_t)
+	    cpu->cd.arm.cur_ic_page) / sizeof(struct arm_instr_call);
+	cpu->pc &= ~((ARM_IC_ENTRIES_PER_PAGE-1) << ARM_INSTR_ALIGNMENT_SHIFT);
+	cpu->pc += (low_pc << ARM_INSTR_ALIGNMENT_SHIFT);
+
+	arm_push(cpu, np, p_bit, u_bit, s_bit, w_bit, (uint16_t)iw);
 }
 Y(bdt_store)
 

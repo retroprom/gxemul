@@ -967,7 +967,18 @@ int arm_cpu_disassemble_instr_thumb(struct cpu *cpu, unsigned char *ib,
 	case 0xe:
 		// Unconditional branch.
 		if (iw & 0x0800) {
-			debug("blx\tTODO: prefix + ((instruction+4+(poff<<12)+offset*4) &~ 3)\n");
+			uint32_t addr = (dumpaddr + 4 + (cpu->cd.arm.tmp_branch + (((iw >> 1) & 0x3ff) << 2))) & ~3;
+			
+			debug("blx\t");
+			if (running) {
+				debug("0x%x", addr);
+				symbol = get_symbol_name(&cpu->machine->symbol_context,
+				    tmp, &offset);
+				if (symbol != NULL)
+					debug(" \t<%s>", symbol);
+				debug("\n");
+			} else
+				debug("offset depending on prefix at runtime\n");
 		} else {
 			tmp = (iw & 0x7ff) << 1;
 			if (tmp & 0x800)
@@ -984,7 +995,18 @@ int arm_cpu_disassemble_instr_thumb(struct cpu *cpu, unsigned char *ib,
 
 	case 0xf:
 		if (iw & 0x0800) {
-			debug("bl\tTODO: prefix + (low 11 bits)<<1 relative to pc+4\n");
+			uint32_t addr = (dumpaddr + 2 + (cpu->cd.arm.tmp_branch + ((iw & 0x7ff) << 1)));
+			
+			debug("bl\t");
+			if (running) {
+				debug("0x%x", addr);
+				symbol = get_symbol_name(&cpu->machine->symbol_context,
+				    tmp, &offset);
+				if (symbol != NULL)
+					debug(" \t<%s>", symbol);
+				debug("\n");
+			} else
+				debug("offset depending on prefix at runtime\n");
 		} else {
 			tmp32 = iw & 0x07ff;
 			if (tmp32 & 0x0400)
@@ -1053,6 +1075,7 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 
 	int main_opcode = (iw >> 12) & 15;
 	int op10 = (iw >> 10) & 3;
+	int op11_9 = (iw >> 9) & 7;
 	int rd8 = (iw >> 8) & 7;
 	uint8_t word[sizeof(uint32_t)];
 	uint32_t tmp;
@@ -1083,7 +1106,7 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 			// It works with real code, but is not the same as that of
 			// http://engold.ui.ac.ir/~nikmehr/Appendix_B2.pdf
 			tmp = (addr & ~3) + 4 + (iw & 0xff) * 4;
-printf("tmp = %08x\n", (int)tmp);
+
 			if (!cpu->memory_rw(cpu, cpu->mem, tmp, &word[0],
 					sizeof(ib), MEM_READ, CACHE_INSTRUCTION)) {
 				fatal("arm_cpu_interpret_thumb_SLOW(): could not load pc-relative word\n");
@@ -1103,6 +1126,86 @@ printf("tmp = %08x\n", (int)tmp);
 			debug("TODO: unimplemented opcode 0x%x,%i at pc 0x%08x\n", main_opcode, op10, (int)cpu->pc);
 			cpu->running = 0;
 			return 0;
+		}
+		break;
+	case 0x9:
+		// sp-relative load or store
+		if (iw & 0x0800) {
+			tmp = cpu->cd.arm.r[ARM_SP] + (iw & 0xff) * 4;
+			if (!cpu->memory_rw(cpu, cpu->mem, tmp, &word[0],
+					sizeof(ib), MEM_READ, CACHE_DATA)) {
+				fatal("arm_cpu_interpret_thumb_SLOW(): could not load sp-relative word\n");
+				cpu->running = 0;
+				return 0;
+			}
+
+			if (cpu->byte_order == EMUL_LITTLE_ENDIAN)
+				tmp = word[0] + (word[1]<<8) + (word[2]<<16) + (word[3]<<24);
+			else
+				tmp = word[3] + (word[2]<<8) + (word[1]<<16) + (word[0]<<24);
+
+			cpu->cd.arm.r[rd8] = tmp;
+		} else {
+			debug("TODO: sp-relative store at pc 0x%08x\n", (int)cpu->pc);
+			cpu->running = 0;
+			return 0;
+		}
+		break;
+	case 0xb:
+		switch (op11_9) {
+		case 2:
+			/*  push, i.e. stmdb sp!, reglist  */
+			arm_push(cpu, &cpu->cd.arm.r[ARM_SP], 1, 0, 0, 1, (iw & 0xff) |
+				(iw & 0x100 ? (1 << ARM_LR) : 0));
+			break;
+		case 6:
+			/*  pop, i.e. ldmia sp!, reglist  */
+			cpu->cd.arm.r[ARM_PC] = cpu->pc;
+			arm_pop(cpu, &cpu->cd.arm.r[ARM_SP], 0, 1, 0, 1, (iw & 0xff) |
+				(iw & 0x100 ? (1 << ARM_PC) : 0));
+			cpu->pc = cpu->cd.arm.r[ARM_PC];
+			if (cpu->pc & 1)
+				cpu->cd.arm.cpsr |= ARM_FLAG_T;
+			else
+				cpu->cd.arm.cpsr &= ~ARM_FLAG_T;
+			return 1;
+		default:
+			debug("TODO: unimplemented opcode 0x%x,%i at pc 0x%08x\n", main_opcode, op11_9, (int)cpu->pc);
+			cpu->running = 0;
+			return 0;
+		}
+		break;
+	case 0xe:
+		if (iw & 0x0800) {
+			// blx
+			uint32_t addr = (cpu->pc + 4 + (cpu->cd.arm.tmp_branch + (((iw >> 1) & 0x3ff) << 2))) & ~3;
+			cpu->cd.arm.r[ARM_LR] = cpu->pc + 2;
+			cpu->pc = addr - 2;
+			cpu->cd.arm.cpsr &= ~ARM_FLAG_T;
+		} else {
+			// b
+			tmp = (iw & 0x7ff) << 1;
+			if (tmp & 0x800)
+				tmp |= 0xfffff000;
+			tmp = (int32_t)(cpu->pc + 4 + tmp);
+			debug("TODO: thumb b at pc 0x%08x\n", main_opcode, op11_9, (int)cpu->pc);
+			cpu->running = 0;
+			return 0;
+		}
+		break;
+	case 0xf:
+		if (iw & 0x0800) {
+			// bl
+			uint32_t addr = (cpu->pc + 2 + (cpu->cd.arm.tmp_branch + ((iw & 0x7ff) << 1)));
+			cpu->cd.arm.r[ARM_LR] = cpu->pc + 2;
+			cpu->pc = addr - 2;
+		} else {
+			// "branch prefix".
+			uint32_t tmp32 = iw & 0x07ff;
+			if (tmp32 & 0x0400)
+				tmp32 |= 0xfffff800;
+			tmp32 <<= 12;
+			cpu->cd.arm.tmp_branch = tmp32;
 		}
 		break;
 	default:

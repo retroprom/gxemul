@@ -316,6 +316,10 @@ void arm_coproc_i80321_6(struct cpu *cpu, int opcode1, int opcode2, int l_bit,
 void arm_coproc_xscale_14(struct cpu *cpu, int opcode1, int opcode2, int l_bit,
 	int crn, int crm, int rd);
 
+/*  cpu_arm_instr.c:  */
+void arm_push(struct cpu* cpu, uint32_t* np, int p_bit, int u_bit, int s_bit, int w_bit, uint16_t regs);
+void arm_pop(struct cpu* cpu, uint32_t* np, int p_bit, int u_bit, int s_bit, int w_bit, uint32_t iw);
+
 /*  memory_arm.c:  */
 int arm_translate_v2p(struct cpu *cpu, uint64_t vaddr,
 	uint64_t *return_addr, int flags);
