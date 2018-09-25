@@ -4732,3 +4732,5 @@ Changelog for GXemul:
 		Beginning to implement very slow THUMB interpretation (not
 		dyntrans). Horrible performance-wise, but better than nothing.
 20180924	Oops, forgot to add machine_rpi.cc back in 20131006.
+20180925	Cleaning up some more files on make clean_all. Thanks to
+		Göran Weinholt for noticing.
