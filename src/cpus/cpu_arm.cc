@@ -1080,7 +1080,12 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 	int main_opcode = (iw >> 12) & 15;
 	int op10 = (iw >> 10) & 3;
 	int op11_9 = (iw >> 9) & 7;
+	int op11_8 = (iw >> 8) & 15;
 	int rd8 = (iw >> 8) & 7;
+	int rm = (iw >> 3) & 7;
+	int rd = (iw >> 0) & 7;
+	int hd = (iw >> 7) & 1;
+	int hm = (iw >> 6) & 1;
 	uint8_t word[sizeof(uint32_t)];
 	uint32_t tmp;
 
@@ -1089,17 +1094,47 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 	case 0x4:
 		switch (op10) {
 		case 1:
-			if ((iw & 0xff87) == 0x4700) {
-				//  bx
-				int rm = (iw >> 3) & 15;
-				//  Note: pc will be increased by 2 further down!
-				cpu->pc = cpu->cd.arm.r[rm] - sizeof(uint16_t);
-				if (!(cpu->pc & 1))
-					cpu->cd.arm.cpsr &= ~ARM_FLAG_T;
-				if (rm == ARM_LR && cpu->machine->show_trace_tree)
-					cpu_functioncall_trace_return(cpu);
-			} else {
-				debug("TODO: unimplemented opcode 0x%x,%i at pc 0x%08x\n", main_opcode, op10, (int)cpu->pc);
+			switch (op11_8) {
+			case 6:
+				if (hd)
+					rd += 8;
+				if (hm)
+					rm += 8;
+				cpu->cd.arm.r[rd] = cpu->cd.arm.r[rm];
+				if (rm == ARM_PC) {
+					if (cpu->pc & 1) {
+						debug("TODO: double check with manual whether it is correct to use old pc + 8 here; at pc 0x%08x\n", (int)cpu->pc);
+						cpu->running = 0;
+						return 0;
+					}
+					cpu->cd.arm.r[rd] += 8;
+				}
+				if (rd == ARM_PC) {
+					cpu->pc = cpu->cd.arm.r[rd];
+					cpu->cd.arm.cpsr |= ARM_FLAG_T;
+					if (!(cpu->pc & 1))
+						cpu->cd.arm.cpsr &= ~ARM_FLAG_T;
+					cpu->pc = addr - sizeof(uint16_t);
+				}
+				break;
+			case 7:
+				if ((iw & 0xff87) == 0x4700) {
+					//  bx
+					int rm = (iw >> 3) & 15;
+					//  Note: pc will be increased by 2 further down!
+					cpu->pc = cpu->cd.arm.r[rm] - sizeof(uint16_t);
+					if (!(cpu->pc & 1))
+						cpu->cd.arm.cpsr &= ~ARM_FLAG_T;
+					if (rm == ARM_LR && cpu->machine->show_trace_tree)
+						cpu_functioncall_trace_return(cpu);
+				} else {
+					debug("TODO: unimplemented opcode 0x%x,%i at pc 0x%08x\n", main_opcode, op11_8, (int)cpu->pc);
+					cpu->running = 0;
+					return 0;
+				}
+				break;
+			default:
+				debug("TODO: unimplemented opcode 0x%x,%i at pc 0x%08x\n", main_opcode, op11_8, (int)cpu->pc);
 				cpu->running = 0;
 				return 0;
 			}
@@ -1193,7 +1228,7 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 			}
 
 			cpu->cd.arm.r[ARM_LR] = cpu->pc + 2;
-			cpu->pc = addr - 2;
+			cpu->pc = addr - sizeof(uint16_t);
 			cpu->cd.arm.cpsr &= ~ARM_FLAG_T;
 		} else {
 			// b
@@ -1211,7 +1246,7 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 			// bl
 			uint32_t addr = (cpu->pc + 2 + (cpu->cd.arm.tmp_branch + ((iw & 0x7ff) << 1)));
 			cpu->cd.arm.r[ARM_LR] = cpu->pc + 2;
-			cpu->pc = addr - 2;
+			cpu->pc = addr - sizeof(uint16_t);
 		} else {
 			// "branch prefix".
 			uint32_t tmp32 = iw & 0x07ff;
