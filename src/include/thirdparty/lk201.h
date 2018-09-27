@@ -1,4 +1,85 @@
-/*  This file contains two files from netbsd, lk201.h and lk201.c.  */
+/*
+ *  This file contains definitions from two files in NetBSD, lk201.h and lk201.c.
+ *
+ *  Technical information can be found here:
+ *
+ *	https://www.netbsd.org/docs/Hardware/Machines/DEC/lk201.html
+ *
+ *  (There is also a http://cvsweb.netbsd.org/bsdweb.cgi/src/sys/dev/dec/lk201reg.h?rev=1.3&content-type=text/x-cvsweb-markup&only_with_tag=MAIN which
+ *  seems to have duplicate definitions, but perhaps there are some which are
+ *  not in this file (yet).)
+ *
+ *  The header file (lk201.h) does not have a separate copyright notice on
+ *  it which presumably would make it fall under the general NetBSD license,
+ *  but digging deeper, lk201.c had a CVS comment that it was "abstrated out of
+ *  the pmax scc and dc7085 drivers"
+ *  (http://cvsweb.netbsd.org/bsdweb.cgi/src/sys/arch/pmax/dev/Attic/lk201.c?only_with_tag=MAIN),
+ *  which had the following two copyright notices (according
+ *  to http://cvsweb.netbsd.org/bsdweb.cgi/src/sys/arch/pmax/dev/Attic/scc.c?rev=1.11&content-type=text/x-cvsweb-markup&only_with_tag=MAIN):
+ *
+ *
+ * Copyright (c) 1991,1990,1989,1994,1995 Carnegie Mellon University
+ * All rights reserved.
+ * 
+ * Author: Chris G. Demetriou and Jonathan Stone
+ *
+ * Permission to use, copy, modify and distribute this software and its
+ * documentation is hereby granted, provided that both the copyright
+ * notice and this permission notice appear in all copies of the
+ * software, derivative works or modified versions, and any portions
+ * thereof, and that both notices appear in supporting documentation.
+ * 
+ * CARNEGIE MELLON ALLOWS FREE USE OF THIS SOFTWARE IN ITS 
+ * CONDITION.  CARNEGIE MELLON DISCLAIMS ANY LIABILITY OF ANY KIND FOR
+ * ANY DAMAGES WHATSOEVER RESULTING FROM THE USE OF THIS SOFTWARE.
+ * 
+ * Carnegie Mellon requests users of this software to return to
+ * 
+ *  Software Distribution Coordinator  or  Software.Distribution@CS.CMU.EDU
+ *  School of Computer Science
+ *  Carnegie Mellon University
+ *  Pittsburgh PA 15213-3890
+ * 
+ * any improvements or extensions that they make and grant Carnegie the
+ * rights to redistribute these changes.
+ *
+ *
+ * Copyright (c) 1992, 1993
+ *	The Regents of the University of California.  All rights reserved.
+ *
+ * This code is derived from software contributed to Berkeley by
+ * Ralph Campbell and Rick Macklem.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. All advertising materials mentioning features or use of this software
+ *    must display the following acknowledgement:
+ *	This product includes software developed by the University of
+ *	California, Berkeley and its contributors.
+ * 4. Neither the name of the University nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ *
+ *	from: @(#)scc.c	8.2 (Berkeley) 11/30/93
+ */
 
 #ifndef LK201_H
 #define LK201_H
