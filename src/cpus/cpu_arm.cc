@@ -848,9 +848,13 @@ int arm_cpu_disassemble_instr_thumb(struct cpu *cpu, unsigned char *ib,
 				} else {
 					if (op8 == 0)
 						debug("add\tr%i,r%i,r%i\n", rd, rd, rs_rb);
-					else
-						debug("%s\tr%i,r%i\n",
-							op8 == 1 ? "cmp" : "mov", rd, rs_rb);
+					else {
+						if (op8 == 2 && rd == rs_rb)
+							debug("nop\n");	// mov rX,rX
+						else
+							debug("%s\tr%i,r%i\n",
+							    op8 == 1 ? "cmp" : "mov", rd, rs_rb);
+					}
 				}
 				break;
 			case 3:
@@ -1096,6 +1100,8 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 					cpu_functioncall_trace_return(cpu);
 			} else {
 				debug("TODO: unimplemented opcode 0x%x,%i at pc 0x%08x\n", main_opcode, op10, (int)cpu->pc);
+				cpu->running = 0;
+				return 0;
 			}
 			break;
 
@@ -1179,6 +1185,13 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 		if (iw & 0x0800) {
 			// blx
 			uint32_t addr = (cpu->pc + 4 + (cpu->cd.arm.tmp_branch + (((iw >> 1) & 0x3ff) << 2))) & ~3;
+
+			if (iw & 1) {
+				fatal("lowest bit set in thumb blx instruction?\n");
+				cpu->running = 0;
+				return 0;
+			}
+
 			cpu->cd.arm.r[ARM_LR] = cpu->pc + 2;
 			cpu->pc = addr - 2;
 			cpu->cd.arm.cpsr &= ~ARM_FLAG_T;
