@@ -408,7 +408,7 @@ struct pci_data *bus_pci_init(struct machine *machine, const char *irq_path,
 
 PCIINIT(igsfb)
 {
-	char tmpstr[200];
+	char tmpstr[2000];
 
 	PCI_SET_DATA(PCI_ID_REG,
 	    PCI_ID_CODE(PCI_VENDOR_INTEGRAPHICS, 0x2010));
@@ -489,7 +489,7 @@ PCIINIT(ali_m1543)
 
 PCIINIT(ali_m5229)
 {
-	char tmpstr[300], irqstr[300];
+	char tmpstr[2000], irqstr[1000];
 
 	PCI_SET_DATA(PCI_ID_REG,
 	    PCI_ID_CODE(PCI_VENDOR_ALI, PCI_PRODUCT_ALI_M5229));
@@ -715,7 +715,7 @@ PCIINIT(i31244)
 	/*  PCI IDE using dev_wdc:  */
 	if (diskimage_exist(machine, 0, DISKIMAGE_IDE) ||
 	    diskimage_exist(machine, 1, DISKIMAGE_IDE)) {
-		char tmpstr[150];
+		char tmpstr[2000];
 		snprintf(tmpstr, sizeof(tmpstr), "wdc addr=0x%llx irq=%s.%i",
 		    (long long)(pd->pcibus->pci_actual_io_offset + 0),
 		    pd->pcibus->irq_path_pci, irq & 255);
@@ -818,7 +818,7 @@ int piix_ide_cfg_reg_write(struct pci_device *pd, int reg, uint32_t value)
 
 PCIINIT(piix3_ide)
 {
-	char tmpstr[100];
+	char tmpstr[2000];
 
 	PCI_SET_DATA(PCI_ID_REG, PCI_ID_CODE(PCI_VENDOR_INTEL,
 	    PCI_PRODUCT_INTEL_82371SB_IDE));
@@ -858,7 +858,7 @@ PCIINIT(piix3_ide)
 
 PCIINIT(piix4_ide)
 {
-	char tmpstr[100];
+	char tmpstr[2000];
 
 	PCI_SET_DATA(PCI_ID_REG, PCI_ID_CODE(PCI_VENDOR_INTEL,
 	    PCI_PRODUCT_INTEL_82371AB_IDE));
@@ -1010,7 +1010,7 @@ int vt82c586_ide_cfg_reg_write(struct pci_device *pd, int reg, uint32_t value)
 
 PCIINIT(vt82c586_ide)
 {
-	char tmpstr[100];
+	char tmpstr[2000];
 
 	PCI_SET_DATA(PCI_ID_REG, PCI_ID_CODE(PCI_VENDOR_VIATECH,
 	    PCI_PRODUCT_VIATECH_VT82C586_IDE));
@@ -1120,7 +1120,7 @@ printf("  value = 0x%" PRIx32"\n", value);
 
 PCIINIT(symphony_82c105)
 {
-	char tmpstr[100];
+	char tmpstr[2000];
 
 	PCI_SET_DATA(PCI_ID_REG, PCI_ID_CODE(PCI_VENDOR_SYMPHONY,
 	    PCI_PRODUCT_SYMPHONY_82C105));
@@ -1175,8 +1175,8 @@ PCIINIT(rtl8139c)
 {
 	uint64_t port, memaddr;
 	int pci_int_line = 0x101, irq = 0;
-	char irqstr[200];
-	char tmpstr[200];
+	char irqstr[1000];
+	char tmpstr[2000];
 
 	PCI_SET_DATA(PCI_ID_REG, PCI_ID_CODE(PCI_VENDOR_REALTEK,
 	    PCI_PRODUCT_REALTEK_RT8139));
@@ -1220,8 +1220,8 @@ PCIINIT(dec21143)
 {
 	uint64_t port, memaddr;
 	int pci_int_line = 0x101, irq = 0, isa = 0;
-	char irqstr[200];
-	char tmpstr[200];
+	char irqstr[1000];
+	char tmpstr[2000];
 
 	PCI_SET_DATA(PCI_ID_REG, PCI_ID_CODE(PCI_VENDOR_DEC,
 	    PCI_PRODUCT_DEC_21142));
@@ -1295,7 +1295,7 @@ PCIINIT(dec21143)
 PCIINIT(dec21030)
 {
 	uint64_t base = 0;
-	char tmpstr[200];
+	char tmpstr[2000];
 
 	PCI_SET_DATA(PCI_ID_REG, PCI_ID_CODE(PCI_VENDOR_DEC,
 	    PCI_PRODUCT_DEC_21030));

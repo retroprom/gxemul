@@ -402,7 +402,8 @@ size_t I960_CPUComponent::DisassembleInstruction(uint64_t vaddr, size_t maxLen,
 		ssHex << " " << std::setfill('0') << std::setw(8) << (uint32_t) displacementWord;
 	else
 		ssHex << "         ";
-		result.push_back(ssHex.str());
+
+	result.push_back(ssHex.str());
 
 
 	stringstream ssOpcode;
@@ -923,14 +924,14 @@ void I960_CPUComponent::Translate(uint32_t iword, uint32_t iword2, struct Dyntra
 		}
 	} else if (opcode >= 0x80 && opcode <= 0xcf) {
 		/*  MEM:  */
-		const int MEMA_abase   = (iword >> 14) & 0x1f;
+//		const int MEMA_abase   = (iword >> 14) & 0x1f;
 		const int MEMA_md      = (iword >> 13) & 0x1;
 		const int MEMA_offset  = (iword >> 0) & 0xfff;
 		const int MEMB_src_dst = (iword >> 19) & 0x1f;
-		const int MEMB_abase   = (iword >> 14) & 0x1f;
+//		const int MEMB_abase   = (iword >> 14) & 0x1f;
 		const int MEMB_mode    = (iword >> 10) & 0xf;
-		const int MEMB_scale   = (iword >> 7) & 0x7;
-		const int MEMB_index   = (iword >> 0) & 0x1f;
+//		const int MEMB_scale   = (iword >> 7) & 0x7;
+//		const int MEMB_index   = (iword >> 0) & 0x1f;
 
 		ic->arg[2].p = &m_r[MEMB_src_dst];
 

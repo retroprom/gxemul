@@ -100,7 +100,7 @@ struct dec_ioasic_data {
 	uint32_t	scsi_sdr0;		/*  0x1c0  */
 	uint32_t	scsi_sdr1;		/*  0x1d0  */
 
-	int		(*(dma_func[MAX_IOASIC_DMA_FUNCTIONS]))(struct cpu *, void *, uint64_t addr, size_t dma_len, int tx);
+	int		(*dma_func[MAX_IOASIC_DMA_FUNCTIONS])(struct cpu *, void *, uint64_t addr, size_t dma_len, int tx);
 	void		*dma_func_extra[MAX_IOASIC_DMA_FUNCTIONS];
 	int		rackmount_flag;
 	struct interrupt *irq;

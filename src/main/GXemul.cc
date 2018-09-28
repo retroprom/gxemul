@@ -876,11 +876,11 @@ static void GetComponentsAndFrequencies(refcount_ptr<Component> component,
 	if (freq != NULL && step != NULL &&
 	    (paused == NULL || paused->ToInteger() == 0)) {
 		struct ComponentAndFrequency caf;
-		memset(&caf, 0, sizeof(caf));
 
 		caf.component = component;
 		caf.frequency = freq->ToDouble();
 		caf.step      = step;
+		caf.nextTimeToExecute = 0;
 
 		componentsAndFrequencies.push_back(caf);
 	}

@@ -976,8 +976,7 @@ int arm_cpu_disassemble_instr_thumb(struct cpu *cpu, unsigned char *ib,
 			debug("blx\t");
 			if (running) {
 				debug("0x%x", addr);
-				symbol = get_symbol_name(&cpu->machine->symbol_context,
-				    tmp, &offset);
+				symbol = get_symbol_name(&cpu->machine->symbol_context, addr, &offset);
 				if (symbol != NULL)
 					debug(" \t<%s>", symbol);
 				debug("\n");
@@ -989,8 +988,7 @@ int arm_cpu_disassemble_instr_thumb(struct cpu *cpu, unsigned char *ib,
 				tmp |= 0xfffff000;
 			tmp = (int32_t)(dumpaddr + 4 + tmp);
 			debug("b\t0x%x", (int)tmp);
-			symbol = get_symbol_name(&cpu->machine->symbol_context,
-			    tmp, &offset);
+			symbol = get_symbol_name(&cpu->machine->symbol_context, tmp, &offset);
 			if (symbol != NULL)
 				debug(" \t<%s>", symbol);
 			debug("\n");
@@ -1004,8 +1002,7 @@ int arm_cpu_disassemble_instr_thumb(struct cpu *cpu, unsigned char *ib,
 			debug("bl\t");
 			if (running) {
 				debug("0x%x", addr);
-				symbol = get_symbol_name(&cpu->machine->symbol_context,
-				    tmp, &offset);
+				symbol = get_symbol_name(&cpu->machine->symbol_context, addr, &offset);
 				if (symbol != NULL)
 					debug(" \t<%s>", symbol);
 				debug("\n");

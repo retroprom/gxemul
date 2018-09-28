@@ -75,7 +75,7 @@
  */
 static void default_test(struct machine *machine, struct cpu *cpu)
 {
-	char tmpstr[1000];
+	char tmpstr[2000];
 	char base_irq[1000];
 	char end_of_base_irq[50];
 

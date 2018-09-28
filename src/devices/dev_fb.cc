@@ -236,7 +236,7 @@ void framebuffer_blockcopyfill(struct vfb_data *d, int fillflag, int fill_r,
 	int from_x, int from_y)
 {
 	int x, y;
-	long from_ofs, dest_ofs, linelen;
+	size_t from_ofs, dest_ofs, linelen;
 
 	if (fillflag)
 		debug("framebuffer_blockcopyfill(FILL, %i,%i, %i,%i, "
@@ -262,7 +262,7 @@ void framebuffer_blockcopyfill(struct vfb_data *d, int fillflag, int fill_r,
 				    d->framebuffer + dest_ofs;
 
 				if (d->bit_depth == 24) {
-					for (x=0; x<linelen && x <
+					for (x=0; x<(ssize_t)linelen && x <
 					    (int) sizeof(buf); x += 3) {
 						buf[x] = fill_r;
 						buf[x+1] = fill_g;
