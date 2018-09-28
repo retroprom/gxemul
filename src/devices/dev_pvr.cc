@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2006-2014  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2006-2018  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -797,11 +797,11 @@ static void texturedline(struct pvr_data *d,
 					break;
 				case 6:
 					{
-						// TODO: multiple palette banks?
+						// TODO: multiple palette banks? Endianness?
 						int index8bpp = d->vram[addr];
 						char* base = (char*)&d->reg[PVRREG_PALETTE / sizeof(uint32_t)];
-						uint16_t c16 = *((uint16_t*)base + index8bpp);
-						uint16_t c32 = *((uint32_t*)base + index8bpp);
+						uint16_t c16 = *((uint16_t*)(void*)base + index8bpp);
+						uint16_t c32 = *((uint32_t*)(void*)base + index8bpp);
 						switch (palette_cfg) {
 						case PVR_PALETTE_CFG_MODE_ARGB1555:
 							a = (c16 >> 15) & 0x1 ? 255 : 0;
@@ -1418,6 +1418,8 @@ static void pvr_tilebuf_debugdump(struct pvr_data *d)
 	// 24 word header (before the TILEBUF_ADDR pointer), followed by
 	// 6 words for each tile.
 	uint32_t tilebuf = REG(PVRREG_TILEBUF_ADDR) & PVR_TILEBUF_ADDR_MASK;
+
+	// TODO: endianness
 	uint32_t *p = (uint32_t*) (d->vram + tilebuf);
 
 	fatal("PVR tile buffer debug dump:\n");

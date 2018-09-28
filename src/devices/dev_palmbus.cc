@@ -55,7 +55,6 @@ DEVICE_ACCESS(palmbus)
 {
 	struct palmbus_data *d = (struct palmbus_data *) extra;
 	uint64_t idata = 0, odata = 0;
-	int regnr;
 
 	if (writeflag == MEM_WRITE)
 		idata = memory_readmax64(cpu, data, len);
@@ -105,7 +104,6 @@ DEVICE_ACCESS(palmbus)
 DEVINIT(palmbus)
 {
 	char *name2;
-	size_t nlen = 55;
 	struct palmbus_data *d;
 
 	CHECK_ALLOCATION(d = (struct palmbus_data *) malloc(sizeof(struct palmbus_data)));

@@ -372,7 +372,7 @@ size_t M88K_CPUComponent::DisassembleInstruction(uint64_t vaddr, size_t maxLen,
 	}
 
 	// Read the instruction word:
-	uint32_t instructionWord = *((uint32_t *) instruction);
+	uint32_t instructionWord = *((uint32_t *)(void*) instruction);
 	if (m_isBigEndian)
 		instructionWord = BE32_TO_HOST(instructionWord);
 	else
