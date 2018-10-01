@@ -67,6 +67,10 @@ static const char *arm_thumb_dpiname[16] = ARM_THUMB_DPI_NAMES;
 
 static int arm_exception_to_mode[N_ARM_EXCEPTIONS] = ARM_EXCEPTION_TO_MODE;
 
+extern uint8_t condition_hi[16];
+extern uint8_t condition_ge[16];
+extern uint8_t condition_gt[16];
+
 /*  For quick_pc_to_pointers():  */
 void arm_pc_to_pointers(struct cpu *cpu);
 #include "quick_pc_to_pointers.h"
@@ -1075,6 +1079,7 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 		iw = ib[1] + (ib[0]<<8);
 
 	int main_opcode = (iw >> 12) & 15;
+	int condition_code = (iw >> 8) & 15;
 	int op10 = (iw >> 10) & 3;
 	int op11_8 = (iw >> 8) & 15;
 	int rd8 = (iw >> 8) & 7;
@@ -1086,6 +1091,7 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 	int imm6 = (iw >> 6) & 31;
 	uint8_t word[sizeof(uint32_t)];
 	uint32_t tmp;
+	int t;
 
 	switch (main_opcode)
 	{
@@ -1105,18 +1111,19 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 			cpu->cd.arm.r[rd] = cpu->cd.arm.r[r3] << imm6;
 			tmp >>= 31;
 		}
-		cpu->cd.arm.cpsr &= ~(ARM_FLAG_Z | ARM_FLAG_N);
+		cpu->cd.arm.flags &= ~(ARM_F_Z | ARM_F_N);
 		if (cpu->cd.arm.r[rd8] == 0)
-			cpu->cd.arm.cpsr |= ARM_FLAG_Z;
+			cpu->cd.arm.flags |= ARM_F_Z;
 		if ((int32_t)cpu->cd.arm.r[rd8] < 0)
-			cpu->cd.arm.cpsr |= ARM_FLAG_N;
+			cpu->cd.arm.flags |= ARM_F_N;
 		if (imm6 != 0) {
 			// tmp is "last bit shifted out"
-			cpu->cd.arm.cpsr &= ~ARM_FLAG_C;
+			cpu->cd.arm.flags &= ~ARM_F_C;
 			if (tmp)
-				cpu->cd.arm.cpsr |= ARM_FLAG_C;
+				cpu->cd.arm.flags |= ARM_F_C;
 		}
 		break;
+
 	case 0x1:
 		if (!(iw & 0x0800)) {
 			// asr
@@ -1125,16 +1132,16 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 				tmp = (int32_t)tmp >> (imm6 - 1);
 			cpu->cd.arm.r[rd] = (int32_t)cpu->cd.arm.r[r3] >> imm6;
 			tmp &= 1;
-			cpu->cd.arm.cpsr &= ~(ARM_FLAG_Z | ARM_FLAG_N);
+			cpu->cd.arm.flags &= ~(ARM_F_Z | ARM_F_N);
 			if (cpu->cd.arm.r[rd8] == 0)
-				cpu->cd.arm.cpsr |= ARM_FLAG_Z;
+				cpu->cd.arm.flags |= ARM_F_Z;
 			if ((int32_t)cpu->cd.arm.r[rd8] < 0)
-				cpu->cd.arm.cpsr |= ARM_FLAG_N;
+				cpu->cd.arm.flags |= ARM_F_N;
 			if (imm6 != 0) {
 				// tmp is "last bit shifted out"
-				cpu->cd.arm.cpsr &= ~ARM_FLAG_C;
+				cpu->cd.arm.flags &= ~ARM_F_C;
 				if (tmp)
-					cpu->cd.arm.cpsr |= ARM_FLAG_C;
+					cpu->cd.arm.flags |= ARM_F_C;
 			}
 		} else {
 			// add or sub
@@ -1145,22 +1152,23 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 			tmp = (isSub ? -tmp64 : tmp64);
 			uint64_t result = old + tmp64;
 			cpu->cd.arm.r[rd] = result;
-			cpu->cd.arm.cpsr &= ~(ARM_FLAG_Z | ARM_FLAG_N | ARM_FLAG_C | ARM_FLAG_V);
+			cpu->cd.arm.flags &= ~(ARM_F_Z | ARM_F_N | ARM_F_C | ARM_F_V);
 			if (result == 0)
-				cpu->cd.arm.cpsr |= ARM_FLAG_Z;
+				cpu->cd.arm.flags |= ARM_F_Z;
 			if ((int32_t)result < 0)
-				cpu->cd.arm.cpsr |= ARM_FLAG_N;
+				cpu->cd.arm.flags |= ARM_F_N;
 			if (result & 0x100000000ULL)
-				cpu->cd.arm.cpsr |= ARM_FLAG_C;
+				cpu->cd.arm.flags |= ARM_F_C;
 			if (result & 0x80000000) {
 				if ((tmp64 & 0x80000000) == 0 && (old & 0x80000000) == 0)
-					cpu->cd.arm.cpsr |= ARM_FLAG_V;
+					cpu->cd.arm.flags |= ARM_F_V;
 			} else {
 				if ((tmp64 & 0x80000000) != 0 && (old & 0x80000000) != 0)
-					cpu->cd.arm.cpsr |= ARM_FLAG_V;
+					cpu->cd.arm.flags |= ARM_F_V;
 			}
 		}
 		break;
+
 	case 0x2:
 		// movs or cmp
 		if (iw & 0x0800) {
@@ -1169,11 +1177,12 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 			return 0;
 		} else {
 			cpu->cd.arm.r[rd8] = iw & 0xff;
-			cpu->cd.arm.cpsr &= ~(ARM_FLAG_Z | ARM_FLAG_N);
+			cpu->cd.arm.flags &= ~(ARM_F_Z | ARM_F_N);
 			if (cpu->cd.arm.r[rd8] == 0)
-				cpu->cd.arm.cpsr |= ARM_FLAG_Z;
+				cpu->cd.arm.flags |= ARM_F_Z;
 		}
 		break;
+
 	case 0x4:
 		switch (op10) {
 		case 0:
@@ -1184,19 +1193,19 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 					uint32_t old = cpu->cd.arm.r[rd];
 					uint64_t tmp64 = -cpu->cd.arm.r[r3];
 					uint64_t result = old + tmp64;
-					cpu->cd.arm.cpsr &= ~(ARM_FLAG_Z | ARM_FLAG_N | ARM_FLAG_C | ARM_FLAG_V);
+					cpu->cd.arm.flags &= ~(ARM_F_Z | ARM_F_N | ARM_F_C | ARM_F_V);
 					if (result == 0)
-						cpu->cd.arm.cpsr |= ARM_FLAG_Z;
+						cpu->cd.arm.flags |= ARM_F_Z;
 					if ((int32_t)result < 0)
-						cpu->cd.arm.cpsr |= ARM_FLAG_N;
+						cpu->cd.arm.flags |= ARM_F_N;
 					if (result & 0x100000000ULL)
-						cpu->cd.arm.cpsr |= ARM_FLAG_C;
+						cpu->cd.arm.flags |= ARM_F_C;
 					if (result & 0x80000000) {
 						if ((tmp64 & 0x80000000) == 0 && (old & 0x80000000) == 0)
-							cpu->cd.arm.cpsr |= ARM_FLAG_V;
+							cpu->cd.arm.flags |= ARM_F_V;
 					} else {
 						if ((tmp64 & 0x80000000) != 0 && (old & 0x80000000) != 0)
-							cpu->cd.arm.cpsr |= ARM_FLAG_V;
+							cpu->cd.arm.flags |= ARM_F_V;
 					}
 				}
 				break;
@@ -1282,6 +1291,7 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 			return 0;
 		}
 		break;
+
 	case 0x9:
 		// sp-relative load or store
 		if (iw & 0x0800) {
@@ -1305,6 +1315,7 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 			return 0;
 		}
 		break;
+
 	case 0xb:
 		switch (op11_8) {
 		case 0:
@@ -1337,6 +1348,71 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 			return 0;
 		}
 		break;
+
+	case 0xd:
+		if (condition_code < 0xe) {
+			// Conditional branch.
+			tmp = (iw & 0xff) << 1;
+			if (tmp & 0x100)
+				tmp |= 0xfffffe00;
+			tmp = (int32_t)(cpu->pc + 4 + tmp);
+
+			switch (condition_code) {
+			case 0x0:	// eq:
+					t = cpu->cd.arm.flags & ARM_F_Z;
+					break;
+			case 0x1:	// ne:
+					t = !(cpu->cd.arm.flags & ARM_F_Z);
+					break;
+			case 0x2:	// cs:
+					t = cpu->cd.arm.flags & ARM_F_C;
+					break;
+			case 0x3:	// cc:
+					t = !(cpu->cd.arm.flags & ARM_F_C);
+					break;
+			case 0x4:	// mi:
+					t = cpu->cd.arm.flags & ARM_F_N;
+					break;
+			case 0x5:	// pl:
+					t = !(cpu->cd.arm.flags & ARM_F_N);
+					break;
+			case 0x6:	// vs:
+					t = cpu->cd.arm.flags & ARM_F_V;
+					break;
+			case 0x7:	// vc:
+					t = !(cpu->cd.arm.flags & ARM_F_V);
+					break;
+			case 0x8:	// hi:
+					t = condition_hi[cpu->cd.arm.flags];
+					break;
+			case 0x9:	// ls:
+					t = !condition_hi[cpu->cd.arm.flags];
+					break;
+			case 0xa:	// ge:
+					t = condition_ge[cpu->cd.arm.flags];
+					break;
+			case 0xb:	// lt:
+					t = !condition_ge[cpu->cd.arm.flags];
+					break;
+			case 0xc:	// gt:
+					t = condition_gt[cpu->cd.arm.flags];
+					break;
+			case 0xd:	// le:
+					t = !condition_gt[cpu->cd.arm.flags];
+					break;
+			}
+
+			if (t) {
+				cpu->pc = tmp;
+				return 1;
+			}
+		} else {
+			debug("TODO: unimplemented opcode 0x%x, non-branch, at pc 0x%08x\n", main_opcode, (int)cpu->pc);
+			cpu->running = 0;
+			return 0;
+		}
+		break;
+
 	case 0xe:
 		if (iw & 0x0800) {
 			// blx
@@ -1362,6 +1438,7 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 			return 0;
 		}
 		break;
+
 	case 0xf:
 		if (iw & 0x0800) {
 			// bl
@@ -1377,6 +1454,7 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 			cpu->cd.arm.tmp_branch = tmp32;
 		}
 		break;
+
 	default:
 		debug("TODO: unimplemented opcode 0x%x at pc 0x%08x\n", main_opcode, (int)cpu->pc);
 		cpu->running = 0;
