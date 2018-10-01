@@ -5,47 +5,16 @@
  *
  *	https://www.netbsd.org/docs/Hardware/Machines/DEC/lk201.html
  *
- *  (There is also a http://cvsweb.netbsd.org/bsdweb.cgi/src/sys/dev/dec/lk201reg.h?rev=1.3&content-type=text/x-cvsweb-markup&only_with_tag=MAIN which
- *  seems to have duplicate definitions, but perhaps there are some which are
- *  not in this file (yet).)
- *
- *  The header file (lk201.h) does not have a separate copyright notice on
- *  it which presumably would make it fall under the general NetBSD license,
- *  but digging deeper, lk201.c had a CVS comment that it was "abstrated out of
- *  the pmax scc and dc7085 drivers"
- *  (http://cvsweb.netbsd.org/bsdweb.cgi/src/sys/arch/pmax/dev/Attic/lk201.c?only_with_tag=MAIN),
- *  which had the following two copyright notices (according
- *  to http://cvsweb.netbsd.org/bsdweb.cgi/src/sys/arch/pmax/dev/Attic/scc.c?rev=1.11&content-type=text/x-cvsweb-markup&only_with_tag=MAIN):
+ *  The header file (lk201.h) in NetBSD did not have a separate copyright
+ *  notice on it. Possible sources for lk201.h and lk201.c are the old files
+ *  http://cvsweb.netbsd.org/bsdweb.cgi/src/sys/arch/pmax/dev/Attic/fb.c?rev=1.1&content-type=text/x-cvsweb-markup
+ *  for the scan codes, and
+ *  http://cvsweb.netbsd.org/bsdweb.cgi/src/sys/arch/pmax/dev/Attic/fbreg.h?rev=1.1&content-type=text/x-cvsweb-markup
+ *  for other control codes, in which case the copyright is/was:
  *
  *
- * Copyright (c) 1991,1990,1989,1994,1995 Carnegie Mellon University
+ * Copyright (c) 1992 The Regents of the University of California.
  * All rights reserved.
- * 
- * Author: Chris G. Demetriou and Jonathan Stone
- *
- * Permission to use, copy, modify and distribute this software and its
- * documentation is hereby granted, provided that both the copyright
- * notice and this permission notice appear in all copies of the
- * software, derivative works or modified versions, and any portions
- * thereof, and that both notices appear in supporting documentation.
- * 
- * CARNEGIE MELLON ALLOWS FREE USE OF THIS SOFTWARE IN ITS 
- * CONDITION.  CARNEGIE MELLON DISCLAIMS ANY LIABILITY OF ANY KIND FOR
- * ANY DAMAGES WHATSOEVER RESULTING FROM THE USE OF THIS SOFTWARE.
- * 
- * Carnegie Mellon requests users of this software to return to
- * 
- *  Software Distribution Coordinator  or  Software.Distribution@CS.CMU.EDU
- *  School of Computer Science
- *  Carnegie Mellon University
- *  Pittsburgh PA 15213-3890
- * 
- * any improvements or extensions that they make and grant Carnegie the
- * rights to redistribute these changes.
- *
- *
- * Copyright (c) 1992, 1993
- *	The Regents of the University of California.  All rights reserved.
  *
  * This code is derived from software contributed to Berkeley by
  * Ralph Campbell and Rick Macklem.
@@ -78,7 +47,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	from: @(#)scc.c	8.2 (Berkeley) 11/30/93
+ *
+ *
+ *	@(#)fb.c	7.2 (Berkeley) 12/20/92
+ * and
+ *	@(#)fbreg.h	7.1 (Berkeley) 11/15/92
  */
 
 #ifndef LK201_H
