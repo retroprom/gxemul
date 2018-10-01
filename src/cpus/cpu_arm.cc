@@ -787,12 +787,12 @@ int arm_cpu_disassemble_instr_thumb(struct cpu *cpu, unsigned char *ib,
 	{
 	case 0x0:
 	case 0x1:
-		if (op11 < 3) {
+		if (op11 <= 2) {
 			// Move shifted register.
-			debug("movs\tr%i,r%i, %s #%i\n",
-				rd,
-				rs_rb,
+			debug("%ss\tr%i,r%i,#%i\n",
 				op11 & 1 ? "lsr" : (op11 & 2 ? "asr" : "lsl"),
+				rd,
+				rs_rb,				
 				offset5);
 		} else {
 			// Add/subtract.
@@ -1076,29 +1076,134 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 
 	int main_opcode = (iw >> 12) & 15;
 	int op10 = (iw >> 10) & 3;
-	int op11_9 = (iw >> 9) & 7;
 	int op11_8 = (iw >> 8) & 15;
 	int rd8 = (iw >> 8) & 7;
-	int rm = (iw >> 3) & 7;
+	int r6 = (iw >> 6) & 7;
+	int r3 = (iw >> 3) & 7;
 	int rd = (iw >> 0) & 7;
 	int hd = (iw >> 7) & 1;
 	int hm = (iw >> 6) & 1;
+	int imm6 = (iw >> 6) & 31;
 	uint8_t word[sizeof(uint32_t)];
 	uint32_t tmp;
 
 	switch (main_opcode)
 	{
+	case 0x0:
+		if (iw & 0x0800) {
+			// lsr
+			tmp = cpu->cd.arm.r[r3];
+			if (imm6 > 1)
+				tmp >>= (imm6 - 1);
+			cpu->cd.arm.r[rd] = cpu->cd.arm.r[r3] >> imm6;
+			tmp &= 1;
+		} else {
+			// lsl
+			tmp = cpu->cd.arm.r[r3];
+			if (imm6 > 1)
+				tmp <<= (imm6 - 1);
+			cpu->cd.arm.r[rd] = cpu->cd.arm.r[r3] << imm6;
+			tmp >>= 31;
+		}
+		cpu->cd.arm.cpsr &= ~(ARM_FLAG_Z | ARM_FLAG_N);
+		if (cpu->cd.arm.r[rd8] == 0)
+			cpu->cd.arm.cpsr |= ARM_FLAG_Z;
+		if ((int32_t)cpu->cd.arm.r[rd8] < 0)
+			cpu->cd.arm.cpsr |= ARM_FLAG_N;
+		if (imm6 != 0) {
+			// tmp is "last bit shifted out"
+			cpu->cd.arm.cpsr &= ~ARM_FLAG_C;
+			if (tmp)
+				cpu->cd.arm.cpsr |= ARM_FLAG_C;
+		}
+		break;
+	case 0x1:
+		if (!(iw & 0x0800)) {
+			// asr
+			tmp = cpu->cd.arm.r[r3];
+			if (imm6 > 1)
+				tmp = (int32_t)tmp >> (imm6 - 1);
+			cpu->cd.arm.r[rd] = (int32_t)cpu->cd.arm.r[r3] >> imm6;
+			tmp &= 1;
+			cpu->cd.arm.cpsr &= ~(ARM_FLAG_Z | ARM_FLAG_N);
+			if (cpu->cd.arm.r[rd8] == 0)
+				cpu->cd.arm.cpsr |= ARM_FLAG_Z;
+			if ((int32_t)cpu->cd.arm.r[rd8] < 0)
+				cpu->cd.arm.cpsr |= ARM_FLAG_N;
+			if (imm6 != 0) {
+				// tmp is "last bit shifted out"
+				cpu->cd.arm.cpsr &= ~ARM_FLAG_C;
+				if (tmp)
+					cpu->cd.arm.cpsr |= ARM_FLAG_C;
+			}
+		} else {
+			// add or sub
+			int isSub = iw & 0x0200;
+			int isImm3 = iw & 0x0400;
+			uint32_t old = cpu->cd.arm.r[r3];
+			uint64_t tmp64 = isImm3 ? r6 : cpu->cd.arm.r[r6];
+			tmp64 = cpu->cd.arm.r[r3] + (isSub ? -tmp64 : tmp64);
+			cpu->cd.arm.r[rd] = tmp64;
+			cpu->cd.arm.cpsr &= ~(ARM_FLAG_Z | ARM_FLAG_N | ARM_FLAG_C | ARM_FLAG_V);
+			if (cpu->cd.arm.r[rd] == 0)
+				cpu->cd.arm.cpsr |= ARM_FLAG_Z;
+			if ((int32_t)cpu->cd.arm.r[rd] < 0)
+				cpu->cd.arm.cpsr |= ARM_FLAG_N;
+			if (tmp64 & 0x100000000ULL)
+				cpu->cd.arm.cpsr |= ARM_FLAG_C;
+			if ((tmp64 ^ old) & 0x80000000ULL)
+				cpu->cd.arm.cpsr |= ARM_FLAG_V;	// TODO: correct?)
+		}
+		break;
+	case 0x2:
+		// movs or cmp
+		if (iw & 0x0800) {
+			debug("TODO: cmp pc 0x%08x\n", (int)cpu->pc);
+			cpu->running = 0;
+			return 0;
+		} else {
+			cpu->cd.arm.r[rd8] = iw & 0xff;
+			cpu->cd.arm.cpsr &= ~(ARM_FLAG_Z | ARM_FLAG_N);
+			if (cpu->cd.arm.r[rd8] == 0)
+				cpu->cd.arm.cpsr |= ARM_FLAG_Z;
+		}
+		break;
 	case 0x4:
 		switch (op10) {
+		case 0:
+			// "DPIs":
+			switch ((iw >> 6) & 15) {
+			case 10:	// cmp
+				{
+					uint32_t old = cpu->cd.arm.r[rd];
+					uint64_t tmp64 = cpu->cd.arm.r[rd] - cpu->cd.arm.r[r3];
+					tmp = tmp64;
+					cpu->cd.arm.cpsr &= ~(ARM_FLAG_Z | ARM_FLAG_N | ARM_FLAG_C | ARM_FLAG_V);
+					if (tmp == 0)
+						cpu->cd.arm.cpsr |= ARM_FLAG_Z;
+					if ((int32_t)tmp < 0)
+						cpu->cd.arm.cpsr |= ARM_FLAG_N;
+					if (tmp64 & 0x100000000ULL)
+						cpu->cd.arm.cpsr |= ARM_FLAG_C;
+					if ((tmp64 ^ old) & 0x80000000ULL)
+						cpu->cd.arm.cpsr |= ARM_FLAG_V;	// TODO: correct?)
+				}
+				break;
+			default:
+				debug("TODO: unimplemented DPI %i at pc 0x%08x\n", (iw >> 6) & 15, (int)cpu->pc);
+				cpu->running = 0;
+				return 0;
+			}
+			break;
 		case 1:
 			switch (op11_8) {
 			case 6:
 				if (hd)
 					rd += 8;
 				if (hm)
-					rm += 8;
-				cpu->cd.arm.r[rd] = cpu->cd.arm.r[rm];
-				if (rm == ARM_PC) {
+					r3 += 8;
+				cpu->cd.arm.r[rd] = cpu->cd.arm.r[r3];
+				if (r3 == ARM_PC) {
 					if (cpu->pc & 1) {
 						debug("TODO: double check with manual whether it is correct to use old pc + 8 here; at pc 0x%08x\n", (int)cpu->pc);
 						cpu->running = 0;
@@ -1190,13 +1295,21 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 		}
 		break;
 	case 0xb:
-		switch (op11_9) {
-		case 2:
+		switch (op11_8) {
+		case 0:
+			if (iw & 0x0080)
+				cpu->cd.arm.r[ARM_SP] -= ((iw & 0x7f) << 2);
+			else
+				cpu->cd.arm.r[ARM_SP] += ((iw & 0x7f) << 2);
+			break;
+		case 4:
+		case 5:
 			/*  push, i.e. stmdb sp!, reglist  */
 			arm_push(cpu, &cpu->cd.arm.r[ARM_SP], 1, 0, 0, 1, (iw & 0xff) |
 				(iw & 0x100 ? (1 << ARM_LR) : 0));
 			break;
-		case 6:
+		case 12:
+		case 13:
 			/*  pop, i.e. ldmia sp!, reglist  */
 			cpu->cd.arm.r[ARM_PC] = cpu->pc;
 			arm_pop(cpu, &cpu->cd.arm.r[ARM_SP], 0, 1, 0, 1, (iw & 0xff) |
@@ -1208,7 +1321,7 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 				cpu->cd.arm.cpsr &= ~ARM_FLAG_T;
 			return 1;
 		default:
-			debug("TODO: unimplemented opcode 0x%x,%i at pc 0x%08x\n", main_opcode, op11_9, (int)cpu->pc);
+			debug("TODO: unimplemented opcode 0x%x,%i at pc 0x%08x\n", main_opcode, op11_8, (int)cpu->pc);
 			cpu->running = 0;
 			return 0;
 		}
@@ -1233,7 +1346,7 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 			if (tmp & 0x800)
 				tmp |= 0xfffff000;
 			tmp = (int32_t)(cpu->pc + 4 + tmp);
-			debug("TODO: thumb b at pc 0x%08x\n", main_opcode, op11_9, (int)cpu->pc);
+			debug("TODO: thumb b at pc 0x%08x\n", (int)cpu->pc);
 			cpu->running = 0;
 			return 0;
 		}

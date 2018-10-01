@@ -4736,3 +4736,4 @@ Changelog for GXemul:
 		Göran Weinholt for noticing.
 20180927	Fixing big-endian ARM loads/stores (except perhaps double-word
 		loads and stores); probably slows everything down a bit.
+20181001	Continuing on the slow THUMB instruction interpretation.
