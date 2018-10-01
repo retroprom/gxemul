@@ -1142,7 +1142,8 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 			int isImm3 = iw & 0x0400;
 			uint64_t old = cpu->cd.arm.r[r3];
 			uint64_t tmp64 = isImm3 ? r6 : cpu->cd.arm.r[r6];
-			uint64_t result = old + (isSub ? -tmp64 : tmp64);
+			tmp = (isSub ? -tmp64 : tmp64);
+			uint64_t result = old + tmp64;
 			cpu->cd.arm.r[rd] = result;
 			cpu->cd.arm.cpsr &= ~(ARM_FLAG_Z | ARM_FLAG_N | ARM_FLAG_C | ARM_FLAG_V);
 			if (result == 0)
@@ -1181,8 +1182,8 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 			case 10:	// cmp
 				{
 					uint32_t old = cpu->cd.arm.r[rd];
-					uint64_t tmp64 = cpu->cd.arm.r[r3];
-					uint64_t result = old - tmp64;
+					uint64_t tmp64 = -cpu->cd.arm.r[r3];
+					uint64_t result = old + tmp64;
 					cpu->cd.arm.cpsr &= ~(ARM_FLAG_Z | ARM_FLAG_N | ARM_FLAG_C | ARM_FLAG_V);
 					if (result == 0)
 						cpu->cd.arm.cpsr |= ARM_FLAG_Z;
