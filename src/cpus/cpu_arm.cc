@@ -1140,19 +1140,24 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 			// add or sub
 			int isSub = iw & 0x0200;
 			int isImm3 = iw & 0x0400;
-			uint32_t old = cpu->cd.arm.r[r3];
+			uint64_t old = cpu->cd.arm.r[r3];
 			uint64_t tmp64 = isImm3 ? r6 : cpu->cd.arm.r[r6];
-			tmp64 = cpu->cd.arm.r[r3] + (isSub ? -tmp64 : tmp64);
-			cpu->cd.arm.r[rd] = tmp64;
+			uint64_t result = old + (isSub ? -tmp64 : tmp64);
+			cpu->cd.arm.r[rd] = result;
 			cpu->cd.arm.cpsr &= ~(ARM_FLAG_Z | ARM_FLAG_N | ARM_FLAG_C | ARM_FLAG_V);
-			if (cpu->cd.arm.r[rd] == 0)
+			if (result == 0)
 				cpu->cd.arm.cpsr |= ARM_FLAG_Z;
-			if ((int32_t)cpu->cd.arm.r[rd] < 0)
+			if ((int32_t)result < 0)
 				cpu->cd.arm.cpsr |= ARM_FLAG_N;
-			if (tmp64 & 0x100000000ULL)
+			if (result & 0x100000000ULL)
 				cpu->cd.arm.cpsr |= ARM_FLAG_C;
-			if ((tmp64 ^ old) & 0x80000000ULL)
-				cpu->cd.arm.cpsr |= ARM_FLAG_V;	// TODO: correct?)
+			if (result & 0x80000000) {
+				if ((tmp64 & 0x80000000) == 0 && (old & 0x80000000) == 0)
+					cpu->cd.arm.cpsr |= ARM_FLAG_V;
+			} else {
+				if ((tmp64 & 0x80000000) != 0 && (old & 0x80000000) != 0)
+					cpu->cd.arm.cpsr |= ARM_FLAG_V;
+			}
 		}
 		break;
 	case 0x2:
@@ -1176,17 +1181,22 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 			case 10:	// cmp
 				{
 					uint32_t old = cpu->cd.arm.r[rd];
-					uint64_t tmp64 = cpu->cd.arm.r[rd] - cpu->cd.arm.r[r3];
-					tmp = tmp64;
+					uint64_t tmp64 = cpu->cd.arm.r[r3];
+					uint64_t result = old - tmp64;
 					cpu->cd.arm.cpsr &= ~(ARM_FLAG_Z | ARM_FLAG_N | ARM_FLAG_C | ARM_FLAG_V);
-					if (tmp == 0)
+					if (result == 0)
 						cpu->cd.arm.cpsr |= ARM_FLAG_Z;
-					if ((int32_t)tmp < 0)
+					if ((int32_t)result < 0)
 						cpu->cd.arm.cpsr |= ARM_FLAG_N;
-					if (tmp64 & 0x100000000ULL)
+					if (result & 0x100000000ULL)
 						cpu->cd.arm.cpsr |= ARM_FLAG_C;
-					if ((tmp64 ^ old) & 0x80000000ULL)
-						cpu->cd.arm.cpsr |= ARM_FLAG_V;	// TODO: correct?)
+					if (result & 0x80000000) {
+						if ((tmp64 & 0x80000000) == 0 && (old & 0x80000000) == 0)
+							cpu->cd.arm.cpsr |= ARM_FLAG_V;
+					} else {
+						if ((tmp64 & 0x80000000) != 0 && (old & 0x80000000) != 0)
+							cpu->cd.arm.cpsr |= ARM_FLAG_V;
+					}
 				}
 				break;
 			default:
