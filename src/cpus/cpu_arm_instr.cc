@@ -360,7 +360,7 @@ X(bx)
 		cpu->cd.arm.cpsr &= ~ARM_FLAG_T;
 
 	if (cpu->cd.arm.cpsr != old_cpsr)
-		cpu->invalidate_translation_caches(cpu, 0, INVALIDATE_ALL);
+		cpu->cd.arm.next_ic = &nothing_call;
 
 	if (cpu->pc & 2 && ((cpu->pc & 1) == 0)) {
 		fatal("[ ARM pc misaligned? 0x%08x ]\n", (int)cpu->pc);
@@ -391,7 +391,7 @@ X(bx_trace)
 		cpu->cd.arm.cpsr &= ~ARM_FLAG_T;
 
 	if (cpu->cd.arm.cpsr != old_cpsr)
-		cpu->invalidate_translation_caches(cpu, 0, INVALIDATE_ALL);
+		cpu->cd.arm.next_ic = &nothing_call;
 
 	if (cpu->pc & 2 && ((cpu->pc & 1) == 0)) {
 		fatal("[ ARM pc misaligned? 0x%08x ]\n", (int)cpu->pc);
@@ -455,7 +455,7 @@ X(blx_imm)
 	}
 
 	if (cpu->cd.arm.cpsr != old_cpsr)
-		cpu->invalidate_translation_caches(cpu, 0, INVALIDATE_ALL);
+		cpu->cd.arm.next_ic = &nothing_call;
 
 	if (cpu->pc & 2 && ((cpu->pc & 1) == 0)) {
 		fatal("[ ARM pc misaligned? 0x%08x ]\n", (int)cpu->pc);
@@ -492,7 +492,7 @@ X(blx_reg)
 		cpu->cd.arm.cpsr &= ~ARM_FLAG_T;
 
 	if (cpu->cd.arm.cpsr != old_cpsr)
-		cpu->invalidate_translation_caches(cpu, 0, INVALIDATE_ALL);
+		cpu->cd.arm.next_ic = &nothing_call;
 
 	if (cpu->pc & 2 && ((cpu->pc & 1) == 0)) {
 		fatal("[ ARM pc misaligned? 0x%08x ]\n", (int)cpu->pc);
