@@ -29,12 +29,6 @@
  *
  *	o)  Big-endian Double-Word loads/stores are likely INCORRECT.
  *
- *	o)  Alignment checks!
- *
- *	o)  Native load/store if the endianness is the same as the host's
- *	    (only implemented for little endian, so far, and it assumes that
- *	    alignment is correct!)
- *
  *	o)  "Base Updated Abort Model", which updates the base register
  *	    even if the memory access failed.
  *
@@ -121,6 +115,7 @@ void A__NAME__general(struct cpu *cpu, struct arm_instr_call *ic)
 #endif
 	    ;
 
+	addr &= ~(datalen - 1);
 
 #if defined(A__L) || defined(A__LDRD)
 	/*  Load:  */
@@ -275,6 +270,7 @@ void A__NAME(struct cpu *cpu, struct arm_instr_call *ic)
 		    page[addr & 0xfff];
 #else
 #ifdef A__H
+		addr &= ~1;
 		reg(ic->arg[2]) =
 #ifdef A__SIGNED
 		    (int32_t)(int16_t)
@@ -283,6 +279,7 @@ void A__NAME(struct cpu *cpu, struct arm_instr_call *ic)
 		    ? (page[addr & 0xfff] + (page[(addr & 0xfff) + 1] << 8))
 		    : ((page[addr & 0xfff] << 8) + page[(addr & 0xfff) + 1]));
 #else
+		addr &= ~3;
 		if (cpu->byte_order == EMUL_LITTLE_ENDIAN)
 			reg(ic->arg[2]) = page[addr & 0xfff] +
 			    (page[(addr & 0xfff) + 1] << 8) +
@@ -300,6 +297,7 @@ void A__NAME(struct cpu *cpu, struct arm_instr_call *ic)
 		page[addr & 0xfff] = reg(ic->arg[2]);
 #else
 #ifdef A__H
+		addr &= ~1;
 		if (cpu->byte_order == EMUL_LITTLE_ENDIAN)  {
 			page[addr & 0xfff] = reg(ic->arg[2]);
 			page[(addr & 0xfff)+1] = reg(ic->arg[2]) >> 8;
@@ -308,6 +306,7 @@ void A__NAME(struct cpu *cpu, struct arm_instr_call *ic)
 			page[(addr & 0xfff)+1] = reg(ic->arg[2]);
 		}
 #else
+		addr &= ~3;
 		if (cpu->byte_order == EMUL_LITTLE_ENDIAN)  {
 			page[addr & 0xfff] = reg(ic->arg[2]);
 			page[(addr & 0xfff)+1] = reg(ic->arg[2]) >> 8;

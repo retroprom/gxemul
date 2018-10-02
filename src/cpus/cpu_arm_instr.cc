@@ -1115,7 +1115,7 @@ X(cmps_regshort);
  */
 void arm_pop(struct cpu* cpu, uint32_t* np, int p_bit, int u_bit, int s_bit, int w_bit, uint32_t iw)
 {
-	uint32_t value, addr = *np;
+	uint32_t addr = *np;
 	unsigned char data[4];
 	unsigned char *page;
 	int i, return_flag = 0;
@@ -1379,17 +1379,13 @@ void arm_push(struct cpu* cpu, uint32_t* np, int p_bit, int u_bit, int s_bit, in
  */
 X(bdt_load)
 {
-	unsigned char data[4];
 	uint32_t *np = (uint32_t *)ic->arg[0];
-	uint32_t addr = *np, low_pc;
-	unsigned char *page;
+	uint32_t low_pc;
 	uint32_t iw = ic->arg[1];  /*  xxxx100P USWLnnnn llllllll llllllll  */
 	int p_bit = iw & 0x01000000;
 	int u_bit = iw & 0x00800000;
 	int s_bit = iw & 0x00400000;
 	int w_bit = iw & 0x00200000;
-	int i, return_flag = 0;
-	uint32_t new_values[16];
 
 #ifdef GATHER_BDT_STATISTICS
 	if (!s_bit)
