@@ -862,12 +862,13 @@ int arm_cpu_disassemble_instr_thumb(struct cpu *cpu, unsigned char *ib,
 						if (op8 == 2 && rd == rs_rb)
 							debug("nop\n");	// mov rX,rX
 						else {
-							debug("%s\tr%i,r%i",
-							    op8 == 1 ? "cmp" : "mov", rd, rs_rb);
+							debug("%s\t%s,%s",
+							    op8 == 1 ? "cmp" : "mov",
+							    	arm_regname[rd],
+							    	arm_regname[rs_rb]);
 							if (running) {
 								debug("\t\t; %s = 0x%x", arm_regname[rd], cpu->cd.arm.r[rd]);
-								if (op8 == 1)
-									debug(", %s = 0x%x", arm_regname[rs_rb], cpu->cd.arm.r[rs_rb]);
+								debug(", %s = 0x%x", arm_regname[rs_rb], cpu->cd.arm.r[rs_rb]);
 							}
 							debug("\n");
 						}
@@ -1170,7 +1171,7 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 			int isImm3 = iw & 0x0400;
 			uint64_t old = cpu->cd.arm.r[r3];
 			uint64_t tmp64 = isImm3 ? r6 : cpu->cd.arm.r[r6];
-			tmp64 = (isSub ? -tmp64 : tmp64);
+			tmp64 = (uint32_t)(isSub ? -tmp64 : tmp64);
 			uint64_t result = old + tmp64;
 			cpu->cd.arm.r[rd] = result;
 			cpu->cd.arm.flags &= ~(ARM_F_Z | ARM_F_N | ARM_F_C | ARM_F_V);
@@ -1194,7 +1195,7 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 		// movs or cmp
 		if (iw & 0x0800) {
 			uint64_t old = cpu->cd.arm.r[rd8];
-			uint64_t tmp64 = -(iw & 0xff);
+			uint64_t tmp64 = (uint32_t)(-(iw & 0xff));
 			uint64_t result = old + tmp64;
 			cpu->cd.arm.flags &= ~(ARM_F_Z | ARM_F_N | ARM_F_C | ARM_F_V);
 			if (result == 0)
@@ -1218,15 +1219,86 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 		}
 		break;
 
+	case 0x3:
+		// adds or sub
+		{
+			uint64_t old = cpu->cd.arm.r[rd8];
+			uint64_t tmp64 = iw & 0xff;
+			
+			if (iw & 0x0800)
+				tmp64 = (uint32_t)(-tmp64);
+
+			uint64_t result = old + tmp64;
+			cpu->cd.arm.r[rd8] = result;
+
+			cpu->cd.arm.flags &= ~(ARM_F_Z | ARM_F_N | ARM_F_C | ARM_F_V);
+			if (result == 0)
+				cpu->cd.arm.flags |= ARM_F_Z;
+			if ((int32_t)result < 0)
+				cpu->cd.arm.flags |= ARM_F_N;
+			if (result & 0x100000000ULL)
+				cpu->cd.arm.flags |= ARM_F_C;
+			if (result & 0x80000000) {
+				if ((tmp64 & 0x80000000) == 0 && (old & 0x80000000) == 0)
+					cpu->cd.arm.flags |= ARM_F_V;
+			} else {
+				if ((tmp64 & 0x80000000) != 0 && (old & 0x80000000) != 0)
+					cpu->cd.arm.flags |= ARM_F_V;
+			}
+		}
+		break;
+
 	case 0x4:
 		switch (op10) {
 		case 0:
 			// "DPIs":
 			switch ((iw >> 6) & 15) {
+			case 0:// ands
+				cpu->cd.arm.r[rd] &= cpu->cd.arm.r[r3];
+				cpu->cd.arm.flags &= ~(ARM_F_Z | ARM_F_N);
+				if (cpu->cd.arm.r[rd] == 0)
+					cpu->cd.arm.flags |= ARM_F_Z;
+				if ((int32_t)cpu->cd.arm.r[rd] < 0)
+					cpu->cd.arm.flags |= ARM_F_N;
+				break;
+			case 1:// eors
+				cpu->cd.arm.r[rd] ^= cpu->cd.arm.r[r3];
+				cpu->cd.arm.flags &= ~(ARM_F_Z | ARM_F_N);
+				if (cpu->cd.arm.r[rd] == 0)
+					cpu->cd.arm.flags |= ARM_F_Z;
+				if ((int32_t)cpu->cd.arm.r[rd] < 0)
+					cpu->cd.arm.flags |= ARM_F_N;
+				break;
+			case 7:// rors
+				{
+					int amount = cpu->cd.arm.r[r3] & 0xff;
+					for (int i = 0; i < (amount & 31); ++i) {
+						int c = cpu->cd.arm.r[rd] & 1;
+						cpu->cd.arm.r[rd] >>= 1;
+						cpu->cd.arm.flags &= ~ARM_F_C;
+						if (c) {
+							cpu->cd.arm.flags |= ARM_F_C;
+							cpu->cd.arm.r[rd] |= 0x80000000;
+						}
+					}
+					if (cpu->cd.arm.r[rd] == 0)
+						cpu->cd.arm.flags |= ARM_F_Z;
+					if ((int32_t)cpu->cd.arm.r[rd] < 0)
+						cpu->cd.arm.flags |= ARM_F_N;
+				}
+				break;
+			case 8:// tst
+				tmp = cpu->cd.arm.r[rd] & cpu->cd.arm.r[r3];
+				cpu->cd.arm.flags &= ~(ARM_F_Z | ARM_F_N);
+				if (tmp == 0)
+					cpu->cd.arm.flags |= ARM_F_Z;
+				if ((int32_t)tmp < 0)
+					cpu->cd.arm.flags |= ARM_F_N;
+				break;
 			case 10:	// cmp
 				{
 					uint64_t old = cpu->cd.arm.r[rd];
-					uint64_t tmp64 = -cpu->cd.arm.r[r3];
+					uint64_t tmp64 = (uint32_t) (-cpu->cd.arm.r[r3]);
 					uint64_t result = old + tmp64;
 					cpu->cd.arm.flags &= ~(ARM_F_Z | ARM_F_N | ARM_F_C | ARM_F_V);
 					if (result == 0)
@@ -1243,6 +1315,22 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 							cpu->cd.arm.flags |= ARM_F_V;
 					}
 				}
+				break;
+			case 12:// orrs
+				cpu->cd.arm.r[rd] |= cpu->cd.arm.r[r3];
+				cpu->cd.arm.flags &= ~(ARM_F_Z | ARM_F_N);
+				if (cpu->cd.arm.r[rd] == 0)
+					cpu->cd.arm.flags |= ARM_F_Z;
+				if ((int32_t)cpu->cd.arm.r[rd] < 0)
+					cpu->cd.arm.flags |= ARM_F_N;
+				break;
+			case 13:// muls
+				cpu->cd.arm.r[rd] *= cpu->cd.arm.r[r3];
+				cpu->cd.arm.flags &= ~(ARM_F_Z | ARM_F_N);
+				if (cpu->cd.arm.r[rd] == 0)
+					cpu->cd.arm.flags |= ARM_F_Z;
+				if ((int32_t)cpu->cd.arm.r[rd] < 0)
+					cpu->cd.arm.flags |= ARM_F_N;
 				break;
 			default:
 				debug("TODO: unimplemented DPI %i at pc 0x%08x\n", (iw >> 6) & 15, (int)cpu->pc);
@@ -1264,7 +1352,7 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 						cpu->running = 0;
 						return 0;
 					}
-					cpu->cd.arm.r[rd] += 8;
+					cpu->cd.arm.r[rd] = cpu->pc + 8;
 				}
 				if (rd == ARM_PC) {
 					cpu->pc = cpu->cd.arm.r[rd];
@@ -1376,8 +1464,8 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 	case 0x9:
 		// sp-relative load or store
 		if (iw & 0x0800) {
-			tmp = cpu->cd.arm.r[ARM_SP] + (iw & 0xff) * 4;
-			if (!cpu->memory_rw(cpu, cpu->mem, tmp, &word[0],
+			addr = (cpu->cd.arm.r[ARM_SP] + (iw & 0xff) * 4) & ~3;
+			if (!cpu->memory_rw(cpu, cpu->mem, addr, &word[0],
 					sizeof(word), MEM_READ, CACHE_DATA)) {
 				fatal("arm_cpu_interpret_thumb_SLOW(): could not load sp-relative word\n");
 				cpu->running = 0;
@@ -1391,9 +1479,22 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 
 			cpu->cd.arm.r[rd8] = tmp;
 		} else {
-			debug("TODO: sp-relative store at pc 0x%08x\n", (int)cpu->pc);
-			cpu->running = 0;
-			return 0;
+			tmp = cpu->cd.arm.r[rd8];
+			if (cpu->byte_order == EMUL_LITTLE_ENDIAN) {
+				for (size_t i = 0; i < sizeof(word); ++i)
+					word[i] = (tmp >> (8*i));
+			} else {
+				for (size_t i = 0; i < sizeof(word); ++i)
+					word[sizeof(word) - 1 - i] = (tmp >> (8*i));
+			}
+
+			addr = (cpu->cd.arm.r[ARM_SP] + (iw & 0xff) * 4) & ~3;
+			if (!cpu->memory_rw(cpu, cpu->mem, addr, &word[0],
+					sizeof(word), MEM_WRITE, CACHE_DATA)) {
+				fatal("arm_cpu_interpret_thumb_SLOW(): could not store sp-relative word\n");
+				cpu->running = 0;
+				return 0;
+			}
 		}
 		break;
 
@@ -1422,6 +1523,9 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 				cpu->cd.arm.cpsr |= ARM_FLAG_T;
 			else
 				cpu->cd.arm.cpsr &= ~ARM_FLAG_T;
+			// If not popping pc, make sure to move to the next instruction:
+			if (!(iw & 0x100))
+				cpu->pc += sizeof(uint16_t);
 			return 1;
 		default:
 			debug("TODO: unimplemented opcode 0x%x,%i at pc 0x%08x\n", main_opcode, op11_8, (int)cpu->pc);
@@ -1509,8 +1613,11 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 			}
 
 			cpu->cd.arm.r[ARM_LR] = cpu->pc + 2;
-			cpu->pc = addr - sizeof(uint16_t);
+			cpu->pc = addr;
+			if (cpu->machine->show_trace_tree)
+				cpu_functioncall_trace(cpu, cpu->pc);
 			cpu->cd.arm.cpsr &= ~ARM_FLAG_T;
+			return 1;
 		} else {
 			// b
 			tmp = (iw & 0x7ff) << 1;
@@ -1527,6 +1634,8 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 			addr = (cpu->pc + 2 + (cpu->cd.arm.tmp_branch + ((iw & 0x7ff) << 1)));
 			cpu->cd.arm.r[ARM_LR] = cpu->pc + 2;
 			cpu->pc = addr;
+			if (cpu->machine->show_trace_tree)
+				cpu_functioncall_trace(cpu, cpu->pc);
 			return 1;
 		} else {
 			// "branch prefix".
