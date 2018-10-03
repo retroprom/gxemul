@@ -1134,9 +1134,9 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 			tmp >>= 31;
 		}
 		cpu->cd.arm.flags &= ~(ARM_F_Z | ARM_F_N);
-		if (cpu->cd.arm.r[rd8] == 0)
+		if (cpu->cd.arm.r[rd] == 0)
 			cpu->cd.arm.flags |= ARM_F_Z;
-		if ((int32_t)cpu->cd.arm.r[rd8] < 0)
+		if ((int32_t)cpu->cd.arm.r[rd] < 0)
 			cpu->cd.arm.flags |= ARM_F_N;
 		if (imm6 != 0) {
 			// tmp is "last bit shifted out"
@@ -1281,6 +1281,16 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 							cpu->cd.arm.r[rd] |= 0x80000000;
 						}
 					}
+					
+					// Rotating right by e.g. 32 means that the C flag
+					// should be updated, but the register isn't
+					// really rotated.
+					if (amount != 0 && (amount & 31) == 0) {
+						cpu->cd.arm.flags &= ~ARM_F_C;
+						if (cpu->cd.arm.r[rd] & 0x80000000)
+							cpu->cd.arm.flags |= ARM_F_C;
+					}
+					
 					if (cpu->cd.arm.r[rd] == 0)
 						cpu->cd.arm.flags |= ARM_F_Z;
 					if ((int32_t)cpu->cd.arm.r[rd] < 0)
