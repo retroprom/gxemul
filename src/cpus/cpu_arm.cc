@@ -1100,6 +1100,8 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
 	else
 		iw = ib[1] + (ib[0]<<8);
 
+	cpu->ninstrs ++;
+
 	int main_opcode = (iw >> 12) & 15;
 	int condition_code = (iw >> 8) & 15;
 	int op10 = (iw >> 10) & 3;
