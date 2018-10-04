@@ -766,7 +766,7 @@ int arm_cpu_disassemble_instr_thumb(struct cpu *cpu, unsigned char *ib,
 	debug("%04x    \t", (int)iw);
 
 	int main_opcode = (iw >> 12) & 15;
-	int rn = (iw >> 6) & 7;
+	int r6 = (iw >> 6) & 7;
 	int rs_rb = (iw >> 3) & 7;
 	int rd = iw & 7;
 	int offset5 = (iw >> 6) & 0x1f;
@@ -805,7 +805,7 @@ int arm_cpu_disassemble_instr_thumb(struct cpu *cpu, unsigned char *ib,
 				rd,
 				rs_rb,
 				addsub_immediate ? "#" : "r",
-				rn);
+				r6);
 		}
 		break;
 
@@ -910,6 +910,24 @@ int arm_cpu_disassemble_instr_thumb(struct cpu *cpu, unsigned char *ib,
 		}
 		break;
 
+	case 0x5:
+		// Load/Store with register offset.
+		switch ((iw >> 9) & 7) {
+		case 0:	debug("str"); break;
+		case 1:	debug("strh"); break;
+		case 2:	debug("strb"); break;
+		case 3:	debug("ldrsb"); break;
+		case 4:	debug("ldr"); break;
+		case 5:	debug("ldrh"); break;
+		case 6:	debug("ldrb"); break;
+		case 7:	debug("ldrsh"); break;
+		}
+		debug("\t%s,[%s,%s]\n",
+			arm_regname[rd],
+			arm_regname[rs_rb],
+			arm_regname[r6]);
+		break;
+		
 	case 0x6:
 	case 0x7:
 		// Load/Store with immediate offset.
