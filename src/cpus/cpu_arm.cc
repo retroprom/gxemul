@@ -32,6 +32,9 @@
  *
  *  Another one, with details about THUMB:
  *  http://engold.ui.ac.ir/~nikmehr/Appendix_B2.pdf
+ *
+ *  and yet another one, with descriptions about THUMB semantics:
+ *  https://web.eecs.umich.edu/~prabal/teaching/eecs373-f10/readings/ARM_QRC0006_UAL16.pdf
  */
 
 #include <stdio.h>
@@ -953,6 +956,14 @@ int arm_cpu_disassemble_instr_thumb(struct cpu *cpu, unsigned char *ib,
 		debug("%s\t%s,[sp,#%i]\n",
 			l_bit ? "ldr" : "str",
 			arm_regname[rd8],
+			4 * (iw & 0xff));
+		break;
+
+	case 0xa:
+		// add rx, sp or pc plus imm
+		debug("add\t%s,%s,#%i\n",
+			arm_regname[rd8],
+			iw & 0x0800 ? "sp" : "pc",
 			4 * (iw & 0xff));
 		break;
 
