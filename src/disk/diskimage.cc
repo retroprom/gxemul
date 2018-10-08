@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2011  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2018  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -769,6 +769,7 @@ int diskimage_add(struct machine *machine, char *fname)
 	/*  ... but some machines use SCSI by default:  */
 	if (machine->machine_type == MACHINE_PMAX ||
 	    machine->machine_type == MACHINE_ARC ||
+	    machine->machine_type == MACHINE_SGI ||
 	    machine->machine_type == MACHINE_MVME88K)
 		d->type = DISKIMAGE_SCSI;
 
