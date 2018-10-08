@@ -485,9 +485,9 @@ j = 0;
 		 *  mcclock0 at mace0 offset 0x3a0000 intrmask 0x0
 		 *  macepci0 at mace0 offset 0x80000 intr 7 intrmask 0x0: rev 1
 		 *
-		 *  intr 4 = MACE_PERIPH_SERIAL
-		 *  intr 5 = MACE_PERIPH_MISC
-		 *  intr 7 = MACE_PCI_BRIDGE
+		 *  intr 4 = CRIME_INT_PERIPH_SERIAL
+		 *  intr 5 = CRIME_INT_PERIPH_MISC
+		 *  intr 7 = CRIME_INT_PCI_BRIDGE
 		 */
 
 		snprintf(eaddr_string, ETHERNET_STRING_MAXLEN,
@@ -496,7 +496,7 @@ j = 0;
 		    macaddr[3], macaddr[4], macaddr[5]);
 
 		snprintf(tmpstr, sizeof(tmpstr), "%s.cpu[%i].2.crime.0x%x",
-		    machine->path, machine->bootstrap_cpu, MACE_ETHERNET);
+		    machine->path, machine->bootstrap_cpu, CRIME_INT_ETHERNET);
 		dev_sgi_mec_init(machine, mem, 0x1f280000,
 		    tmpstr, macaddr);
 
@@ -506,13 +506,13 @@ j = 0;
 		    "ns16550 irq=%s.cpu[%i].2.crime.0x%x.mace.%i addr="
 		    "0x1f390000 addr_mult=0x100 in_use=%i name2=tty0",
 		    machine->path, machine->bootstrap_cpu,
-		    MACE_PERIPH_SERIAL, 20, machine->x11_md.in_use? 0 : 1);
+		    CRIME_INT_PERIPH_SERIAL, 20, machine->x11_md.in_use? 0 : 1);
 		j = (size_t)device_add(machine, tmpstr);
 		snprintf(tmpstr, sizeof(tmpstr),
 		    "ns16550 irq=%s.cpu[%i].2.crime.0x%x.mace.%i addr="
 		    "0x1f398000 addr_mult=0x100 in_use=%i name2=tty1",
 		    machine->path, machine->bootstrap_cpu,
-		    MACE_PERIPH_SERIAL, 26, 0);
+		    CRIME_INT_PERIPH_SERIAL, 26, 0);
 		device_add(machine, tmpstr);
 
 		machine->main_console_handle = j;
@@ -525,12 +525,12 @@ j = 0;
 			snprintf(tmpstr1, sizeof(tmpstr1),
 			    "%s.cpu[%i].2.crime.0x%x.mace.%i",
 			    machine->path, machine->bootstrap_cpu,
-			    MACE_PERIPH_MISC, 9);
+			    CRIME_INT_PERIPH_MISC, 9);
 
 			snprintf(tmpstr2, sizeof(tmpstr2),
 			    "%s.cpu[%i].2.crime.0x%x.mace.%i",
 			    machine->path, machine->bootstrap_cpu,
-			    MACE_PERIPH_MISC, 11);
+			    CRIME_INT_PERIPH_MISC, 11);
 
 			i = dev_pckbc_init(machine, mem, 0x1f320000,
 			    PCKBC_8242, tmpstr1,
@@ -543,7 +543,7 @@ j = 0;
 		snprintf(tmpstr, sizeof(tmpstr),
 		    "%s.cpu[%i].2.crime.0x%x.mace.%i",
 		    machine->path, machine->bootstrap_cpu,
-		    MACE_PERIPH_MISC, 8);
+		    CRIME_INT_PERIPH_MISC, 8);
 		dev_mc146818_init(machine, mem, 0x1f3a0000, tmpstr,
 		    MC146818_SGI, 0x40);  /*  mcclock0  */
 
@@ -565,7 +565,7 @@ j = 0;
 
 		snprintf(tmpstr, sizeof(tmpstr),
 		    "%s.cpu[%i].2.crime.0x%x", machine->path,
-		    machine->bootstrap_cpu, MACE_PCI_BRIDGE);
+		    machine->bootstrap_cpu, CRIME_INT_PCI_BRIDGE);
 		pci_data = dev_macepci_init(machine, mem, 0x1f080000,
 		    tmpstr);		/*  macepci0  */
 		/*  bus_pci_add(machine, pci_data, mem, 0, 0, 0,

@@ -28,11 +28,17 @@
  *  COMMENT: SGI IP32 stuff (CRIME, MACE, MACEPCI, mec, ust, mte)
  *
  *	o)  CRIME
- *	o)  MACE
+ *	o)  MACE (Multimedia, Audio and Communications Engine)
  *	o)  MACE PCI bus
  *	o)  mec (ethernet)
  *	o)  ust (unknown device)
  *	o)  mte (memory transfer engine? details unknown)
+ *	o)  TODO: VICE (Video and Image Compression Engine)
+ *
+ *  The SGI GBE (Graphics Back End) is in dev_sgi_gbe.cc.
+ *
+ *  Some info here: http://bukosek.si/hardware/collection/sgi-o2.html
+ *  but mostly based on how NetBSD, OpenBSD, and Linux use the hardware.
  */
 
 #include <stdio.h>
@@ -51,6 +57,7 @@
 #include "net.h"
 
 #include "thirdparty/crimereg.h"
+#include "thirdparty/crmfbreg.h"
 #include "thirdparty/if_mecreg.h"
 #include "thirdparty/sgi_macereg.h"
 
@@ -182,10 +189,10 @@ DEVICE_ACCESS(crime)
 	 *  When the bank control registers contain the same value as the
 	 *  previous one, that bank is not valid. (?)
 	 */
-	d->reg[CRM_MEM_BANK_CTRL0 + 6] = 0;  /* lowbit set=128MB, clear=32MB */
-	d->reg[CRM_MEM_BANK_CTRL0 + 7] = 0;  /* address * 32MB  */
-	d->reg[CRM_MEM_BANK_CTRL1 + 6] = 0;  /* lowbit set=128MB, clear=32MB */
-	d->reg[CRM_MEM_BANK_CTRL1 + 7] = 1;  /* address * 32MB  */
+	d->reg[CRIME_MEM_BANK_CTRL0 + 6] = 0;  /* lowbit set=128MB, clear=32MB */
+	d->reg[CRIME_MEM_BANK_CTRL0 + 7] = 0;  /* address * 32MB  */
+	d->reg[CRIME_MEM_BANK_CTRL1 + 6] = 0;  /* lowbit set=128MB, clear=32MB */
+	d->reg[CRIME_MEM_BANK_CTRL1 + 7] = 1;  /* address * 32MB  */
 
 	if (relative_addr >= CRIME_TIME && relative_addr < CRIME_TIME+8) {
 		if (writeflag == MEM_READ)
@@ -448,15 +455,15 @@ DEVINIT(mace)
 	memset(d, 0, sizeof(struct mace_data));
 
 	snprintf(tmpstr, sizeof(tmpstr), "%s.0x%x",
-	    devinit->interrupt_path, MACE_PERIPH_SERIAL);
+	    devinit->interrupt_path, CRIME_INT_PERIPH_SERIAL);
 	INTERRUPT_CONNECT(tmpstr, d->irq_periph);
 
 	snprintf(tmpstr, sizeof(tmpstr), "%s.0x%x",
-	    devinit->interrupt_path, MACE_PERIPH_SERIAL);
+	    devinit->interrupt_path, CRIME_INT_PERIPH_SERIAL);
 	INTERRUPT_CONNECT(tmpstr, d->irq_misc);
 
 	/*
-	 *  For Mace interrupts MACE_PERIPH_SERIAL and MACE_PERIPH_MISC,
+	 *  For Mace interrupts PERIPH_SERIAL and PERIPH_MISC,
 	 *  register 32 mace interrupts each.
 	 */
 	/*  Register 32 crime interrupts (hexadecimal names):  */
@@ -464,7 +471,7 @@ DEVINIT(mace)
 		struct interrupt templ;
 		char name[400];
 		snprintf(name, sizeof(name), "%s.0x%x.mace.%i",
-		    devinit->interrupt_path, MACE_PERIPH_SERIAL, i);
+		    devinit->interrupt_path, CRIME_INT_PERIPH_SERIAL, i);
 		memset(&templ, 0, sizeof(templ));
                 templ.line = i;
 		templ.name = name;
@@ -474,7 +481,7 @@ DEVINIT(mace)
 		interrupt_handler_register(&templ);
 
 		snprintf(name, sizeof(name), "%s.0x%x.mace.%i",
-		    devinit->interrupt_path, MACE_PERIPH_MISC, i);
+		    devinit->interrupt_path, CRIME_INT_PERIPH_MISC, i);
 		memset(&templ, 0, sizeof(templ));
                 templ.line = i;
 		templ.name = name;
@@ -1184,7 +1191,8 @@ void dev_sgi_ust_init(struct memory *mem, uint64_t baseaddr)
 
 
 /*
- *  SGI "mte". This device seems to be an accelerator for copying/clearing
+ *  SGI "mte". NetBSD sources describes it as a "memory transfer engine".
+ *  This device seems to be an accelerator for copying/clearing
  *  memory. Used by (at least) the SGI O2 PROM.
  *
  *  Actually, it seems to be used for graphics output as well. (?)
@@ -1261,8 +1269,11 @@ DEVICE_ACCESS(sgi_mte)
 	case 0x3038:
 		break;
 
+	case CRIME_DE_STATUS:	// 0x4000
+		odata = CRIME_DE_IDLE;
+		break;
+
 	/*  Unknown, but no warning:  */
-	case 0x4000:
 	case 0x3018:
 	case 0x3008:
 	case 0x1700:

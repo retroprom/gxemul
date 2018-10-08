@@ -80,7 +80,7 @@ dev_rtc.cc  A generic Real-Time Clock device, for the test machines
 dev_rtl8139c.cc  Realtek 8139 ethernet controller
 dev_scc.cc  Serial controller used in some DECsystem and SGI machines
 dev_sfb.cc  SFB TURBOchannel framebuffer (graphics card)
-dev_sgi_gbe.cc  SGI "gbe", graphics controller + framebuffer
+dev_sgi_gbe.cc  SGI "Graphics Back End", graphics controller + framebuffer
 dev_sgi_ip19.cc  SGI IP19 (and IP25) stuff
 dev_sgi_ip20.cc  SGI IP20 stuff
 dev_sgi_ip22.cc  SGI IP22 stuff

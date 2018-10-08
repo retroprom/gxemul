@@ -25,9 +25,9 @@
  *  SUCH DAMAGE.
  *   
  *
- *  COMMENT: SGI "gbe", graphics controller + framebuffer
+ *  COMMENT: SGI "Graphics Back End", graphics controller + framebuffer
  *
- *  Loosely inspired by Linux code.
+ *  Guesswork, based on how Linux and NetBSD use the graphics on the SGI O2.
  */
 
 #include <stdio.h>
@@ -40,6 +40,8 @@
 #include "machine.h"
 #include "memory.h"
 #include "misc.h"
+
+#include "thirdparty/crmfbreg.h"
 
 
 /*  Let's hope nothing is there already...  */
@@ -219,26 +221,26 @@ DEVICE_ACCESS(sgi_gbe)
 
 	switch (relative_addr) {
 
-	case 0x0:
+	case CRMFB_CTRLSTAT:	// 0x0
 		if (writeflag == MEM_WRITE)
 			d->control = idata;
 		else
 			odata = d->control;
 		break;
 
-	case 0x4:
+	case CRMFB_DOTCLOCK:	// 0x4
 		if (writeflag == MEM_WRITE)
 			d->dotclock = idata;
 		else
 			odata = d->dotclock;
 		break;
 
-	case 0x8:	/*  i2c?  */
+	case CRMFB_I2C_VGA:	// 0x8
 		/*
 		 *  "CRT I2C control".
 		 *
 		 *  I'm not sure what this does. It isn't really commented
-		 *  in the linux sources.  The IP32 prom writes the values
+		 *  in the Linux sources.  The IP32 PROM writes the values
 		 *  0x03, 0x01, and then 0x00 to this address, and then
 		 *  reads back a value.
 		 */
@@ -250,7 +252,7 @@ DEVICE_ACCESS(sgi_gbe)
 		}
 		break;
 
-	case 0x10:	/*  i2cfp, flat panel control  */
+	case CRMFB_I2C_FP:	// 0x10, i2cfp, flat panel control
 		if (writeflag == MEM_WRITE) {
 			d->i2cfp = idata;
 		} else {
@@ -259,7 +261,7 @@ DEVICE_ACCESS(sgi_gbe)
 		}
 		break;
 
-	case 0x10000:
+	case CRMFB_VT_XY:	// 0x10000
 		if (writeflag == MEM_WRITE)
 			d->freeze = idata & ((uint32_t)1<<31)? 1 : 0;
 		else {
@@ -283,7 +285,7 @@ DEVICE_ACCESS(sgi_gbe)
 		}
 		break;
 
-	case 0x10004:		/*  vt_xymax, according to Linux  */
+	case CRMFB_VT_XYMAX:	// 0x10004, vt_xymax, according to Linux & NetBSD
 		odata = ((d->yres-1) << 12) + d->xres-1;
 		/*  ... 12 bits maxy, 12 bits maxx.  */
 		break;
@@ -296,6 +298,14 @@ DEVICE_ACCESS(sgi_gbe)
 	case 0x10038:		/*  vt_vpixen, according to Linux  */
 		odata = (0 << 12) + d->yres-1;
 		/*  ... 12 bits on, 12 bits off.  */
+		break;
+
+	case CRMFB_VT_HCMAP:	// 0x1003c
+		odata = d->xres << CRMFB_VT_HCMAP_ON_SHIFT;
+		break;
+
+	case CRMFB_VT_VCMAP:	// 0x10040
+		odata = d->yres << CRMFB_VT_VCMAP_ON_SHIFT;
 		break;
 
 	case 0x20004:
