@@ -61,6 +61,8 @@
 #include "thirdparty/if_mecreg.h"
 #include "thirdparty/sgi_macereg.h"
 
+#define debug fatal
+
 
 #define	CRIME_TICKSHIFT			14
 #define	CRIME_SPEED_MUL_FACTOR		1
@@ -71,7 +73,7 @@ struct macepci_data {
 	uint32_t	reg[DEV_MACEPCI_LENGTH / 4];
 };
 
-#define	DEV_CRIME_LENGTH		0x1000
+#define	DEV_CRIME_LENGTH		0x280
 struct crime_data {
 	unsigned char		reg[DEV_CRIME_LENGTH];
 	struct interrupt	irq;

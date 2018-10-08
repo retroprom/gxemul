@@ -47,8 +47,8 @@
 /*  Let's hope nothing is there already...  */
 #define	FAKE_GBE_FB_ADDRESS	0x38000000
 
-#define	GBE_DEBUG
-/*  #define debug fatal  */
+// #define	GBE_DEBUG
+// #define debug fatal
 
 #define MTE_TEST
 
@@ -261,6 +261,10 @@ DEVICE_ACCESS(sgi_gbe)
 		}
 		break;
 
+	case CRMFB_DEVICE_ID:	// 0x14
+		odata = CRMFB_DEVICE_ID_DEF;
+		break;
+
 	case CRMFB_VT_XY:	// 0x10000
 		if (writeflag == MEM_WRITE)
 			d->freeze = idata & ((uint32_t)1<<31)? 1 : 0;
@@ -290,12 +294,33 @@ DEVICE_ACCESS(sgi_gbe)
 		/*  ... 12 bits maxy, 12 bits maxx.  */
 		break;
 
-	case 0x10034:		/*  vt_hpixen, according to Linux  */
+	case CRMFB_VT_VSYNC:	// 0x10008
+	case CRMFB_VT_HSYNC:	// 0x1000c
+	case CRMFB_VT_VBLANK:	// 0x10010
+	case CRMFB_VT_HBLANK:	// 0x10014
+		// TODO
+		break;
+
+	case CRMFB_VT_FLAGS:	// 0x10018
+		// OpenBSD/sgi writes to this register.
+		break;
+
+	case CRMFB_VT_FRAMELOCK:	// 0x1001c
+		// TODO.
+		break;
+
+	case 0x10028:	// 0x10028
+	case 0x1002c:	// 0x1002c
+	case 0x10030:	// 0x10030
+		// TODO: Unknown, written to by the PROM?
+		break;
+
+	case CRMFB_VT_HPIX_EN:	// 0x10034, vt_hpixen, according to Linux
 		odata = (0 << 12) + d->xres-1;
 		/*  ... 12 bits on, 12 bits off.  */
 		break;
 
-	case 0x10038:		/*  vt_vpixen, according to Linux  */
+	case CRMFB_VT_VPIX_EN:	// 0x10038, vt_vpixen, according to Linux
 		odata = (0 << 12) + d->yres-1;
 		/*  ... 12 bits on, 12 bits off.  */
 		break;
@@ -308,7 +333,17 @@ DEVICE_ACCESS(sgi_gbe)
 		odata = d->yres << CRMFB_VT_VCMAP_ON_SHIFT;
 		break;
 
-	case 0x20004:
+	case CRMFB_VT_DID_STARTXY:	// 0x10044
+	case CRMFB_VT_CRS_STARTXY:	// 0x10048
+	case CRMFB_VT_VC_STARTXY:	// 0x1004c
+		// TODO
+		break;
+		
+	case CRMFB_OVR_WIDTH_TILE:	// 0x20000
+		// TODO
+		break;
+
+	case CRMFB_OVR_TILE_PTR:// 0x20004
 		/*
 		 *  Unknown. Hacks to get the IP32 PROM and IRIX to
 		 *  get slightly further than without these values.
@@ -327,12 +362,17 @@ DEVICE_ACCESS(sgi_gbe)
 			odata = 0x3bf6a0;
 		break;
 
-	case 0x30000:	/*  normal plane ctrl 0  */
+	case CRMFB_OVR_CONTROL:	// 0x20008
+		// TODO.
+		break;
+
+	case CRMFB_FRM_TILESIZE:	// 0x30000:
+		/*  normal plane ctrl 0  */
 		/*  bit 15 = fifo reset, 14..13 = depth, 
 		    12..5 = tile width, 4..0 = rhs  */
 		if (writeflag == MEM_WRITE) {
 			d->plane0ctrl = idata;
-			d->bitdepth = 8 << ((d->plane0ctrl >> 13) & 3);
+			d->bitdepth = 8 << ((d->plane0ctrl >> CRMFB_FRM_TILESIZE_DEPTH_SHIFT) & 3);
 			debug("[ sgi_gbe: setting color depth to %i bits ]\n",
 			    d->bitdepth);
 			if (d->bitdepth != 8)
@@ -342,6 +382,10 @@ DEVICE_ACCESS(sgi_gbe)
 			odata = d->plane0ctrl;
 		break;
 
+	case CRMFB_FRM_PIXSIZE:
+		// TODO.
+		break;
+		
 	case 0x30008:	/*  normal plane ctrl 2  */
 		odata = random();	/*  IP32 prom test hack. TODO  */
 		/*  IRIX wants 0x20, it seems.  */
@@ -349,7 +393,8 @@ DEVICE_ACCESS(sgi_gbe)
 			odata = 0x20;
 		break;
 
-	case 0x3000c:	/*  normal plane ctrl 3  */
+	case CRMFB_FRM_CONTROL:	// 0x3000c
+		/*  normal plane ctrl 3  */
 		/*
 		 *  Writes to 3000c should be readable back at 30008?
 		 *  At least bit 0 (dma) ctrl 3.
@@ -366,11 +411,24 @@ DEVICE_ACCESS(sgi_gbe)
 			odata = d->frm_control;
 		break;
 
-	case 0x40000:
+	case CRMFB_DID_PTR:	// 0x40000
 		odata = random();	/*  IP32 prom test hack. TODO  */
 		/*  IRIX wants 0x20, it seems.  */
 		if (random() & 1)
 			odata = 0x20;
+		break;
+
+	case CRMFB_DID_CONTROL:	// 0x40004
+		// TODO
+		break;
+
+	case CRMFB_CMAP_FIFO:		// 0x58000
+	case CRMFB_CURSOR_POS:		// 0x70000
+	case CRMFB_CURSOR_CONTROL:	// 0x70004
+	case CRMFB_CURSOR_CMAP0:	// 0x70008
+	case CRMFB_CURSOR_CMAP1:	// 0x7000c
+	case CRMFB_CURSOR_CMAP2:	// 0x70010
+		// TODO
 		break;
 
 	/*
@@ -387,14 +445,14 @@ DEVICE_ACCESS(sgi_gbe)
 	 */
 
 	default:
-		/*  Gamma correction:  */
-		if (relative_addr >= 0x60000 && relative_addr <= 0x603ff) {
-			/*  ignore gamma correction for now  */
+		/*  WID at 0x48000 .. 0x48000 + 4*31:  */
+		if (relative_addr >= CRMFB_WID && relative_addr <= CRMFB_WID + 4 * 31) {
+			/*  ignore WID for now  */
 			break;
 		}
 
-		/*  RGB Palette:  */
-		if (relative_addr >= 0x50000 && relative_addr <= 0x503ff) {
+		/*  RGB Palette at 0x50000 .. 0x503ff:  */
+		if (relative_addr >= CRMFB_CMAP && relative_addr <= CRMFB_CMAP + 0x3ff) {
 			int color_nr, r, g, b;
 			int old_r, old_g, old_b;
 
@@ -422,13 +480,29 @@ DEVICE_ACCESS(sgi_gbe)
 			break;
 		}
 
+		/*  Gamma correction at 0x60000 .. 0x603ff:  */
+		if (relative_addr >= CRMFB_GMAP && relative_addr <= CRMFB_GMAP + 0x3ff) {
+			/*  ignore gamma correction for now  */
+			break;
+		}
+
+		/*  Cursor bitmap at 0x78000 ..:  */
+		if (relative_addr >= CRMFB_CURSOR_BITMAP && relative_addr <= CRMFB_CURSOR_BITMAP + 0xff) {
+			/*  ignore gamma correction for now  */
+			break;
+		}
+
+#ifdef GBE_DEBUG
 		if (writeflag == MEM_WRITE)
-			debug("[ sgi_gbe: unimplemented write to address "
+			fatal("[ sgi_gbe: unimplemented write to address "
 			    "0x%llx, data=0x%llx ]\n",
 			    (long long)relative_addr, (long long)idata);
 		else
-			debug("[ sgi_gbe: unimplemented read from address "
+			fatal("[ sgi_gbe: unimplemented read from address "
 			    "0x%llx ]\n", (long long)relative_addr);
+
+		exit(1);
+#endif
 	}
 
 	if (writeflag == MEM_READ) {
@@ -457,7 +531,7 @@ void dev_sgi_gbe_init(struct machine *machine, struct memory *mem,
 	d->bitdepth = 8;
 	d->control = 0x20aa000;		/*  or 0x00000001?  */
 
-	/*  1280x1024 for booting the O2's PROM:  */
+	/*  1280x1024 for booting the O2's PROM, and experiments with NetBSD and OpenBSD:  */
 	d->xres = 1280; d->yres = 1024;
 
 	d->fb_data = dev_fb_init(machine, mem, FAKE_GBE_FB_ADDRESS,
