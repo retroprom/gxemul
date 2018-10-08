@@ -199,6 +199,26 @@ DEVICE_ACCESS(crime)
 		memcpy(data, &d->reg[relative_addr], len);
 
 	switch (relative_addr) {
+
+	case CRIME_REV:		/*  0x000  */
+		/*
+		 *  A contender for winning a prize for the worst hack
+		 *  in history:  the IP32 PROM probes the CPU caches during
+		 *  bootup, but they are not really emulated, so it fails.
+		 *  During the probe, the CRIME_REV is read a lot. By
+		 *  "returning" from the probe function, i.e. jumping to ra,
+		 *  when this register is read the second time, we can
+		 *  skip the probing and thus get further.
+		 */
+		if ((int32_t)cpu->pc == (int32_t)0xbfc0517c ||	// PROM v2.3
+		    (int32_t)cpu->pc == (int32_t)0xbfc051ac) {	// PROM v4.13
+			store_32bit_word(cpu, cpu->pc + 4, 0x03e00008);	// jr ra
+			store_32bit_word(cpu, cpu->pc + 8, 0x00000000); // nop
+		}
+		
+		// TODO. Return actual value from my real O2?
+		break;
+
 	case CRIME_CONTROL:	/*  0x008  */
 		/*  TODO: 64-bit write to CRIME_CONTROL, but some things
 		    (such as NetBSD 1.6.2) write to 0x00c!  */
@@ -480,12 +500,10 @@ DEVICE_ACCESS(macepci)
 {
 	struct macepci_data *d = (struct macepci_data *) extra;
 	uint64_t idata = 0, odata=0;
-	int regnr, res = 1, bus, dev, func, pcireg;
+	int res = 1, bus, dev, func, pcireg;
 
 	if (writeflag == MEM_WRITE)
 		idata = memory_readmax64(cpu, data, len);
-
-	regnr = relative_addr / sizeof(uint32_t);
 
 	/*  Read from/write to the macepci:  */
 	switch (relative_addr) {

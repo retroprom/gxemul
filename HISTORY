@@ -4737,3 +4737,4 @@ Changelog for GXemul:
 20180927	Fixing big-endian ARM loads/stores (except perhaps double-word
 		loads and stores); probably slows everything down a bit.
 20181001	Continuing on the slow THUMB instruction interpretation.
+20181008	Disk images added using -d for SGI modes are now SCSI, not IDE.

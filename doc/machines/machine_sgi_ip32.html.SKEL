@@ -1,9 +1,13 @@
 
 The <tt>sgi_ip32</tt> machine template tries to emulate an
 <a href="http://en.wikipedia.org/wiki/SGI_O2">SGI O2</a> machine,
-for experiments with <a href="http://www.netbsd.org/ports/sgimips/">NetBSD/sgimips</a>,
-<a href="http://openbsd.org/sgi.html">OpenBSD/sgi</a>, Linux for O2,
-and possibly also SGI O2 PROMs and/or IRIX in the future.
+for experiments with primarily
+<a href="http://www.netbsd.org/ports/sgimips/">NetBSD/sgimips</a>,
+<a href="http://openbsd.org/sgi.html">OpenBSD/sgi</a>, and
+<a href="http://ftp.debian.org/debian/dists/Debian8.11/main/installer-mips/current/images/r5k-ip32/">Linux for O2</a>.
+(Emulating the hardware well enough to run the raw PROM image from an SGI O2
+correctly, or to run IRIX, would likely be much harder than getting
+open source operating systems to run.)
 
 
 <p><br>
@@ -70,21 +74,22 @@ systems.
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 <a href="../sgi-o2-real.jpg"><img src="../sgi-o2-real_small.jpg"></a>
 &nbsp;&nbsp;&nbsp;
-<a href="../20050817-sgi-o2-success-7.png"><img src="../20050817-sgi-o2-success-7_small.png"></a>
-&nbsp;&nbsp;&nbsp;
-<a href="../20050817-sgi-o2-success-8.png"><img src="../20050817-sgi-o2-success-8_small.png"></a>
+<a href="../20180910-sgiip32prom-4.13.png">
+<img src="../20180910-sgiip32prom-4.13.png" width=250>
+</a>
 
-<p>The photo on the left is from the real machine. The other two are
-screenshots of the PROM running experimentally in an older version of GXemul
-from 2005, using <tt>-Y2</tt> framebuffer scaledown.
+<p>The photo on the left is from the real machine. The screenshot to the right
+is from the emulator.
 
 <p><font color="#ff0000">
-NOTE: The SGI O2 PROM does some hardware tests during startup that fail in
-GXemul, in particular cache detection. So right now (2018-09-10), it
-can not boot without further intervention.</font>
+NOTE: The SGI O2 PROM does some hardware tests during startup that do not
+work in GXemul, in particular cache detection. So right now,
+there is a hack/workaround which skips cache detection in an ugly way.
+This only works with PROM versions 2.3 and 4.13. For other versions, it
+must be manually skipped.</font>
 
-<p>With a IP32 PROM version 4.13 for example, the cache detection routine
-at 0xbfc05180 must be skipped:
+<p>With a IP32 PROM version 4.13 for example, if the hack is commented out,
+the cache detection routine at 0xbfc05180 must be skipped:
 
 <pre>
 $ <b>gxemul -p 0xffffffffbfc05180 -X -Q -e o2 0xbfc00000:prom-4.13</b>
@@ -96,18 +101,11 @@ pc = ra
 continue
 </pre>
 
-<p>This causes the PROM to output some messages to the serial port.
-Setting the console environment variable to 'g' (for graphics), and
-setting autoload to 'no', and then using the 'init' command to restart the
-emulated machine without leaving the debugger, will bring up the graphical
-boot screen (after performing the above mentioned pc=ra + continue again):
+<p>If the 'console' variable in the PROM's environment variable section
+was set to something starting with 'g', output will be graphical, otherwise
+it will be to serial console.
 
-<p>
-<a href="../20180910-sgiip32prom-4.13.png">
-<img src="../20180910-sgiip32prom-4.13.png" width=250>
-</a>
-
-<p>Note however that many devices do not work. Most importantly, SCSI is not
+<p>Note however that almost nothing works. <b>Most importantly</b>, SCSI is not
 implemented for the SGI O2, so the emulated machine will not be that
 meaningful. Also, the graphics is only <i>barely</i> emulated; when the PROM
 attempts to scroll up, nothing happens.

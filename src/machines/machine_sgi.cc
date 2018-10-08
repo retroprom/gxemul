@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2018  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -571,7 +571,9 @@ j = 0;
 		/*  bus_pci_add(machine, pci_data, mem, 0, 0, 0,
 		    "ne2000");  TODO  */
 
-		/*  TODO: make this nicer  */
+		// ahc0:
+		/*  TODO: Make it possible to add the controller, regardless of
+			the existence of disks!  */
 		if (diskimage_exist(machine, 0, DISKIMAGE_SCSI) ||
 		    diskimage_exist(machine, 1, DISKIMAGE_SCSI) ||
 		    diskimage_exist(machine, 2, DISKIMAGE_SCSI) ||
@@ -582,14 +584,8 @@ j = 0;
 		    diskimage_exist(machine, 7, DISKIMAGE_SCSI))
 			bus_pci_add(machine, pci_data, mem, 0, 1, 0, "ahc");
 
-		/*  TODO: second ahc  */
-		/*  bus_pci_add(machine, pci_data, mem, 0, 2, 0, "ahc");  */
-
-		/*
-		 *  An additional PCI IDE controller, for NetBSD/sgimips
-		 *  experiments:  (Not found in a regular O2.)
-		 */
-		bus_pci_add(machine, pci_data, mem, 0, 3, 0, "symphony_82c105");
+		// ahc1:
+		// bus_pci_add(machine, pci_data, mem, 0, 2, 0, "ahc");
 
 		break;
 
