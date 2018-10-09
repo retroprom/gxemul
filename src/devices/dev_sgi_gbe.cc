@@ -28,6 +28,13 @@
  *  COMMENT: SGI "Graphics Back End", graphics controller + framebuffer
  *
  *  Guesswork, based on how Linux and NetBSD use the graphics on the SGI O2.
+ *  Using NetBSD terminology (from crmfbreg.h):
+ *
+ *	0x15001000	rendering engine
+ *	0x15002000	drawing engine
+ *	0x15003000	memory transfer engine
+ *	0x15004000	status registers for drawing engine
+ *	0x16000000	crm (or gbe) framebuffer control
  */
 
 #include <stdio.h>
@@ -102,7 +109,7 @@ if (cpu != NULL)
 return;
 #endif
 
-	/*  debug("[ sgi_gbe: dev_sgi_gbe_tick() ]\n");  */
+	debug("[ sgi_gbe: dev_sgi_gbe_tick() ]\n");
 
 	tiletable = (d->frm_control & 0xfffffe00);
 	if (tiletable == 0)
@@ -542,4 +549,280 @@ void dev_sgi_gbe_init(struct machine *machine, struct memory *mem,
 	    dev_sgi_gbe_access, d, DM_DEFAULT, NULL);
 	machine_add_tickfunction(machine, dev_sgi_gbe_tick, d, 18);
 }
+
+
+/****************************************************************************/
+
+
+/*
+ *  SGI "mte". NetBSD sources describes it as a "memory transfer engine".
+ *  This device seems to be an accelerator for copying/clearing
+ *  memory. Used by (at least) the SGI O2 PROM.
+ *
+ *  Actually, it seems to be used for graphics output as well. (?)
+ *  The O2's PROM uses it to output graphics.
+ */
+/*  #define debug fatal  */
+/*  #define MTE_DEBUG  */
+#define	ZERO_CHUNK_LEN		4096
+
+struct sgi_mte_data {
+	uint32_t	reg[DEV_SGI_MTE_LENGTH / sizeof(uint32_t)];
+};
+
+
+DEVICE_ACCESS(sgi_mte)
+{
+	struct sgi_mte_data *d = (struct sgi_mte_data *) extra;
+	uint64_t first_addr, last_addr, zerobuflen, fill_addr, fill_len;
+	unsigned char zerobuf[ZERO_CHUNK_LEN];
+	uint64_t idata = 0, odata = 0;
+	int regnr;
+
+	idata = memory_readmax64(cpu, data, len);
+	regnr = relative_addr / sizeof(uint32_t);
+
+	/*
+	 *  Treat all registers as read/write, by default.  Sometimes these
+	 *  are accessed as 32-bit words, sometimes as 64-bit words.
+	 */
+	if (len != 4) {
+		if (writeflag == MEM_WRITE) {
+			d->reg[regnr] = idata >> 32;
+			d->reg[regnr+1] = idata;
+		} else
+			odata = ((uint64_t)d->reg[regnr] << 32) +
+			    d->reg[regnr+1];
+	}
+
+	if (writeflag == MEM_WRITE)
+		d->reg[regnr] = idata;
+	else
+		odata = d->reg[regnr];
+
+#ifdef MTE_DEBUG
+	if (writeflag == MEM_WRITE && relative_addr >= 0x2000 &&
+	    relative_addr < 0x3000)
+		fatal("[ MTE: 0x%08x: 0x%016llx ]\n", (int)relative_addr,
+		    (long long)idata);
+#endif
+
+	/*
+	 *  I've not found any docs about this 'mte' device at all, so this is
+	 *  just a guess. The mte seems to be used for copying and zeroing
+	 *  chunks of memory.
+	 *
+	 *   write to 0x3030, data=0x00000000003da000 ]  <-- first address
+	 *   write to 0x3038, data=0x00000000003f9fff ]  <-- last address
+	 *   write to 0x3018, data=0x0000000000000000 ]  <-- what to fill?
+	 *   write to 0x3008, data=0x00000000ffffffff ]  <-- ?
+	 *   write to 0x3800, data=0x0000000000000011 ]  <-- operation
+	 *						     (0x11 = zerofill)
+	 *
+	 *   write to 0x1700, data=0x80001ea080001ea1  <-- also containing the
+	 *   write to 0x1708, data=0x80001ea280001ea3      address to fill (?)
+	 *   write to 0x1710, data=0x80001ea480001ea5
+	 *  ...
+	 *   write to 0x1770, data=0x80001e9c80001e9d
+	 *   write to 0x1778, data=0x80001e9e80001e9f
+	 */
+	switch (relative_addr) {
+
+	/*  No warnings for these:  */
+	case 0x3030:
+	case 0x3038:
+		break;
+
+	case CRIME_DE_STATUS:	// 0x4000
+		odata = CRIME_DE_IDLE;
+		break;
+
+	/*  Unknown, but no warning:  */
+	case 0x3018:
+	case 0x3008:
+	case 0x1700:
+	case 0x1708:
+	case 0x1710:
+	case 0x1718:
+	case 0x1720:
+	case 0x1728:
+	case 0x1730:
+	case 0x1738:
+	case 0x1740:
+	case 0x1748:
+	case 0x1750:
+	case 0x1758:
+	case 0x1760:
+	case 0x1768:
+	case 0x1770:
+	case 0x1778:
+		break;
+
+	/*  Graphics stuff? No warning:  */
+	case 0x2018:
+	case 0x2060:
+	case 0x2070:
+	case 0x2074:
+	case 0x20c0:
+	case 0x20c4:
+	case 0x20d0:
+	case 0x21b0:
+	case 0x21b8:
+		break;
+
+	/*  Perform graphics operation:  */
+	case CRIME_DE_FLUSH:	// 0x21f8
+		{
+			uint32_t op = d->reg[0x2060 / sizeof(uint32_t)];
+			uint32_t color = d->reg[0x20d0 / sizeof(uint32_t)]&255;
+			uint32_t x1 = (d->reg[0x2070 / sizeof(uint32_t)]
+			    >> 16) & 0xfff;
+			uint32_t y1 = d->reg[0x2070 / sizeof(uint32_t)]& 0xfff;
+			uint32_t x2 = (d->reg[0x2074 / sizeof(uint32_t)]
+			    >> 16) & 0xfff;
+			uint32_t y2 = d->reg[0x2074 / sizeof(uint32_t)]& 0xfff;
+			uint32_t y;
+
+			op >>= 24;
+
+			switch (op) {
+			case 1:	/*  Unknown. Used after drawing bitmaps?  */
+				break;
+			case 3:	/*  Fill:  */
+				if (x2 < x1) {
+					int tmp = x1; x1 = x2; x2 = tmp;
+				}
+				if (y2 < y1) {
+					int tmp = y1; y1 = y2; y2 = tmp;
+				}
+				for (y=y1; y<=y2; y++) {
+					unsigned char buf[1280];
+					int length = x2-x1+1;
+					int addr = (x1 + y*1280);
+					if (length < 1)
+						length = 1;
+					memset(buf, color, length);
+					if (x1 < 1280 && y < 1024)
+						cpu->memory_rw(cpu, cpu->mem,
+						    FAKE_GBE_FB_ADDRESS + addr, buf,
+						    length, MEM_WRITE,
+						    NO_EXCEPTIONS | PHYSICAL);
+				}
+				break;
+
+			default:fatal("\n--- MTE OP %i color 0x%02x: %i,%i - "
+				    "%i,%i\n\n", op, color, x1,y1, x2,y2);
+			}
+		}
+		break;
+
+	case 0x29f0:
+		/*  Pixel output:  */
+		{
+			uint32_t pixeldata = d->reg[0x20c4 / sizeof(uint32_t)];
+			uint32_t color = d->reg[0x20d0 / sizeof(uint32_t)]&255;
+			uint32_t x1 = (d->reg[0x2070 / sizeof(uint32_t)]
+			    >> 16) & 0xfff;
+			uint32_t y1 = d->reg[0x2070 / sizeof(uint32_t)]& 0xfff;
+			uint32_t x2 = (d->reg[0x2074 / sizeof(uint32_t)]
+			    >> 16) & 0xfff;
+			uint32_t y2 = d->reg[0x2074 / sizeof(uint32_t)]& 0xfff;
+			size_t x, y;
+
+			if (x2 < x1) {
+				int tmp = x1; x1 = x2; x2 = tmp;
+			}
+			if (y2 < y1) {
+				int tmp = y1; y1 = y2; y2 = tmp;
+			}
+			if (x2-x1 <= 15)
+				pixeldata <<= 16;
+
+			x=x1; y=y1;
+			while (x <= x2 && y <= y2) {
+				unsigned char buf = color;
+				int addr = x + y*1280;
+				int bit_set = pixeldata & 0x80000000UL;
+				pixeldata <<= 1;
+				if (x < 1280 && y < 1024 && bit_set)
+					cpu->memory_rw(cpu, cpu->mem,
+					    FAKE_GBE_FB_ADDRESS + addr, &buf,1,MEM_WRITE,
+					    NO_EXCEPTIONS | PHYSICAL);
+				x++;
+				if (x > x2) {
+					x = x1;
+					y++;
+				}
+			}
+		}
+		break;
+
+
+	/*  Operations:  */
+	case 0x3800:
+		if (writeflag == MEM_WRITE) {
+			switch (idata) {
+			case 0x11:		/*  zerofill  */
+				first_addr = d->reg[0x3030 / sizeof(uint32_t)];
+				last_addr  = d->reg[0x3038 / sizeof(uint32_t)];
+				zerobuflen = last_addr - first_addr + 1;
+				debug("[ sgi_mte: zerofill: first = 0x%016llx,"
+				    " last = 0x%016llx, length = 0x%llx ]\n",
+				    (long long)first_addr, (long long)
+				    last_addr, (long long)zerobuflen);
+
+				/*  TODO:  is there a better way to
+				           implement this?  */
+				memset(zerobuf, 0, sizeof(zerobuf));
+				fill_addr = first_addr;
+				while (zerobuflen != 0) {
+					if (zerobuflen > sizeof(zerobuf))
+						fill_len = sizeof(zerobuf);
+					else
+						fill_len = zerobuflen;
+					cpu->memory_rw(cpu, mem, fill_addr,
+					    zerobuf, fill_len, MEM_WRITE,
+					    NO_EXCEPTIONS | PHYSICAL);
+					fill_addr += fill_len;
+					zerobuflen -= sizeof(zerobuf);
+				}
+
+				break;
+			default:
+				fatal("[ sgi_mte: UNKNOWN operation "
+				    "0x%x ]\n", idata);
+			}
+		}
+		break;
+	default:
+		if (writeflag == MEM_WRITE)
+			debug("[ sgi_mte: unimplemented write to "
+			    "address 0x%llx, data=0x%016llx ]\n",
+			    (long long)relative_addr, (long long)idata);
+		else
+			debug("[ sgi_mte: unimplemented read from address"
+			    " 0x%llx ]\n", (long long)relative_addr);
+	}
+
+	if (writeflag == MEM_READ)
+		memory_writemax64(cpu, data, len, odata);
+
+	return 1;
+}
+
+
+/*
+ *  dev_sgi_mte_init():
+ */
+void dev_sgi_mte_init(struct memory *mem, uint64_t baseaddr)
+{
+	struct sgi_mte_data *d;
+
+	CHECK_ALLOCATION(d = (struct sgi_mte_data *) malloc(sizeof(struct sgi_mte_data)));
+	memset(d, 0, sizeof(struct sgi_mte_data));
+
+	memory_device_register(mem, "sgi_mte", baseaddr, DEV_SGI_MTE_LENGTH,
+	    dev_sgi_mte_access, (void *)d, DM_DEFAULT, NULL);
+}
+
 
