@@ -858,8 +858,8 @@ if (x&1)
 				odata |= 0x10;
 			}
 
-			debug("[ pckbc: read from port %i, PS2_STATUS: "
-			    "0x%llx ]\n", port_nr, (long long)odata);
+			//debug("[ pckbc: read from port %i, PS2_STATUS: "
+			//    "0x%llx ]\n", port_nr, (long long)odata);
 		} else {
 			debug("[ pckbc: write to port %i, PS2_STATUS: "
 			    "0x%llx ]\n", port_nr, (long long)idata);
