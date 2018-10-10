@@ -601,25 +601,6 @@ DEVICE_ACCESS(sgi_re)
 
 	switch (relative_addr) {
 
-	/*  Unknown, but no warning:  */
-	case 0x1700:
-	case 0x1708:
-	case 0x1710:
-	case 0x1718:
-	case 0x1720:
-	case 0x1728:
-	case 0x1730:
-	case 0x1738:
-	case 0x1740:
-	case 0x1748:
-	case 0x1750:
-	case 0x1758:
-	case 0x1760:
-	case 0x1768:
-	case 0x1770:
-	case 0x1778:
-		break;
-
 	default:
 		if (writeflag == MEM_WRITE)
 			debug("[ sgi_re: unimplemented write to "
@@ -693,32 +674,62 @@ DEVICE_ACCESS(sgi_de)
 
 	switch (relative_addr) {
 
+	case CRIME_DE_DRAWMODE:
+		debug("[ sgi_de: %s CRIME_DE_DRAWMODE: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		break;
+
 	case CRIME_DE_PRIMITIVE:
-		debug("[ sgi_mte: %s CRIME_DE_PRIMITIVE: 0x%016llx ]\n",
+		debug("[ sgi_de: %s CRIME_DE_PRIMITIVE: 0x%016llx ]\n",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		break;
 
 	case CRIME_DE_X_VERTEX_0:
-		debug("[ sgi_mte: %s CRIME_DE_X_VERTEX_0: 0x%016llx ]\n",
+		debug("[ sgi_de: %s CRIME_DE_X_VERTEX_0: 0x%016llx ]\n",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		break;
 
 	case CRIME_DE_X_VERTEX_1:
-		debug("[ sgi_mte: %s CRIME_DE_X_VERTEX_1: 0x%016llx ]\n",
+		debug("[ sgi_de: %s CRIME_DE_X_VERTEX_1: 0x%016llx ]\n",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		break;
 
 	case CRIME_DE_STIPPLE_MODE:
-		debug("[ sgi_mte: %s CRIME_DE_STIPPLE_MODE: 0x%016llx ]\n",
+		debug("[ sgi_de: %s CRIME_DE_STIPPLE_MODE: 0x%016llx ]\n",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		break;
 
 	case CRIME_DE_STIPPLE_PAT:
-		debug("[ sgi_mte: %s CRIME_DE_STIPPLE_PAT: 0x%016llx ]\n",
+		debug("[ sgi_de: %s CRIME_DE_STIPPLE_PAT: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		break;
+
+	case CRIME_DE_FG:
+		debug("[ sgi_de: %s CRIME_DE_FG: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		break;
+
+	case CRIME_DE_BG:
+		debug("[ sgi_de: %s CRIME_DE_BG: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		break;
+
+	case CRIME_DE_ROP:
+		debug("[ sgi_de: %s CRIME_DE_ROP: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		break;
+
+	case CRIME_DE_PLANEMASK:
+		debug("[ sgi_de: %s CRIME_DE_PLANEMASK: 0x%016llx ]\n",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		break;
@@ -740,7 +751,8 @@ DEVICE_ACCESS(sgi_de)
 	if (startFlag) {
 		uint32_t op = d->de_reg[(CRIME_DE_PRIMITIVE - 0x2000) / sizeof(uint32_t)];
 
-		uint32_t color = d->de_reg[(CRIME_DE_FG - 0x2000) / sizeof(uint32_t)]&255;
+		uint32_t fg = d->de_reg[(CRIME_DE_FG - 0x2000) / sizeof(uint32_t)]&255;
+		uint32_t bg = d->de_reg[(CRIME_DE_BG - 0x2000) / sizeof(uint32_t)]&255;
 		uint32_t pattern = d->de_reg[(CRIME_DE_STIPPLE_PAT - 0x2000) / sizeof(uint32_t)];
 
 		uint32_t x1 = (d->de_reg[(CRIME_DE_X_VERTEX_0 - 0x2000) / sizeof(uint32_t)]
@@ -750,6 +762,12 @@ DEVICE_ACCESS(sgi_de)
 		    >> 16) & 0xfff;
 		uint32_t y2 = d->de_reg[(CRIME_DE_X_VERTEX_1 - 0x2000) / sizeof(uint32_t)]& 0xfff;
 		size_t x, y;
+
+		// TODO: Take drawmode, rop, bg, and planemask into account etc.
+
+		debug("[ sgi_de: STARTING DRAWING COMMAND: op = 0x%08x,"
+		    " x1=%i y1=%i x2=%i y2=%i fg=0x%x bg=0x%x pattern=0x%08x ]\n",
+		    op, x1, y1, x2, y2, fg, bg, pattern);
 
 		switch (op & 0xff000000) {
 		case DE_PRIM_LINE:
@@ -768,7 +786,7 @@ DEVICE_ACCESS(sgi_de)
 
 			x=x1; y=y1;
 			while (x <= x2 && y <= y2) {
-				unsigned char buf = color;
+				uint8_t buf = fg;
 				// buf = random();
 				int addr = x + y*d->xres;
 				int bit_set = pattern & 0x80000000UL;
@@ -800,7 +818,7 @@ DEVICE_ACCESS(sgi_de)
 				int addr = (x1 + y*d->xres);
 				if (length < 1)
 					length = 1;
-				memset(buf, color, length);
+				memset(buf, fg, length);
 				// for (int i = 0; i < length; ++i) buf[i] = random();
 				if (x1 < (uint32_t)d->xres && y < (uint32_t)d->yres)
 					cpu->memory_rw(cpu, cpu->mem,
@@ -810,8 +828,9 @@ DEVICE_ACCESS(sgi_de)
 			}
 			break;
 
-		default:fatal("\n--- DE OP 0x%x color 0x%02x: %i,%i - "
-			    "%i,%i\n\n", op, color, x1,y1, x2,y2);
+		default:fatal("[ sgi_de: UNIMPLEMENTED drawing command: op = 0x%08x,"
+			    " x1=%i y1=%i x2=%i y2=%i fg=0x%x bg=0x%x pattern=0x%08x ]\n",
+			    op, x1, y1, x2, y2, fg, bg, pattern);
 			exit(1);
 		}
 	}
@@ -999,6 +1018,9 @@ DEVICE_ACCESS(sgi_mte)
 		    " dst1 = 0x%016llx (length = 0x%llx), bg = 0x%x, bytemask = 0x%x ]\n",
 		    (long long)dst0, (long long)dst1,
 		    (long long)dstlen, (int)bg, (int)bytemask);
+
+		if (dstlen <= 1)
+			return 1;
 
 		memset(zerobuf, 0, sizeof(zerobuf));
 		uint64_t fill_addr = dst0;
