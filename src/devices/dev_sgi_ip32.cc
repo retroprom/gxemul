@@ -27,7 +27,7 @@
  *
  *  COMMENT: SGI IP32 stuff (CRIME, MACE, MACEPCI, ust)
  *
- *	o)  CRIME
+ *	o)  CRIME (interrupt controller)
  *	o)  MACE (Multimedia, Audio and Communications Engine)
  *	o)  MACE PCI bus
  *	o)  ust (unknown device)
@@ -36,7 +36,7 @@
  *	o)  VICE (Video and Image Compression Engine)
  *		(perhaps best to place in the Graphics Back End?)
  *
- *  The SGI GBE (Graphics Back End) is in dev_sgi_gbe.cc.
+ *  The GBE graphics (Graphics Back End) is in dev_sgi_gbe.cc.
  *
  *  Some info here: http://bukosek.si/hardware/collection/sgi-o2.html
  *  but mostly based on how NetBSD, OpenBSD, and Linux use the hardware.

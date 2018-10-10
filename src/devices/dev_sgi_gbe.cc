@@ -54,16 +54,19 @@
 /*  Let's hope nothing is there already...  */
 #define	FAKE_GBE_FB_ADDRESS	0x38000000
 
+#define	ZERO_CHUNK_LEN		4096
+
 // #define	GBE_DEBUG
 // #define debug fatal
 
 #define MTE_TEST
 
-#define	GBE_DEFAULT_XRES		640
-#define	GBE_DEFAULT_YRES		480
+#define	GBE_DEFAULT_XRES		1280
+#define	GBE_DEFAULT_YRES		1024
 
 
 struct sgi_gbe_data {
+	// crm / gbe
 	int		xres, yres;
 
 	uint32_t	control;		/* 0x00000  */
@@ -76,6 +79,15 @@ struct sgi_gbe_data {
 
 	int		bitdepth;
 	struct vfb_data *fb_data;
+
+	// rendering engine
+	uint32_t	re_reg[DEV_SGI_RE_LENGTH / sizeof(uint32_t)];
+
+	// drawing engine
+	uint32_t	de_reg[DEV_SGI_DE_LENGTH / sizeof(uint32_t)];
+
+	// memory transfer engine
+	uint32_t	mte_reg[DEV_SGI_MTE_LENGTH / sizeof(uint32_t)];
 };
 
 
@@ -532,14 +544,10 @@ void dev_sgi_gbe_init(struct machine *machine, struct memory *mem,
 	CHECK_ALLOCATION(d = (struct sgi_gbe_data *) malloc(sizeof(struct sgi_gbe_data)));
 	memset(d, 0, sizeof(struct sgi_gbe_data));
 
-	/*  640x480 for Linux:  */
 	d->xres = GBE_DEFAULT_XRES;
 	d->yres = GBE_DEFAULT_YRES;
 	d->bitdepth = 8;
 	d->control = 0x20aa000;		/*  or 0x00000001?  */
-
-	/*  1280x1024 for booting the O2's PROM, and experiments with NetBSD and OpenBSD:  */
-	d->xres = 1280; d->yres = 1024;
 
 	d->fb_data = dev_fb_init(machine, mem, FAKE_GBE_FB_ADDRESS,
 	    VFB_GENERIC, d->xres, d->yres, d->xres, d->yres, 8, "SGI GBE");
@@ -548,39 +556,30 @@ void dev_sgi_gbe_init(struct machine *machine, struct memory *mem,
 	memory_device_register(mem, "sgi_gbe", baseaddr, DEV_SGI_GBE_LENGTH,
 	    dev_sgi_gbe_access, d, DM_DEFAULT, NULL);
 	machine_add_tickfunction(machine, dev_sgi_gbe_tick, d, 18);
+
+	dev_sgi_re_init(mem, 0x15001000, d);
+	dev_sgi_de_init(mem, 0x15002000, d);
+	dev_sgi_mte_init(mem, 0x15003000, d);
+	dev_sgi_de_status_init(mem, 0x15004000, d);
 }
 
 
 /****************************************************************************/
 
-
 /*
- *  SGI "mte". NetBSD sources describes it as a "memory transfer engine".
- *  This device seems to be an accelerator for copying/clearing
- *  memory. Used by (at least) the SGI O2 PROM.
- *
- *  Actually, it seems to be used for graphics output as well. (?)
- *  The O2's PROM uses it to output graphics.
+ *  SGI "re", NetBSD sources describes it as a "rendering engine".
  */
-/*  #define debug fatal  */
-/*  #define MTE_DEBUG  */
-#define	ZERO_CHUNK_LEN		4096
 
-struct sgi_mte_data {
-	uint32_t	reg[DEV_SGI_MTE_LENGTH / sizeof(uint32_t)];
-};
-
-
-DEVICE_ACCESS(sgi_mte)
+DEVICE_ACCESS(sgi_re)
 {
-	struct sgi_mte_data *d = (struct sgi_mte_data *) extra;
-	uint64_t first_addr, last_addr, zerobuflen, fill_addr, fill_len;
-	unsigned char zerobuf[ZERO_CHUNK_LEN];
+	struct sgi_gbe_data *d = (struct sgi_gbe_data *) extra;
 	uint64_t idata = 0, odata = 0;
 	int regnr;
 
 	idata = memory_readmax64(cpu, data, len);
 	regnr = relative_addr / sizeof(uint32_t);
+
+	relative_addr += 0x1000;
 
 	/*
 	 *  Treat all registers as read/write, by default.  Sometimes these
@@ -588,58 +587,21 @@ DEVICE_ACCESS(sgi_mte)
 	 */
 	if (len != 4) {
 		if (writeflag == MEM_WRITE) {
-			d->reg[regnr] = idata >> 32;
-			d->reg[regnr+1] = idata;
+			d->re_reg[regnr] = idata >> 32;
+			d->re_reg[regnr+1] = idata;
 		} else
-			odata = ((uint64_t)d->reg[regnr] << 32) +
-			    d->reg[regnr+1];
+			odata = ((uint64_t)d->re_reg[regnr] << 32) +
+			    d->re_reg[regnr+1];
 	}
 
 	if (writeflag == MEM_WRITE)
-		d->reg[regnr] = idata;
+		d->re_reg[regnr] = idata;
 	else
-		odata = d->reg[regnr];
+		odata = d->re_reg[regnr];
 
-#ifdef MTE_DEBUG
-	if (writeflag == MEM_WRITE && relative_addr >= 0x2000 &&
-	    relative_addr < 0x3000)
-		fatal("[ MTE: 0x%08x: 0x%016llx ]\n", (int)relative_addr,
-		    (long long)idata);
-#endif
-
-	/*
-	 *  I've not found any docs about this 'mte' device at all, so this is
-	 *  just a guess. The mte seems to be used for copying and zeroing
-	 *  chunks of memory.
-	 *
-	 *   write to 0x3030, data=0x00000000003da000 ]  <-- first address
-	 *   write to 0x3038, data=0x00000000003f9fff ]  <-- last address
-	 *   write to 0x3018, data=0x0000000000000000 ]  <-- what to fill?
-	 *   write to 0x3008, data=0x00000000ffffffff ]  <-- ?
-	 *   write to 0x3800, data=0x0000000000000011 ]  <-- operation
-	 *						     (0x11 = zerofill)
-	 *
-	 *   write to 0x1700, data=0x80001ea080001ea1  <-- also containing the
-	 *   write to 0x1708, data=0x80001ea280001ea3      address to fill (?)
-	 *   write to 0x1710, data=0x80001ea480001ea5
-	 *  ...
-	 *   write to 0x1770, data=0x80001e9c80001e9d
-	 *   write to 0x1778, data=0x80001e9e80001e9f
-	 */
 	switch (relative_addr) {
 
-	/*  No warnings for these:  */
-	case 0x3030:
-	case 0x3038:
-		break;
-
-	case CRIME_DE_STATUS:	// 0x4000
-		odata = CRIME_DE_IDLE;
-		break;
-
 	/*  Unknown, but no warning:  */
-	case 0x3018:
-	case 0x3008:
 	case 0x1700:
 	case 0x1708:
 	case 0x1710:
@@ -658,6 +620,78 @@ DEVICE_ACCESS(sgi_mte)
 	case 0x1778:
 		break;
 
+	default:
+		if (writeflag == MEM_WRITE)
+			debug("[ sgi_re: unimplemented write to "
+			    "address 0x%llx, data=0x%016llx ]\n",
+			    (long long)relative_addr, (long long)idata);
+		else
+			debug("[ sgi_re: unimplemented read from address"
+			    " 0x%llx ]\n", (long long)relative_addr);
+	}
+
+	if (writeflag == MEM_READ)
+		memory_writemax64(cpu, data, len, odata);
+
+	return 1;
+}
+
+
+/*
+ *  dev_sgi_re_init():
+ */
+void dev_sgi_re_init(struct memory *mem, uint64_t baseaddr, struct sgi_gbe_data *d)
+{
+	memory_device_register(mem, "sgi_re", baseaddr, DEV_SGI_RE_LENGTH,
+	    dev_sgi_re_access, (void *)d, DM_DEFAULT, NULL);
+}
+
+
+
+/****************************************************************************/
+
+/*
+ *  SGI "de", NetBSD sources describes it as a "drawing engine".
+ */
+
+DEVICE_ACCESS(sgi_de)
+{
+	struct sgi_gbe_data *d = (struct sgi_gbe_data *) extra;
+	uint64_t idata = 0, odata = 0;
+	int regnr;
+
+	idata = memory_readmax64(cpu, data, len);
+	regnr = relative_addr / sizeof(uint32_t);
+
+	relative_addr += 0x2000;
+
+	/*
+	 *  Treat all registers as read/write, by default.  Sometimes these
+	 *  are accessed as 32-bit words, sometimes as 64-bit words.
+	 */
+	if (len != 4) {
+		if (writeflag == MEM_WRITE) {
+			d->de_reg[regnr] = idata >> 32;
+			d->de_reg[regnr+1] = idata;
+		} else
+			odata = ((uint64_t)d->de_reg[regnr] << 32) +
+			    d->de_reg[regnr+1];
+	}
+
+	if (writeflag == MEM_WRITE)
+		d->de_reg[regnr] = idata;
+	else
+		odata = d->de_reg[regnr];
+
+#ifdef MTE_DEBUG
+	if (writeflag == MEM_WRITE && relative_addr >= 0x2000 &&
+	    relative_addr < 0x3000)
+		fatal("[ DE: 0x%08x: 0x%016llx ]\n", (int)relative_addr,
+		    (long long)idata);
+#endif
+
+	switch (relative_addr) {
+
 	/*  Graphics stuff? No warning:  */
 	case 0x2018:
 	case 0x2060:
@@ -673,14 +707,14 @@ DEVICE_ACCESS(sgi_mte)
 	/*  Perform graphics operation:  */
 	case CRIME_DE_FLUSH:	// 0x21f8
 		{
-			uint32_t op = d->reg[0x2060 / sizeof(uint32_t)];
-			uint32_t color = d->reg[0x20d0 / sizeof(uint32_t)]&255;
-			uint32_t x1 = (d->reg[0x2070 / sizeof(uint32_t)]
+			uint32_t op = d->de_reg[(CRIME_DE_PRIMITIVE - 0x2000) / sizeof(uint32_t)];
+			uint32_t color = d->de_reg[(CRIME_DE_FG - 0x2000) / sizeof(uint32_t)]&255;
+			uint32_t x1 = (d->de_reg[(CRIME_DE_X_VERTEX_0 - 0x2000) / sizeof(uint32_t)]
 			    >> 16) & 0xfff;
-			uint32_t y1 = d->reg[0x2070 / sizeof(uint32_t)]& 0xfff;
-			uint32_t x2 = (d->reg[0x2074 / sizeof(uint32_t)]
+			uint32_t y1 = d->de_reg[(CRIME_DE_X_VERTEX_0 - 0x2000) / sizeof(uint32_t)]& 0xfff;
+			uint32_t x2 = (d->de_reg[(CRIME_DE_X_VERTEX_1 - 0x2000) / sizeof(uint32_t)]
 			    >> 16) & 0xfff;
-			uint32_t y2 = d->reg[0x2074 / sizeof(uint32_t)]& 0xfff;
+			uint32_t y2 = d->de_reg[(CRIME_DE_X_VERTEX_1 - 0x2000) / sizeof(uint32_t)]& 0xfff;
 			uint32_t y;
 
 			op >>= 24;
@@ -698,11 +732,11 @@ DEVICE_ACCESS(sgi_mte)
 				for (y=y1; y<=y2; y++) {
 					unsigned char buf[1280];
 					int length = x2-x1+1;
-					int addr = (x1 + y*1280);
+					int addr = (x1 + y*d->xres);
 					if (length < 1)
 						length = 1;
 					memset(buf, color, length);
-					if (x1 < 1280 && y < 1024)
+					if (x1 < (uint32_t)d->xres && y < (uint32_t)d->yres)
 						cpu->memory_rw(cpu, cpu->mem,
 						    FAKE_GBE_FB_ADDRESS + addr, buf,
 						    length, MEM_WRITE,
@@ -710,23 +744,22 @@ DEVICE_ACCESS(sgi_mte)
 				}
 				break;
 
-			default:fatal("\n--- MTE OP %i color 0x%02x: %i,%i - "
+			default:fatal("\n--- DE OP %i color 0x%02x: %i,%i - "
 				    "%i,%i\n\n", op, color, x1,y1, x2,y2);
 			}
 		}
 		break;
 
-	case 0x29f0:
+	case CRIME_DE_NULL + CRIME_DE_START:	// 0x21f0 + 0x0800 = 0x29f0
 		/*  Pixel output:  */
 		{
-			uint32_t pixeldata = d->reg[0x20c4 / sizeof(uint32_t)];
-			uint32_t color = d->reg[0x20d0 / sizeof(uint32_t)]&255;
-			uint32_t x1 = (d->reg[0x2070 / sizeof(uint32_t)]
+			uint32_t pixeldata = d->de_reg[(CRIME_DE_STIPPLE_PAT - 0x2000) / sizeof(uint32_t)];
+			uint32_t color = d->de_reg[(CRIME_DE_FG - 0x2000) / sizeof(uint32_t)]&255;
+			uint32_t x1 = (d->de_reg[(CRIME_DE_X_VERTEX_0 - 0x2000) / sizeof(uint32_t)] >> 16) & 0xfff;
+			uint32_t y1 = d->de_reg[(CRIME_DE_X_VERTEX_0 - 0x2000) / sizeof(uint32_t)]& 0xfff;
+			uint32_t x2 = (d->de_reg[(CRIME_DE_X_VERTEX_1 - 0x2000) / sizeof(uint32_t)]
 			    >> 16) & 0xfff;
-			uint32_t y1 = d->reg[0x2070 / sizeof(uint32_t)]& 0xfff;
-			uint32_t x2 = (d->reg[0x2074 / sizeof(uint32_t)]
-			    >> 16) & 0xfff;
-			uint32_t y2 = d->reg[0x2074 / sizeof(uint32_t)]& 0xfff;
+			uint32_t y2 = d->de_reg[(CRIME_DE_X_VERTEX_1 - 0x2000) / sizeof(uint32_t)]& 0xfff;
 			size_t x, y;
 
 			if (x2 < x1) {
@@ -741,10 +774,10 @@ DEVICE_ACCESS(sgi_mte)
 			x=x1; y=y1;
 			while (x <= x2 && y <= y2) {
 				unsigned char buf = color;
-				int addr = x + y*1280;
+				int addr = x + y*d->xres;
 				int bit_set = pixeldata & 0x80000000UL;
 				pixeldata <<= 1;
-				if (x < 1280 && y < 1024 && bit_set)
+				if (x < (uint32_t)d->xres && y < (uint32_t)d->yres && bit_set)
 					cpu->memory_rw(cpu, cpu->mem,
 					    FAKE_GBE_FB_ADDRESS + addr, &buf,1,MEM_WRITE,
 					    NO_EXCEPTIONS | PHYSICAL);
@@ -757,51 +790,215 @@ DEVICE_ACCESS(sgi_mte)
 		}
 		break;
 
-
-	/*  Operations:  */
-	case 0x3800:
-		if (writeflag == MEM_WRITE) {
-			switch (idata) {
-			case 0x11:		/*  zerofill  */
-				first_addr = d->reg[0x3030 / sizeof(uint32_t)];
-				last_addr  = d->reg[0x3038 / sizeof(uint32_t)];
-				zerobuflen = last_addr - first_addr + 1;
-				debug("[ sgi_mte: zerofill: first = 0x%016llx,"
-				    " last = 0x%016llx, length = 0x%llx ]\n",
-				    (long long)first_addr, (long long)
-				    last_addr, (long long)zerobuflen);
-
-				/*  TODO:  is there a better way to
-				           implement this?  */
-				memset(zerobuf, 0, sizeof(zerobuf));
-				fill_addr = first_addr;
-				while (zerobuflen != 0) {
-					if (zerobuflen > sizeof(zerobuf))
-						fill_len = sizeof(zerobuf);
-					else
-						fill_len = zerobuflen;
-					cpu->memory_rw(cpu, mem, fill_addr,
-					    zerobuf, fill_len, MEM_WRITE,
-					    NO_EXCEPTIONS | PHYSICAL);
-					fill_addr += fill_len;
-					zerobuflen -= sizeof(zerobuf);
-				}
-
-				break;
-			default:
-				fatal("[ sgi_mte: UNKNOWN operation "
-				    "0x%x ]\n", idata);
-			}
-		}
-		break;
 	default:
 		if (writeflag == MEM_WRITE)
-			debug("[ sgi_mte: unimplemented write to "
+			debug("[ sgi_de: unimplemented write to "
 			    "address 0x%llx, data=0x%016llx ]\n",
 			    (long long)relative_addr, (long long)idata);
 		else
-			debug("[ sgi_mte: unimplemented read from address"
+			debug("[ sgi_de: unimplemented read from address"
 			    " 0x%llx ]\n", (long long)relative_addr);
+	}
+
+	if (writeflag == MEM_READ)
+		memory_writemax64(cpu, data, len, odata);
+
+	return 1;
+}
+
+
+/*
+ *  dev_sgi_de_init():
+ */
+void dev_sgi_de_init(struct memory *mem, uint64_t baseaddr, struct sgi_gbe_data *d)
+{
+	memory_device_register(mem, "sgi_de", baseaddr, DEV_SGI_DE_LENGTH,
+	    dev_sgi_de_access, (void *)d, DM_DEFAULT, NULL);
+}
+
+
+/****************************************************************************/
+
+/*
+ *  SGI "mte", NetBSD sources describes it as a "memory transfer engine".
+ *
+ *  If the relative address has the 0x0800 flag set, it means "go ahead
+ *  with the transfer". Otherwise, it is just reads and writes of the
+ *  registers.
+ */
+
+DEVICE_ACCESS(sgi_mte)
+{
+	struct sgi_gbe_data *d = (struct sgi_gbe_data *) extra;
+	uint64_t idata = 0, odata = 0;
+	int regnr;
+	bool startFlag = relative_addr & 0x0800 ? true : false;
+
+	idata = memory_readmax64(cpu, data, len);
+	regnr = relative_addr / sizeof(uint32_t);
+
+	relative_addr += 0x3000;
+
+	/*
+	 *  Treat all registers as read/write, by default.  Sometimes these
+	 *  are accessed as 32-bit words, sometimes as 64-bit words.
+	 */
+	if (len != 4) {
+		if (writeflag == MEM_WRITE) {
+			d->mte_reg[regnr] = idata >> 32;
+			d->mte_reg[regnr+1] = idata;
+		} else
+			odata = ((uint64_t)d->mte_reg[regnr] << 32) +
+			    d->mte_reg[regnr+1];
+	}
+
+	if (writeflag == MEM_WRITE)
+		d->mte_reg[regnr] = idata;
+	else
+		odata = d->mte_reg[regnr];
+
+	switch (relative_addr & ~0x0800) {
+
+	case CRIME_MTE_MODE:
+		debug("[ sgi_mte: %s CRIME_MTE_MODE: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		break;
+
+	case CRIME_MTE_BYTEMASK:
+		debug("[ sgi_mte: %s CRIME_MTE_BYTEMASK: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		break;
+
+	case CRIME_MTE_STIPPLEMASK:
+		fatal("[ sgi_mte: %s CRIME_MTE_STIPPLEMASK: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		break;
+
+	case CRIME_MTE_BG:
+		debug("[ sgi_mte: %s CRIME_MTE_BG: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		break;
+
+	case CRIME_MTE_SRC0:
+		fatal("[ sgi_mte: %s CRIME_MTE_SRC0: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		break;
+
+	case CRIME_MTE_SRC1:
+		fatal("[ sgi_mte: %s CRIME_MTE_SRC1: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		break;
+
+	case CRIME_MTE_DST0:
+		debug("[ sgi_mte: %s CRIME_MTE_DST0: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		break;
+
+	case CRIME_MTE_DST1:
+		debug("[ sgi_mte: %s CRIME_MTE_DST1: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		break;
+
+	case CRIME_MTE_SRC_Y_STEP:
+		fatal("[ sgi_mte: %s CRIME_MTE_SRC_Y_STEP: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		break;
+
+	case CRIME_MTE_DST_Y_STEP:
+		fatal("[ sgi_mte: %s CRIME_MTE_DST_Y_STEP: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		break;
+
+	case CRIME_MTE_NULL:
+		fatal("[ sgi_mte: %s CRIME_MTE_NULL: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		break;
+
+	case CRIME_MTE_FLUSH:
+		fatal("[ sgi_mte: %s CRIME_MTE_FLUSH: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		break;
+
+	default:
+		if (writeflag == MEM_WRITE)
+			fatal("[ sgi_mte: unimplemented write to "
+			    "address 0x%llx, data=0x%016llx ]\n",
+			    (long long)relative_addr, (long long)idata);
+		else
+			fatal("[ sgi_mte: unimplemented read from address"
+			    " 0x%llx ]\n", (long long)relative_addr);
+	}
+
+	if (startFlag && writeflag == MEM_WRITE) {
+		uint32_t mode = d->mte_reg[(CRIME_MTE_MODE - 0x3000) / sizeof(uint32_t)];
+		uint64_t dst0 = d->mte_reg[(CRIME_MTE_DST0 - 0x3000) / sizeof(uint32_t)];
+		uint64_t dst1  = d->mte_reg[(CRIME_MTE_DST1 - 0x3000) / sizeof(uint32_t)];
+		uint64_t dstlen = dst1 - dst0 + 1;
+		unsigned char zerobuf[ZERO_CHUNK_LEN];
+		int depth = (mode & MTE_MODE_DEPTH_MASK) >> MTE_DEPTH_SHIFT;
+		int src = (mode & MTE_MODE_SRC_BUF_MASK) >> MTE_SRC_TLB_SHIFT;
+		uint32_t bytemask  = d->mte_reg[(CRIME_MTE_BYTEMASK - 0x3000) / sizeof(uint32_t)];
+		uint32_t bg  = d->mte_reg[(CRIME_MTE_BG - 0x3000) / sizeof(uint32_t)];
+
+		// TODO: copy from src0/src1?
+
+		if (depth != MTE_DEPTH_8) {
+			fatal("[ sgi_mte: unimplemented MTE_DEPTH_x ]");
+			exit(1);
+		}
+
+		if (bg != 0) {
+			fatal("[ sgi_mte: unimplemented BG != 0 ]");
+			exit(1);
+		}
+
+		if (src != 0) {
+			fatal("[ sgi_mte: unimplemented SRC ]");
+			exit(1);
+		}
+
+		if (mode & MTE_MODE_COPY) {
+			fatal("[ sgi_mte: unimplemented MTE_MODE_COPY ]");
+			exit(1);
+		}
+
+		if (mode & MTE_MODE_STIPPLE) {
+			fatal("[ sgi_mte: unimplemented MTE_MODE_STIPPLE ]");
+			exit(1);
+		}
+
+		debug("[ sgi_mte: STARTING TRANSFER: dst0 = 0x%016llx,"
+		    " dst1 = 0x%016llx (length = 0x%llx), bg = 0x%x, bytemask = 0x%x ]\n",
+		    (long long)dst0, (long long)dst1,
+		    (long long)dstlen, (int)bg, (int)bytemask);
+
+		memset(zerobuf, 0, sizeof(zerobuf));
+		uint64_t fill_addr = dst0;
+		while (dstlen != 0) {
+			uint64_t fill_len;
+			if (dstlen > sizeof(zerobuf))
+				fill_len = sizeof(zerobuf);
+			else
+				fill_len = dstlen;
+
+			cpu->memory_rw(cpu, mem, fill_addr, zerobuf, fill_len,
+				MEM_WRITE, NO_EXCEPTIONS | PHYSICAL);
+
+			fill_addr += fill_len;
+			dstlen -= sizeof(zerobuf);
+		}
 	}
 
 	if (writeflag == MEM_READ)
@@ -814,15 +1011,60 @@ DEVICE_ACCESS(sgi_mte)
 /*
  *  dev_sgi_mte_init():
  */
-void dev_sgi_mte_init(struct memory *mem, uint64_t baseaddr)
+void dev_sgi_mte_init(struct memory *mem, uint64_t baseaddr, struct sgi_gbe_data *d)
 {
-	struct sgi_mte_data *d;
-
-	CHECK_ALLOCATION(d = (struct sgi_mte_data *) malloc(sizeof(struct sgi_mte_data)));
-	memset(d, 0, sizeof(struct sgi_mte_data));
-
 	memory_device_register(mem, "sgi_mte", baseaddr, DEV_SGI_MTE_LENGTH,
 	    dev_sgi_mte_access, (void *)d, DM_DEFAULT, NULL);
+}
+
+
+/****************************************************************************/
+
+/*
+ *  SGI "de_status".
+ */
+
+DEVICE_ACCESS(sgi_de_status)
+{
+	// struct sgi_gbe_data *d = (struct sgi_gbe_data *) extra;
+	uint64_t idata = 0, odata = 0;
+	// int regnr;
+
+	idata = memory_readmax64(cpu, data, len);
+	// regnr = relative_addr / sizeof(uint32_t);
+
+	relative_addr += 0x4000;
+
+	switch (relative_addr) {
+
+	case CRIME_DE_STATUS:	// 0x4000
+		odata = CRIME_DE_IDLE;
+		break;
+
+	default:
+		if (writeflag == MEM_WRITE)
+			debug("[ sgi_de_status: unimplemented write to "
+			    "address 0x%llx, data=0x%016llx ]\n",
+			    (long long)relative_addr, (long long)idata);
+		else
+			debug("[ sgi_de_status: unimplemented read from address"
+			    " 0x%llx ]\n", (long long)relative_addr);
+	}
+
+	if (writeflag == MEM_READ)
+		memory_writemax64(cpu, data, len, odata);
+
+	return 1;
+}
+
+
+/*
+ *  dev_sgi_de_status_init():
+ */
+void dev_sgi_de_status_init(struct memory *mem, uint64_t baseaddr, struct sgi_gbe_data *d)
+{
+	memory_device_register(mem, "sgi_de_status", baseaddr, DEV_SGI_DE_STATUS_LENGTH,
+	    dev_sgi_de_status_access, (void *)d, DM_DEFAULT, NULL);
 }
 
 

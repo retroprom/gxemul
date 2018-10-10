@@ -4739,3 +4739,5 @@ Changelog for GXemul:
 20181001	Continuing on the slow THUMB instruction interpretation.
 20181008	Disk images added using -d for SGI modes are now SCSI, not IDE.
 		Importing newer crimereg.h and crmfbreg.h from NetBSD.
+20181009	Moving around SGI O2 graphics code, in preparation for making
+		more use of the "new" NetBSD defines.

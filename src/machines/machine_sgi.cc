@@ -444,15 +444,14 @@ j = 0;
 		    machine->path, machine->bootstrap_cpu);
 		dev_crime_init(machine, mem, 0x14000000, tmpstr,
 		    machine->x11_md.in_use);			/*  crime0  */
-		dev_sgi_mte_init(mem, 0x15000000);		/*  mte ???  */
-		dev_sgi_gbe_init(machine, mem, 0x16000000);	/*  gbe?  */
+		dev_sgi_gbe_init(machine, mem, 0x16000000);	/*  graphics  */
 
 		/*
 		 *  A combination of NetBSD and Linux info:
 		 *
 		 *	14000000	crime (interrupt/memory controller?)
-		 *	15000000	mte (memory transfer engine?)
-		 *	16000000	gbe (graphics)
+		 *	15000000	drawing engine, memory transfer engine, rendering engine
+		 *	16000000	gbe (graphics), crm framebuffer control
 		 *      17000000	vice (Video Image Compression Engine)
 		 *	1f000000	mace
 		 *	1f080000	macepci
