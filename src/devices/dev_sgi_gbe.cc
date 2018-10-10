@@ -659,11 +659,12 @@ DEVICE_ACCESS(sgi_de)
 	struct sgi_gbe_data *d = (struct sgi_gbe_data *) extra;
 	uint64_t idata = 0, odata = 0;
 	int regnr;
+	bool startFlag = relative_addr & CRIME_DE_START ? true : false;
 
 	idata = memory_readmax64(cpu, data, len);
 	regnr = relative_addr / sizeof(uint32_t);
 
-	relative_addr += 0x2000;
+	relative_addr = (relative_addr & ~CRIME_DE_START) + 0x2000;
 
 	/*
 	 *  Treat all registers as read/write, by default.  Sometimes these
@@ -692,75 +693,69 @@ DEVICE_ACCESS(sgi_de)
 
 	switch (relative_addr) {
 
-	/*  Graphics stuff? No warning:  */
-	case 0x2018:
-	case 0x2060:
-	case 0x2070:
-	case 0x2074:
-	case 0x20c0:
-	case 0x20c4:
-	case 0x20d0:
-	case 0x21b0:
-	case 0x21b8:
+	case CRIME_DE_PRIMITIVE:
+		debug("[ sgi_mte: %s CRIME_DE_PRIMITIVE: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		break;
 
-	/*  Perform graphics operation:  */
+	case CRIME_DE_X_VERTEX_0:
+		debug("[ sgi_mte: %s CRIME_DE_X_VERTEX_0: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		break;
+
+	case CRIME_DE_X_VERTEX_1:
+		debug("[ sgi_mte: %s CRIME_DE_X_VERTEX_1: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		break;
+
+	case CRIME_DE_STIPPLE_MODE:
+		debug("[ sgi_mte: %s CRIME_DE_STIPPLE_MODE: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		break;
+
+	case CRIME_DE_STIPPLE_PAT:
+		debug("[ sgi_mte: %s CRIME_DE_STIPPLE_PAT: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		break;
+
+	case CRIME_DE_NULL:	// 0x21f0
 	case CRIME_DE_FLUSH:	// 0x21f8
-		{
-			uint32_t op = d->de_reg[(CRIME_DE_PRIMITIVE - 0x2000) / sizeof(uint32_t)];
-			uint32_t color = d->de_reg[(CRIME_DE_FG - 0x2000) / sizeof(uint32_t)]&255;
-			uint32_t x1 = (d->de_reg[(CRIME_DE_X_VERTEX_0 - 0x2000) / sizeof(uint32_t)]
-			    >> 16) & 0xfff;
-			uint32_t y1 = d->de_reg[(CRIME_DE_X_VERTEX_0 - 0x2000) / sizeof(uint32_t)]& 0xfff;
-			uint32_t x2 = (d->de_reg[(CRIME_DE_X_VERTEX_1 - 0x2000) / sizeof(uint32_t)]
-			    >> 16) & 0xfff;
-			uint32_t y2 = d->de_reg[(CRIME_DE_X_VERTEX_1 - 0x2000) / sizeof(uint32_t)]& 0xfff;
-			uint32_t y;
-
-			op >>= 24;
-
-			switch (op) {
-			case 1:	/*  Unknown. Used after drawing bitmaps?  */
-				break;
-			case 3:	/*  Fill:  */
-				if (x2 < x1) {
-					int tmp = x1; x1 = x2; x2 = tmp;
-				}
-				if (y2 < y1) {
-					int tmp = y1; y1 = y2; y2 = tmp;
-				}
-				for (y=y1; y<=y2; y++) {
-					unsigned char buf[1280];
-					int length = x2-x1+1;
-					int addr = (x1 + y*d->xres);
-					if (length < 1)
-						length = 1;
-					memset(buf, color, length);
-					if (x1 < (uint32_t)d->xres && y < (uint32_t)d->yres)
-						cpu->memory_rw(cpu, cpu->mem,
-						    FAKE_GBE_FB_ADDRESS + addr, buf,
-						    length, MEM_WRITE,
-						    NO_EXCEPTIONS | PHYSICAL);
-				}
-				break;
-
-			default:fatal("\n--- DE OP %i color 0x%02x: %i,%i - "
-				    "%i,%i\n\n", op, color, x1,y1, x2,y2);
-			}
-		}
 		break;
 
-	case CRIME_DE_NULL + CRIME_DE_START:	// 0x21f0 + 0x0800 = 0x29f0
-		/*  Pixel output:  */
-		{
-			uint32_t pixeldata = d->de_reg[(CRIME_DE_STIPPLE_PAT - 0x2000) / sizeof(uint32_t)];
-			uint32_t color = d->de_reg[(CRIME_DE_FG - 0x2000) / sizeof(uint32_t)]&255;
-			uint32_t x1 = (d->de_reg[(CRIME_DE_X_VERTEX_0 - 0x2000) / sizeof(uint32_t)] >> 16) & 0xfff;
-			uint32_t y1 = d->de_reg[(CRIME_DE_X_VERTEX_0 - 0x2000) / sizeof(uint32_t)]& 0xfff;
-			uint32_t x2 = (d->de_reg[(CRIME_DE_X_VERTEX_1 - 0x2000) / sizeof(uint32_t)]
-			    >> 16) & 0xfff;
-			uint32_t y2 = d->de_reg[(CRIME_DE_X_VERTEX_1 - 0x2000) / sizeof(uint32_t)]& 0xfff;
-			size_t x, y;
+	default:
+		if (writeflag == MEM_WRITE)
+			fatal("[ sgi_de: unimplemented write to "
+			    "address 0x%llx, data=0x%016llx ]\n",
+			    (long long)relative_addr, (long long)idata);
+		else
+			fatal("[ sgi_de: unimplemented read from address"
+			    " 0x%llx ]\n", (long long)relative_addr);
+	}
+
+	if (startFlag) {
+		uint32_t op = d->de_reg[(CRIME_DE_PRIMITIVE - 0x2000) / sizeof(uint32_t)];
+
+		uint32_t color = d->de_reg[(CRIME_DE_FG - 0x2000) / sizeof(uint32_t)]&255;
+		uint32_t pattern = d->de_reg[(CRIME_DE_STIPPLE_PAT - 0x2000) / sizeof(uint32_t)];
+
+		uint32_t x1 = (d->de_reg[(CRIME_DE_X_VERTEX_0 - 0x2000) / sizeof(uint32_t)]
+		    >> 16) & 0xfff;
+		uint32_t y1 = d->de_reg[(CRIME_DE_X_VERTEX_0 - 0x2000) / sizeof(uint32_t)]& 0xfff;
+		uint32_t x2 = (d->de_reg[(CRIME_DE_X_VERTEX_1 - 0x2000) / sizeof(uint32_t)]
+		    >> 16) & 0xfff;
+		uint32_t y2 = d->de_reg[(CRIME_DE_X_VERTEX_1 - 0x2000) / sizeof(uint32_t)]& 0xfff;
+		size_t x, y;
+
+		switch (op & 0xff000000) {
+		case DE_PRIM_LINE:
+			/*
+			 *  Used by the PROM to draw text characters on the screen.
+			 */
 
 			if (x2 < x1) {
 				int tmp = x1; x1 = x2; x2 = tmp;
@@ -769,14 +764,15 @@ DEVICE_ACCESS(sgi_de)
 				int tmp = y1; y1 = y2; y2 = tmp;
 			}
 			if (x2-x1 <= 15)
-				pixeldata <<= 16;
+				pattern <<= 16;
 
 			x=x1; y=y1;
 			while (x <= x2 && y <= y2) {
 				unsigned char buf = color;
+				// buf = random();
 				int addr = x + y*d->xres;
-				int bit_set = pixeldata & 0x80000000UL;
-				pixeldata <<= 1;
+				int bit_set = pattern & 0x80000000UL;
+				pattern <<= 1;
 				if (x < (uint32_t)d->xres && y < (uint32_t)d->yres && bit_set)
 					cpu->memory_rw(cpu, cpu->mem,
 					    FAKE_GBE_FB_ADDRESS + addr, &buf,1,MEM_WRITE,
@@ -787,17 +783,37 @@ DEVICE_ACCESS(sgi_de)
 					y++;
 				}
 			}
-		}
-		break;
+			break;
+		case DE_PRIM_RECTANGLE:
+			/*
+			 *  Used by the PROM to fill parts of the background.
+			 */
+			if (x2 < x1) {
+				int tmp = x1; x1 = x2; x2 = tmp;
+			}
+			if (y2 < y1) {
+				int tmp = y1; y1 = y2; y2 = tmp;
+			}
+			for (y=y1; y<=y2; y++) {
+				unsigned char buf[1280];
+				int length = x2-x1+1;
+				int addr = (x1 + y*d->xres);
+				if (length < 1)
+					length = 1;
+				memset(buf, color, length);
+				// for (int i = 0; i < length; ++i) buf[i] = random();
+				if (x1 < (uint32_t)d->xres && y < (uint32_t)d->yres)
+					cpu->memory_rw(cpu, cpu->mem,
+					    FAKE_GBE_FB_ADDRESS + addr, buf,
+					    length, MEM_WRITE,
+					    NO_EXCEPTIONS | PHYSICAL);
+			}
+			break;
 
-	default:
-		if (writeflag == MEM_WRITE)
-			debug("[ sgi_de: unimplemented write to "
-			    "address 0x%llx, data=0x%016llx ]\n",
-			    (long long)relative_addr, (long long)idata);
-		else
-			debug("[ sgi_de: unimplemented read from address"
-			    " 0x%llx ]\n", (long long)relative_addr);
+		default:fatal("\n--- DE OP 0x%x color 0x%02x: %i,%i - "
+			    "%i,%i\n\n", op, color, x1,y1, x2,y2);
+			exit(1);
+		}
 	}
 
 	if (writeflag == MEM_READ)
@@ -837,7 +853,7 @@ DEVICE_ACCESS(sgi_mte)
 	idata = memory_readmax64(cpu, data, len);
 	regnr = relative_addr / sizeof(uint32_t);
 
-	relative_addr += 0x3000;
+	relative_addr = (relative_addr & ~0x0800) + 0x3000;
 
 	/*
 	 *  Treat all registers as read/write, by default.  Sometimes these
@@ -857,7 +873,7 @@ DEVICE_ACCESS(sgi_mte)
 	else
 		odata = d->mte_reg[regnr];
 
-	switch (relative_addr & ~0x0800) {
+	switch (relative_addr) {
 
 	case CRIME_MTE_MODE:
 		debug("[ sgi_mte: %s CRIME_MTE_MODE: 0x%016llx ]\n",
