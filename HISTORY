@@ -4741,3 +4741,7 @@ Changelog for GXemul:
 		Importing newer crimereg.h and crmfbreg.h from NetBSD.
 20181009	Moving around SGI O2 graphics code, in preparation for making
 		more use of the "new" NetBSD defines.
+20181011	SGI O2 GBE now switches resolution if the OS wants it (i.e.
+		Linux/O2), rather than requiring a recompile.
+		Also, detection of Linux' "tweaked" (linear) mode, thus
+		avoiding a recompile when experimenting with Linux/O2.

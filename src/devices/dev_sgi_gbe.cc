@@ -59,8 +59,6 @@
 // #define	GBE_DEBUG
 // #define debug fatal
 
-#define MTE_TEST
-
 #define	GBE_DEFAULT_XRES		1280
 #define	GBE_DEFAULT_YRES		1024
 
@@ -77,6 +75,8 @@ struct sgi_gbe_data {
 	uint32_t	frm_control;		/* 0x3000c  */
 	int		freeze;
 
+	int 		width_in_tiles;
+	int		partial_pixels;
 	int		bitdepth;
 	struct vfb_data *fb_data;
 
@@ -91,17 +91,78 @@ struct sgi_gbe_data {
 };
 
 
+void horrible_putpixel(struct cpu* cpu, struct sgi_gbe_data* d, int x, int y, uint32_t color)
+{
+	int linear = d->width_in_tiles == 1 && d->partial_pixels == 0;
+
+	if (linear) {
+		fatal("sgi gbe horrible_putpixel called in linear mode?!\n");
+		exit(1);
+	}
+
+	if (x < 0 || y < 0 || x >= d->xres || y >= d->yres)
+		return;
+
+	int tilewidth_in_pixels = 512 * 8 / d->bitdepth;
+	
+	int tile_nr_x = x / tilewidth_in_pixels;
+	int tile_nr_y = y / 128;
+
+	int w = d->width_in_tiles + (d->partial_pixels > 0 ? 1 : 0);
+	int tile_nr = tile_nr_y * w + tile_nr_x;
+
+	uint64_t tiletable = (d->frm_control & 0xfffffe00);
+
+	unsigned char tileptr_buf[sizeof(uint16_t)];
+	cpu->memory_rw(cpu, cpu->mem, tiletable +
+	    sizeof(tileptr_buf) * tile_nr,
+	    tileptr_buf, sizeof(tileptr_buf), MEM_READ,
+	    NO_EXCEPTIONS | PHYSICAL);
+	uint64_t tileptr = 256 * tileptr_buf[0] + tileptr_buf[1];
+	tileptr <<= 16;
+
+	if (tileptr == 0) {
+		fatal("sgi gbe horrible_putpixel: bad tileptr?\n");
+		exit(1);
+	}
+
+	y %= 128;
+	int xofs = (x % tilewidth_in_pixels) * d->bitdepth / 8;
+
+	uint8_t buf[4];
+	buf[0] = color;
+	buf[1] = buf[2] = buf[3] = 0x00;
+
+	if (d->bitdepth != 8) {
+		fatal("sgi gbe horrible_putpixel: TODO: non-8-bit\n");
+		exit(1);
+	}
+
+	cpu->memory_rw(cpu, cpu->mem, tileptr + 512 * y + xofs,
+	    buf, d->bitdepth / 8,
+	    MEM_WRITE, NO_EXCEPTIONS | PHYSICAL);
+}
+
+
 /*
  *  dev_sgi_gbe_tick():
  *
  *  Every now and then, copy data from the framebuffer in normal ram
  *  to the actual framebuffer (which will then redraw the window).
- *  TODO:  This is utterly slow, even slower than the normal framebuffer
- *  which is really slow as it is.
+ *
+ *  NOTE: This is very slow, even slower than the normal emulated framebuffer,
+ *  which is already slow as it is.
  *
  *  frm_control (bits 31..9) is a pointer to an array of uint16_t.
  *  These numbers (when << 16 bits) are pointers to the tiles. Tiles are
  *  512x128 in 8-bit mode, 256x128 in 16-bit mode, and 128x128 in 32-bit mode.
+ *
+ *  An exception is how Linux/O2 uses the framebuffer, in a "tweaked" mode
+ *  which resembles linear mode. This code attempts to support both.
+ *
+ *  TODO: It doesn't really use width_in_tiles and partial_pixels, rather
+ *  it just draws tiles to cover the whole xres * yres pixels. Perhaps this
+ *  could be fixed some day, if it matters.
  */
 DEVICE_TICK(sgi_gbe)
 {
@@ -113,22 +174,20 @@ DEVICE_TICK(sgi_gbe)
 	unsigned char buf[16384];	/*  must be power of 2, at most 65536 */
 	int copy_len, copy_offset;
 	uint64_t old_fb_offset = 0;
-	int tweaked = 1;
 
-#ifdef MTE_TEST
-/*  Actually just a return, but this fools the Compaq compiler...  */
-if (cpu != NULL)
-return;
-#endif
-
-	debug("[ sgi_gbe: dev_sgi_gbe_tick() ]\n");
+	// Linear "tweaked" mode is something that Linux/O2 uses.
+	int linear = d->width_in_tiles == 1 && d->partial_pixels == 0;
 
 	tiletable = (d->frm_control & 0xfffffe00);
+
+#ifdef GBE_DEBUG
+	fatal("[ sgi_gbe: dev_sgi_gbe_tick(): tiletable = 0x%llx, linear = %i ]\n",
+		(long long)tiletable, linear);
+#endif
+
 	if (tiletable == 0)
 		on_screen = 0;
-/*
-tweaked = 0;
-*/
+
 	while (on_screen) {
 		/*  Get pointer to a tile:  */
 		cpu->memory_rw(cpu, cpu->mem, tiletable +
@@ -140,13 +199,15 @@ tweaked = 0;
 		tileptr <<= 16;
 
 		/*  tileptr is now a physical address of a tile.  */
-		debug("[ sgi_gbe:   tile_nr = %2i, tileptr = 0x%08lx, xbase"
+#ifdef GBE_DEBUG
+		fatal("[ sgi_gbe:   tile_nr = %2i, tileptr = 0x%08lx, xbase"
 		    " = %4i, ybase = %4i ]\n", tile_nr, tileptr, xbase, ybase);
+#endif
 
-		if (tweaked) {
-			/*  Tweaked (linear) mode:  */
-
+		if (linear) {
 			/*
+			 *  Tweaked (linear) mode, as used by Linux/O2:
+			 *
 			 *  Copy data from this 64KB physical RAM block to the
 			 *  framebuffer:
 			 *
@@ -172,14 +233,18 @@ tweaked = 0;
 				cpu->memory_rw(cpu, cpu->mem, tileptr +
 				    copy_offset, buf, copy_len, MEM_READ,
 				    NO_EXCEPTIONS | PHYSICAL);
+
+				// for (int i=0; i<sizeof(buf); ++i) buf[i] ^= (random() & 0x20);
+
 				dev_fb_access(cpu, cpu->mem, old_fb_offset,
 				    buf, copy_len, MEM_WRITE, d->fb_data);
 				copy_offset += sizeof(buf);
 				old_fb_offset += sizeof(buf);
 			}
 		} else {
-			/*  This is for non-tweaked (tiled) mode. Not really
-			    tested with correct image data, but might work:  */
+			/*
+			 *  Tiled mode (used by other things than Linux):
+			 */
 
 			lines_to_copy = 128;
 			if (ybase + lines_to_copy > d->yres)
@@ -197,7 +262,7 @@ tweaked = 0;
 {
 int i;
 for (i=0; i<pixels_per_line * d->bitdepth / 8; i++)
-	buf[i] ^= (random() & 0x20);
+	buf[i] ^= (random() & 0x21);
 }
 #endif
 				dev_fb_access(cpu, cpu->mem, ((ybase + y) *
@@ -229,14 +294,14 @@ DEVICE_ACCESS(sgi_gbe)
 	struct sgi_gbe_data *d = (struct sgi_gbe_data *) extra;
 	uint64_t idata = 0, odata = 0;
 
-	if (writeflag == MEM_WRITE)
+	if (writeflag == MEM_WRITE) {
 		idata = memory_readmax64(cpu, data, len);
 
 #ifdef GBE_DEBUG
-	if (writeflag == MEM_WRITE)
-		debug("[ sgi_gbe: DEBUG: write to address 0x%llx, data"
+		fatal("[ sgi_gbe: DEBUG: write to address 0x%llx, data"
 		    "=0x%llx ]\n", (long long)relative_addr, (long long)idata);
 #endif
+	}
 
 	switch (relative_addr) {
 
@@ -345,11 +410,21 @@ DEVICE_ACCESS(sgi_gbe)
 		break;
 
 	case CRMFB_VT_HCMAP:	// 0x1003c
-		odata = d->xres << CRMFB_VT_HCMAP_ON_SHIFT;
+		if (writeflag == MEM_WRITE) {
+			d->xres = (idata & CRMFB_HCMAP_ON_MASK) >> CRMFB_VT_HCMAP_ON_SHIFT;
+			dev_fb_resize(d->fb_data, d->xres, d->yres);
+		}
+		
+		odata = (d->xres << CRMFB_VT_HCMAP_ON_SHIFT) + d->xres + 100;
 		break;
 
 	case CRMFB_VT_VCMAP:	// 0x10040
-		odata = d->yres << CRMFB_VT_VCMAP_ON_SHIFT;
+		if (writeflag == MEM_WRITE) {
+			d->yres = (idata & CRMFB_VCMAP_ON_MASK) >> CRMFB_VT_VCMAP_ON_SHIFT;
+			dev_fb_resize(d->fb_data, d->xres, d->yres);
+		}
+
+		odata = (d->yres << CRMFB_VT_VCMAP_ON_SHIFT) + d->yres + 100;
 		break;
 
 	case CRMFB_VT_DID_STARTXY:	// 0x10044
@@ -391,12 +466,19 @@ DEVICE_ACCESS(sgi_gbe)
 		    12..5 = tile width, 4..0 = rhs  */
 		if (writeflag == MEM_WRITE) {
 			d->plane0ctrl = idata;
+
 			d->bitdepth = 8 << ((d->plane0ctrl >> CRMFB_FRM_TILESIZE_DEPTH_SHIFT) & 3);
-			debug("[ sgi_gbe: setting color depth to %i bits ]\n",
-			    d->bitdepth);
-			if (d->bitdepth != 8)
+			d->width_in_tiles = (idata >> CRMFB_FRM_TILESIZE_WIDTH_SHIFT) & 0xff;
+			d->partial_pixels = ((idata >> CRMFB_FRM_TILESIZE_RHS_SHIFT) & 0x1f) * 32;
+
+			debug("[ sgi_gbe: setting color depth to %i bits, width in tiles = %i, partial pixels = %i ]\n",
+			    d->bitdepth, d->width_in_tiles, d->partial_pixels);
+
+			if (d->bitdepth != 8) {
 				fatal("sgi_gbe: warning: bitdepth %i not "
 				    "really implemented yet\n", d->bitdepth);
+				exit(1);
+			}
 		} else
 			odata = d->plane0ctrl;
 		break;
@@ -455,12 +537,12 @@ DEVICE_ACCESS(sgi_gbe)
 	 *  to 0x503xx, and gamma correction data to 0x60000 - 0x603ff, as
 	 *  32-bit values at addresses divisible by 4 (formated as 0xrrggbb00).
 	 *
-	 *  sgio2fb: initializing
-	 *  sgio2fb: I/O at 0xffffffffb6000000
-	 *  sgio2fb: tiles at ffffffffa2ef5000
-	 *  sgio2fb: framebuffer at ffffffffa1000000
-	 *  sgio2fb: 8192kB memory
-	 *  Console: switching to colour frame buffer device 80x30
+	 *  "sgio2fb: initializing
+	 *   sgio2fb: I/O at 0xffffffffb6000000
+	 *   sgio2fb: tiles at ffffffffa2ef5000
+	 *   sgio2fb: framebuffer at ffffffffa1000000
+	 *   sgio2fb: 8192kB memory
+	 *   Console: switching to colour frame buffer device 80x30"
 	 */
 
 	default:
@@ -642,10 +724,12 @@ DEVICE_ACCESS(sgi_de)
 	int regnr;
 	bool startFlag = relative_addr & CRIME_DE_START ? true : false;
 
+	relative_addr &= ~CRIME_DE_START;
+
 	idata = memory_readmax64(cpu, data, len);
 	regnr = relative_addr / sizeof(uint32_t);
 
-	relative_addr = (relative_addr & ~CRIME_DE_START) + 0x2000;
+	relative_addr += 0x2000;
 
 	/*
 	 *  Treat all registers as read/write, by default.  Sometimes these
@@ -772,7 +856,8 @@ DEVICE_ACCESS(sgi_de)
 		switch (op & 0xff000000) {
 		case DE_PRIM_LINE:
 			/*
-			 *  Used by the PROM to draw text characters on the screen.
+			 *  Used by the PROM to draw text
+			 *  characters on the screen.
 			 */
 
 			if (x2 < x1) {
@@ -786,15 +871,10 @@ DEVICE_ACCESS(sgi_de)
 
 			x=x1; y=y1;
 			while (x <= x2 && y <= y2) {
-				uint8_t buf = fg;
-				// buf = random();
-				int addr = x + y*d->xres;
-				int bit_set = pattern & 0x80000000UL;
+				if (pattern & 0x80000000UL)
+					horrible_putpixel(cpu, d, x, y, fg);
+
 				pattern <<= 1;
-				if (x < (uint32_t)d->xres && y < (uint32_t)d->yres && bit_set)
-					cpu->memory_rw(cpu, cpu->mem,
-					    FAKE_GBE_FB_ADDRESS + addr, &buf,1,MEM_WRITE,
-					    NO_EXCEPTIONS | PHYSICAL);
 				x++;
 				if (x > x2) {
 					x = x1;
@@ -804,7 +884,8 @@ DEVICE_ACCESS(sgi_de)
 			break;
 		case DE_PRIM_RECTANGLE:
 			/*
-			 *  Used by the PROM to fill parts of the background.
+			 *  Used by the PROM to fill parts of the background,
+			 *  and used by NetBSD/OpenBSD to draw text characters.
 			 */
 			if (x2 < x1) {
 				int tmp = x1; x1 = x2; x2 = tmp;
@@ -812,20 +893,10 @@ DEVICE_ACCESS(sgi_de)
 			if (y2 < y1) {
 				int tmp = y1; y1 = y2; y2 = tmp;
 			}
-			for (y=y1; y<=y2; y++) {
-				unsigned char buf[1280];
-				int length = x2-x1+1;
-				int addr = (x1 + y*d->xres);
-				if (length < 1)
-					length = 1;
-				memset(buf, fg, length);
-				// for (int i = 0; i < length; ++i) buf[i] = random();
-				if (x1 < (uint32_t)d->xres && y < (uint32_t)d->yres)
-					cpu->memory_rw(cpu, cpu->mem,
-					    FAKE_GBE_FB_ADDRESS + addr, buf,
-					    length, MEM_WRITE,
-					    NO_EXCEPTIONS | PHYSICAL);
-			}
+
+			for (y=y1; y<=y2; y++)
+				for (x = x1; x <= x2; ++x)
+					horrible_putpixel(cpu, d, x, y, fg);
 			break;
 
 		default:fatal("[ sgi_de: UNIMPLEMENTED drawing command: op = 0x%08x,"
@@ -869,28 +940,37 @@ DEVICE_ACCESS(sgi_mte)
 	int regnr;
 	bool startFlag = relative_addr & 0x0800 ? true : false;
 
+	relative_addr &= ~0x0800;
+
 	idata = memory_readmax64(cpu, data, len);
 	regnr = relative_addr / sizeof(uint32_t);
 
-	relative_addr = (relative_addr & ~0x0800) + 0x3000;
+	relative_addr += 0x3000;
 
 	/*
 	 *  Treat all registers as read/write, by default.  Sometimes these
 	 *  are accessed as 32-bit words, sometimes as 64-bit words.
+	 *
+	 *  NOTE: The lowest bits are internally stored in the "low" (+0)
+	 *  register, and the higher bits are stored in the "+1" word.
 	 */
-	if (len != 4) {
+	if (len == 4) {
+		if (writeflag == MEM_WRITE)
+			d->mte_reg[regnr] = idata;
+		else
+			odata = d->mte_reg[regnr];
+	} else if (len != 4) {
 		if (writeflag == MEM_WRITE) {
-			d->mte_reg[regnr] = idata >> 32;
-			d->mte_reg[regnr+1] = idata;
-		} else
-			odata = ((uint64_t)d->mte_reg[regnr] << 32) +
-			    d->mte_reg[regnr+1];
+			d->mte_reg[regnr+1] = idata >> 32;
+			d->mte_reg[regnr] = idata;
+		} else {
+			odata = ((uint64_t)d->mte_reg[regnr+1] << 32) +
+			    d->mte_reg[regnr];
+		}
+	} else {
+		fatal("[ sgi_mte: UNIMPLEMENTED read/write len %i ]\n", len);
+		exit(1);
 	}
-
-	if (writeflag == MEM_WRITE)
-		d->mte_reg[regnr] = idata;
-	else
-		odata = d->mte_reg[regnr];
 
 	switch (relative_addr) {
 
@@ -979,15 +1059,25 @@ DEVICE_ACCESS(sgi_mte)
 	if (startFlag && writeflag == MEM_WRITE) {
 		uint32_t mode = d->mte_reg[(CRIME_MTE_MODE - 0x3000) / sizeof(uint32_t)];
 		uint64_t dst0 = d->mte_reg[(CRIME_MTE_DST0 - 0x3000) / sizeof(uint32_t)];
-		uint64_t dst1  = d->mte_reg[(CRIME_MTE_DST1 - 0x3000) / sizeof(uint32_t)];
+		uint64_t dst1 = d->mte_reg[(CRIME_MTE_DST1 - 0x3000) / sizeof(uint32_t)];
 		uint64_t dstlen = dst1 - dst0 + 1;
 		unsigned char zerobuf[ZERO_CHUNK_LEN];
 		int depth = (mode & MTE_MODE_DEPTH_MASK) >> MTE_DEPTH_SHIFT;
 		int src = (mode & MTE_MODE_SRC_BUF_MASK) >> MTE_SRC_TLB_SHIFT;
-		uint32_t bytemask  = d->mte_reg[(CRIME_MTE_BYTEMASK - 0x3000) / sizeof(uint32_t)];
-		uint32_t bg  = d->mte_reg[(CRIME_MTE_BG - 0x3000) / sizeof(uint32_t)];
+		uint32_t bytemask = d->mte_reg[(CRIME_MTE_BYTEMASK - 0x3000) / sizeof(uint32_t)];
+		uint32_t bg = d->mte_reg[(CRIME_MTE_BG - 0x3000) / sizeof(uint32_t)];
 
 		// TODO: copy from src0/src1?
+
+		if (mode == 0x01) {
+			fatal("[ sgi_mte: TODO! unimplemented mode 0x%x ]", mode);
+			return 1;
+		}
+
+		if (mode != 0x11) {
+			fatal("[ sgi_mte: unimplemented mode 0x%x ]", mode);
+			exit(1);
+		}
 
 		if (depth != MTE_DEPTH_8) {
 			fatal("[ sgi_mte: unimplemented MTE_DEPTH_x ]");
@@ -1018,9 +1108,6 @@ DEVICE_ACCESS(sgi_mte)
 		    " dst1 = 0x%016llx (length = 0x%llx), bg = 0x%x, bytemask = 0x%x ]\n",
 		    (long long)dst0, (long long)dst1,
 		    (long long)dstlen, (int)bg, (int)bytemask);
-
-		if (dstlen <= 1)
-			return 1;
 
 		memset(zerobuf, 0, sizeof(zerobuf));
 		uint64_t fill_addr = dst0;
