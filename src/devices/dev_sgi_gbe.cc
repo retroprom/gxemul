@@ -52,7 +52,7 @@
 
 
 /*  Let's hope nothing is there already...  */
-#define	FAKE_GBE_FB_ADDRESS	0x38000000
+#define	FAKE_GBE_FB_ADDRESS	0x380000000
 
 #define	ZERO_CHUNK_LEN		4096
 
@@ -834,10 +834,13 @@ DEVICE_ACCESS(sgi_de)
 
 	if (startFlag) {
 		uint32_t op = d->de_reg[(CRIME_DE_PRIMITIVE - 0x2000) / sizeof(uint32_t)];
+		uint32_t drawmode = d->de_reg[(CRIME_DE_DRAWMODE - 0x2000) / sizeof(uint32_t)];
 
-		uint32_t fg = d->de_reg[(CRIME_DE_FG - 0x2000) / sizeof(uint32_t)]&255;
-		uint32_t bg = d->de_reg[(CRIME_DE_BG - 0x2000) / sizeof(uint32_t)]&255;
+		uint32_t fg = d->de_reg[(CRIME_DE_FG - 0x2000) / sizeof(uint32_t)] & 255;
+		uint32_t bg = d->de_reg[(CRIME_DE_BG - 0x2000) / sizeof(uint32_t)] & 255;
 		uint32_t pattern = d->de_reg[(CRIME_DE_STIPPLE_PAT - 0x2000) / sizeof(uint32_t)];
+		//uint32_t stipple_mode = d->de_reg[(CRIME_DE_STIPPLE_MODE - 0x2000) / sizeof(uint32_t)];
+		//uint32_t rop = d->de_reg[(CRIME_DE_ROP - 0x2000) / sizeof(uint32_t)];
 
 		uint32_t x1 = (d->de_reg[(CRIME_DE_X_VERTEX_0 - 0x2000) / sizeof(uint32_t)]
 		    >> 16) & 0xfff;
@@ -848,24 +851,41 @@ DEVICE_ACCESS(sgi_de)
 		size_t x, y;
 
 		// TODO: Take drawmode, rop, bg, and planemask into account etc.
+		// rop 12 = xor netbsd cursor?
 
-		debug("[ sgi_de: STARTING DRAWING COMMAND: op = 0x%08x,"
+		fatal("[ sgi_de: STARTING DRAWING COMMAND: op = 0x%08x,"
 		    " x1=%i y1=%i x2=%i y2=%i fg=0x%x bg=0x%x pattern=0x%08x ]\n",
 		    op, x1, y1, x2, y2, fg, bg, pattern);
+
+		if (drawmode & DE_DRAWMODE_XFER_EN) {
+			// Used by the PROM to scroll up the command window.
+			uint32_t addr_src = d->de_reg[(CRIME_DE_XFER_ADDR_SRC - 0x2000) / sizeof(uint32_t)];
+			uint32_t strd_src = d->de_reg[(CRIME_DE_XFER_STRD_SRC - 0x2000) / sizeof(uint32_t)];
+			uint32_t step_x = d->de_reg[(CRIME_DE_XFER_STEP_X - 0x2000) / sizeof(uint32_t)];
+			uint32_t step_y = d->de_reg[(CRIME_DE_XFER_STEP_Y - 0x2000) / sizeof(uint32_t)];
+			uint32_t addr_dst = d->de_reg[(CRIME_DE_XFER_ADDR_DST - 0x2000) / sizeof(uint32_t)];
+			uint32_t strd_dst = d->de_reg[(CRIME_DE_XFER_STRD_DST - 0x2000) / sizeof(uint32_t)];
+
+			debug("[ sgi_de: XFER addr_src=0x%x strd_src=0x%x step_x=0x%x step_y=0x%x "
+				"addr_dst=0x%x strd_dst=0x%x ]\n",
+				addr_src, strd_src, step_x, step_y, addr_dst, strd_dst);
+
+			return 1;
+		}
+		
+		if (x2 < x1) {
+			int tmp = x1; x1 = x2; x2 = tmp;
+		}
+		if (y2 < y1) {
+			int tmp = y1; y1 = y2; y2 = tmp;
+		}
 
 		switch (op & 0xff000000) {
 		case DE_PRIM_LINE:
 			/*
-			 *  Used by the PROM to draw text
-			 *  characters on the screen.
+			 *  Used by the PROM to draw text characters and
+			 *  icons on the screen.
 			 */
-
-			if (x2 < x1) {
-				int tmp = x1; x1 = x2; x2 = tmp;
-			}
-			if (y2 < y1) {
-				int tmp = y1; y1 = y2; y2 = tmp;
-			}
 			if (x2-x1 <= 15)
 				pattern <<= 16;
 
@@ -887,16 +907,17 @@ DEVICE_ACCESS(sgi_de)
 			 *  Used by the PROM to fill parts of the background,
 			 *  and used by NetBSD/OpenBSD to draw text characters.
 			 */
-			if (x2 < x1) {
-				int tmp = x1; x1 = x2; x2 = tmp;
-			}
-			if (y2 < y1) {
-				int tmp = y1; y1 = y2; y2 = tmp;
-			}
-
 			for (y=y1; y<=y2; y++)
-				for (x = x1; x <= x2; ++x)
-					horrible_putpixel(cpu, d, x, y, fg);
+				for (x = x1; x <= x2; ++x) {
+					// TODO: Most likely not correct, but it allows
+					// both NetBSD and the PROM to work for now...
+					int color = fg;
+					if (drawmode & DE_DRAWMODE_OPAQUE_STIP)
+						color = (pattern & 0x80000000UL) ? fg : bg;
+
+					horrible_putpixel(cpu, d, x, y, color);
+					pattern <<= 1;
+				}
 			break;
 
 		default:fatal("[ sgi_de: UNIMPLEMENTED drawing command: op = 0x%08x,"
@@ -936,7 +957,7 @@ void dev_sgi_de_init(struct memory *mem, uint64_t baseaddr, struct sgi_gbe_data 
 DEVICE_ACCESS(sgi_mte)
 {
 	struct sgi_gbe_data *d = (struct sgi_gbe_data *) extra;
-	uint64_t idata = 0, odata = 0;
+	uint64_t idata = 0, odata = 0, fill_addr;
 	int regnr;
 	bool startFlag = relative_addr & 0x0800 ? true : false;
 
@@ -1060,6 +1081,7 @@ DEVICE_ACCESS(sgi_mte)
 		uint32_t mode = d->mte_reg[(CRIME_MTE_MODE - 0x3000) / sizeof(uint32_t)];
 		uint64_t dst0 = d->mte_reg[(CRIME_MTE_DST0 - 0x3000) / sizeof(uint32_t)];
 		uint64_t dst1 = d->mte_reg[(CRIME_MTE_DST1 - 0x3000) / sizeof(uint32_t)];
+		int32_t dst_y_step = d->mte_reg[(CRIME_MTE_DST_Y_STEP - 0x3000) / sizeof(uint32_t)];
 		uint64_t dstlen = dst1 - dst0 + 1;
 		unsigned char zerobuf[ZERO_CHUNK_LEN];
 		int depth = (mode & MTE_MODE_DEPTH_MASK) >> MTE_DEPTH_SHIFT;
@@ -1069,23 +1091,19 @@ DEVICE_ACCESS(sgi_mte)
 
 		// TODO: copy from src0/src1?
 
-		if (mode == 0x01) {
-			fatal("[ sgi_mte: TODO! unimplemented mode 0x%x ]", mode);
-			return 1;
-		}
+		debug("[ sgi_mte: STARTING TRANSFER: mode=0x%08x dst0=0x%016llx,"
+		    " dst1=0x%016llx (length 0x%llx), dst_y_step=%i bg=0x%x, bytemask=0x%x ]\n",
+		    mode,
+		    (long long)dst0, (long long)dst1,
+		    (long long)dstlen, dst_y_step, (int)bg, (int)bytemask);
 
-		if (mode != 0x11) {
-			fatal("[ sgi_mte: unimplemented mode 0x%x ]", mode);
+		if (dst_y_step != 0 && dst_y_step != 1) {
+			fatal("[ sgi_mte: TODO! unimplemented dst_y_step %i ]", dst_y_step);
 			exit(1);
 		}
 
 		if (depth != MTE_DEPTH_8) {
 			fatal("[ sgi_mte: unimplemented MTE_DEPTH_x ]");
-			exit(1);
-		}
-
-		if (bg != 0) {
-			fatal("[ sgi_mte: unimplemented BG != 0 ]");
 			exit(1);
 		}
 
@@ -1104,25 +1122,43 @@ DEVICE_ACCESS(sgi_mte)
 			exit(1);
 		}
 
-		debug("[ sgi_mte: STARTING TRANSFER: dst0 = 0x%016llx,"
-		    " dst1 = 0x%016llx (length = 0x%llx), bg = 0x%x, bytemask = 0x%x ]\n",
-		    (long long)dst0, (long long)dst1,
-		    (long long)dstlen, (int)bg, (int)bytemask);
+		switch (mode) {
+		case 0x01:
+			// Used by NetBSD's crmfb_fill_rect. It puts graphical
+			// coordinates in dst0 and dst1.
+			{
+				int x1 = dst0 >> 12;
+				int y1 = dst0 & 0xfff;
+				int x2 = dst1 >> 12;
+				int y2 = dst1 & 0xfff;
+				x1 /= (d->bitdepth / 8);
+				x2 /= (d->bitdepth / 8);
+				for (int y = y1; y <= y2; ++y)
+					for  (int x = x1; x <= x2; ++x)
+						horrible_putpixel(cpu, d, x, y, bg);
+			}
+			break;
+		case 0x11:
+			// Used by the PROM to zero-fill memory (?).
+			memset(zerobuf, bg, dstlen < sizeof(zerobuf) ? dstlen : sizeof(zerobuf));
+			fill_addr = dst0;
+			while (dstlen != 0) {
+				uint64_t fill_len;
+				if (dstlen > sizeof(zerobuf))
+					fill_len = sizeof(zerobuf);
+				else
+					fill_len = dstlen;
 
-		memset(zerobuf, 0, sizeof(zerobuf));
-		uint64_t fill_addr = dst0;
-		while (dstlen != 0) {
-			uint64_t fill_len;
-			if (dstlen > sizeof(zerobuf))
-				fill_len = sizeof(zerobuf);
-			else
-				fill_len = dstlen;
+				cpu->memory_rw(cpu, mem, fill_addr, zerobuf, fill_len,
+					MEM_WRITE, NO_EXCEPTIONS | PHYSICAL);
 
-			cpu->memory_rw(cpu, mem, fill_addr, zerobuf, fill_len,
-				MEM_WRITE, NO_EXCEPTIONS | PHYSICAL);
-
-			fill_addr += fill_len;
-			dstlen -= sizeof(zerobuf);
+				fill_addr += fill_len;
+				dstlen -= sizeof(zerobuf);
+			}
+			break;
+		default:
+			fatal("[ sgi_mte: TODO! unimplemented mode 0x%x ]", mode);
+			return 1;
 		}
 	}
 

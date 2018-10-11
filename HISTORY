@@ -4745,3 +4745,4 @@ Changelog for GXemul:
 		Linux/O2), rather than requiring a recompile.
 		Also, detection of Linux' "tweaked" (linear) mode, thus
 		avoiding a recompile when experimenting with Linux/O2.
+		NetBSD can now show some output on the O2 framebuffer too.
