@@ -64,33 +64,47 @@
 
 
 struct sgi_gbe_data {
-	// crm / gbe
+	// CRM / GBE registers:
 	int		xres, yres;
 
 	uint32_t	control;		/* 0x00000  */
 	uint32_t	dotclock;		/* 0x00004  */
 	uint32_t	i2c;			/* 0x00008  */
 	uint32_t	i2cfp;			/* 0x00010  */
+
 	uint32_t	plane0ctrl;		/* 0x30000  */
 	uint32_t	frm_control;		/* 0x3000c  */
 	int		freeze;
 
+	// Emulator's representation:
 	int 		width_in_tiles;
 	int		partial_pixels;
 	int		bitdepth;
 	struct vfb_data *fb_data;
 
-	// rendering engine
+	// Rendering engine registers
 	uint32_t	re_reg[DEV_SGI_RE_LENGTH / sizeof(uint32_t)];
 
-	// drawing engine
+	// Drawing engine registers:
 	uint32_t	de_reg[DEV_SGI_DE_LENGTH / sizeof(uint32_t)];
 
-	// memory transfer engine
+	// Memory transfer engine registers:
 	uint32_t	mte_reg[DEV_SGI_MTE_LENGTH / sizeof(uint32_t)];
 };
 
 
+/*
+ *  horrible_putpixel():
+ *
+ *  This routine puts a pixel in one of the tiles, from the perspective of
+ *  the rendering/drawing engine. Given x and y, it figures out which tile
+ *  number it is, does a slow read from emulated memory to find that tile's
+ *  base address (64 KB aligned), and then finally does a slow write to
+ *  put the pixel at the correct sub-coordinates within the tile.
+ *
+ *  Tiles are always 512 _bytes_ wide, and 128 pixels high. For 32-bit color
+ *  modes, for example, that means 128 x 128 pixels.
+ */
 void horrible_putpixel(struct cpu* cpu, struct sgi_gbe_data* d, int x, int y, uint32_t color)
 {
 	int linear = d->width_in_tiles == 1 && d->partial_pixels == 0;
@@ -122,7 +136,7 @@ void horrible_putpixel(struct cpu* cpu, struct sgi_gbe_data* d, int x, int y, ui
 	tileptr <<= 16;
 
 	if (tileptr == 0) {
-		fatal("sgi gbe horrible_putpixel: bad tileptr?\n");
+		fatal("sgi gbe horrible_putpixel: unexpected NULL tileptr?\n");
 		exit(1);
 	}
 
@@ -159,18 +173,13 @@ void horrible_putpixel(struct cpu* cpu, struct sgi_gbe_data* d, int x, int y, ui
  *
  *  An exception is how Linux/O2 uses the framebuffer, in a "tweaked" mode
  *  which resembles linear mode. This code attempts to support both.
- *
- *  TODO: It doesn't really use width_in_tiles and partial_pixels, rather
- *  it just draws tiles to cover the whole xres * yres pixels. Perhaps this
- *  could be fixed some day, if it matters.
  */
 DEVICE_TICK(sgi_gbe)
 {
 	struct sgi_gbe_data *d = (struct sgi_gbe_data *) extra;
-	int tile_nr = 0, on_screen = 1, xbase = 0, ybase = 0;
+	int tile_nr = 0, on_screen = 1;
 	unsigned char tileptr_buf[sizeof(uint16_t)];
 	uint64_t tileptr, tiletable;
-	int lines_to_copy, pixels_per_line, y;
 	unsigned char buf[16384];	/*  must be power of 2, at most 65536 */
 	int copy_len, copy_offset;
 	uint64_t old_fb_offset = 0;
@@ -186,35 +195,34 @@ DEVICE_TICK(sgi_gbe)
 #endif
 
 	if (tiletable == 0)
-		on_screen = 0;
+		return;
 
-	while (on_screen) {
-		/*  Get pointer to a tile:  */
-		cpu->memory_rw(cpu, cpu->mem, tiletable +
-		    sizeof(tileptr_buf) * tile_nr,
-		    tileptr_buf, sizeof(tileptr_buf), MEM_READ,
-		    NO_EXCEPTIONS | PHYSICAL);
-		tileptr = 256 * tileptr_buf[0] + tileptr_buf[1];
-		/*  TODO: endianness  */
-		tileptr <<= 16;
+	if (linear) {
+		/*
+		 *  Tweaked (linear) mode, as used by Linux/O2:
+		 *
+		 *  Copy data from this 64KB physical RAM block to the
+		 *  framebuffer:
+		 *
+		 *  NOTE: Copy it in smaller chunks than 64KB, in case
+		 *        the framebuffer device can optimize away
+		 *        portions that aren't modified that way.
+		 */
 
-		/*  tileptr is now a physical address of a tile.  */
+		while (on_screen) {
+			/*  Get pointer to a tile:  */
+			cpu->memory_rw(cpu, cpu->mem, tiletable +
+			    sizeof(tileptr_buf) * tile_nr,
+			    tileptr_buf, sizeof(tileptr_buf), MEM_READ,
+			    NO_EXCEPTIONS | PHYSICAL);
+			tileptr = 256 * tileptr_buf[0] + tileptr_buf[1];
+			tileptr <<= 16;
+
+			/*  tileptr is now a physical address of a tile.  */
 #ifdef GBE_DEBUG
-		fatal("[ sgi_gbe:   tile_nr = %2i, tileptr = 0x%08lx, xbase"
-		    " = %4i, ybase = %4i ]\n", tile_nr, tileptr, xbase, ybase);
+			fatal("[ sgi_gbe:   tile_nr = %2i, tileptr = 0x%08lx ]\n", tile_nr, tileptr);
 #endif
 
-		if (linear) {
-			/*
-			 *  Tweaked (linear) mode, as used by Linux/O2:
-			 *
-			 *  Copy data from this 64KB physical RAM block to the
-			 *  framebuffer:
-			 *
-			 *  NOTE: Copy it in smaller chunks than 64KB, in case
-			 *        the framebuffer device can optimize away
-			 *        portions that aren't modified that way.
-			 */
 			copy_len = sizeof(buf);
 			copy_offset = 0;
 
@@ -241,51 +249,75 @@ DEVICE_TICK(sgi_gbe)
 				copy_offset += sizeof(buf);
 				old_fb_offset += sizeof(buf);
 			}
-		} else {
-			/*
-			 *  Tiled mode (used by other things than Linux):
-			 */
 
-			lines_to_copy = 128;
-			if (ybase + lines_to_copy > d->yres)
-				lines_to_copy = d->yres - ybase;
-
-			pixels_per_line = 512 * 8 / d->bitdepth;
-			if (xbase + pixels_per_line > d->xres)
-				pixels_per_line = d->xres - xbase;
-
-			for (y=0; y<lines_to_copy; y++) {
-				cpu->memory_rw(cpu, cpu->mem, tileptr + 512 * y,
-				    buf, pixels_per_line * d->bitdepth / 8,
-				    MEM_READ, NO_EXCEPTIONS | PHYSICAL);
-#if 0
-{
-int i;
-for (i=0; i<pixels_per_line * d->bitdepth / 8; i++)
-	buf[i] ^= (random() & 0x21);
-}
-#endif
-				dev_fb_access(cpu, cpu->mem, ((ybase + y) *
-				    d->xres + xbase) * d->bitdepth / 8,
-				    buf, pixels_per_line * d->bitdepth / 8,
-				    MEM_WRITE, d->fb_data);
-			}
-
-			/*  Go to next tile:  */
-			xbase += (512 * 8 / d->bitdepth);
-			if (xbase >= d->xres) {
-				xbase = 0;
-				ybase += 128;
-				if (ybase >= d->yres)
-					on_screen = 0;
-			}
+			tile_nr ++;
 		}
-
-		/*  Go to next tile:  */
-		tile_nr ++;
+		
+		return;
 	}
 
-	/*  debug("[ sgi_gbe: dev_sgi_gbe_tick() end]\n");  */
+	/*
+	 *  Tiled mode (used by other things than Linux):
+	 */
+
+	// Nr of tiles horizontally and vertically:
+	int h = (d->yres + 127) / 128;
+	int w = d->width_in_tiles + (d->partial_pixels > 0 ? 1 : 0);
+
+	int nr_of_tiles = h * w;
+	
+	uint32_t tile[256];
+	uint8_t alltileptrs[256 * sizeof(uint16_t)];
+
+	if (nr_of_tiles > 256) {
+		fatal("sgi gbe: too many tiles?!\n");
+		exit(1);
+	}
+	
+	cpu->memory_rw(cpu, cpu->mem, tiletable,
+	    alltileptrs, sizeof(alltileptrs), MEM_READ,
+	    NO_EXCEPTIONS | PHYSICAL);
+
+	for (int i = 0; i < 256; ++i)
+		tile[i] = (256 * alltileptrs[i*2] + alltileptrs[i*2+1]) << 16;
+
+	int bytes_per_pixel = d->bitdepth / 8;
+	int screensize = d->xres * d->yres * bytes_per_pixel;
+	int x = 0, y = 0;
+	
+	for (int tiley = 0; tiley < h; ++tiley) {
+		for (int line = 0; line < 128; ++line) {
+			for (int tilex = 0; tilex < w; ++tilex) {
+				int tilenr = tilex + tiley * w;
+
+				// Read one line of up to 512 bytes from the tile.
+				int len = tilex < d->width_in_tiles ? 512 : (d->partial_pixels * bytes_per_pixel);
+
+				cpu->memory_rw(cpu, cpu->mem, tile[tilenr] + 512 * line,
+				    buf, len, MEM_READ, NO_EXCEPTIONS | PHYSICAL);
+
+#if 0
+for (int j=0; j<len; j++) buf[j] ^= (random() & 0x21);
+#endif
+
+				int offset = (x + y * d->xres) * bytes_per_pixel;
+				if (offset + len > screensize) {
+					len = screensize - offset;
+				}
+
+				dev_fb_access(cpu, cpu->mem, offset,
+				    buf, len, MEM_WRITE, d->fb_data);
+				
+				x += len / bytes_per_pixel;
+				if (x >= d->xres) {
+					x -= d->xres;
+					++y;
+					if (y >= d->yres)
+						return;
+				}
+			}
+		}
+	}
 }
 
 
@@ -469,7 +501,7 @@ DEVICE_ACCESS(sgi_gbe)
 
 			d->bitdepth = 8 << ((d->plane0ctrl >> CRMFB_FRM_TILESIZE_DEPTH_SHIFT) & 3);
 			d->width_in_tiles = (idata >> CRMFB_FRM_TILESIZE_WIDTH_SHIFT) & 0xff;
-			d->partial_pixels = ((idata >> CRMFB_FRM_TILESIZE_RHS_SHIFT) & 0x1f) * 32;
+			d->partial_pixels = ((idata >> CRMFB_FRM_TILESIZE_RHS_SHIFT) & 0x1f) * 32 * 8 / d->bitdepth;
 
 			debug("[ sgi_gbe: setting color depth to %i bits, width in tiles = %i, partial pixels = %i ]\n",
 			    d->bitdepth, d->width_in_tiles, d->partial_pixels);
@@ -483,11 +515,11 @@ DEVICE_ACCESS(sgi_gbe)
 			odata = d->plane0ctrl;
 		break;
 
-	case CRMFB_FRM_PIXSIZE:
+	case CRMFB_FRM_PIXSIZE:	// 0x30004
 		// TODO.
 		break;
 		
-	case 0x30008:	/*  normal plane ctrl 2  */
+	case 0x30008:
 		odata = random();	/*  IP32 prom test hack. TODO  */
 		/*  IRIX wants 0x20, it seems.  */
 		if (random() & 1)
@@ -495,7 +527,6 @@ DEVICE_ACCESS(sgi_gbe)
 		break;
 
 	case CRMFB_FRM_CONTROL:	// 0x3000c
-		/*  normal plane ctrl 3  */
 		/*
 		 *  Writes to 3000c should be readable back at 30008?
 		 *  At least bit 0 (dma) ctrl 3.

@@ -4746,3 +4746,9 @@ Changelog for GXemul:
 		Also, detection of Linux' "tweaked" (linear) mode, thus
 		avoiding a recompile when experimenting with Linux/O2.
 		NetBSD can now show some output on the O2 framebuffer too.
+20181012	Fixing a bug in the generic X11 framebuffer output, so that
+		scaledown is preserved even when a guest OS switches resultion
+		at runtime.
+		Continuing on the SGI O2 graphics; when the nr of tiles or
+		"partial pixels" is in mismatch with the screen resolution,
+		the skewed result now looks the same as on my real physical O2.
