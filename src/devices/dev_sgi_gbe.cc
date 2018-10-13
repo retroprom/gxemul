@@ -30,11 +30,12 @@
  *  Guesswork, based on how Linux and NetBSD use the graphics on the SGI O2.
  *  Using NetBSD terminology (from crmfbreg.h):
  *
- *	0x15001000	rendering engine
+ *	0x15001000	rendering engine (TLBs)
  *	0x15002000	drawing engine
  *	0x15003000	memory transfer engine
  *	0x15004000	status registers for drawing engine
- *	0x16000000	crm (or gbe) framebuffer control
+ *
+ *	0x16000000	crm (or gbe) framebuffer control / video output
  */
 
 #include <stdio.h>
@@ -82,8 +83,11 @@ struct sgi_gbe_data {
 	int		bitdepth;
 	struct vfb_data *fb_data;
 
-	// Rendering engine registers
-	uint32_t	re_reg[DEV_SGI_RE_LENGTH / sizeof(uint32_t)];
+	// Rendering engine registers:
+	uint16_t	re_tlb_a[256];
+	uint16_t	re_tlb_b[256];
+	uint16_t	re_tlb_c[256];
+	// todo: linear etc.
 
 	// Drawing engine registers:
 	uint32_t	de_reg[DEV_SGI_DE_LENGTH / sizeof(uint32_t)];
@@ -98,16 +102,36 @@ struct sgi_gbe_data {
  *
  *  This routine puts a pixel in one of the tiles, from the perspective of
  *  the rendering/drawing engine. Given x and y, it figures out which tile
- *  number it is, does a slow read from emulated memory to find that tile's
- *  base address (64 KB aligned), and then finally does a slow write to
- *  put the pixel at the correct sub-coordinates within the tile.
+ *  number it is, and then finally does a slow write to put the pixel at the
+ *  correct sub-coordinates within the tile.
  *
  *  Tiles are always 512 _bytes_ wide, and 128 pixels high. For 32-bit color
  *  modes, for example, that means 128 x 128 pixels.
  */
-void horrible_putpixel(struct cpu* cpu, struct sgi_gbe_data* d, int x, int y, uint32_t color)
+void horrible_putpixel(struct cpu* cpu, struct sgi_gbe_data* d, int dst_mode, int x, int y, uint32_t color)
 {
 	int linear = d->width_in_tiles == 1 && d->partial_pixels == 0;
+
+	// dst_mode (see NetBSD's crmfbreg.h):
+	// #define DE_MODE_TLB_A           0x00000000
+	// #define DE_MODE_TLB_B           0x00000400
+	// #define DE_MODE_TLB_C           0x00000800
+	// #define DE_MODE_LIN_A           0x00001000
+	// #define DE_MODE_LIN_B           0x00001400
+	uint32_t mode = dst_mode & 0x7;
+
+	uint16_t* tlb = NULL;
+	
+	switch (mode) {
+	case 0:	tlb = d->re_tlb_a;
+		break;
+	case 1:	tlb = d->re_tlb_b;
+		break;
+	case 2:	tlb = d->re_tlb_c;
+		break;
+	default:fatal("unimplemented dst_mode\n");
+		exit(1);
+	}
 
 	if (linear) {
 		fatal("sgi gbe horrible_putpixel called in linear mode?!\n");
@@ -117,23 +141,22 @@ void horrible_putpixel(struct cpu* cpu, struct sgi_gbe_data* d, int x, int y, ui
 	if (x < 0 || y < 0 || x >= d->xres || y >= d->yres)
 		return;
 
+	if (d->bitdepth != 8) {
+		fatal("sgi gbe horrible_putpixel: TODO: non-8-bit\n");
+		exit(1);
+	}
+
 	int tilewidth_in_pixels = 512 * 8 / d->bitdepth;
 	
 	int tile_nr_x = x / tilewidth_in_pixels;
 	int tile_nr_y = y / 128;
 
-	int w = d->width_in_tiles + (d->partial_pixels > 0 ? 1 : 0);
+	int w = 2048 / 512; // d->width_in_tiles + (d->partial_pixels > 0 ? 1 : 0);
 	int tile_nr = tile_nr_y * w + tile_nr_x;
 
-	uint64_t tiletable = (d->frm_control & 0xfffffe00);
+	uint32_t tileptr = (tlb[tile_nr] & ~0x8000) << 16;
 
-	unsigned char tileptr_buf[sizeof(uint16_t)];
-	cpu->memory_rw(cpu, cpu->mem, tiletable +
-	    sizeof(tileptr_buf) * tile_nr,
-	    tileptr_buf, sizeof(tileptr_buf), MEM_READ,
-	    NO_EXCEPTIONS | PHYSICAL);
-	uint64_t tileptr = 256 * tileptr_buf[0] + tileptr_buf[1];
-	tileptr <<= 16;
+	// printf("dst_mode %i, tile_nr = %i,  tileptr = 0x%llx\n", dst_mode, tile_nr, (long long)tileptr);
 
 	if (tileptr == 0) {
 		fatal("sgi gbe horrible_putpixel: unexpected NULL tileptr?\n");
@@ -146,11 +169,6 @@ void horrible_putpixel(struct cpu* cpu, struct sgi_gbe_data* d, int x, int y, ui
 	uint8_t buf[4];
 	buf[0] = color;
 	buf[1] = buf[2] = buf[3] = 0x00;
-
-	if (d->bitdepth != 8) {
-		fatal("sgi gbe horrible_putpixel: TODO: non-8-bit\n");
-		exit(1);
-	}
 
 	cpu->memory_rw(cpu, cpu->mem, tileptr + 512 * y + xofs,
 	    buf, d->bitdepth / 8,
@@ -509,7 +527,7 @@ DEVICE_ACCESS(sgi_gbe)
 			if (d->bitdepth != 8) {
 				fatal("sgi_gbe: warning: bitdepth %i not "
 				    "really implemented yet\n", d->bitdepth);
-				exit(1);
+				// exit(1);
 			}
 		} else
 			odata = d->plane0ctrl;
@@ -687,40 +705,74 @@ DEVICE_ACCESS(sgi_re)
 {
 	struct sgi_gbe_data *d = (struct sgi_gbe_data *) extra;
 	uint64_t idata = 0, odata = 0;
-	int regnr;
 
 	idata = memory_readmax64(cpu, data, len);
-	regnr = relative_addr / sizeof(uint32_t);
 
 	relative_addr += 0x1000;
 
-	/*
-	 *  Treat all registers as read/write, by default.  Sometimes these
-	 *  are accessed as 32-bit words, sometimes as 64-bit words.
-	 */
-	if (len != 4) {
+	if (relative_addr >= CRIME_RE_TLB_A && relative_addr < CRIME_RE_TLB_B) {
+		if (len != 8) {
+			fatal("TODO: unimplemented len=%i for CRIME_RE_TLB_A\n", len);
+			exit(1);
+		}
+
 		if (writeflag == MEM_WRITE) {
-			d->re_reg[regnr] = idata >> 32;
-			d->re_reg[regnr+1] = idata;
-		} else
-			odata = ((uint64_t)d->re_reg[regnr] << 32) +
-			    d->re_reg[regnr+1];
-	}
+			int tlbi = (relative_addr >> 3) & 0xff;
+			if (tlbi & 3) {
+				// TODO: openbsd writes sequences that I didn't
+				// expect...
+				return 1;
+			}
+			for (int hwi = 0; hwi < len; hwi += sizeof(uint16_t)) {
+				d->re_tlb_a[tlbi] = data[hwi]*256 + data[hwi+1];
+				fatal("d->re_tlb_a[%i] = 0x%04x\n", tlbi, d->re_tlb_a[tlbi]);
+				tlbi++;
+			}
+		} else {
+			fatal("TODO: read from CRIME_RE_TLB_A\n");
+			exit(1);
+		}
+	} else 	if (relative_addr >= CRIME_RE_TLB_B && relative_addr < CRIME_RE_TLB_C) {
+		if (len != 8) {
+			fatal("TODO: unimplemented len=%i for CRIME_RE_TLB_B\n", len);
+			exit(1);
+		}
 
-	if (writeflag == MEM_WRITE)
-		d->re_reg[regnr] = idata;
-	else
-		odata = d->re_reg[regnr];
+		if (writeflag == MEM_WRITE) {
+			int tlbi = (relative_addr >> 3) & 0xff;
+			for (int hwi = 0; hwi < len; hwi += sizeof(uint16_t)) {
+				d->re_tlb_b[tlbi] = data[hwi]*256 + data[hwi+1];
+				fatal("d->re_tlb_b[%i] = 0x%04x\n", tlbi, d->re_tlb_b[tlbi]);
+				tlbi++;
+			}
+		} else {
+			fatal("TODO: read from CRIME_RE_TLB_B\n");
+			exit(1);
+		}
+	} else 	if (relative_addr >= CRIME_RE_TLB_C && relative_addr < CRIME_RE_TLB_C + 0x200) {
+		if (len != 8) {
+			fatal("TODO: unimplemented len=%i for CRIME_RE_TLB_C\n", len);
+			exit(1);
+		}
 
-	switch (relative_addr) {
-
-	default:
+		if (writeflag == MEM_WRITE) {
+			int tlbi = (relative_addr >> 3) & 0xff;
+			for (int hwi = 0; hwi < len; hwi += sizeof(uint16_t)) {
+				d->re_tlb_c[tlbi] = data[hwi]*256 + data[hwi+1];
+				fatal("d->re_tlb_c[%i] = 0x%04x\n", tlbi, d->re_tlb_c[tlbi]);
+				tlbi++;
+			}
+		} else {
+			fatal("TODO: read from CRIME_RE_TLB_C\n");
+			exit(1);
+		}
+	} else {
 		if (writeflag == MEM_WRITE)
-			debug("[ sgi_re: unimplemented write to "
+			fatal("[ sgi_re: unimplemented write to "
 			    "address 0x%llx, data=0x%016llx ]\n",
 			    (long long)relative_addr, (long long)idata);
 		else
-			debug("[ sgi_re: unimplemented read from address"
+			fatal("[ sgi_re: unimplemented read from address"
 			    " 0x%llx ]\n", (long long)relative_addr);
 	}
 
@@ -866,7 +918,7 @@ DEVICE_ACCESS(sgi_de)
 	if (startFlag) {
 		uint32_t op = d->de_reg[(CRIME_DE_PRIMITIVE - 0x2000) / sizeof(uint32_t)];
 		uint32_t drawmode = d->de_reg[(CRIME_DE_DRAWMODE - 0x2000) / sizeof(uint32_t)];
-
+		uint32_t dst_mode = d->de_reg[(CRIME_DE_MODE_DST - 0x2000) / sizeof(uint32_t)];
 		uint32_t fg = d->de_reg[(CRIME_DE_FG - 0x2000) / sizeof(uint32_t)] & 255;
 		uint32_t bg = d->de_reg[(CRIME_DE_BG - 0x2000) / sizeof(uint32_t)] & 255;
 		uint32_t pattern = d->de_reg[(CRIME_DE_STIPPLE_PAT - 0x2000) / sizeof(uint32_t)];
@@ -923,7 +975,7 @@ DEVICE_ACCESS(sgi_de)
 			x=x1; y=y1;
 			while (x <= x2 && y <= y2) {
 				if (pattern & 0x80000000UL)
-					horrible_putpixel(cpu, d, x, y, fg);
+					horrible_putpixel(cpu, d, (dst_mode & 0x00001c00) >> 10, x, y, fg);
 
 				pattern <<= 1;
 				x++;
@@ -946,7 +998,7 @@ DEVICE_ACCESS(sgi_de)
 					if (drawmode & DE_DRAWMODE_OPAQUE_STIP)
 						color = (pattern & 0x80000000UL) ? fg : bg;
 
-					horrible_putpixel(cpu, d, x, y, color);
+					horrible_putpixel(cpu, d, (dst_mode & 0x00001c00) >> 10, x, y, color);
 					pattern <<= 1;
 				}
 			break;
@@ -1166,7 +1218,7 @@ DEVICE_ACCESS(sgi_mte)
 				x2 /= (d->bitdepth / 8);
 				for (int y = y1; y <= y2; ++y)
 					for  (int x = x1; x <= x2; ++x)
-						horrible_putpixel(cpu, d, x, y, bg);
+						horrible_putpixel(cpu, d, 0, x, y, bg);
 			}
 			break;
 		case 0x11:

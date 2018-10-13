@@ -4752,3 +4752,4 @@ Changelog for GXemul:
 		Continuing on the SGI O2 graphics; when the nr of tiles or
 		"partial pixels" is in mismatch with the screen resolution,
 		the skewed result now looks the same as on my real physical O2.
+20181013	More SGI O2 graphics work: TLBs.
