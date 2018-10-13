@@ -98,17 +98,17 @@ struct sgi_gbe_data {
 
 
 /*
- *  horrible_putpixel():
+ *  horrible_getputpixel():
  *
- *  This routine puts a pixel in one of the tiles, from the perspective of
+ *  This routine gets/puts a pixel in one of the tiles, from the perspective of
  *  the rendering/drawing engine. Given x and y, it figures out which tile
- *  number it is, and then finally does a slow write to put the pixel at the
- *  correct sub-coordinates within the tile.
+ *  number it is, and then finally does a slow read/write to get/put the pixel
+ *  at the correct sub-coordinates within the tile.
  *
  *  Tiles are always 512 _bytes_ wide, and 128 pixels high. For 32-bit color
  *  modes, for example, that means 128 x 128 pixels.
  */
-void horrible_putpixel(struct cpu* cpu, struct sgi_gbe_data* d, int dst_mode, int x, int y, uint32_t color)
+void horrible_getputpixel(bool put, struct cpu* cpu, struct sgi_gbe_data* d, int dst_mode, int x, int y, uint32_t* color)
 {
 	int linear = d->width_in_tiles == 1 && d->partial_pixels == 0;
 
@@ -134,7 +134,7 @@ void horrible_putpixel(struct cpu* cpu, struct sgi_gbe_data* d, int dst_mode, in
 	}
 
 	if (linear) {
-		fatal("sgi gbe horrible_putpixel called in linear mode?!\n");
+		fatal("sgi gbe horrible_getputpixel called in linear mode?!\n");
 		exit(1);
 	}
 
@@ -142,7 +142,7 @@ void horrible_putpixel(struct cpu* cpu, struct sgi_gbe_data* d, int dst_mode, in
 		return;
 
 	if (d->bitdepth != 8) {
-		fatal("sgi gbe horrible_putpixel: TODO: non-8-bit\n");
+		fatal("sgi gbe horrible_getputpixel: TODO: non-8-bit\n");
 		exit(1);
 	}
 
@@ -159,7 +159,7 @@ void horrible_putpixel(struct cpu* cpu, struct sgi_gbe_data* d, int dst_mode, in
 	// printf("dst_mode %i, tile_nr = %i,  tileptr = 0x%llx\n", dst_mode, tile_nr, (long long)tileptr);
 
 	if (tileptr == 0) {
-		fatal("sgi gbe horrible_putpixel: unexpected NULL tileptr?\n");
+		fatal("sgi gbe horrible_getputpixel: unexpected NULL tileptr?\n");
 		exit(1);
 	}
 
@@ -167,12 +167,20 @@ void horrible_putpixel(struct cpu* cpu, struct sgi_gbe_data* d, int dst_mode, in
 	int xofs = (x % tilewidth_in_pixels) * d->bitdepth / 8;
 
 	uint8_t buf[4];
-	buf[0] = color;
-	buf[1] = buf[2] = buf[3] = 0x00;
+	if (put) {
+		buf[0] = *color;
+		buf[1] = buf[2] = buf[3] = 0x00;	// TODO
 
-	cpu->memory_rw(cpu, cpu->mem, tileptr + 512 * y + xofs,
-	    buf, d->bitdepth / 8,
-	    MEM_WRITE, NO_EXCEPTIONS | PHYSICAL);
+		cpu->memory_rw(cpu, cpu->mem, tileptr + 512 * y + xofs,
+		    buf, d->bitdepth / 8,
+		    MEM_WRITE, NO_EXCEPTIONS | PHYSICAL);
+	} else {
+		cpu->memory_rw(cpu, cpu->mem, tileptr + 512 * y + xofs,
+		    buf, d->bitdepth / 8,
+		    MEM_READ, NO_EXCEPTIONS | PHYSICAL);
+
+		*color = buf[0];
+	}
 }
 
 
@@ -717,7 +725,7 @@ DEVICE_ACCESS(sgi_re)
 		}
 
 		if (writeflag == MEM_WRITE) {
-			int tlbi = (relative_addr >> 3) & 0xff;
+			int tlbi = ((relative_addr & 0x1ff) >> 3) & 0xff;
 			if (tlbi & 3) {
 				// TODO: openbsd writes sequences that I didn't
 				// expect...
@@ -725,41 +733,41 @@ DEVICE_ACCESS(sgi_re)
 			}
 			for (int hwi = 0; hwi < len; hwi += sizeof(uint16_t)) {
 				d->re_tlb_a[tlbi] = data[hwi]*256 + data[hwi+1];
-				fatal("d->re_tlb_a[%i] = 0x%04x\n", tlbi, d->re_tlb_a[tlbi]);
+				debug("d->re_tlb_a[%i] = 0x%04x\n", tlbi, d->re_tlb_a[tlbi]);
 				tlbi++;
 			}
 		} else {
 			fatal("TODO: read from CRIME_RE_TLB_A\n");
 			exit(1);
 		}
-	} else 	if (relative_addr >= CRIME_RE_TLB_B && relative_addr < CRIME_RE_TLB_C) {
+	} else if (relative_addr >= CRIME_RE_TLB_B && relative_addr < CRIME_RE_TLB_C) {
 		if (len != 8) {
 			fatal("TODO: unimplemented len=%i for CRIME_RE_TLB_B\n", len);
 			exit(1);
 		}
 
 		if (writeflag == MEM_WRITE) {
-			int tlbi = (relative_addr >> 3) & 0xff;
+			int tlbi = ((relative_addr & 0x1ff) >> 3) & 0xff;
 			for (int hwi = 0; hwi < len; hwi += sizeof(uint16_t)) {
 				d->re_tlb_b[tlbi] = data[hwi]*256 + data[hwi+1];
-				fatal("d->re_tlb_b[%i] = 0x%04x\n", tlbi, d->re_tlb_b[tlbi]);
+				debug("d->re_tlb_b[%i] = 0x%04x\n", tlbi, d->re_tlb_b[tlbi]);
 				tlbi++;
 			}
 		} else {
 			fatal("TODO: read from CRIME_RE_TLB_B\n");
 			exit(1);
 		}
-	} else 	if (relative_addr >= CRIME_RE_TLB_C && relative_addr < CRIME_RE_TLB_C + 0x200) {
+	} else if (relative_addr >= CRIME_RE_TLB_C && relative_addr < CRIME_RE_TLB_C + 0x200) {
 		if (len != 8) {
 			fatal("TODO: unimplemented len=%i for CRIME_RE_TLB_C\n", len);
 			exit(1);
 		}
 
 		if (writeflag == MEM_WRITE) {
-			int tlbi = (relative_addr >> 3) & 0xff;
+			int tlbi = ((relative_addr & 0x1ff) >> 3) & 0xff;
 			for (int hwi = 0; hwi < len; hwi += sizeof(uint16_t)) {
 				d->re_tlb_c[tlbi] = data[hwi]*256 + data[hwi+1];
-				fatal("d->re_tlb_c[%i] = 0x%04x\n", tlbi, d->re_tlb_c[tlbi]);
+				debug("d->re_tlb_c[%i] = 0x%04x\n", tlbi, d->re_tlb_c[tlbi]);
 				tlbi++;
 			}
 		} else {
@@ -841,6 +849,18 @@ DEVICE_ACCESS(sgi_de)
 
 	switch (relative_addr) {
 
+	case CRIME_DE_MODE_SRC:
+		debug("[ sgi_de: %s CRIME_DE_MODE_SRC: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		break;
+
+	case CRIME_DE_MODE_DST:
+		debug("[ sgi_de: %s CRIME_DE_MODE_DST: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		break;
+
 	case CRIME_DE_DRAWMODE:
 		debug("[ sgi_de: %s CRIME_DE_DRAWMODE: 0x%016llx ]\n",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
@@ -861,6 +881,24 @@ DEVICE_ACCESS(sgi_de)
 
 	case CRIME_DE_X_VERTEX_1:
 		debug("[ sgi_de: %s CRIME_DE_X_VERTEX_1: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		break;
+
+	case CRIME_DE_XFER_ADDR_SRC:
+		debug("[ sgi_de: %s CRIME_DE_XFER_ADDR_SRC: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		break;
+
+	case CRIME_DE_XFER_STEP_X:
+		debug("[ sgi_de: %s CRIME_DE_XFER_STEP_X: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		break;
+
+	case CRIME_DE_XFER_STEP_Y:
+		debug("[ sgi_de: %s CRIME_DE_XFER_STEP_Y: 0x%016llx ]\n",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		break;
@@ -919,6 +957,7 @@ DEVICE_ACCESS(sgi_de)
 		uint32_t op = d->de_reg[(CRIME_DE_PRIMITIVE - 0x2000) / sizeof(uint32_t)];
 		uint32_t drawmode = d->de_reg[(CRIME_DE_DRAWMODE - 0x2000) / sizeof(uint32_t)];
 		uint32_t dst_mode = d->de_reg[(CRIME_DE_MODE_DST - 0x2000) / sizeof(uint32_t)];
+		uint32_t src_mode = d->de_reg[(CRIME_DE_MODE_SRC - 0x2000) / sizeof(uint32_t)];
 		uint32_t fg = d->de_reg[(CRIME_DE_FG - 0x2000) / sizeof(uint32_t)] & 255;
 		uint32_t bg = d->de_reg[(CRIME_DE_BG - 0x2000) / sizeof(uint32_t)] & 255;
 		uint32_t pattern = d->de_reg[(CRIME_DE_STIPPLE_PAT - 0x2000) / sizeof(uint32_t)];
@@ -936,10 +975,11 @@ DEVICE_ACCESS(sgi_de)
 		// TODO: Take drawmode, rop, bg, and planemask into account etc.
 		// rop 12 = xor netbsd cursor?
 
-		fatal("[ sgi_de: STARTING DRAWING COMMAND: op = 0x%08x,"
+		debug("[ sgi_de: STARTING DRAWING COMMAND: op = 0x%08x,"
 		    " x1=%i y1=%i x2=%i y2=%i fg=0x%x bg=0x%x pattern=0x%08x ]\n",
 		    op, x1, y1, x2, y2, fg, bg, pattern);
 
+		int src_x = -1, src_y = -1;
 		if (drawmode & DE_DRAWMODE_XFER_EN) {
 			// Used by the PROM to scroll up the command window.
 			uint32_t addr_src = d->de_reg[(CRIME_DE_XFER_ADDR_SRC - 0x2000) / sizeof(uint32_t)];
@@ -949,20 +989,28 @@ DEVICE_ACCESS(sgi_de)
 			uint32_t addr_dst = d->de_reg[(CRIME_DE_XFER_ADDR_DST - 0x2000) / sizeof(uint32_t)];
 			uint32_t strd_dst = d->de_reg[(CRIME_DE_XFER_STRD_DST - 0x2000) / sizeof(uint32_t)];
 
-			debug("[ sgi_de: XFER addr_src=0x%x strd_src=0x%x step_x=0x%x step_y=0x%x "
-				"addr_dst=0x%x strd_dst=0x%x ]\n",
-				addr_src, strd_src, step_x, step_y, addr_dst, strd_dst);
+			src_x = (addr_src >> 16) & 0xfff;
+			src_y = addr_src & 0xfff;
 
-			return 1;
+			if (step_x != 1 || step_y != 1) {
+				fatal("[ sgi_de: unimplemented XFER addr_src=0x%x strd_src=0x%x step_x=0x%x step_y=0x%x "
+					"addr_dst=0x%x strd_dst=0x%x ]\n",
+					addr_src, strd_src, step_x, step_y, addr_dst, strd_dst);
+
+				exit(1);
+			}
 		}
-		
+
+		int dx = op & DE_PRIM_RL ? -1 :  1;
+		int dy = op & DE_PRIM_TB ?  1 : -1;
+
 		if (x2 < x1) {
 			int tmp = x1; x1 = x2; x2 = tmp;
 		}
 		if (y2 < y1) {
 			int tmp = y1; y1 = y2; y2 = tmp;
 		}
-
+		
 		switch (op & 0xff000000) {
 		case DE_PRIM_LINE:
 			/*
@@ -975,7 +1023,7 @@ DEVICE_ACCESS(sgi_de)
 			x=x1; y=y1;
 			while (x <= x2 && y <= y2) {
 				if (pattern & 0x80000000UL)
-					horrible_putpixel(cpu, d, (dst_mode & 0x00001c00) >> 10, x, y, fg);
+					horrible_getputpixel(true, cpu, d, (dst_mode & 0x00001c00) >> 10, x, y, &fg);
 
 				pattern <<= 1;
 				x++;
@@ -990,17 +1038,37 @@ DEVICE_ACCESS(sgi_de)
 			 *  Used by the PROM to fill parts of the background,
 			 *  and used by NetBSD/OpenBSD to draw text characters.
 			 */
-			for (y=y1; y<=y2; y++)
-				for (x = x1; x <= x2; ++x) {
-					// TODO: Most likely not correct, but it allows
-					// both NetBSD and the PROM to work for now...
-					int color = fg;
-					if (drawmode & DE_DRAWMODE_OPAQUE_STIP)
-						color = (pattern & 0x80000000UL) ? fg : bg;
-
-					horrible_putpixel(cpu, d, (dst_mode & 0x00001c00) >> 10, x, y, color);
-					pattern <<= 1;
+			if (drawmode & DE_DRAWMODE_XFER_EN) {
+				// Pixel colors copied from another source.
+				// TODO: Actually take top-to-bottom and left-to-right
+				// settings into account. Right now it's kind of ignored.
+				if (dx < 0) { src_x -= (x2-x1+1); dx = 1; }
+				if (dy < 0) { src_y -= (y2-y1+1); dy = 1; }
+				int saved_src_x = src_x;
+				for (y=y1; y<=y2; y+=1) {
+					src_x = saved_src_x;
+					for (x = x1; x <= x2; x+=1) {
+						uint32_t color;
+						horrible_getputpixel(false, cpu, d, (src_mode & 0x00001c00) >> 10, src_x, src_y, &color);
+						horrible_getputpixel(true, cpu, d, (dst_mode & 0x00001c00) >> 10, x, y, &color);
+						src_x += dx;
+					}
+					src_y += dy;
 				}
+			} else {
+				// Plain color.
+				for (y=y1; y<=y2; y++)
+					for (x = x1; x <= x2; ++x) {
+						// TODO: Most likely not correct, but it allows
+						// both NetBSD and the PROM to work for now...
+						uint32_t color = fg;
+						if (drawmode & DE_DRAWMODE_OPAQUE_STIP)
+							color = (pattern & 0x80000000UL) ? fg : bg;
+
+						horrible_getputpixel(true, cpu, d, (dst_mode & 0x00001c00) >> 10, x, y, &color);
+						pattern <<= 1;
+					}
+			}
 			break;
 
 		default:fatal("[ sgi_de: UNIMPLEMENTED drawing command: op = 0x%08x,"
@@ -1205,8 +1273,12 @@ DEVICE_ACCESS(sgi_mte)
 			exit(1);
 		}
 
-		switch (mode) {
-		case 0x01:
+		int dst_tlb = (mode & MTE_MODE_DST_BUF_MASK) >> MTE_DST_TLB_SHIFT;
+		
+		switch (dst_tlb) {
+		case MTE_TLB_A:
+		case MTE_TLB_B:
+		case MTE_TLB_C:
 			// Used by NetBSD's crmfb_fill_rect. It puts graphical
 			// coordinates in dst0 and dst1.
 			{
@@ -1218,10 +1290,10 @@ DEVICE_ACCESS(sgi_mte)
 				x2 /= (d->bitdepth / 8);
 				for (int y = y1; y <= y2; ++y)
 					for  (int x = x1; x <= x2; ++x)
-						horrible_putpixel(cpu, d, 0, x, y, bg);
+						horrible_getputpixel(true, cpu, d, dst_tlb, x, y, &bg);
 			}
 			break;
-		case 0x11:
+		case MTE_TLB_LIN_A:
 			// Used by the PROM to zero-fill memory (?).
 			memset(zerobuf, bg, dstlen < sizeof(zerobuf) ? dstlen : sizeof(zerobuf));
 			fill_addr = dst0;
@@ -1240,7 +1312,7 @@ DEVICE_ACCESS(sgi_mte)
 			}
 			break;
 		default:
-			fatal("[ sgi_mte: TODO! unimplemented mode 0x%x ]", mode);
+			fatal("[ sgi_mte: TODO! unimplemented dst_tlb 0x%x ]", dst_tlb);
 			return 1;
 		}
 	}
