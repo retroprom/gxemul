@@ -420,31 +420,29 @@ j = 0;
 		 *  02: vaddr=0000000004000000 (global):  p0=0x044000000 D p1=0x045000000 D (16MB)
 		 *  03: vaddr=0000000006000000 (global):  p0=0x046000000 D p1=0x047000000 D (16MB)
 		 *
-		 *  Possibly, it expects 128 MB per bank (?).
+		 *  In other words, it uses real memory at 0x40000000 and up.
+		 *  However, it is also accessible at 0x0.
+		 *
+		 *  Max amount of RAM in an O2 is 1 GB. However, devices start at
+		 *  0x14000000 (or below that), so 256 MB is the most that the legacy GXemul
+		 *  framework can handle. Memory above that must be accessed from 0x40000000 and up.
  		 */
 
-/*		dev_ram_init(machine, 0x07ffff00ULL,           256,
-		    DEV_RAM_MIRROR, 0x03ffff00);
-		dev_ram_init(machine, 0x10000000ULL,           256,
-		    DEV_RAM_MIRROR, 0x00000000);
-		dev_ram_init(machine, 0x11ffff00ULL,           256,
-		    DEV_RAM_MIRROR, 0x01ffff00);
-		dev_ram_init(machine, 0x12000000ULL,           256,
-		    DEV_RAM_MIRROR, 0x02000000);
-		dev_ram_init(machine, 0x17ffff00ULL,           256,
-		    DEV_RAM_MIRROR, 0x03ffff00);
-		dev_ram_init(machine, 0x20000000ULL, 128 * 1048576,
-		    DEV_RAM_MIRROR, 0x00000000);
-*/
-		dev_ram_init(machine, 0x40000000ULL, 128 * 1048576,
-		    DEV_RAM_RAM, 0);
+		if (machine->physical_ram_in_mb > 256) {
+			fatal("TODO: Legacy framework cannot handle more than 256 MB for the SGI O2.\n");
+			exit(1);
+		}
+
+		// TODO: This should probably be a DEV_RAM_MIRROR, and 256 MB long.
+		dev_ram_init(machine, 0x40000000ULL, 128 * 1048576, DEV_RAM_RAM, 0);
 
 		/*  Connect CRIME (Interrupt Controller) to MIPS irq 2:  */
 		snprintf(tmpstr, sizeof(tmpstr), "%s.cpu[%i].2",
 		    machine->path, machine->bootstrap_cpu);
-		dev_crime_init(machine, mem, 0x14000000, tmpstr,
-		    machine->x11_md.in_use);			/*  crime0  */
-		dev_sgi_gbe_init(machine, mem, 0x16000000);	/*  graphics  */
+		dev_crime_init(machine, mem, 0x14000000, tmpstr, machine->x11_md.in_use);
+
+		/*  Graphics Back End  */
+		dev_sgi_gbe_init(machine, mem, 0x16000000);
 
 		/*
 		 *  A combination of NetBSD and Linux info:
@@ -453,6 +451,7 @@ j = 0;
 		 *	15000000	drawing engine, memory transfer engine, rendering engine
 		 *	16000000	gbe (graphics), crm framebuffer control
 		 *      17000000	vice (Video Image Compression Engine)
+		 *	18000000	pci (?)
 		 *	1f000000	mace
 		 *	1f080000	macepci
 		 *	1f100000	vin1
@@ -648,7 +647,7 @@ MACHINE_DEFAULT_CPU(sgi)
 
 MACHINE_DEFAULT_RAM(sgi)
 {
-	machine->physical_ram_in_mb = 64;
+	machine->physical_ram_in_mb = 128;
 }
 
 

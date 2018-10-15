@@ -193,11 +193,25 @@ DEVICE_ACCESS(crime)
 	 *
 	 *  When the bank control registers contain the same value as the
 	 *  previous one, that bank is not valid. (?)
+	 *
+	 *  TODO: Make this work reliably with other sizes than 128 MB.
+	 *  128 MB is what I have in my machine. Theoretically, up to 1 GB
+	 *  could be supported in the O2.
 	 */
+	if (cpu->machine->physical_ram_in_mb != 128) {
+		fatal("sgi CRIME memory controller: TODO: other sizes than 128 MB\n");
+		exit(1);
+	}
+	 
 	d->reg[CRIME_MEM_BANK_CTRL0 + 6] = 0;  /* lowbit set=128MB, clear=32MB */
 	d->reg[CRIME_MEM_BANK_CTRL0 + 7] = 0;  /* address * 32MB  */
 	d->reg[CRIME_MEM_BANK_CTRL1 + 6] = 0;  /* lowbit set=128MB, clear=32MB */
 	d->reg[CRIME_MEM_BANK_CTRL1 + 7] = 1;  /* address * 32MB  */
+
+	d->reg[CRIME_MEM_BANK_CTRL2 + 6] = 0;  /* lowbit set=128MB, clear=32MB */
+	d->reg[CRIME_MEM_BANK_CTRL2 + 7] = 1;  /* address * 32MB  */
+	d->reg[CRIME_MEM_BANK_CTRL3 + 6] = 0;  /* lowbit set=128MB, clear=32MB */
+	d->reg[CRIME_MEM_BANK_CTRL3 + 7] = 1;  /* address * 32MB  */
 
 	if (relative_addr >= CRIME_TIME && relative_addr < CRIME_TIME+8) {
 		if (writeflag == MEM_READ)
