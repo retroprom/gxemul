@@ -4758,3 +4758,4 @@ Changelog for GXemul:
 		my real O2 does.
 		Refactoring the O2 "output" to always be 24-bit, separate from
 		the emulated framebuffer tiles (which may be e.g. 8 bit).
+		NetBSD's colors (RG3B2 mode) are now probably more correct.

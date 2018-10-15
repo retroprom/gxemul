@@ -291,6 +291,7 @@ DEVICE_TICK(sgi_gbe)
 					return;
 
 				uint8_t fb_buf[512 * 3];
+				int fb_i = 0;
 				for (int i = 0; i < 512; i+=bytes_per_pixel) {
 					uint32_t color;
 					if (bytes_per_pixel == 1)
@@ -301,9 +302,9 @@ DEVICE_TICK(sgi_gbe)
 						color = (buf[i]<<24) + (buf[i+1]<<16)
 							+ (buf[i+2]<<8)+buf[i+3];
 					get_rgb(d, color,
-					    &fb_buf[i*3+0],
-					    &fb_buf[i*3+1],
-					    &fb_buf[i*3+2]);
+					    &fb_buf[fb_i++],
+					    &fb_buf[fb_i++],
+					    &fb_buf[fb_i++]);
 				}
 
 				dev_fb_access(cpu, cpu->mem, fb_offset,
