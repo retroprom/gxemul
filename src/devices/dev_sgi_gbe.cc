@@ -273,11 +273,17 @@ DEVICE_TICK(sgi_gbe)
 			for (int line = 0; line < 128; ++line) {
 				for (int tilex = 0; tilex < w; ++tilex) {
 					int tilenr = tilex + tiley * w;
-
+					uint32_t base = tile[tilenr];
+					
+					if (base == 0) {
+						fatal("sgi_gbe: warning: tile base 0\n");
+						return;
+					}
+					
 					// Read one line of up to 512 bytes from the tile.
 					int len = tilex < d->width_in_tiles ? 512 : (d->partial_pixels * bytes_per_pixel);
 
-					cpu->memory_rw(cpu, cpu->mem, tile[tilenr] + 512 * line,
+					cpu->memory_rw(cpu, cpu->mem, base + 512 * line,
 					    buf, len, MEM_READ, NO_EXCEPTIONS | PHYSICAL);
 
 	#if 0
@@ -834,7 +840,6 @@ void horrible_getputpixel(bool put, struct cpu* cpu, struct sgi_gbe_data* d, int
 		return;
 
 	// TODO: Non 8-bit modes!
-
 	int tilewidth_in_pixels = 512;
 	
 	int tile_nr_x = x / tilewidth_in_pixels;
@@ -843,14 +848,17 @@ void horrible_getputpixel(bool put, struct cpu* cpu, struct sgi_gbe_data* d, int
 	int w = 2048 / 512; // d->width_in_tiles + (d->partial_pixels > 0 ? 1 : 0);
 	int tile_nr = tile_nr_y * w + tile_nr_x;
 
-	uint32_t tileptr = (tlb[tile_nr] & ~0x8000) << 16;
+	// The highest bit seems to be set for a "valid" tile pointer.
+	uint32_t tileptr = tlb[tile_nr] << 16;
 
 	// printf("dst_mode %i, tile_nr = %i,  tileptr = 0x%llx\n", dst_mode, tile_nr, (long long)tileptr);
 
-	if (tileptr == 0) {
-		fatal("sgi gbe horrible_getputpixel: unexpected NULL tileptr?\n");
+	if (!(tileptr & 0x80000000)) {
+		fatal("sgi gbe horrible_getputpixel: unexpected non-set high bit of tileptr?\n");
 		exit(1);
 	}
+	
+	tileptr &= 0x7fffffff;
 
 	y %= 128;
 	int xofs = (x % tilewidth_in_pixels) * d->bitdepth / 8;
@@ -858,7 +866,7 @@ void horrible_getputpixel(bool put, struct cpu* cpu, struct sgi_gbe_data* d, int
 	uint8_t buf[4];
 	if (put) {
 		buf[0] = *color;
-		buf[1] = buf[2] = buf[3] = 0x00;	// TODO
+		buf[1] = buf[2] = buf[3] = *color;	// TODO
 
 		cpu->memory_rw(cpu, cpu->mem, tileptr + 512 * y + xofs,
 		    buf, d->bitdepth / 8,
