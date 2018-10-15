@@ -461,8 +461,7 @@ j = 0;
 		 *	1f300000	perif:
 		 *	  1f300000	  audio
 		 *	  1f310000	  isa
-		 *	    1f318000	    (accessed by Irix'
-		 *			     pciio_pio_write64)
+		 *	    1f318000	    (unknown, accessed by Irix' pciio_pio_write64)
 		 *	  1f320000	  kbdms
 		 *	  1f330000	  i2c
 		 *	  1f340000	  ust

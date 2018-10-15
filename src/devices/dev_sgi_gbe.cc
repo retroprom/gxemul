@@ -27,8 +27,8 @@
  *
  *  COMMENT: SGI "Graphics Back End", graphics controller + framebuffer
  *
- *  Guesswork, based on how Linux and NetBSD use the graphics on the SGI O2.
- *  Using NetBSD terminology (from crmfbreg.h):
+ *  Guesswork, based on how Linux, NetBSD, and OpenBSD use the graphics on
+ *  the SGI O2. Using NetBSD terminology (from crmfbreg.h):
  *
  *	0x15001000	rendering engine (TLBs)
  *	0x15002000	drawing engine
@@ -74,7 +74,7 @@ struct sgi_gbe_data {
 	uint32_t	i2c;			/* 0x00008  */
 	uint32_t	i2cfp;			/* 0x00010  */
 
-	uint32_t	plane0ctrl;		/* 0x30000  */
+	uint32_t	tilesize;		/* 0x30000  */
 	uint32_t	frm_control;		/* 0x3000c  */
 	int		freeze;
 
@@ -98,7 +98,8 @@ struct sgi_gbe_data {
 	uint16_t	re_tlb_a[256];
 	uint16_t	re_tlb_b[256];
 	uint16_t	re_tlb_c[256];
-	// todo: tex registers, clip_ids registers.
+	uint16_t	re_tex[112];
+	// todo: clip_ids registers.
 	uint32_t	re_linear_a[32];
 	uint32_t	re_linear_b[32];
 
@@ -263,8 +264,22 @@ DEVICE_TICK(sgi_gbe)
 		    alltileptrs, sizeof(alltileptrs), MEM_READ,
 		    NO_EXCEPTIONS | PHYSICAL);
 
-		for (int i = 0; i < 256; ++i)
+		/*
+		 *  PERHAPS this is the way it works:
+		 *
+		 *  tiles 0 and forward are for regular rendering.
+		 *  tiles 64 and forward are for overlay?
+		 *
+		 *  TODO: figure out.
+		 */
+
+		for (int i = 0; i < 256; ++i) {
 			tile[i] = (256 * alltileptrs[i*2] + alltileptrs[i*2+1]) << 16;
+#ifdef GBE_DEBUG
+			if (tile[i] != 0)
+				printf("tile[%i] = 0x%08x\n", i, tile[i]);
+#endif
+		}
 
 		int screensize = d->xres * d->yres * 3;
 		int x = 0, y = 0;
@@ -277,7 +292,7 @@ DEVICE_TICK(sgi_gbe)
 					
 					if (base == 0) {
 						// fatal("sgi_gbe: warning: tile base 0\n");
-						return;
+						continue;
 					}
 					
 					// Read one line of up to 512 bytes from the tile.
@@ -579,20 +594,17 @@ DEVICE_ACCESS(sgi_gbe)
 		break;
 
 	case CRMFB_FRM_TILESIZE:	// 0x30000:
-		/*  normal plane ctrl 0  */
-		/*  bit 15 = fifo reset, 14..13 = depth, 
-		    12..5 = tile width, 4..0 = rhs  */
 		if (writeflag == MEM_WRITE) {
-			d->plane0ctrl = idata;
+			d->tilesize = idata;
 
-			d->bitdepth = 8 << ((d->plane0ctrl >> CRMFB_FRM_TILESIZE_DEPTH_SHIFT) & 3);
+			d->bitdepth = 8 << ((d->tilesize >> CRMFB_FRM_TILESIZE_DEPTH_SHIFT) & 3);
 			d->width_in_tiles = (idata >> CRMFB_FRM_TILESIZE_WIDTH_SHIFT) & 0xff;
 			d->partial_pixels = ((idata >> CRMFB_FRM_TILESIZE_RHS_SHIFT) & 0x1f) * 32 * 8 / d->bitdepth;
 
 			debug("[ sgi_gbe: setting color depth to %i bits, width in tiles = %i, partial pixels = %i ]\n",
 			    d->bitdepth, d->width_in_tiles, d->partial_pixels);
 		} else
-			odata = d->plane0ctrl;
+			odata = d->tilesize;
 		break;
 
 	case CRMFB_FRM_PIXSIZE:	// 0x30004
@@ -729,7 +741,7 @@ DEVICE_ACCESS(sgi_gbe)
 			break;
 		}
 
-#ifdef GBE_DEBUG
+//#ifdef GBE_DEBUG
 		if (writeflag == MEM_WRITE)
 			fatal("[ sgi_gbe: unimplemented write to address "
 			    "0x%llx, data=0x%llx ]\n",
@@ -738,8 +750,8 @@ DEVICE_ACCESS(sgi_gbe)
 			fatal("[ sgi_gbe: unimplemented read from address "
 			    "0x%llx ]\n", (long long)relative_addr);
 
-		exit(1);
-#endif
+		// exit(1);
+//#endif
 	}
 
 	if (writeflag == MEM_READ) {
@@ -774,6 +786,11 @@ void dev_sgi_gbe_init(struct machine *machine, struct memory *mem,
 			CRMFB_CTRLSTAT_GPIO4_SENSE |
 			CRMFB_CTRLSTAT_GPIO3_INPUT |
 			(CRMFB_CTRLSTAT_CHIPID_MASK & 1);
+
+	// Grayscale palette, most likely overwritten immediately by the
+	// guest operating system.
+	for (int i = 0; i < 256; ++i)
+		d->palette[i] = (i<<24) + (i<<16) + (i<<8);
 
 	d->fb_data = dev_fb_init(machine, mem, FAKE_GBE_FB_ADDRESS,
 	    VFB_GENERIC, d->xres, d->yres, d->xres, d->yres, 24, "SGI GBE");
@@ -950,6 +967,23 @@ DEVICE_ACCESS(sgi_re)
 			fatal("TODO: read from CRIME_RE_TLB_C\n");
 			exit(1);
 		}
+	} else if (relative_addr >= CRIME_RE_TEX && relative_addr < CRIME_RE_TEX + 0xe0) {
+		if (len != 8) {
+			fatal("TODO: unimplemented len=%i for CRIME_RE_TEX\n", len);
+			exit(1);
+		}
+
+		if (writeflag == MEM_WRITE) {
+			int tlbi = ((relative_addr & 0xff) >> 3) & 0xff;
+			for (size_t hwi = 0; hwi < len; hwi += sizeof(uint16_t)) {
+				d->re_tex[tlbi] = data[hwi]*256 + data[hwi+1];
+				debug("d->re_tex[%i] = 0x%04x\n", tlbi, d->re_tex[tlbi]);
+				tlbi++;
+			}
+		} else {
+			fatal("TODO: read from CRIME_RE_TEX\n");
+			exit(1);
+		}
 	} else if (relative_addr >= CRIME_RE_LINEAR_A && relative_addr < CRIME_RE_LINEAR_A + 0x80) {
 		if (len != 8) {
 			fatal("TODO: unimplemented len=%i for CRIME_RE_LINEAR_A\n", len);
@@ -964,6 +998,20 @@ DEVICE_ACCESS(sgi_re)
 			fatal("TODO: read from CRIME_RE_LINEAR_A\n");
 			exit(1);
 		}
+	} else if (relative_addr >= CRIME_RE_LINEAR_B && relative_addr < CRIME_RE_LINEAR_B + 0x80) {
+		if (len != 8) {
+			fatal("TODO: unimplemented len=%i for CRIME_RE_LINEAR_B\n", len);
+			exit(1);
+		}
+
+		if (writeflag == MEM_WRITE) {
+			int tlbi = ((relative_addr & 0x7f) >> 2) & 0x1f;
+			d->re_linear_b[tlbi] = idata;
+			debug("d->re_linear_b[%i] = 0x%08x\n", tlbi, d->re_linear_b[tlbi]);
+		} else {
+			fatal("TODO: read from CRIME_RE_LINEAR_B\n");
+			exit(1);
+		}
 	} else {
 		if (writeflag == MEM_WRITE)
 			fatal("[ sgi_re: unimplemented write to "
@@ -972,6 +1020,7 @@ DEVICE_ACCESS(sgi_re)
 		else
 			fatal("[ sgi_re: unimplemented read from address"
 			    " 0x%llx ]\n", (long long)relative_addr);
+		exit(1);
 	}
 
 	if (writeflag == MEM_READ)
