@@ -1220,8 +1220,8 @@ DEVICE_ACCESS(sgi_de)
 				// Pixel colors copied from another source.
 				// TODO: Actually take top-to-bottom and left-to-right
 				// settings into account. Right now it's kind of ignored.
-				if (dx < 0) { src_x -= (x2-x1+1); dx = 1; }
-				if (dy < 0) { src_y -= (y2-y1+1); dy = 1; }
+				if (dx < 0) { src_x -= (x2-x1); dx = 1; }
+				if (dy < 0) { src_y -= (y2-y1); dy = 1; }
 				int saved_src_x = src_x;
 				for (y=y1; y<=y2; y+=1) {
 					src_x = saved_src_x;
