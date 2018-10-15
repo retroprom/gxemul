@@ -62,13 +62,14 @@
 
 #define	GBE_DEFAULT_XRES		1280
 #define	GBE_DEFAULT_YRES		1024
+#define	GBE_DEFAULT_BITDEPTH		8
 
 
 struct sgi_gbe_data {
 	// CRM / GBE registers:
 	int		xres, yres;
 
-	uint32_t	control;		/* 0x00000  */
+	uint32_t	ctrlstat;		/* 0x00000  */
 	uint32_t	dotclock;		/* 0x00004  */
 	uint32_t	i2c;			/* 0x00008  */
 	uint32_t	i2cfp;			/* 0x00010  */
@@ -87,7 +88,9 @@ struct sgi_gbe_data {
 	uint16_t	re_tlb_a[256];
 	uint16_t	re_tlb_b[256];
 	uint16_t	re_tlb_c[256];
-	// todo: linear etc.
+	// todo: tex registers, clip_ids registers.
+	uint32_t	re_linear_a[32];
+	uint32_t	re_linear_b[32];
 
 	// Drawing engine registers:
 	uint32_t	de_reg[DEV_SGI_DE_LENGTH / sizeof(uint32_t)];
@@ -95,93 +98,6 @@ struct sgi_gbe_data {
 	// Memory transfer engine registers:
 	uint32_t	mte_reg[DEV_SGI_MTE_LENGTH / sizeof(uint32_t)];
 };
-
-
-/*
- *  horrible_getputpixel():
- *
- *  This routine gets/puts a pixel in one of the tiles, from the perspective of
- *  the rendering/drawing engine. Given x and y, it figures out which tile
- *  number it is, and then finally does a slow read/write to get/put the pixel
- *  at the correct sub-coordinates within the tile.
- *
- *  Tiles are always 512 _bytes_ wide, and 128 pixels high. For 32-bit color
- *  modes, for example, that means 128 x 128 pixels.
- */
-void horrible_getputpixel(bool put, struct cpu* cpu, struct sgi_gbe_data* d, int dst_mode, int x, int y, uint32_t* color)
-{
-	int linear = d->width_in_tiles == 1 && d->partial_pixels == 0;
-
-	// dst_mode (see NetBSD's crmfbreg.h):
-	// #define DE_MODE_TLB_A           0x00000000
-	// #define DE_MODE_TLB_B           0x00000400
-	// #define DE_MODE_TLB_C           0x00000800
-	// #define DE_MODE_LIN_A           0x00001000
-	// #define DE_MODE_LIN_B           0x00001400
-	uint32_t mode = dst_mode & 0x7;
-
-	uint16_t* tlb = NULL;
-	
-	switch (mode) {
-	case 0:	tlb = d->re_tlb_a;
-		break;
-	case 1:	tlb = d->re_tlb_b;
-		break;
-	case 2:	tlb = d->re_tlb_c;
-		break;
-	default:fatal("unimplemented dst_mode\n");
-		exit(1);
-	}
-
-	if (linear) {
-		fatal("sgi gbe horrible_getputpixel called in linear mode?!\n");
-		exit(1);
-	}
-
-	if (x < 0 || y < 0 || x >= d->xres || y >= d->yres)
-		return;
-
-	if (d->bitdepth != 8) {
-		fatal("sgi gbe horrible_getputpixel: TODO: non-8-bit\n");
-		exit(1);
-	}
-
-	int tilewidth_in_pixels = 512 * 8 / d->bitdepth;
-	
-	int tile_nr_x = x / tilewidth_in_pixels;
-	int tile_nr_y = y / 128;
-
-	int w = 2048 / 512; // d->width_in_tiles + (d->partial_pixels > 0 ? 1 : 0);
-	int tile_nr = tile_nr_y * w + tile_nr_x;
-
-	uint32_t tileptr = (tlb[tile_nr] & ~0x8000) << 16;
-
-	// printf("dst_mode %i, tile_nr = %i,  tileptr = 0x%llx\n", dst_mode, tile_nr, (long long)tileptr);
-
-	if (tileptr == 0) {
-		fatal("sgi gbe horrible_getputpixel: unexpected NULL tileptr?\n");
-		exit(1);
-	}
-
-	y %= 128;
-	int xofs = (x % tilewidth_in_pixels) * d->bitdepth / 8;
-
-	uint8_t buf[4];
-	if (put) {
-		buf[0] = *color;
-		buf[1] = buf[2] = buf[3] = 0x00;	// TODO
-
-		cpu->memory_rw(cpu, cpu->mem, tileptr + 512 * y + xofs,
-		    buf, d->bitdepth / 8,
-		    MEM_WRITE, NO_EXCEPTIONS | PHYSICAL);
-	} else {
-		cpu->memory_rw(cpu, cpu->mem, tileptr + 512 * y + xofs,
-		    buf, d->bitdepth / 8,
-		    MEM_READ, NO_EXCEPTIONS | PHYSICAL);
-
-		*color = buf[0];
-	}
-}
 
 
 /*
@@ -364,10 +280,12 @@ DEVICE_ACCESS(sgi_gbe)
 	switch (relative_addr) {
 
 	case CRMFB_CTRLSTAT:	// 0x0
-		if (writeflag == MEM_WRITE)
-			d->control = idata;
-		else
-			odata = d->control;
+		if (writeflag == MEM_WRITE) {
+			fatal("[ sgi_gbe: write to ctrlstat: 0x08%x\n ]", (int)idata);
+			d->ctrlstat = (idata & ~CRMFB_CTRLSTAT_CHIPID_MASK)
+				| (d->ctrlstat & CRMFB_CTRLSTAT_CHIPID_MASK);
+		} else
+			odata = d->ctrlstat;
 		break;
 
 	case CRMFB_DOTCLOCK:	// 0x4
@@ -685,8 +603,16 @@ void dev_sgi_gbe_init(struct machine *machine, struct memory *mem,
 
 	d->xres = GBE_DEFAULT_XRES;
 	d->yres = GBE_DEFAULT_YRES;
-	d->bitdepth = 8;
-	d->control = 0x20aa000;		/*  or 0x00000001?  */
+	d->bitdepth = GBE_DEFAULT_BITDEPTH;
+	
+	// My O2 says 0x300ae001 here (while running).
+	d->ctrlstat = CRMFB_CTRLSTAT_INTERNAL_PCLK |
+			CRMFB_CTRLSTAT_GPIO6_INPUT |
+			CRMFB_CTRLSTAT_GPIO5_INPUT |
+			CRMFB_CTRLSTAT_GPIO4_INPUT |
+			CRMFB_CTRLSTAT_GPIO4_SENSE |
+			CRMFB_CTRLSTAT_GPIO3_INPUT |
+			(CRMFB_CTRLSTAT_CHIPID_MASK & 1);
 
 	d->fb_data = dev_fb_init(machine, mem, FAKE_GBE_FB_ADDRESS,
 	    VFB_GENERIC, d->xres, d->yres, d->xres, d->yres, 8, "SGI GBE");
@@ -704,6 +630,97 @@ void dev_sgi_gbe_init(struct machine *machine, struct memory *mem,
 
 
 /****************************************************************************/
+
+
+/*
+ *  horrible_getputpixel():
+ *
+ *  This routine gets/puts a pixel in one of the tiles, from the perspective of
+ *  the rendering/drawing engine. Given x and y, it figures out which tile
+ *  number it is, and then finally does a slow read/write to get/put the pixel
+ *  at the correct sub-coordinates within the tile.
+ *
+ *  Tiles are always 512 _bytes_ wide, and 128 pixels high. For 32-bit color
+ *  modes, for example, that means 128 x 128 pixels.
+ */
+void horrible_getputpixel(bool put, struct cpu* cpu, struct sgi_gbe_data* d, int dst_mode, int x, int y, uint32_t* color)
+{
+	// TODO: The get/put pixel methods should not rely on the "back end"
+	// stuff. Figure out how to detect the Linux tweaked/linear mode
+	// without reading GBE specific registers or values.
+	int linear = d->width_in_tiles == 1 && d->partial_pixels == 0;
+
+	// dst_mode (see NetBSD's crmfbreg.h):
+	// #define DE_MODE_TLB_A           0x00000000
+	// #define DE_MODE_TLB_B           0x00000400
+	// #define DE_MODE_TLB_C           0x00000800
+	// #define DE_MODE_LIN_A           0x00001000
+	// #define DE_MODE_LIN_B           0x00001400
+	uint32_t mode = dst_mode & 0x7;
+
+	uint16_t* tlb = NULL;
+	
+	switch (mode) {
+	case 0:	tlb = d->re_tlb_a;
+		break;
+	case 1:	tlb = d->re_tlb_b;
+		break;
+	case 2:	tlb = d->re_tlb_c;
+		break;
+	default:fatal("unimplemented dst_mode\n");
+		exit(1);
+	}
+
+	if (linear) {
+		fatal("sgi gbe horrible_getputpixel called in linear mode?!\n");
+		exit(1);
+	}
+
+	if (x < 0 || y < 0 || x >= d->xres || y >= d->yres)
+		return;
+
+	if (d->bitdepth != 8) {
+		fatal("sgi gbe horrible_getputpixel: TODO: non-8-bit\n");
+		exit(1);
+	}
+
+	int tilewidth_in_pixels = 512 * 8 / d->bitdepth;
+	
+	int tile_nr_x = x / tilewidth_in_pixels;
+	int tile_nr_y = y / 128;
+
+	int w = 2048 / 512; // d->width_in_tiles + (d->partial_pixels > 0 ? 1 : 0);
+	int tile_nr = tile_nr_y * w + tile_nr_x;
+
+	uint32_t tileptr = (tlb[tile_nr] & ~0x8000) << 16;
+
+	// printf("dst_mode %i, tile_nr = %i,  tileptr = 0x%llx\n", dst_mode, tile_nr, (long long)tileptr);
+
+	if (tileptr == 0) {
+		fatal("sgi gbe horrible_getputpixel: unexpected NULL tileptr?\n");
+		exit(1);
+	}
+
+	y %= 128;
+	int xofs = (x % tilewidth_in_pixels) * d->bitdepth / 8;
+
+	uint8_t buf[4];
+	if (put) {
+		buf[0] = *color;
+		buf[1] = buf[2] = buf[3] = 0x00;	// TODO
+
+		cpu->memory_rw(cpu, cpu->mem, tileptr + 512 * y + xofs,
+		    buf, d->bitdepth / 8,
+		    MEM_WRITE, NO_EXCEPTIONS | PHYSICAL);
+	} else {
+		cpu->memory_rw(cpu, cpu->mem, tileptr + 512 * y + xofs,
+		    buf, d->bitdepth / 8,
+		    MEM_READ, NO_EXCEPTIONS | PHYSICAL);
+
+		*color = buf[0];
+	}
+}
+
 
 /*
  *  SGI "re", NetBSD sources describes it as a "rendering engine".
@@ -772,6 +789,20 @@ DEVICE_ACCESS(sgi_re)
 			}
 		} else {
 			fatal("TODO: read from CRIME_RE_TLB_C\n");
+			exit(1);
+		}
+	} else if (relative_addr >= CRIME_RE_LINEAR_A && relative_addr < CRIME_RE_LINEAR_A + 0x80) {
+		if (len != 8) {
+			fatal("TODO: unimplemented len=%i for CRIME_RE_LINEAR_A\n", len);
+			exit(1);
+		}
+
+		if (writeflag == MEM_WRITE) {
+			int tlbi = ((relative_addr & 0x7f) >> 2) & 0x1f;
+			d->re_linear_a[tlbi] = idata;
+			debug("d->re_linear_a[%i] = 0x%08x\n", tlbi, d->re_linear_a[tlbi]);
+		} else {
+			fatal("TODO: read from CRIME_RE_LINEAR_A\n");
 			exit(1);
 		}
 	} else {
@@ -1295,6 +1326,14 @@ DEVICE_ACCESS(sgi_mte)
 			break;
 		case MTE_TLB_LIN_A:
 			// Used by the PROM to zero-fill memory (?).
+
+			fatal("[ sgi_mte: TODO STARTING TRANSFER: mode=0x%08x dst0=0x%016llx,"
+			    " dst1=0x%016llx (length 0x%llx), dst_y_step=%i bg=0x%x, bytemask=0x%x ]\n",
+			    mode,
+			    (long long)dst0, (long long)dst1,
+			    (long long)dstlen, dst_y_step, (int)bg, (int)bytemask);
+			return 1;
+
 			memset(zerobuf, bg, dstlen < sizeof(zerobuf) ? dstlen : sizeof(zerobuf));
 			fill_addr = dst0;
 			while (dstlen != 0) {

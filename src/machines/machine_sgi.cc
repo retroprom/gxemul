@@ -550,8 +550,8 @@ j = 0;
 		snprintf(tmpstr, sizeof(tmpstr), "z8530 addr=0x1fbd9830 "
 		    "irq=%s.cpu[%i].2 addr_mult=4",
 		    machine->path, machine->bootstrap_cpu);
-		machine->main_console_handle = (size_t)
-		    device_add(machine, tmpstr);
+//		machine->main_console_handle = (size_t)
+//		    device_add(machine, tmpstr);
 
 		/*
 		 *  PCI devices:   (according to NetBSD's GENERIC

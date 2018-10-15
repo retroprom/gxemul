@@ -4754,3 +4754,5 @@ Changelog for GXemul:
 		the skewed result now looks the same as on my real physical O2.
 20181013	More SGI O2 graphics work: TLBs. OpenBSD can now show graphical
 		console messages.
+20181015	Some more emulated O2 registers now return the same values as
+		my real O2 does.

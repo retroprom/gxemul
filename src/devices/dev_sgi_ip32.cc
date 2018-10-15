@@ -74,7 +74,7 @@ struct macepci_data {
 
 #define	DEV_CRIME_LENGTH		0x280
 struct crime_data {
-	unsigned char		reg[DEV_CRIME_LENGTH];
+	uint8_t			reg[DEV_CRIME_LENGTH];
 	struct interrupt	irq;
 	int			use_fb;
 };
@@ -182,6 +182,10 @@ DEVICE_ACCESS(crime)
 	 */
 	d->reg[4] = 0x00; d->reg[5] = 0x00; d->reg[6] = 0x00;
 	d->reg[7] = d->use_fb? 0xa1 : 0x11;
+
+	d->reg[CRIME_CONTROL + 6] = CRIME_CONTROL_ENDIANESS >> 8;
+
+	// TODO: Rewrite to 64-bit registers instead of 8-bit, for clarity.
 
 	/*
 	 *  Amount of memory.  Bit 8 of bank control set ==> 128MB instead
