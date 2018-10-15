@@ -4764,3 +4764,5 @@ Changelog for GXemul:
 		and the PROM.
 		Implementing the O2's GBE cursor; both bitmap and crosshair modes
 		work exactly like on the real machine now.
+		Finally fixed the bug which caused scroll-up to not work when
+		running the O2's PROM.

@@ -1015,19 +1015,15 @@ DEVICE_ACCESS(sgi_de)
 		} else
 			odata = ((uint64_t)d->de_reg[regnr] << 32) +
 			    d->de_reg[regnr+1];
+	} else if (len == 4) {
+		if (writeflag == MEM_WRITE)
+			d->de_reg[regnr] = idata;
+		else
+			odata = d->de_reg[regnr];
+	} else {
+		fatal("sgi_de: len = %i not implemented\n", len);
+		exit(1);
 	}
-
-	if (writeflag == MEM_WRITE)
-		d->de_reg[regnr] = idata;
-	else
-		odata = d->de_reg[regnr];
-
-#ifdef MTE_DEBUG
-	if (writeflag == MEM_WRITE && relative_addr >= 0x2000 &&
-	    relative_addr < 0x3000)
-		fatal("[ DE: 0x%08x: 0x%016llx ]\n", (int)relative_addr,
-		    (long long)idata);
-#endif
 
 	switch (relative_addr) {
 
@@ -1478,12 +1474,11 @@ DEVICE_ACCESS(sgi_mte)
 		case MTE_TLB_LIN_A:
 			// Used by the PROM to zero-fill memory (?).
 
-			fatal("[ sgi_mte: TODO STARTING TRANSFER: mode=0x%08x dst0=0x%016llx,"
+			debug("[ sgi_mte: TODO STARTING TRANSFER: mode=0x%08x dst0=0x%016llx,"
 			    " dst1=0x%016llx (length 0x%llx), dst_y_step=%i bg=0x%x, bytemask=0x%x ]\n",
 			    mode,
 			    (long long)dst0, (long long)dst1,
 			    (long long)dstlen, dst_y_step, (int)bg, (int)bytemask);
-			return 1;
 
 			memset(zerobuf, bg, dstlen < sizeof(zerobuf) ? dstlen : sizeof(zerobuf));
 			fill_addr = dst0;
