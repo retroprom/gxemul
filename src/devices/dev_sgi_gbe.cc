@@ -78,10 +78,13 @@ struct sgi_gbe_data {
 	uint32_t	frm_control;		/* 0x3000c  */
 	int		freeze;
 
+	uint32_t	palette[256];
+
 	// Emulator's representation:
 	int 		width_in_tiles;
 	int		partial_pixels;
 	int		bitdepth;
+	int		color_mode;
 	struct vfb_data *fb_data;
 
 	// Rendering engine registers:
@@ -98,6 +101,27 @@ struct sgi_gbe_data {
 	// Memory transfer engine registers:
 	uint32_t	mte_reg[DEV_SGI_MTE_LENGTH / sizeof(uint32_t)];
 };
+
+
+void get_rgb(struct sgi_gbe_data *d, uint32_t color, uint8_t* r, uint8_t* g, uint8_t* b)
+{
+	switch (d->color_mode) {
+	case CRMFB_MODE_TYP_I8:
+		color &= 0xff;
+		*r = d->palette[color] >> 24;
+		*g = d->palette[color] >> 16;
+		*b = d->palette[color] >> 8;
+		break;
+	case CRMFB_MODE_TYP_RG3B2:	// Used by NetBSD
+		color &= 0xff;
+		*r = (color >> 5) << 5;	if (*r & 0x20) *r |= 0x1f;
+		*g = (color >> 2) << 5;	if (*g & 0x20) *g |= 0x1f;
+		*b = color << 6;	if (*b & 0x40) *b |= 0x3f;
+		break;
+	default:fatal("sgi gbe get_rgb(): unimplemented mode %i\n", d->color_mode);
+		exit(1);
+	}
+}
 
 
 /*
@@ -125,6 +149,7 @@ DEVICE_TICK(sgi_gbe)
 	unsigned char buf[16384];	/*  must be power of 2, at most 65536 */
 	int copy_len, copy_offset;
 	uint64_t old_fb_offset = 0;
+	int bytes_per_pixel = d->bitdepth / 8;
 
 	// Linear "tweaked" mode is something that Linux/O2 uses.
 	int linear = d->width_in_tiles == 1 && d->partial_pixels == 0;
@@ -151,6 +176,11 @@ DEVICE_TICK(sgi_gbe)
 		 *        portions that aren't modified that way.
 		 */
 
+		if (bytes_per_pixel != 1) {
+			fatal("TODO: tweaked/linear mode in non-8-bit mode.\n");
+			exit(1);
+		}
+
 		while (on_screen) {
 			/*  Get pointer to a tile:  */
 			cpu->memory_rw(cpu, cpu->mem, tiletable +
@@ -169,6 +199,8 @@ DEVICE_TICK(sgi_gbe)
 			copy_offset = 0;
 
 			while (on_screen && copy_offset < 65536) {
+				uint8_t fb_buf[16384 * 3];
+
 				if (old_fb_offset + copy_len > (uint64_t)
 				    (d->xres * d->yres * d->bitdepth / 8)) {
 					copy_len = d->xres * d->yres *
@@ -186,8 +218,15 @@ DEVICE_TICK(sgi_gbe)
 
 				// for (int i=0; i<sizeof(buf); ++i) buf[i] ^= (random() & 0x20);
 
-				dev_fb_access(cpu, cpu->mem, old_fb_offset,
-				    buf, copy_len, MEM_WRITE, d->fb_data);
+				for (int i = 0; i < copy_len; ++i) {
+					get_rgb(d, buf[i],
+					    &fb_buf[i*3+0],
+					    &fb_buf[i*3+1],
+					    &fb_buf[i*3+2]);
+				}
+				
+				dev_fb_access(cpu, cpu->mem, old_fb_offset * 3,
+				    fb_buf, copy_len * 3, MEM_WRITE, d->fb_data);
 				copy_offset += sizeof(buf);
 				old_fb_offset += sizeof(buf);
 			}
@@ -223,10 +262,9 @@ DEVICE_TICK(sgi_gbe)
 	for (int i = 0; i < 256; ++i)
 		tile[i] = (256 * alltileptrs[i*2] + alltileptrs[i*2+1]) << 16;
 
-	int bytes_per_pixel = d->bitdepth / 8;
-	int screensize = d->xres * d->yres * bytes_per_pixel;
+	int screensize = d->xres * d->yres * 3;
 	int x = 0, y = 0;
-	
+
 	for (int tiley = 0; tiley < h; ++tiley) {
 		for (int line = 0; line < 128; ++line) {
 			for (int tilex = 0; tilex < w; ++tilex) {
@@ -239,17 +277,38 @@ DEVICE_TICK(sgi_gbe)
 				    buf, len, MEM_READ, NO_EXCEPTIONS | PHYSICAL);
 
 #if 0
-for (int j=0; j<len; j++) buf[j] ^= (random() & 0x21);
+				for (int j=0; j<len; j++) buf[j] ^= (random() & 0x21);
 #endif
 
-				int offset = (x + y * d->xres) * bytes_per_pixel;
-				if (offset + len > screensize) {
-					len = screensize - offset;
+				int fb_offset = (x + y * d->xres) * 3;
+				int fb_len = (len / bytes_per_pixel) * 3;
+
+				if (fb_offset + fb_len > screensize) {
+					fb_len = screensize - fb_offset;
+				}
+				
+				if (fb_len <= 0)
+					return;
+
+				uint8_t fb_buf[512 * 3];
+				for (int i = 0; i < 512; i+=bytes_per_pixel) {
+					uint32_t color;
+					if (bytes_per_pixel == 1)
+						color = buf[i];
+					else if (bytes_per_pixel == 2)
+						color = (buf[i]<<8) + buf[i+1];
+					else if (bytes_per_pixel == 4)
+						color = (buf[i]<<24) + (buf[i+1]<<16)
+							+ (buf[i+2]<<8)+buf[i+3];
+					get_rgb(d, color,
+					    &fb_buf[i*3+0],
+					    &fb_buf[i*3+1],
+					    &fb_buf[i*3+2]);
 				}
 
-				dev_fb_access(cpu, cpu->mem, offset,
-				    buf, len, MEM_WRITE, d->fb_data);
-				
+				dev_fb_access(cpu, cpu->mem, fb_offset,
+				    fb_buf, fb_len, MEM_WRITE, d->fb_data);
+
 				x += len / bytes_per_pixel;
 				if (x >= d->xres) {
 					x -= d->xres;
@@ -281,7 +340,7 @@ DEVICE_ACCESS(sgi_gbe)
 
 	case CRMFB_CTRLSTAT:	// 0x0
 		if (writeflag == MEM_WRITE) {
-			fatal("[ sgi_gbe: write to ctrlstat: 0x08%x\n ]", (int)idata);
+			debug("[ sgi_gbe: write to ctrlstat: 0x%08x ]\n", (int)idata);
 			d->ctrlstat = (idata & ~CRMFB_CTRLSTAT_CHIPID_MASK)
 				| (d->ctrlstat & CRMFB_CTRLSTAT_CHIPID_MASK);
 		} else
@@ -449,12 +508,6 @@ DEVICE_ACCESS(sgi_gbe)
 
 			debug("[ sgi_gbe: setting color depth to %i bits, width in tiles = %i, partial pixels = %i ]\n",
 			    d->bitdepth, d->width_in_tiles, d->partial_pixels);
-
-			if (d->bitdepth != 8) {
-				fatal("sgi_gbe: warning: bitdepth %i not "
-				    "really implemented yet\n", d->bitdepth);
-				// exit(1);
-			}
 		} else
 			odata = d->plane0ctrl;
 		break;
@@ -498,6 +551,13 @@ DEVICE_ACCESS(sgi_gbe)
 		// TODO
 		break;
 
+	case CRMFB_WID:		// 0x48000
+		// TODO: Figure out how this really works.
+		if (writeflag == MEM_WRITE) {
+			d->color_mode = (idata >> CRMFB_MODE_TYP_SHIFT) & 7;
+		}
+		break;
+
 	case CRMFB_CMAP_FIFO:		// 0x58000
 	case CRMFB_CURSOR_POS:		// 0x70000
 	case CRMFB_CURSOR_CONTROL:	// 0x70004
@@ -529,30 +589,8 @@ DEVICE_ACCESS(sgi_gbe)
 
 		/*  RGB Palette at 0x50000 .. 0x503ff:  */
 		if (relative_addr >= CRMFB_CMAP && relative_addr <= CRMFB_CMAP + 0x3ff) {
-			int color_nr, r, g, b;
-			int old_r, old_g, old_b;
-
-			color_nr = (relative_addr & 0x3ff) / 4;
-			r = (idata >> 24) & 0xff;
-			g = (idata >> 16) & 0xff;
-			b = (idata >>  8) & 0xff;
-
-			old_r = d->fb_data->rgb_palette[color_nr * 3 + 0];
-			old_g = d->fb_data->rgb_palette[color_nr * 3 + 1];
-			old_b = d->fb_data->rgb_palette[color_nr * 3 + 2];
-
-			d->fb_data->rgb_palette[color_nr * 3 + 0] = r;
-			d->fb_data->rgb_palette[color_nr * 3 + 1] = g;
-			d->fb_data->rgb_palette[color_nr * 3 + 2] = b;
-
-			if (r != old_r || g != old_g || b != old_b) {
-				/*  If the palette has been changed, the entire
-				    image needs to be redrawn...  :-/  */
-				d->fb_data->update_x1 = 0;
-				d->fb_data->update_x2 = d->fb_data->xsize - 1;
-				d->fb_data->update_y1 = 0;
-				d->fb_data->update_y2 = d->fb_data->ysize - 1;
-			}
+			int color_index = (relative_addr & 0x3ff) / 4;
+			d->palette[color_index] = idata;
 			break;
 		}
 
@@ -564,7 +602,7 @@ DEVICE_ACCESS(sgi_gbe)
 
 		/*  Cursor bitmap at 0x78000 ..:  */
 		if (relative_addr >= CRMFB_CURSOR_BITMAP && relative_addr <= CRMFB_CURSOR_BITMAP + 0xff) {
-			/*  ignore gamma correction for now  */
+			/*  TODO.  */
 			break;
 		}
 
@@ -615,8 +653,7 @@ void dev_sgi_gbe_init(struct machine *machine, struct memory *mem,
 			(CRMFB_CTRLSTAT_CHIPID_MASK & 1);
 
 	d->fb_data = dev_fb_init(machine, mem, FAKE_GBE_FB_ADDRESS,
-	    VFB_GENERIC, d->xres, d->yres, d->xres, d->yres, 8, "SGI GBE");
-	set_grayscale_palette(d->fb_data, 256);
+	    VFB_GENERIC, d->xres, d->yres, d->xres, d->yres, 24, "SGI GBE");
 
 	memory_device_register(mem, "sgi_gbe", baseaddr, DEV_SGI_GBE_LENGTH,
 	    dev_sgi_gbe_access, d, DM_DEFAULT, NULL);
@@ -679,12 +716,9 @@ void horrible_getputpixel(bool put, struct cpu* cpu, struct sgi_gbe_data* d, int
 	if (x < 0 || y < 0 || x >= d->xres || y >= d->yres)
 		return;
 
-	if (d->bitdepth != 8) {
-		fatal("sgi gbe horrible_getputpixel: TODO: non-8-bit\n");
-		exit(1);
-	}
+	// TODO: Non 8-bit modes!
 
-	int tilewidth_in_pixels = 512 * 8 / d->bitdepth;
+	int tilewidth_in_pixels = 512;
 	
 	int tile_nr_x = x / tilewidth_in_pixels;
 	int tile_nr_y = y / 128;
