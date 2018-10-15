@@ -1148,7 +1148,7 @@ DEVICE_ACCESS(sgi_de)
 		uint32_t bg = d->de_reg[(CRIME_DE_BG - 0x2000) / sizeof(uint32_t)] & 255;
 		uint32_t pattern = d->de_reg[(CRIME_DE_STIPPLE_PAT - 0x2000) / sizeof(uint32_t)];
 		//uint32_t stipple_mode = d->de_reg[(CRIME_DE_STIPPLE_MODE - 0x2000) / sizeof(uint32_t)];
-		//uint32_t rop = d->de_reg[(CRIME_DE_ROP - 0x2000) / sizeof(uint32_t)];
+		uint32_t rop = d->de_reg[(CRIME_DE_ROP - 0x2000) / sizeof(uint32_t)];
 
 		uint32_t x1 = (d->de_reg[(CRIME_DE_X_VERTEX_0 - 0x2000) / sizeof(uint32_t)]
 		    >> 16) & 0xfff;
@@ -1236,6 +1236,9 @@ DEVICE_ACCESS(sgi_de)
 					for (x = x1; x <= x2; x+=1) {
 						uint32_t color;
 						horrible_getputpixel(false, cpu, d, (src_mode & 0x00001c00) >> 10, src_x, src_y, &color);
+						if (drawmode & DE_DRAWMODE_ROP && rop == 12)
+							color = 255 - color;
+
 						horrible_getputpixel(true, cpu, d, (dst_mode & 0x00001c00) >> 10, x, y, &color);
 						src_x += dx;
 					}
