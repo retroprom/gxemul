@@ -78,7 +78,14 @@ struct sgi_gbe_data {
 	uint32_t	frm_control;		/* 0x3000c  */
 	int		freeze;
 
-	uint32_t	palette[256];
+	uint32_t	palette[256];		/* 0x50000  */
+
+	uint32_t	cursor_pos;		/* 0x70000  */
+	uint32_t	cursor_control;		/* 0x70004  */
+	uint32_t	cursor_cmap0;		/* 0x70008  */
+	uint32_t	cursor_cmap1;		/* 0x7000c  */
+	uint32_t	cursor_cmap2;		/* 0x70010  */
+	uint32_t	cursor_bitmap[64];	/* 0x78000  */
 
 	// Emulator's representation:
 	int 		width_in_tiles;
@@ -233,89 +240,158 @@ DEVICE_TICK(sgi_gbe)
 
 			tile_nr ++;
 		}
+	} else {
+		/*
+		 *  Tiled mode (used by other things than Linux):
+		 */
+
+		// Nr of tiles horizontally and vertically:
+		int h = (d->yres + 127) / 128;
+		int w = d->width_in_tiles + (d->partial_pixels > 0 ? 1 : 0);
+
+		int nr_of_tiles = h * w;
 		
-		return;
+		uint32_t tile[256];
+		uint8_t alltileptrs[256 * sizeof(uint16_t)];
+
+		if (nr_of_tiles > 256) {
+			fatal("sgi gbe: too many tiles?!\n");
+			exit(1);
+		}
+		
+		cpu->memory_rw(cpu, cpu->mem, tiletable,
+		    alltileptrs, sizeof(alltileptrs), MEM_READ,
+		    NO_EXCEPTIONS | PHYSICAL);
+
+		for (int i = 0; i < 256; ++i)
+			tile[i] = (256 * alltileptrs[i*2] + alltileptrs[i*2+1]) << 16;
+
+		int screensize = d->xres * d->yres * 3;
+		int x = 0, y = 0;
+
+		for (int tiley = 0; tiley < h; ++tiley) {
+			for (int line = 0; line < 128; ++line) {
+				for (int tilex = 0; tilex < w; ++tilex) {
+					int tilenr = tilex + tiley * w;
+
+					// Read one line of up to 512 bytes from the tile.
+					int len = tilex < d->width_in_tiles ? 512 : (d->partial_pixels * bytes_per_pixel);
+
+					cpu->memory_rw(cpu, cpu->mem, tile[tilenr] + 512 * line,
+					    buf, len, MEM_READ, NO_EXCEPTIONS | PHYSICAL);
+
+	#if 0
+					for (int j=0; j<len; j++) buf[j] ^= (random() & 0x21);
+	#endif
+
+					int fb_offset = (x + y * d->xres) * 3;
+					int fb_len = (len / bytes_per_pixel) * 3;
+
+					if (fb_offset + fb_len > screensize) {
+						fb_len = screensize - fb_offset;
+					}
+					
+					if (fb_len <= 0) {
+						tiley = h;	// to break
+						tilex = w;
+						line = 128;
+					}
+
+					uint8_t fb_buf[512 * 3];
+					int fb_i = 0;
+					for (int i = 0; i < 512; i+=bytes_per_pixel) {
+						uint32_t color;
+						if (bytes_per_pixel == 1)
+							color = buf[i];
+						else if (bytes_per_pixel == 2)
+							color = (buf[i]<<8) + buf[i+1];
+						else // if (bytes_per_pixel == 4)
+							color = (buf[i]<<24) + (buf[i+1]<<16)
+								+ (buf[i+2]<<8)+buf[i+3];
+						get_rgb(d, color,
+						    &fb_buf[fb_i],
+						    &fb_buf[fb_i+1],
+						    &fb_buf[fb_i+2]);
+						fb_i += 3;
+					}
+
+					dev_fb_access(cpu, cpu->mem, fb_offset,
+					    fb_buf, fb_len, MEM_WRITE, d->fb_data);
+
+					x += len / bytes_per_pixel;
+					if (x >= d->xres) {
+						x -= d->xres;
+						++y;
+						if (y >= d->yres) {
+							tiley = h;	// to break
+							tilex = w;
+							line = 128;
+						}
+					}
+				}
+			}
+		}
 	}
 
-	/*
-	 *  Tiled mode (used by other things than Linux):
-	 */
+	if (d->cursor_control & CRMFB_CURSOR_ON) {
+		int16_t cx = d->cursor_pos & 0xffff;
+		int16_t cy = d->cursor_pos >> 16;
 
-	// Nr of tiles horizontally and vertically:
-	int h = (d->yres + 127) / 128;
-	int w = d->width_in_tiles + (d->partial_pixels > 0 ? 1 : 0);
+		if (d->cursor_control & CRMFB_CURSOR_CROSSHAIR) {
+			uint8_t pixel[3];
+			pixel[0] = d->cursor_cmap0 >> 24;
+			pixel[1] = d->cursor_cmap0 >> 16;
+			pixel[2] = d->cursor_cmap0 >> 8;
 
-	int nr_of_tiles = h * w;
-	
-	uint32_t tile[256];
-	uint8_t alltileptrs[256 * sizeof(uint16_t)];
+			if (cx >= 0 && cx < d->xres) {
+				for (int y = 0; y < d->yres; ++y)
+					dev_fb_access(cpu, cpu->mem, (cx + y * d->xres) * 3,
+					    pixel, 3, MEM_WRITE, d->fb_data);
+			}
 
-	if (nr_of_tiles > 256) {
-		fatal("sgi gbe: too many tiles?!\n");
-		exit(1);
-	}
-	
-	cpu->memory_rw(cpu, cpu->mem, tiletable,
-	    alltileptrs, sizeof(alltileptrs), MEM_READ,
-	    NO_EXCEPTIONS | PHYSICAL);
+			// TODO: Rewrite as a single framebuffer block write?
+			if (cy >= 0 && cy < d->yres) {
+				for (int x = 0; x < d->xres; ++x)
+					dev_fb_access(cpu, cpu->mem, (x + cy * d->xres) * 3,
+					    pixel, 3, MEM_WRITE, d->fb_data);
+			}
+		} else {
+			uint8_t pixel[3];
+			int sx, sy;
 
-	for (int i = 0; i < 256; ++i)
-		tile[i] = (256 * alltileptrs[i*2] + alltileptrs[i*2+1]) << 16;
+			for (int dy = 0; dy < 32; ++dy) {
+				for (int dx = 0; dx < 32; ++dx) {
+					sx = cx + dx;
+					sy = cy + dy;
+					
+					if (sx < 0 || sx >= d->xres ||
+					    sy < 0 || sy >= d->yres)
+						continue;
+					
+					int wordindex = dy*2 + (dx>>4);
+					uint32_t word = d->cursor_bitmap[wordindex];
+					
+					int color = (word >> ((15 - (dx&15))*2)) & 3;
+					
+					if (!color)
+						continue;
 
-	int screensize = d->xres * d->yres * 3;
-	int x = 0, y = 0;
+					if (color == 1) {
+						pixel[0] = d->cursor_cmap0 >> 24;
+						pixel[1] = d->cursor_cmap0 >> 16;
+						pixel[2] = d->cursor_cmap0 >> 8;
+					} else if (color == 2) {
+						pixel[0] = d->cursor_cmap1 >> 24;
+						pixel[1] = d->cursor_cmap1 >> 16;
+						pixel[2] = d->cursor_cmap1 >> 8;
+					} else {
+						pixel[0] = d->cursor_cmap2 >> 24;
+						pixel[1] = d->cursor_cmap2 >> 16;
+						pixel[2] = d->cursor_cmap2 >> 8;
+					}
 
-	for (int tiley = 0; tiley < h; ++tiley) {
-		for (int line = 0; line < 128; ++line) {
-			for (int tilex = 0; tilex < w; ++tilex) {
-				int tilenr = tilex + tiley * w;
-
-				// Read one line of up to 512 bytes from the tile.
-				int len = tilex < d->width_in_tiles ? 512 : (d->partial_pixels * bytes_per_pixel);
-
-				cpu->memory_rw(cpu, cpu->mem, tile[tilenr] + 512 * line,
-				    buf, len, MEM_READ, NO_EXCEPTIONS | PHYSICAL);
-
-#if 0
-				for (int j=0; j<len; j++) buf[j] ^= (random() & 0x21);
-#endif
-
-				int fb_offset = (x + y * d->xres) * 3;
-				int fb_len = (len / bytes_per_pixel) * 3;
-
-				if (fb_offset + fb_len > screensize) {
-					fb_len = screensize - fb_offset;
-				}
-				
-				if (fb_len <= 0)
-					return;
-
-				uint8_t fb_buf[512 * 3];
-				int fb_i = 0;
-				for (int i = 0; i < 512; i+=bytes_per_pixel) {
-					uint32_t color;
-					if (bytes_per_pixel == 1)
-						color = buf[i];
-					else if (bytes_per_pixel == 2)
-						color = (buf[i]<<8) + buf[i+1];
-					else if (bytes_per_pixel == 4)
-						color = (buf[i]<<24) + (buf[i+1]<<16)
-							+ (buf[i+2]<<8)+buf[i+3];
-					get_rgb(d, color,
-					    &fb_buf[fb_i++],
-					    &fb_buf[fb_i++],
-					    &fb_buf[fb_i++]);
-				}
-
-				dev_fb_access(cpu, cpu->mem, fb_offset,
-				    fb_buf, fb_len, MEM_WRITE, d->fb_data);
-
-				x += len / bytes_per_pixel;
-				if (x >= d->xres) {
-					x -= d->xres;
-					++y;
-					if (y >= d->yres)
-						return;
+					dev_fb_access(cpu, cpu->mem, (sx + sy * d->xres) * 3,
+					    pixel, 3, MEM_WRITE, d->fb_data);
 				}
 			}
 		}
@@ -560,12 +636,41 @@ DEVICE_ACCESS(sgi_gbe)
 		break;
 
 	case CRMFB_CMAP_FIFO:		// 0x58000
+		break;
+
 	case CRMFB_CURSOR_POS:		// 0x70000
+		if (writeflag == MEM_WRITE)
+			d->cursor_pos = idata;
+		else
+			odata = d->cursor_pos;
+		break;
+		
 	case CRMFB_CURSOR_CONTROL:	// 0x70004
+		if (writeflag == MEM_WRITE)
+			d->cursor_control = idata;
+		else
+			odata = d->cursor_control;
+		break;
+		
 	case CRMFB_CURSOR_CMAP0:	// 0x70008
+		if (writeflag == MEM_WRITE)
+			d->cursor_cmap0 = idata;
+		else
+			odata = d->cursor_cmap0;
+		break;
+		
 	case CRMFB_CURSOR_CMAP1:	// 0x7000c
+		if (writeflag == MEM_WRITE)
+			d->cursor_cmap1 = idata;
+		else
+			odata = d->cursor_cmap1;
+		break;
+		
 	case CRMFB_CURSOR_CMAP2:	// 0x70010
-		// TODO
+		if (writeflag == MEM_WRITE)
+			d->cursor_cmap2 = idata;
+		else
+			odata = d->cursor_cmap2;
 		break;
 
 	/*
@@ -591,7 +696,10 @@ DEVICE_ACCESS(sgi_gbe)
 		/*  RGB Palette at 0x50000 .. 0x503ff:  */
 		if (relative_addr >= CRMFB_CMAP && relative_addr <= CRMFB_CMAP + 0x3ff) {
 			int color_index = (relative_addr & 0x3ff) / 4;
-			d->palette[color_index] = idata;
+			if (writeflag == MEM_WRITE)
+				d->palette[color_index] = idata;
+			else
+				odata = d->palette[color_index];
 			break;
 		}
 
@@ -603,7 +711,15 @@ DEVICE_ACCESS(sgi_gbe)
 
 		/*  Cursor bitmap at 0x78000 ..:  */
 		if (relative_addr >= CRMFB_CURSOR_BITMAP && relative_addr <= CRMFB_CURSOR_BITMAP + 0xff) {
-			/*  TODO.  */
+			if (len != 4) {
+				printf("unimplemented CRMFB_CURSOR_BITMAP len %i\n", (int)len);
+			}
+
+			int index = (relative_addr & 0xff) / 4;
+			if (writeflag == MEM_WRITE)
+				d->cursor_bitmap[index] = idata;
+			else
+				odata = d->cursor_bitmap[index];
 			break;
 		}
 
@@ -783,7 +899,7 @@ DEVICE_ACCESS(sgi_re)
 				// expect...
 				return 1;
 			}
-			for (int hwi = 0; hwi < len; hwi += sizeof(uint16_t)) {
+			for (size_t hwi = 0; hwi < len; hwi += sizeof(uint16_t)) {
 				d->re_tlb_a[tlbi] = data[hwi]*256 + data[hwi+1];
 				debug("d->re_tlb_a[%i] = 0x%04x\n", tlbi, d->re_tlb_a[tlbi]);
 				tlbi++;
@@ -800,7 +916,7 @@ DEVICE_ACCESS(sgi_re)
 
 		if (writeflag == MEM_WRITE) {
 			int tlbi = ((relative_addr & 0x1ff) >> 3) & 0xff;
-			for (int hwi = 0; hwi < len; hwi += sizeof(uint16_t)) {
+			for (size_t hwi = 0; hwi < len; hwi += sizeof(uint16_t)) {
 				d->re_tlb_b[tlbi] = data[hwi]*256 + data[hwi+1];
 				debug("d->re_tlb_b[%i] = 0x%04x\n", tlbi, d->re_tlb_b[tlbi]);
 				tlbi++;
@@ -817,7 +933,7 @@ DEVICE_ACCESS(sgi_re)
 
 		if (writeflag == MEM_WRITE) {
 			int tlbi = ((relative_addr & 0x1ff) >> 3) & 0xff;
-			for (int hwi = 0; hwi < len; hwi += sizeof(uint16_t)) {
+			for (size_t hwi = 0; hwi < len; hwi += sizeof(uint16_t)) {
 				d->re_tlb_c[tlbi] = data[hwi]*256 + data[hwi+1];
 				debug("d->re_tlb_c[%i] = 0x%04x\n", tlbi, d->re_tlb_c[tlbi]);
 				tlbi++;
