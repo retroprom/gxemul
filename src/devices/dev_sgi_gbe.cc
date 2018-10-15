@@ -276,7 +276,7 @@ DEVICE_TICK(sgi_gbe)
 					uint32_t base = tile[tilenr];
 					
 					if (base == 0) {
-						fatal("sgi_gbe: warning: tile base 0\n");
+						// fatal("sgi_gbe: warning: tile base 0\n");
 						return;
 					}
 					

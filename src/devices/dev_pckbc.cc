@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2018  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -287,7 +287,7 @@ static void ascii_to_pc_scancodes_type2(int a, struct pckbc_data *d)
 	int p = 0;	/*  port  */
 	int shift = 0, ctrl = 0;
 
-	if (d->translation_table == 3) {
+	if (d->translation_table == 3 || d->type == PCKBC_8242) {
 		ascii_to_pc_scancodes_type3(a, d);
 		return;
 	}
