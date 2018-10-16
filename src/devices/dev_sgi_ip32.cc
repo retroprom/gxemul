@@ -80,6 +80,10 @@ struct crime_data {
 };
 
 
+void mips_pc_to_pointers(struct cpu *);
+void mips32_pc_to_pointers(struct cpu *);
+
+
 /*
  *  crime_interrupt_assert():
  *  crime_interrupt_deassert():
@@ -233,16 +237,24 @@ DEVICE_ACCESS(crime)
 		 *  bootup, but they are not really emulated, so it fails.
 		 *  During the probe, the CRIME_REV is read a lot. By
 		 *  "returning" from the probe function, i.e. jumping to ra,
-		 *  when this register is read the second time, we can
-		 *  skip the probing and thus get further.
+		 *  when this register is read the second time, the probe
+		 *  can be skipped, and the PROM thus runs further.
+		 *
+		 *  The address where this happens is:
+		 *	0xbfc0517c	PROM v2.3
+		 *	0xbfc051ac	PROM v4.13
+		 *
+		 *  By extrapolating a bit (allowing for variations for other
+		 *  versions of the PROM), let's return if the read of the
+		 *  CRIME_REV register occurs anywhere near 0xbfc051XX.
 		 */
-		if ((int32_t)cpu->pc == (int32_t)0xbfc0517c ||	// PROM v2.3
-		    (int32_t)cpu->pc == (int32_t)0xbfc051ac) {	// PROM v4.13
-			store_32bit_word(cpu, cpu->pc + 4, 0x03e00008);	// jr ra
-			store_32bit_word(cpu, cpu->pc + 8, 0x00000000); // nop
+		if (((uint32_t)cpu->pc & 0xffffff00) == (uint32_t)0xbfc05100) {
+			cpu->pc = cpu->cd.mips.gpr[MIPS_GPR_RA];
+			if (cpu->is_32bit)
+				mips32_pc_to_pointers(cpu);
+			else
+				mips_pc_to_pointers(cpu);
 		}
-		
-		// TODO. Return actual value from my real O2?
 		break;
 
 	case CRIME_CONTROL:	/*  0x008  */
