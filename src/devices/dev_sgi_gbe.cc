@@ -762,11 +762,6 @@ void dev_sgi_gbe_init(struct machine *machine, struct memory *mem,
  */
 void horrible_getputpixel(bool put, struct cpu* cpu, struct sgi_gbe_data* d, int dst_mode, int x, int y, uint32_t* color)
 {
-	// TODO: The get/put pixel methods should not rely on the "back end"
-	// stuff. Figure out how to detect the Linux tweaked/linear mode
-	// without reading GBE specific registers or values.
-	int linear = d->width_in_tiles == 1 && d->partial_pixels == 0;
-
 	// dst_mode (see NetBSD's crmfbreg.h):
 	// #define DE_MODE_TLB_A           0x00000000
 	// #define DE_MODE_TLB_B           0x00000400
@@ -788,11 +783,6 @@ void horrible_getputpixel(bool put, struct cpu* cpu, struct sgi_gbe_data* d, int
 		exit(1);
 	}
 
-	if (linear) {
-		fatal("sgi gbe horrible_getputpixel called in linear mode?!\n");
-		exit(1);
-	}
-
 	if (x < 0 || y < 0 || x >= d->xres || y >= d->yres)
 		return;
 
@@ -802,7 +792,7 @@ void horrible_getputpixel(bool put, struct cpu* cpu, struct sgi_gbe_data* d, int
 	int tile_nr_x = x / tilewidth_in_pixels;
 	int tile_nr_y = y / 128;
 
-	int w = 2048 / 512; // d->width_in_tiles + (d->partial_pixels > 0 ? 1 : 0);
+	int w = 2048 / tilewidth_in_pixels;	// Always 4 tiles wide? Probably not in non-8-bit-modes
 	int tile_nr = tile_nr_y * w + tile_nr_x;
 
 	// The highest bit seems to be set for a "valid" tile pointer.
@@ -1568,7 +1558,10 @@ DEVICE_ACCESS(sgi_de_status)
 	switch (relative_addr) {
 
 	case CRIME_DE_STATUS:	// 0x4000
-		odata = CRIME_DE_IDLE;
+		odata = CRIME_DE_IDLE |
+			CRIME_DE_SETUP_IDLE |
+			CRIME_DE_PIXPIPE_IDLE |
+			CRIME_DE_MTE_IDLE;
 		break;
 
 	default:
