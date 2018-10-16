@@ -55,7 +55,6 @@
 #include "misc.h"
 
 #include "thirdparty/crmfbreg.h"
-#include "thirdparty/sgi_gl.h"
 
 
 /*  Let's hope nothing is there already...  */
@@ -98,21 +97,6 @@ struct sgi_gbe_data {
 	int		bitdepth;
 	int		color_mode;
 	struct vfb_data *fb_data;
-
-	// Rendering engine registers:
-	uint16_t	re_tlb_a[256];
-	uint16_t	re_tlb_b[256];
-	uint16_t	re_tlb_c[256];
-	uint16_t	re_tex[112];
-	// todo: clip_ids registers.
-	uint32_t	re_linear_a[32];
-	uint32_t	re_linear_b[32];
-
-	// Drawing engine registers:
-	uint32_t	de_reg[DEV_SGI_DE_LENGTH / sizeof(uint32_t)];
-
-	// Memory transfer engine registers:
-	uint32_t	mte_reg[DEV_SGI_MTE_LENGTH / sizeof(uint32_t)];
 };
 
 
@@ -145,8 +129,8 @@ void get_rgb(struct sgi_gbe_data *d, uint32_t color, uint8_t* r, uint8_t* g, uin
  *  NOTE: This is very slow, even slower than the normal emulated framebuffer,
  *  which is already slow as it is.
  *
- *  frm_control (bits 31..9) is a pointer to an array of uint16_t.
- *  These numbers (when << 16 bits) are pointers to the tiles. Tiles are
+ *  frm_control contains a pointer to an array of uint16_t. These numbers
+ *  (when shifted 16 bits to the left) are pointers to the tiles. Tiles are
  *  512x128 in 8-bit mode, 256x128 in 16-bit mode, and 128x128 in 32-bit mode.
  *
  *  An exception is how Linux/O2 uses the framebuffer, in a "tweaked" mode
@@ -174,10 +158,6 @@ DEVICE_TICK(sgi_gbe)
 
 	if (tiletable == 0)
 		return;
-
-	/*
-	 *  Tiled mode (used by other things than Linux):
-	 */
 
 	// Nr of tiles horizontally:
 	int w = d->width_in_tiles + (d->partial_pixels > 0 ? 1 : 0);
