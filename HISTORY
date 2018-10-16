@@ -4768,3 +4768,4 @@ Changelog for GXemul:
 		running the O2's PROM.
 20181016	More work on the O2 graphics; managed to get rid of the Linux
 		tweaked special case rendering mode.
+		Splitting the O2 GBE into a GBE part and a Rendering Engine part.

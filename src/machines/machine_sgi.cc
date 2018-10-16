@@ -441,6 +441,9 @@ j = 0;
 		    machine->path, machine->bootstrap_cpu);
 		dev_crime_init(machine, mem, 0x14000000, tmpstr, machine->x11_md.in_use);
 
+		/*  Rendering Engine  */
+		dev_sgi_re_init(machine, mem, 0x15000000);
+
 		/*  Graphics Back End  */
 		dev_sgi_gbe_init(machine, mem, 0x16000000);
 

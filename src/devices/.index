@@ -88,6 +88,7 @@ dev_sgi_ip30.cc  SGI IP30 ("Octane") stuff
 dev_sgi_ip32.cc  SGI IP32 stuff (CRIME, MACE, MACEPCI, ust)
 dev_sgi_mardigras.cc  MardiGras graphics controller on SGI IP30 (Octane)
 dev_sgi_mec.cc  SGI IP32 "mec" ethernet
+dev_sgi_re.cc  SGI O2 "Rendering Engine"
 dev_sh4.cc  SH4-specific memory mapped registers (0xf0000000 - 0xffffffff)
 dev_sii.cc  SII SCSI controller, used in some DECstation systems
 dev_sn.cc  National Semiconductor SONIC ("sn") DP83932 ethernet controller
