@@ -50,6 +50,7 @@
 #include "misc.h"
 
 #include "thirdparty/crmfbreg.h"
+#include "thirdparty/sgi_gl.h"
 
 
 /*  Let's hope nothing is there already...  */
@@ -121,7 +122,6 @@ void get_rgb(struct sgi_gbe_data *d, uint32_t color, uint8_t* r, uint8_t* g, uin
 		*b = d->palette[color] >> 8;
 		break;
 	case CRMFB_MODE_TYP_RG3B2:	// Used by NetBSD
-		color &= 0xff;
 		*r = (color >> 5) << 5;	if (*r & 0x20) *r |= 0x1f;
 		*g = (color >> 2) << 5;	if (*g & 0x20) *g |= 0x1f;
 		*b = color << 6;	if (*b & 0x40) *b |= 0x3f;
@@ -158,6 +158,9 @@ DEVICE_TICK(sgi_gbe)
 	int copy_len, copy_offset;
 	uint64_t old_fb_offset = 0;
 	int bytes_per_pixel = d->bitdepth / 8;
+
+	if (!cpu->machine->x11_md.in_use)
+		return;
 
 	// Linear "tweaked" mode is something that Linux/O2 uses.
 	int linear = d->width_in_tiles == 1 && d->partial_pixels == 0;
@@ -462,6 +465,11 @@ DEVICE_ACCESS(sgi_gbe)
 		 *  reads back a value.
 		 */
 		if (writeflag == MEM_WRITE) {
+			//if (!(d->i2c & CRMFB_I2C_SCL) &&
+			//    (idata & CRMFB_I2C_SCL)) {
+			//	fatal("vga i2c data: %i\n", idata & CRMFB_I2C_SDA);
+			//}
+
 			d->i2c = idata;
 		} else {
 			odata = d->i2c;
@@ -471,6 +479,11 @@ DEVICE_ACCESS(sgi_gbe)
 
 	case CRMFB_I2C_FP:	// 0x10, i2cfp, flat panel control
 		if (writeflag == MEM_WRITE) {
+			//if (d->i2c & CRMFB_I2C_SCL &&
+			//    !(idata & CRMFB_I2C_SCL)) {
+			//	fatal("fp i2c data: %i\n", idata & CRMFB_I2C_SDA);
+			//}
+
 			d->i2cfp = idata;
 		} else {
 			odata = d->i2cfp;
@@ -797,7 +810,7 @@ void dev_sgi_gbe_init(struct machine *machine, struct memory *mem,
 
 	memory_device_register(mem, "sgi_gbe", baseaddr, DEV_SGI_GBE_LENGTH,
 	    dev_sgi_gbe_access, d, DM_DEFAULT, NULL);
-	machine_add_tickfunction(machine, dev_sgi_gbe_tick, d, 18);
+	machine_add_tickfunction(machine, dev_sgi_gbe_tick, d, 19);
 
 	dev_sgi_re_init(mem, 0x15001000, d);
 	dev_sgi_de_init(mem, 0x15002000, d);
@@ -1096,6 +1109,14 @@ DEVICE_ACCESS(sgi_de)
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		break;
 
+	case CRIME_DE_CLIPMODE:
+		debug("[ sgi_de: %s CRIME_DE_CLIPMODE: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		if (writeflag == MEM_WRITE && idata != 0)
+			fatal("[ sgi_de: TODO: non-zero CRIME_DE_CLIPMODE: 0x%016llx ]\n", idata);
+		break;
+
 	case CRIME_DE_DRAWMODE:
 		debug("[ sgi_de: %s CRIME_DE_DRAWMODE: 0x%016llx ]\n",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
@@ -1106,6 +1127,22 @@ DEVICE_ACCESS(sgi_de)
 		debug("[ sgi_de: %s CRIME_DE_PRIMITIVE: 0x%016llx ]\n",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		break;
+
+	case CRIME_DE_WINOFFSET_SRC:
+		debug("[ sgi_de: %s CRIME_DE_WINOFFSET_SRC: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		if (writeflag == MEM_WRITE && idata != 0)
+			fatal("[ sgi_de: TODO: non-zero CRIME_DE_WINOFFSET_SRC: 0x%016llx ]\n", idata);
+		break;
+
+	case CRIME_DE_WINOFFSET_DST:
+		debug("[ sgi_de: %s CRIME_DE_WINOFFSET_DST: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		if (writeflag == MEM_WRITE && idata != 0)
+			fatal("[ sgi_de: TODO: non-zero CRIME_DE_WINOFFSET_DST: 0x%016llx ]\n", idata);
 		break;
 
 	case CRIME_DE_X_VERTEX_0:
@@ -1285,7 +1322,7 @@ DEVICE_ACCESS(sgi_de)
 					for (x = x1; x <= x2; x+=1) {
 						uint32_t color;
 						horrible_getputpixel(false, cpu, d, (src_mode & 0x00001c00) >> 10, src_x, src_y, &color);
-						if (drawmode & DE_DRAWMODE_ROP && rop == 12)
+						if (drawmode & DE_DRAWMODE_ROP && rop == OPENGL_LOGIC_OP_COPY_INVERTED)
 							color = 255 - color;
 
 						horrible_getputpixel(true, cpu, d, (dst_mode & 0x00001c00) >> 10, x, y, &color);
@@ -1338,8 +1375,8 @@ void dev_sgi_de_init(struct memory *mem, uint64_t baseaddr, struct sgi_gbe_data 
 /*
  *  SGI "mte", NetBSD sources describes it as a "memory transfer engine".
  *
- *  If the relative address has the 0x0800 flag set, it means "go ahead
- *  with the transfer". Otherwise, it is just reads and writes of the
+ *  If the relative address has the 0x0800 (CRIME_DE_START) flag set, it means
+ *  "go ahead with the transfer". Otherwise, it is just reads and writes of the
  *  registers.
  */
 
@@ -1348,9 +1385,9 @@ DEVICE_ACCESS(sgi_mte)
 	struct sgi_gbe_data *d = (struct sgi_gbe_data *) extra;
 	uint64_t idata = 0, odata = 0, fill_addr;
 	int regnr;
-	bool startFlag = relative_addr & 0x0800 ? true : false;
+	bool startFlag = relative_addr & CRIME_DE_START ? true : false;
 
-	relative_addr &= ~0x0800;
+	relative_addr &= ~CRIME_DE_START;
 
 	idata = memory_readmax64(cpu, data, len);
 	regnr = relative_addr / sizeof(uint32_t);
@@ -1433,13 +1470,13 @@ DEVICE_ACCESS(sgi_mte)
 		break;
 
 	case CRIME_MTE_SRC_Y_STEP:
-		fatal("[ sgi_mte: %s CRIME_MTE_SRC_Y_STEP: 0x%016llx ]\n",
+		debug("[ sgi_mte: %s CRIME_MTE_SRC_Y_STEP: 0x%016llx ]\n",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		break;
 
 	case CRIME_MTE_DST_Y_STEP:
-		fatal("[ sgi_mte: %s CRIME_MTE_DST_Y_STEP: 0x%016llx ]\n",
+		debug("[ sgi_mte: %s CRIME_MTE_DST_Y_STEP: 0x%016llx ]\n",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		break;
@@ -1539,6 +1576,11 @@ DEVICE_ACCESS(sgi_mte)
 			    mode,
 			    (long long)dst0, (long long)dst1,
 			    (long long)dstlen, dst_y_step, (int)bg, (int)bytemask);
+
+			if (bytemask != 0xffffffff) {
+				fatal("unimplemented MTE bytemask 0x%08x\n", (int)bytemask);
+				exit(1);
+			}
 
 			memset(zerobuf, bg, dstlen < sizeof(zerobuf) ? dstlen : sizeof(zerobuf));
 			fill_addr = dst0;
