@@ -36,6 +36,9 @@
  *	0x15004000	status registers for drawing engine
  *
  *	0x16000000	crm (or gbe) framebuffer control / video output
+ *
+ *  According to https://www.linux-mips.org/wiki/GBE, the GBE is also used in
+ *  the SGI Visual Workstation.
  */
 
 #include <stdio.h>
