@@ -151,19 +151,12 @@ void get_rgb(struct sgi_gbe_data *d, uint32_t color, uint8_t* r, uint8_t* g, uin
 DEVICE_TICK(sgi_gbe)
 {
 	struct sgi_gbe_data *d = (struct sgi_gbe_data *) extra;
-	int tile_nr = 0, on_screen = 1;
-	unsigned char tileptr_buf[sizeof(uint16_t)];
-	uint64_t tileptr, tiletable;
+	uint64_t tiletable;
 	unsigned char buf[16384];	/*  must be power of 2, at most 65536 */
-	int copy_len, copy_offset;
-	uint64_t old_fb_offset = 0;
 	int bytes_per_pixel = d->bitdepth / 8;
 
 	if (!cpu->machine->x11_md.in_use)
 		return;
-
-	// Linear "tweaked" mode is something that Linux/O2 uses.
-	int linear = d->width_in_tiles == 1 && d->partial_pixels == 0;
 
 	tiletable = (d->frm_control & 0xfffffe00);
 
@@ -175,182 +168,111 @@ DEVICE_TICK(sgi_gbe)
 	if (tiletable == 0)
 		return;
 
-	if (linear) {
-		/*
-		 *  Tweaked (linear) mode, as used by Linux/O2:
-		 *
-		 *  Copy data from this 64KB physical RAM block to the
-		 *  framebuffer:
-		 *
-		 *  NOTE: Copy it in smaller chunks than 64KB, in case
-		 *        the framebuffer device can optimize away
-		 *        portions that aren't modified that way.
-		 */
+	/*
+	 *  Tiled mode (used by other things than Linux):
+	 */
 
-		if (bytes_per_pixel != 1) {
-			fatal("TODO: tweaked/linear mode in non-8-bit mode.\n");
-			exit(1);
-		}
+	// Nr of tiles horizontally:
+	int w = d->width_in_tiles + (d->partial_pixels > 0 ? 1 : 0);
 
-		while (on_screen) {
-			/*  Get pointer to a tile:  */
-			cpu->memory_rw(cpu, cpu->mem, tiletable +
-			    sizeof(tileptr_buf) * tile_nr,
-			    tileptr_buf, sizeof(tileptr_buf), MEM_READ,
-			    NO_EXCEPTIONS | PHYSICAL);
-			tileptr = 256 * tileptr_buf[0] + tileptr_buf[1];
-			tileptr <<= 16;
+	// Actually, the number of tiles vertically is usually very few,
+	// but this algorithm will render "up to" 256 and abort as soon
+	// as the screen is filled instead. This makes it work for both
+	// Linux' "tweaked linear" mode and all the other guest OSes.
+	const int max_nr_of_tiles = 256;
+	
+	uint32_t tile[max_nr_of_tiles];
+	uint8_t alltileptrs[max_nr_of_tiles * sizeof(uint16_t)];
+	
+	cpu->memory_rw(cpu, cpu->mem, tiletable,
+	    alltileptrs, sizeof(alltileptrs), MEM_READ,
+	    NO_EXCEPTIONS | PHYSICAL);
 
-			/*  tileptr is now a physical address of a tile.  */
+	/*
+	 *  PERHAPS this is the way it works:
+	 *
+	 *  tiles 0 and forward are for regular rendering.
+	 *  tiles 64 and forward are for overlay?
+	 *
+	 *  TODO: figure out.
+	 */
+
+	for (int i = 0; i < 256; ++i) {
+		tile[i] = (256 * alltileptrs[i*2] + alltileptrs[i*2+1]) << 16;
 #ifdef GBE_DEBUG
-			fatal("[ sgi_gbe:   tile_nr = %2i, tileptr = 0x%08lx ]\n", tile_nr, tileptr);
+		if (tile[i] != 0)
+			printf("tile[%i] = 0x%08x\n", i, tile[i]);
+#endif
+	}
+
+	int screensize = d->xres * d->yres * 3;
+	int x = 0, y = 0;
+
+	for (int tiley = 0; tiley < max_nr_of_tiles; ++tiley) {
+		for (int line = 0; line < 128; ++line) {
+			for (int tilex = 0; tilex < w; ++tilex) {
+				int tilenr = tilex + tiley * w;
+				
+				if (tilenr >= max_nr_of_tiles)
+					continue;
+				
+				uint32_t base = tile[tilenr];
+				
+				if (base == 0)
+					continue;
+				
+				// Read one line of up to 512 bytes from the tile.
+				int len = tilex < d->width_in_tiles ? 512 : (d->partial_pixels * bytes_per_pixel);
+
+				cpu->memory_rw(cpu, cpu->mem, base + 512 * line,
+				    buf, len, MEM_READ, NO_EXCEPTIONS | PHYSICAL);
+
+#if 0
+				for (int j=0; j<len; j++) buf[j] ^= (random() & 0x21);
 #endif
 
-			copy_len = sizeof(buf);
-			copy_offset = 0;
+				int fb_offset = (x + y * d->xres) * 3;
+				int fb_len = (len / bytes_per_pixel) * 3;
 
-			while (on_screen && copy_offset < 65536) {
-				uint8_t fb_buf[16384 * 3];
-
-				if (old_fb_offset + copy_len > (uint64_t)
-				    (d->xres * d->yres * d->bitdepth / 8)) {
-					copy_len = d->xres * d->yres *
-					    d->bitdepth / 8 - old_fb_offset;
-					/*  Stop after copying this block...  */
-					on_screen = 0;
-				}
-
-				/*  debug("old_fb_offset = %08x copylen"
-				    "=%i\n", old_fb_offset, copy_len);  */
-
-				cpu->memory_rw(cpu, cpu->mem, tileptr +
-				    copy_offset, buf, copy_len, MEM_READ,
-				    NO_EXCEPTIONS | PHYSICAL);
-
-				// for (int i=0; i<sizeof(buf); ++i) buf[i] ^= (random() & 0x20);
-
-				for (int i = 0; i < copy_len; ++i) {
-					get_rgb(d, buf[i],
-					    &fb_buf[i*3+0],
-					    &fb_buf[i*3+1],
-					    &fb_buf[i*3+2]);
+				if (fb_offset + fb_len > screensize) {
+					fb_len = screensize - fb_offset;
 				}
 				
-				dev_fb_access(cpu, cpu->mem, old_fb_offset * 3,
-				    fb_buf, copy_len * 3, MEM_WRITE, d->fb_data);
-				copy_offset += sizeof(buf);
-				old_fb_offset += sizeof(buf);
-			}
+				if (fb_len <= 0) {
+					tiley = max_nr_of_tiles;  // to break
+					tilex = w;
+					line = 128;
+				}
 
-			tile_nr ++;
-		}
-	} else {
-		/*
-		 *  Tiled mode (used by other things than Linux):
-		 */
+				uint8_t fb_buf[512 * 3];
+				int fb_i = 0;
+				for (int i = 0; i < 512; i+=bytes_per_pixel) {
+					uint32_t color;
+					if (bytes_per_pixel == 1)
+						color = buf[i];
+					else if (bytes_per_pixel == 2)
+						color = (buf[i]<<8) + buf[i+1];
+					else // if (bytes_per_pixel == 4)
+						color = (buf[i]<<24) + (buf[i+1]<<16)
+							+ (buf[i+2]<<8)+buf[i+3];
+					get_rgb(d, color,
+					    &fb_buf[fb_i],
+					    &fb_buf[fb_i+1],
+					    &fb_buf[fb_i+2]);
+					fb_i += 3;
+				}
 
-		// Nr of tiles horizontally and vertically:
-		int h = (d->yres + 127) / 128;
-		int w = d->width_in_tiles + (d->partial_pixels > 0 ? 1 : 0);
+				dev_fb_access(cpu, cpu->mem, fb_offset,
+				    fb_buf, fb_len, MEM_WRITE, d->fb_data);
 
-		int nr_of_tiles = h * w;
-		
-		uint32_t tile[256];
-		uint8_t alltileptrs[256 * sizeof(uint16_t)];
-
-		if (nr_of_tiles > 256) {
-			fatal("sgi gbe: too many tiles?!\n");
-			exit(1);
-		}
-		
-		cpu->memory_rw(cpu, cpu->mem, tiletable,
-		    alltileptrs, sizeof(alltileptrs), MEM_READ,
-		    NO_EXCEPTIONS | PHYSICAL);
-
-		/*
-		 *  PERHAPS this is the way it works:
-		 *
-		 *  tiles 0 and forward are for regular rendering.
-		 *  tiles 64 and forward are for overlay?
-		 *
-		 *  TODO: figure out.
-		 */
-
-		for (int i = 0; i < 256; ++i) {
-			tile[i] = (256 * alltileptrs[i*2] + alltileptrs[i*2+1]) << 16;
-#ifdef GBE_DEBUG
-			if (tile[i] != 0)
-				printf("tile[%i] = 0x%08x\n", i, tile[i]);
-#endif
-		}
-
-		int screensize = d->xres * d->yres * 3;
-		int x = 0, y = 0;
-
-		for (int tiley = 0; tiley < h; ++tiley) {
-			for (int line = 0; line < 128; ++line) {
-				for (int tilex = 0; tilex < w; ++tilex) {
-					int tilenr = tilex + tiley * w;
-					uint32_t base = tile[tilenr];
-					
-					if (base == 0) {
-						// fatal("sgi_gbe: warning: tile base 0\n");
-						continue;
-					}
-					
-					// Read one line of up to 512 bytes from the tile.
-					int len = tilex < d->width_in_tiles ? 512 : (d->partial_pixels * bytes_per_pixel);
-
-					cpu->memory_rw(cpu, cpu->mem, base + 512 * line,
-					    buf, len, MEM_READ, NO_EXCEPTIONS | PHYSICAL);
-
-	#if 0
-					for (int j=0; j<len; j++) buf[j] ^= (random() & 0x21);
-	#endif
-
-					int fb_offset = (x + y * d->xres) * 3;
-					int fb_len = (len / bytes_per_pixel) * 3;
-
-					if (fb_offset + fb_len > screensize) {
-						fb_len = screensize - fb_offset;
-					}
-					
-					if (fb_len <= 0) {
-						tiley = h;	// to break
+				x += len / bytes_per_pixel;
+				if (x >= d->xres) {
+					x -= d->xres;
+					++y;
+					if (y >= d->yres) {
+						tiley = max_nr_of_tiles; // to break
 						tilex = w;
 						line = 128;
-					}
-
-					uint8_t fb_buf[512 * 3];
-					int fb_i = 0;
-					for (int i = 0; i < 512; i+=bytes_per_pixel) {
-						uint32_t color;
-						if (bytes_per_pixel == 1)
-							color = buf[i];
-						else if (bytes_per_pixel == 2)
-							color = (buf[i]<<8) + buf[i+1];
-						else // if (bytes_per_pixel == 4)
-							color = (buf[i]<<24) + (buf[i+1]<<16)
-								+ (buf[i+2]<<8)+buf[i+3];
-						get_rgb(d, color,
-						    &fb_buf[fb_i],
-						    &fb_buf[fb_i+1],
-						    &fb_buf[fb_i+2]);
-						fb_i += 3;
-					}
-
-					dev_fb_access(cpu, cpu->mem, fb_offset,
-					    fb_buf, fb_len, MEM_WRITE, d->fb_data);
-
-					x += len / bytes_per_pixel;
-					if (x >= d->xres) {
-						x -= d->xres;
-						++y;
-						if (y >= d->yres) {
-							tiley = h;	// to break
-							tilex = w;
-							line = 128;
-						}
 					}
 				}
 			}
@@ -368,14 +290,14 @@ DEVICE_TICK(sgi_gbe)
 			pixel[2] = d->cursor_cmap0 >> 8;
 
 			if (cx >= 0 && cx < d->xres) {
-				for (int y = 0; y < d->yres; ++y)
+				for (y = 0; y < d->yres; ++y)
 					dev_fb_access(cpu, cpu->mem, (cx + y * d->xres) * 3,
 					    pixel, 3, MEM_WRITE, d->fb_data);
 			}
 
 			// TODO: Rewrite as a single framebuffer block write?
 			if (cy >= 0 && cy < d->yres) {
-				for (int x = 0; x < d->xres; ++x)
+				for (x = 0; x < d->xres; ++x)
 					dev_fb_access(cpu, cpu->mem, (x + cy * d->xres) * 3,
 					    pixel, 3, MEM_WRITE, d->fb_data);
 			}
@@ -621,7 +543,9 @@ DEVICE_ACCESS(sgi_gbe)
 		break;
 
 	case CRMFB_FRM_PIXSIZE:	// 0x30004
-		// TODO.
+		if (writeflag == MEM_WRITE) {
+			debug("[ sgi_gbe: setting PIXSIZE to 0x%08x ]\n", (int)idata);
+		}
 		break;
 		
 	case 0x30008:

@@ -4766,3 +4766,5 @@ Changelog for GXemul:
 		work exactly like on the real machine now.
 		Finally fixed the bug which caused scroll-up to not work when
 		running the O2's PROM.
+20181016	More work on the O2 graphics; managed to get rid of the Linux
+		tweaked special case rendering mode.
