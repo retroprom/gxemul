@@ -206,7 +206,7 @@ static void ascii_to_pc_scancodes_type3(int a, struct pckbc_data *d)
 	if (a=='-')	pckbc_add_code(d, 0x4e, p);
 	if (a=='=')	pckbc_add_code(d, 0x55, p);
 
-	if (a=='\b')	pckbc_add_code(d, 0x29, p);
+	if (a=='\b')	pckbc_add_code(d, 0x66, p);
 
 	if (a=='\t')	pckbc_add_code(d, 0x0d, p);
 	if (a=='q')	pckbc_add_code(d, 0x15, p);
@@ -611,7 +611,7 @@ static void dev_pckbc_command(struct pckbc_data *d, int port_nr)
 	default:
 		fatal("[ pckbc: (port %i) UNIMPLEMENTED 8048 command"
 		    " 0x%02x ]\n", port_nr, cmd);
-		exit(1);
+		// exit(1);
 	}
 }
 
