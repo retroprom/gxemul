@@ -4769,3 +4769,5 @@ Changelog for GXemul:
 20181016	More work on the O2 graphics; managed to get rid of the Linux
 		tweaked special case rendering mode.
 		Splitting the O2 GBE into a GBE part and a Rendering Engine part.
+20181017	Refactored the register representation in dev_sgi_ip32's crime
+		interrupt controller.

@@ -45,6 +45,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
 
 #include "bus_pci.h"
 #include "console.h"
@@ -63,8 +64,6 @@
 // #define debug fatal
 
 #define	CRIME_TICKSHIFT			14
-#define	CRIME_SPEED_MUL_FACTOR		1
-#define	CRIME_SPEED_DIV_FACTOR		1
 
 
 struct macepci_data {
@@ -74,8 +73,11 @@ struct macepci_data {
 
 #define	DEV_CRIME_LENGTH		0x280
 struct crime_data {
-	uint8_t			reg[DEV_CRIME_LENGTH];
+	uint64_t		reg[DEV_CRIME_LENGTH / sizeof(uint64_t)];
+
 	struct interrupt	irq;
+	int			prev_asserted;
+
 	int			use_fb;
 };
 
@@ -84,6 +86,26 @@ void mips_pc_to_pointers(struct cpu *);
 void mips32_pc_to_pointers(struct cpu *);
 
 
+void crime_interrupt_reassert(struct crime_data *d)
+{
+	uint64_t status =
+		d->reg[CRIME_SOFTINT / sizeof(uint64_t)] |
+		d->reg[CRIME_HARDINT / sizeof(uint64_t)];
+	
+	status &= d->reg[CRIME_INTSTAT / sizeof(uint64_t)];
+
+	int asserted = !!status;
+
+	if (asserted != d->prev_asserted) {
+		if (asserted)
+			INTERRUPT_ASSERT(d->irq);
+		else
+			INTERRUPT_DEASSERT(d->irq);
+	}
+	
+	d->prev_asserted = asserted;
+}
+
 /*
  *  crime_interrupt_assert():
  *  crime_interrupt_deassert():
@@ -91,84 +113,50 @@ void mips32_pc_to_pointers(struct cpu *);
 void crime_interrupt_assert(struct interrupt *interrupt)
 {
 	struct crime_data *d = (struct crime_data *) interrupt->extra;
-	uint32_t line = interrupt->line, asserted;
-
-	d->reg[CRIME_INTSTAT + 4] |= ((line >> 24) & 255);
-	d->reg[CRIME_INTSTAT + 5] |= ((line >> 16) & 255);
-	d->reg[CRIME_INTSTAT + 6] |= ((line >> 8) & 255);
-	d->reg[CRIME_INTSTAT + 7] |= (line & 255);
-
-	asserted =
-	    (d->reg[CRIME_INTSTAT + 4] & d->reg[CRIME_INTMASK + 4]) |
-	    (d->reg[CRIME_INTSTAT + 5] & d->reg[CRIME_INTMASK + 5]) |
-	    (d->reg[CRIME_INTSTAT + 6] & d->reg[CRIME_INTMASK + 6]) |
-	    (d->reg[CRIME_INTSTAT + 7] & d->reg[CRIME_INTMASK + 7]);
-
-	if (asserted)
-		INTERRUPT_ASSERT(d->irq);
+	d->reg[CRIME_HARDINT / sizeof(uint64_t)] |= interrupt->line;
+	crime_interrupt_reassert(d);
 }
 void crime_interrupt_deassert(struct interrupt *interrupt)
 {
 	struct crime_data *d = (struct crime_data *) interrupt->extra;
-	uint32_t line = interrupt->line, asserted;
-
-	d->reg[CRIME_INTSTAT + 4] &= ~((line >> 24) & 255);
-	d->reg[CRIME_INTSTAT + 5] &= ~((line >> 16) & 255);
-	d->reg[CRIME_INTSTAT + 6] &= ~((line >> 8) & 255);
-	d->reg[CRIME_INTSTAT + 7] &= ~(line & 255);
-
-	asserted =
-	    (d->reg[CRIME_INTSTAT + 4] & d->reg[CRIME_INTMASK + 4]) |
-	    (d->reg[CRIME_INTSTAT + 5] & d->reg[CRIME_INTMASK + 5]) |
-	    (d->reg[CRIME_INTSTAT + 6] & d->reg[CRIME_INTMASK + 6]) |
-	    (d->reg[CRIME_INTSTAT + 7] & d->reg[CRIME_INTMASK + 7]);
-
-	if (!asserted)
-		INTERRUPT_DEASSERT(d->irq);
+	d->reg[CRIME_HARDINT / sizeof(uint64_t)] &= ~interrupt->line;
+	crime_interrupt_reassert(d);
 }
 
 
 /*
  *  dev_crime_tick():
  *
- *  This function simply updates CRIME_TIME each tick.
- *
- *  The names DIV and MUL may be a bit confusing. Increasing the
- *  MUL factor will result in an OS running on the emulated machine
- *  detecting a faster CPU. Increasing the DIV factor will result
- *  in a slower detected CPU.
+ *  Updates CRIME_TIME and reassert CRIME interrupts.
  *
  *  A R10000 is detected as running at
- *  CRIME_SPEED_FACTOR * 66 MHz. (TODO: this is not correct anymore)
+ *  CRIME_SPEED_FACTOR * 66 MHz. (TODO: verify?)
  */
 DEVICE_TICK(crime)
 {
-	int j, carry, old, new_, add_byte;
-	uint64_t what_to_add = (1<<CRIME_TICKSHIFT)
-	    * CRIME_SPEED_DIV_FACTOR / CRIME_SPEED_MUL_FACTOR;
 	struct crime_data *d = (struct crime_data *) extra;
+	struct timeval tv;
+	
+	gettimeofday(&tv, NULL);
 
-	j = 0;
-	carry = 0;
-	while (j < 8) {
-		old = d->reg[CRIME_TIME + 7 - j];
-		add_byte = what_to_add >> ((int64_t)j * 8);
-		add_byte &= 255;
-		new_ = old + add_byte + carry;
-		d->reg[CRIME_TIME + 7 - j] = new_ & 255;
-		if (new_ >= 256)
-			carry = 1;
-		else
-			carry = 0;
-		j++;
-	}
+	uint64_t microseconds = tv.tv_sec * 1000000000 + tv.tv_usec;
+
+	// NetBSD says CRIME_TIME_MASK = 0x0000ffffffffffffULL
+	// but my O2 seems to use only the lower 32 bits as an
+	// unsigned value. (TODO: Double-check this again.)
+	d->reg[CRIME_TIME / sizeof(uint64_t)] =
+		(uint32_t)(microseconds * 66);
+
+	crime_interrupt_reassert(d);
 }
 
 
 DEVICE_ACCESS(crime)
 {
 	struct crime_data *d = (struct crime_data *) extra;
-	uint64_t idata = 0;
+	uint64_t idata = 0, odata = 0;
+	uint64_t preserved_CRIME_HARDINT = d->reg[CRIME_HARDINT / sizeof(uint64_t)];
+	uint64_t preserved_CRIME_INTSTAT = d->reg[CRIME_INTSTAT / sizeof(uint64_t)];
 	size_t i;
 
 	if (writeflag == MEM_WRITE)
@@ -184,12 +172,9 @@ DEVICE_ACCESS(crime)
 	 *  NetBSD 2.0 complains about "unknown" crime for 0x11, but I guess
 	 *  that's something one has to live with.  (TODO?)
 	 */
-	d->reg[4] = 0x00; d->reg[5] = 0x00; d->reg[6] = 0x00;
-	d->reg[7] = d->use_fb? 0xa1 : 0x11;
+	d->reg[CRIME_REV / sizeof(uint64_t)] = d->use_fb? 0xa1 : 0x11;
 
-	d->reg[CRIME_CONTROL + 6] = CRIME_CONTROL_ENDIANESS >> 8;
-
-	// TODO: Rewrite to 64-bit registers instead of 8-bit, for clarity.
+	d->reg[CRIME_CONTROL / sizeof(uint64_t)] = CRIME_CONTROL_ENDIANESS;
 
 	/*
 	 *  Amount of memory.  Bit 8 of bank control set ==> 128MB instead
@@ -207,26 +192,36 @@ DEVICE_ACCESS(crime)
 		exit(1);
 	}
 	 
-	d->reg[CRIME_MEM_BANK_CTRL0 + 6] = 0;  /* lowbit set=128MB, clear=32MB */
-	d->reg[CRIME_MEM_BANK_CTRL0 + 7] = 0;  /* address * 32MB  */
-	d->reg[CRIME_MEM_BANK_CTRL1 + 6] = 0;  /* lowbit set=128MB, clear=32MB */
-	d->reg[CRIME_MEM_BANK_CTRL1 + 7] = 1;  /* address * 32MB  */
+	d->reg[CRIME_MEM_BANK_CTRL0 / sizeof(uint64_t)] = 0;
+	d->reg[CRIME_MEM_BANK_CTRL1 / sizeof(uint64_t)] = 1;
+	d->reg[CRIME_MEM_BANK_CTRL2 / sizeof(uint64_t)] = 1;
+	d->reg[CRIME_MEM_BANK_CTRL3 / sizeof(uint64_t)] = 1;
 
-	d->reg[CRIME_MEM_BANK_CTRL2 + 6] = 0;  /* lowbit set=128MB, clear=32MB */
-	d->reg[CRIME_MEM_BANK_CTRL2 + 7] = 1;  /* address * 32MB  */
-	d->reg[CRIME_MEM_BANK_CTRL3 + 6] = 0;  /* lowbit set=128MB, clear=32MB */
-	d->reg[CRIME_MEM_BANK_CTRL3 + 7] = 1;  /* address * 32MB  */
-
-	if (relative_addr >= CRIME_TIME && relative_addr < CRIME_TIME+8) {
-		if (writeflag == MEM_READ)
-			memcpy(data, &d->reg[relative_addr], len);
-		return 1;
+	if (len == 8) {
+		if (writeflag == MEM_WRITE)
+			d->reg[relative_addr / 8] = idata;
+		else
+			odata = d->reg[relative_addr / 8];
+	} else if (len == 4) {
+		if (writeflag == MEM_WRITE) {
+			if (relative_addr & 4) {
+				d->reg[relative_addr / 8] &= ~0xffffffffULL;
+				d->reg[relative_addr / 8] |= (uint32_t)idata;
+			} else {
+				d->reg[relative_addr / 8] &= 0xffffffffULL;
+				d->reg[relative_addr / 8] |= (uint64_t)(idata << 32ULL);
+			}
+		} else {
+			odata = d->reg[relative_addr / 8];
+			if (relative_addr & 4)
+				odata = (int32_t)odata;
+			else
+				odata = (int32_t)(odata >> 32);
+		}
+	} else {
+		fatal("crime access len = %i!\n", len);
+		exit(1);
 	}
-
-	if (writeflag == MEM_WRITE)
-		memcpy(&d->reg[relative_addr], data, len);
-	else
-		memcpy(data, &d->reg[relative_addr], len);
 
 	switch (relative_addr) {
 
@@ -286,19 +281,13 @@ DEVICE_ACCESS(crime)
 		break;
 
 	case CRIME_INTSTAT:	/*  0x010, Current interrupt status  */
-	case CRIME_INTSTAT + 4:
-	case CRIME_INTMASK:	/*  0x018,  Current interrupt mask  */
-	case CRIME_INTMASK + 4:
-		if ((d->reg[CRIME_INTSTAT + 4] & d->reg[CRIME_INTMASK + 4]) |
-		    (d->reg[CRIME_INTSTAT + 5] & d->reg[CRIME_INTMASK + 5]) |
-		    (d->reg[CRIME_INTSTAT + 6] & d->reg[CRIME_INTMASK + 6]) |
-		    (d->reg[CRIME_INTSTAT + 7] & d->reg[CRIME_INTMASK + 7]) )
-			INTERRUPT_ASSERT(d->irq);
-		else
-			INTERRUPT_DEASSERT(d->irq);
+	case CRIME_INTMASK:	/*  0x018, Current interrupt mask  */
+		crime_interrupt_reassert(d);
 		break;
-	case 0x34:
-		/*  don't dump debug info for these  */
+
+	case CRIME_DOG:		/*  0x030  */
+	case CRIME_TIME:	/*  0x038  */
+		// No warning for these.
 		break;
 
 	default:
@@ -315,6 +304,12 @@ DEVICE_ACCESS(crime)
 			debug(" (len=%i) ]\n", len);
 		}
 	}
+
+	d->reg[CRIME_HARDINT / sizeof(uint64_t)] = preserved_CRIME_HARDINT;
+	d->reg[CRIME_INTSTAT / sizeof(uint64_t)] = preserved_CRIME_INTSTAT;
+
+	if (writeflag == MEM_READ)
+		memory_writemax64(cpu, data, len, odata);
 
 	return 1;
 }
