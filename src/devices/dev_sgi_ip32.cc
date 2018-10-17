@@ -185,7 +185,8 @@ DEVICE_ACCESS(crime)
 	 *
 	 *  TODO: Make this work reliably with other sizes than 128 MB.
 	 *  128 MB is what I have in my machine. Theoretically, up to 1 GB
-	 *  could be supported in the O2.
+	 *  could be supported in the O2, of which the first 256 MB is
+	 *  accessible at low physical addresses (below 0x10000000).
 	 */
 	if (cpu->machine->physical_ram_in_mb != 128) {
 		fatal("sgi CRIME memory controller: TODO: other sizes than 128 MB\n");
