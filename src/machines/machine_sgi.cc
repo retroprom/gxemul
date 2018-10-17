@@ -433,8 +433,10 @@ j = 0;
 			exit(1);
 		}
 
-		// TODO: This should probably be a DEV_RAM_MIRROR, and 256 MB long.
-		dev_ram_init(machine, 0x40000000ULL, 128 * 1048576, DEV_RAM_RAM, 0);
+		/*  In the new framework, this would be the other way around :-), i.e.
+		    actual memory at 0x40000000 and the first 256 MB would be mirrored
+		    at address 0.  */
+		dev_ram_init(machine, 0x40000000ULL, 256 * 1048576, DEV_RAM_MIRROR, 0);
 
 		/*  Connect CRIME (Interrupt Controller) to MIPS irq 2:  */
 		snprintf(tmpstr, sizeof(tmpstr), "%s.cpu[%i].2",
@@ -464,7 +466,8 @@ j = 0;
 		 *	1f300000	perif:
 		 *	  1f300000	  audio
 		 *	  1f310000	  isa
-		 *	    1f318000	    (unknown, accessed by Irix' pciio_pio_write64)
+		 *	    1f318000	    (unknown, accessed by Irix' pciio_pio_write64 and by the PROM during bootup)
+		 *	    1f31c000	    (unknown, accessed by the PROM during bootup)
 		 *	  1f320000	  kbdms
 		 *	  1f330000	  i2c
 		 *	  1f340000	  ust

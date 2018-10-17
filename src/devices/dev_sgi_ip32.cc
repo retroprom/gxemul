@@ -75,6 +75,9 @@ struct macepci_data {
 struct crime_data {
 	uint64_t		reg[DEV_CRIME_LENGTH / sizeof(uint64_t)];
 
+	uint64_t		last_microseconds;
+	uint64_t		extra_increments;
+
 	struct interrupt	irq;
 	int			prev_asserted;
 
@@ -140,12 +143,28 @@ DEVICE_TICK(crime)
 	gettimeofday(&tv, NULL);
 
 	uint64_t microseconds = tv.tv_sec * 1000000000 + tv.tv_usec;
+	if (d->last_microseconds == 0)
+		d->last_microseconds = microseconds;
+
+	uint64_t delta = microseconds - d->last_microseconds;
+
+	d->last_microseconds = microseconds;
+
+	// The delta to add is the 66 per microsecond, minus any extra
+	// increments that have already been done due to reading the
+	// register.
+	int64_t to_add = delta * 66 - d->extra_increments;
+
+	if (to_add < 1)
+		to_add = 1;
 
 	// NetBSD says CRIME_TIME_MASK = 0x0000ffffffffffffULL
 	// but my O2 seems to use only the lower 32 bits as an
 	// unsigned value. (TODO: Double-check this again.)
 	d->reg[CRIME_TIME / sizeof(uint64_t)] =
-		(uint32_t)(microseconds * 66);
+		(uint32_t)(d->reg[CRIME_TIME / sizeof(uint64_t)] + to_add);
+
+	d->extra_increments = 0;
 
 	crime_interrupt_reassert(d);
 }
@@ -240,6 +259,8 @@ DEVICE_ACCESS(crime)
 		 *	0xbfc0517c	PROM v2.3
 		 *	0xbfc051ac	PROM v4.13
 		 *
+		 *  4.18 works too.
+		 *
 		 *  By extrapolating a bit (allowing for variations for other
 		 *  versions of the PROM), let's return if the read of the
 		 *  CRIME_REV register occurs anywhere near 0xbfc051XX.
@@ -287,8 +308,15 @@ DEVICE_ACCESS(crime)
 		break;
 
 	case CRIME_DOG:		/*  0x030  */
+		// No warning.
+		break;
+
 	case CRIME_TIME:	/*  0x038  */
-		// No warning for these.
+		// Subtly increase the timer tick by 66; useful if some
+		// code loops and reads this. 66 means 1 millisecond
+		// at 66 MHz.
+		d->reg[CRIME_TIME / sizeof(uint64_t)] += 66;
+		d->extra_increments += 66;
 		break;
 
 	default:
@@ -427,6 +455,15 @@ DEVICE_ACCESS(mace)
 		memcpy(data, &d->reg[relative_addr], len);
 
 	switch (relative_addr) {
+
+	case MACE_ISA_FLASH_NIC_REG:
+		// I think the PROM attempts to read the machine's ethernet
+		// address from a DS2502 EPROM, by writing MACE_ISA_NIC_DEASSERT
+		// to this register in various patterns, and looking at the
+		// resulting MACE_ISA_NIC_DATA (or does it write data as well?)
+		// In any case, onewire is too complicated to implement right
+		// now. TODO.
+		break;
 
 	case MACE_ISA_INT_STATUS:	/*  Current interrupt assertions  */
 	case MACE_ISA_INT_STATUS + 4:

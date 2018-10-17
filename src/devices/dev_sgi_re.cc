@@ -842,6 +842,27 @@ DEVICE_ACCESS(sgi_mte)
 				exit(1);
 			}
 
+			/*
+			 *  Horrible hack:
+			 *
+			 *  During bootup, the PROM fills memory at 0x40000000 and
+			 *  forward. This corresponds to the lowest possible RAM address.
+			 *  However, these fills are not going via the CPU's cache,
+			 *  which contains things such as the return address on the
+			 *  stack. If we _really_ write this data in the emulator (which
+			 *  doesn't emulate the cache), it would overwrite the stack.
+			 *
+			 *  So let's not.
+			 *
+			 *  (If some guest OS or firmware variant actually depends on
+			 *  the ability to write to the start of memory this way,
+			 *  it would not work in the emulator.)
+			 */
+			if (dst0 >= 0x40000000 && dst0 < 0x40004000 && dst1 > 0x40004000) {
+				dst0 += 0x4000;
+				dstlen -= 0x4000;
+			}
+
 			memset(zerobuf, bg, dstlen < sizeof(zerobuf) ? dstlen : sizeof(zerobuf));
 			fill_addr = dst0;
 			while (dstlen != 0) {

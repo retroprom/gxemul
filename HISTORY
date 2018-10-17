@@ -4771,3 +4771,5 @@ Changelog for GXemul:
 		Splitting the O2 GBE into a GBE part and a Rendering Engine part.
 20181017	Refactored the register representation in dev_sgi_ip32's crime
 		interrupt controller.
+		Adding a horrible hack to enable the use of a RAM_MIRROR at
+		0x40000000 (for SGI O2 emulation).
