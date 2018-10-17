@@ -901,13 +901,30 @@ Malta:
 		2. Implement the NIC.
 
 SGI O2:
-	Experiment with the SGI O2 PROM image again, from the real O2.
-	Right now (September 2018), it hangs during cache detection, but if that is
-	skipped it works with graphics and serial console. Graphics must be entered
-	by setting the 'console' environment variable to 'g', running 'init' and
-	skipping the cache detection again.
+	mec ethernet: perhaps bit-rotted/broken? attempt to make it work
+		with NetBSD and OpenBSD [again].
 
-	The most obvious hardware component that is not emulated is SCSI.
+	ps2 8242:
+		ctrl-keys are not handled by OpenBSD (?)
+		netbsd doesn't work with keyboard at all!
+		mouse (netbsd X, and PROM, and openbsd?)
+	
+	scsi! this is probably time consuming.
+	
+	horrible_getputpixel:
+		non-8-bit pixel formats?
+		GBE_CMODE_RGB10 etc from openbsd's header file?
+
+	CRIME interrupt controller:
+		1) rewrite to nicer register-style rather than byte-style access.
+		2) better memory bank representation, so that other sizes than
+			128 MB RAM can be emulated
+
+	audio?
+
+	i2c vga data, for NetBSD etc.
+
+	"3D graphics" etc. this would be hard.
 
 HPCmips:
 	x)  Mouse/pad support! :)
