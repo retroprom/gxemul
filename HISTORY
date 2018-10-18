@@ -4773,3 +4773,5 @@ Changelog for GXemul:
 		interrupt controller.
 		Adding a horrible hack to enable the use of a RAM_MIRROR at
 		0x40000000 (for SGI O2 emulation).
+20181018	Updating the OpenBSD/sgi installation instructions (still
+		in unsupported.html though, and still only diskless).
