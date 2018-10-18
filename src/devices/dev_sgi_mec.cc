@@ -54,6 +54,7 @@
 
 #include "thirdparty/if_mecreg.h"
 
+// #define debug fatal
 
 #define	MEC_TICK_SHIFT		14
 
@@ -64,6 +65,8 @@ struct sgi_mec_data {
 	uint64_t	reg[DEV_SGI_MEC_LENGTH / sizeof(uint64_t)];
 
 	struct interrupt irq;
+	int		prev_asserted;
+
 	unsigned char	macaddr[6];
 
 	unsigned char	cur_tx_packet[MAX_TX_PACKET_LEN];
@@ -128,16 +131,6 @@ static int mec_try_rx(struct cpu *cpu, struct sgi_mec_data *d)
 	if (!res)
 		return 0;
 
-#if 0
-	printf("{ mec: rxdesc %i: ", d->cur_rx_addr_index);
-	for (i=0; i<sizeof(data); i++) {
-		if ((i & 3) == 0)
-			printf(" ");
-		printf("%02x", data[i]);
-	}
-	printf(" }\n");
-#endif
-
 	/*  Is this descriptor already in use?  */
 	if (data[0] & 0x80) {
 		/*  printf("INTERRUPT for base = 0x%x\n", (int)base);  */
@@ -152,14 +145,24 @@ static int mec_try_rx(struct cpu *cpu, struct sgi_mec_data *d)
 	if (d->cur_rx_packet == NULL)
 		goto skip;
 
+#if 0
+	printf("{ mec: rxdesc %i: ", d->cur_rx_addr_index);
+	for (i=0; i<sizeof(data); i++) {
+		if ((i & 3) == 0)
+			printf(" ");
+		printf("%02x", data[i]);
+	}
+	printf(" }\n");
+#endif
+
 	/*  Copy the packet data:  */
-	/*  printf("RX: ");  */
+	//printf("RX: ");
 	for (i=0; i<d->cur_rx_packet_len; i++) {
 		res = cpu->memory_rw(cpu, cpu->mem, base + 32 + i + 2,
 		    d->cur_rx_packet + i, 1, MEM_WRITE, PHYSICAL);
-		/*  printf(" %02x", d->cur_rx_packet[i]);  */
+		//printf(" %02x", d->cur_rx_packet[i]);
 	}
-	/*  printf("\n");  */
+	//printf("\n");
 
 #if 0
 	printf("RX: %i bytes, index %i, base = 0x%x\n",
@@ -262,6 +265,7 @@ static int mec_try_tx(struct cpu *cpu, struct sgi_mec_data *d)
 	j = 0;
 	d->cur_tx_packet_len = len;
 
+	//printf("TX: ");
 	for (i=start_offset; i<start_offset+len; i++) {
 		unsigned char ch;
 
@@ -270,7 +274,7 @@ static int mec_try_tx(struct cpu *cpu, struct sgi_mec_data *d)
 
 		res = cpu->memory_rw(cpu, cpu->mem, addr + i,
 		    &ch, sizeof(ch), MEM_READ, PHYSICAL);
-		/*  printf(" %02x", ch);  */
+		//printf(" %02x", ch);
 
 		d->cur_tx_packet[j++] = ch;
 		if (j >= MAX_TX_PACKET_LEN) {
@@ -278,7 +282,7 @@ static int mec_try_tx(struct cpu *cpu, struct sgi_mec_data *d)
 			break;
 		}
 	}
-	/*  printf("\n");  */
+	//printf("\n");
 
 	if (j < len) {
 		/*  Continue with DMA:  */
@@ -374,15 +378,14 @@ DEVICE_TICK(sgi_mec)
 		n++;
 
 	/*  Interrupts:  (TODO: only when enabled)  */
-	if (d->reg[MEC_INT_STATUS / sizeof(uint64_t)] & MEC_INT_STATUS_MASK) {
-#if 0
-		printf("[%02x]", (int)(d->reg[MEC_INT_STATUS /
-		    sizeof(uint64_t)] & MEC_INT_STATUS_MASK));
-		fflush(stdout);
-#endif
+	int asserted = !!(d->reg[MEC_INT_STATUS / sizeof(uint64_t)] & MEC_INT_STATUS_MASK);
+
+	if (asserted && !d->prev_asserted)
 		INTERRUPT_ASSERT(d->irq);
-	} else
+	else if (!asserted && d->prev_asserted)
 		INTERRUPT_DEASSERT(d->irq);
+
+	d->prev_asserted = asserted;
 }
 
 

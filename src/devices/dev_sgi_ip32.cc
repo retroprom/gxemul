@@ -94,17 +94,22 @@ void crime_interrupt_reassert(struct crime_data *d)
 	uint64_t status =
 		d->reg[CRIME_SOFTINT / sizeof(uint64_t)] |
 		d->reg[CRIME_HARDINT / sizeof(uint64_t)];
-	
-	status &= d->reg[CRIME_INTSTAT / sizeof(uint64_t)];
 
+	status &= d->reg[CRIME_INTMASK / sizeof(uint64_t)];
+
+	/*printf("CRIME SOFTINT=0x%08x HARDINT=0x%08x => 0x%08x, INTMASK=0x%08x\n",
+		(uint32_t)d->reg[CRIME_SOFTINT / sizeof(uint64_t)],
+		(uint32_t)d->reg[CRIME_HARDINT / sizeof(uint64_t)],
+		(uint32_t)status,
+		(uint32_t)d->reg[CRIME_INTMASK / sizeof(uint64_t)]);
+	*/
+	
 	int asserted = !!status;
 
-	if (asserted != d->prev_asserted) {
-		if (asserted)
-			INTERRUPT_ASSERT(d->irq);
-		else
-			INTERRUPT_DEASSERT(d->irq);
-	}
+	if (asserted && !d->prev_asserted)
+		INTERRUPT_ASSERT(d->irq);
+	else if (!asserted && d->prev_asserted)
+		INTERRUPT_DEASSERT(d->irq);
 	
 	d->prev_asserted = asserted;
 }
@@ -117,12 +122,14 @@ void crime_interrupt_assert(struct interrupt *interrupt)
 {
 	struct crime_data *d = (struct crime_data *) interrupt->extra;
 	d->reg[CRIME_HARDINT / sizeof(uint64_t)] |= interrupt->line;
+	//printf("CRIME asserting 0x%08x\n", interrupt->line);
 	crime_interrupt_reassert(d);
 }
 void crime_interrupt_deassert(struct interrupt *interrupt)
 {
 	struct crime_data *d = (struct crime_data *) interrupt->extra;
 	d->reg[CRIME_HARDINT / sizeof(uint64_t)] &= ~interrupt->line;
+	//printf("CRIME deasserting 0x%08x\n", interrupt->line);
 	crime_interrupt_reassert(d);
 }
 
@@ -175,7 +182,6 @@ DEVICE_ACCESS(crime)
 	struct crime_data *d = (struct crime_data *) extra;
 	uint64_t idata = 0, odata = 0;
 	uint64_t preserved_CRIME_HARDINT = d->reg[CRIME_HARDINT / sizeof(uint64_t)];
-	uint64_t preserved_CRIME_INTSTAT = d->reg[CRIME_INTSTAT / sizeof(uint64_t)];
 	size_t i;
 
 	if (writeflag == MEM_WRITE)
@@ -335,7 +341,9 @@ DEVICE_ACCESS(crime)
 	}
 
 	d->reg[CRIME_HARDINT / sizeof(uint64_t)] = preserved_CRIME_HARDINT;
-	d->reg[CRIME_INTSTAT / sizeof(uint64_t)] = preserved_CRIME_INTSTAT;
+	d->reg[CRIME_INTSTAT / sizeof(uint64_t)] =
+		d->reg[CRIME_SOFTINT / sizeof(uint64_t)] |
+		d->reg[CRIME_HARDINT / sizeof(uint64_t)];
 
 	if (writeflag == MEM_READ)
 		memory_writemax64(cpu, data, len, odata);

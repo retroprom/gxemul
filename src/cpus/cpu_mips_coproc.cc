@@ -1108,9 +1108,9 @@ static int fpu_op(struct cpu *cpu, struct mips_coproc *cp, int op, int fmt,
 			nf = float_value[0].f / float_value[1].f;
 		else {
 			fatal("DIV by zero !!!! TODO\n");
-			// nf = 0.0;	/*  TODO  */
-			// nan = 1;
-			mips_cpu_exception(cpu, EXCEPTION_FPE, 0, 0, 1, 0, 0, 0);
+			nf = 0.0;	/*  TODO  */
+			nan = 1;
+			// mips_cpu_exception(cpu, EXCEPTION_FPE, 0, 0, 1, 0, 0, 0);
 			return 0;
 		}
 		/*  debug("  div: %f / %f = %f\n",
