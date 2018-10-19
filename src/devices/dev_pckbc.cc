@@ -145,6 +145,9 @@ int pckbc_get_code(struct pckbc_data *d, int port)
  *
  *  Conversion from ASCII codes to default (US) keyboard scancodes.
  *  (See http://www.computer-engineering.org/ps2keyboard/scancodes3.html)
+ *
+ *  For unknown reason, these are listed as "scancode 2" (!) at
+ *  https://www.win.tue.nl/~aeb/linux/kbd/scancodes-10.html#scancodesets
  */
 static void ascii_to_pc_scancodes_type3(int a, struct pckbc_data *d)
 {
@@ -175,11 +178,12 @@ static void ascii_to_pc_scancodes_type3(int a, struct pckbc_data *d)
 	if (a=='<')  {	a = ','; shift = 1; }
 	if (a=='>')  {	a = '.'; shift = 1; }
 	if (a=='?')  {	a = '/'; shift = 1; }
+	if (a=='~')  {	a = '`'; shift = 1; }
 
 	if (shift)
 		pckbc_add_code(d, 0x12, p);
 	if (ctrl)
-		pckbc_add_code(d, 0x11, p);
+		pckbc_add_code(d, 0x14, p);	// or 0x11? TODO
 
 	/*
 	 *  Note: The ugly hack used to add release codes for all of these
@@ -237,8 +241,8 @@ static void ascii_to_pc_scancodes_type3(int a, struct pckbc_data *d)
 
 	if (a==';')	pckbc_add_code(d, 0x4c, p);
 	if (a=='\'')	pckbc_add_code(d, 0x52, p);
-/*	if (a=='~')	pckbc_add_code(d, 0x29, p);  ?  */
-	if (a=='\\')	pckbc_add_code(d, 0x5c, p);
+	if (a=='`')	pckbc_add_code(d, 0x0e, p);	// ?
+	if (a=='\\')	pckbc_add_code(d, 0x5d, p);	// 0x5c?
 
 	if (a=='z')	pckbc_add_code(d, 0x1a, p);
 	if (a=='x')	pckbc_add_code(d, 0x22, p);
@@ -268,7 +272,7 @@ static void ascii_to_pc_scancodes_type3(int a, struct pckbc_data *d)
 	}
 	if (ctrl) {
 		pckbc_add_code(d, 0xf0, p);
-		pckbc_add_code(d, 0x11, p);
+		pckbc_add_code(d, 0x14, p);	// or 0x11? TODO
 	}
 }
 
