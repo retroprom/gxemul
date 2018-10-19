@@ -901,29 +901,25 @@ Malta:
 		2. Implement the NIC.
 
 SGI O2:
-	mec ethernet: perhaps bit-rotted/broken? attempt to make it work
-		with NetBSD and OpenBSD [again].
-
 	ps2 8242:
-		ctrl-keys are not handled by OpenBSD (?)
 		netbsd doesn't work with keyboard at all!
 		mouse (netbsd X, and PROM, and openbsd?)
-	
+
 	scsi! this is probably time consuming.
-	
-	horrible_getputpixel:
-		non-8-bit pixel formats?
-		GBE_CMODE_RGB10 etc from openbsd's header file?
+
+	graphics:
+		horrible_getputpixel:
+			non-8-bit pixel formats?
+			GBE_CMODE_RGB10 etc from openbsd's header file?
+		correct x,y direction for primitives!
+		i2c vga data, for NetBSD etc.
+		3D graphics? i.e. depth buffers etc.
 
 	CRIME interrupt controller:
 		better memory bank representation, so that other sizes than
 			128 MB RAM can be emulated
 
 	audio?
-
-	i2c vga data, for NetBSD etc.
-
-	"3D graphics" etc. this would be hard.
 
 HPCmips:
 	x)  Mouse/pad support! :)
