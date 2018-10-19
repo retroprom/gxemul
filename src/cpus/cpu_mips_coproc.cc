@@ -1016,7 +1016,7 @@ static const char *ccname[16] = {
  *
  *  Stores a float value (actually a double) in fmt format.
  */
-static void fpu_store_float_value(struct mips_coproc *cp, int fd,
+static void fpu_store_float_value(bool fr, struct mips_coproc *cp, int fd,
 	double nf, int fmt, int nan)
 {
 	int ieee_fmt = mips_fmt_to_ieee_fmt[fmt];
@@ -1027,13 +1027,17 @@ static void fpu_store_float_value(struct mips_coproc *cp, int fd,
 	 *        for 64-bit coprocessor functionality!
 	 */
 	if (fmt == COP1_FMT_D || fmt == COP1_FMT_L) {
-		cp->reg[fd] = r & 0xffffffffULL;
-		cp->reg[(fd+1) & 31] = (r >> 32) & 0xffffffffULL;
+		if (fr)
+			cp->reg[fd] = r;
+		else {
+			cp->reg[fd] = r & 0xffffffffULL;
+			cp->reg[(fd+1) & 31] = (r >> 32) & 0xffffffffULL;
 
-		if (cp->reg[fd] & 0x80000000ULL)
-			cp->reg[fd] |= 0xffffffff00000000ULL;
-		if (cp->reg[fd+1] & 0x80000000ULL)
-			cp->reg[fd+1] |= 0xffffffff00000000ULL;
+			if (cp->reg[fd] & 0x80000000ULL)
+				cp->reg[fd] |= 0xffffffff00000000ULL;
+			if (cp->reg[fd+1] & 0x80000000ULL)
+				cp->reg[fd+1] |= 0xffffffff00000000ULL;
+		}
 	} else {
 		cp->reg[fd] = r & 0xffffffffULL;
 
@@ -1060,46 +1064,52 @@ static int fpu_op(struct cpu *cpu, struct mips_coproc *cp, int op, int fmt,
 	int unordered, nan, ieee_fmt = mips_fmt_to_ieee_fmt[fmt];
 	uint64_t fs_v = 0;
 	double nf;
+	bool fr = cpu->cd.mips.coproc[0]->reg[COP0_STATUS] & STATUS_FR ? true : false;
+
+	// printf("op %x (fmt %i):\n", op, fmt);
 
 	if (fs >= 0) {
 		fs_v = cp->reg[fs];
-		/*  TODO: register-pair mode and plain
-		    register mode? "FR" bit?  */
-		if (fmt == COP1_FMT_D || fmt == COP1_FMT_L)
-			fs_v = (fs_v & 0xffffffffULL) +
-			    (cp->reg[(fs + 1) & 31] << 32);
+		if (fmt == COP1_FMT_D || fmt == COP1_FMT_L) {
+			if (!fr)
+				fs_v = (fs_v & 0xffffffffULL) +
+				    (cp->reg[(fs + 1) & 31] << 32);
+		}
+		// printf("    fs_v = 0x%016llx\n", (long long)fs_v);
 		ieee_interpret_float_value(fs_v, &float_value[0], ieee_fmt);
 	}
 	if (ft >= 0) {
 		uint64_t v = cp->reg[ft];
-		/*  TODO: register-pair mode and
-		    plain register mode? "FR" bit?  */
-		if (fmt == COP1_FMT_D || fmt == COP1_FMT_L)
-			v = (v & 0xffffffffULL) +
-			    (cp->reg[(ft + 1) & 31] << 32);
+		if (fmt == COP1_FMT_D || fmt == COP1_FMT_L) {
+			if (!fr)
+				v = (v & 0xffffffffULL) +
+				    (cp->reg[(ft + 1) & 31] << 32);
+		}
+		// printf("    ft_v = 0x%016llx\n", (long long)v);
 		ieee_interpret_float_value(v, &float_value[1], ieee_fmt);
 	}
+
 
 	switch (op) {
 	case FPU_OP_ADD:
 		nf = float_value[0].f + float_value[1].f;
 		/*  debug("  add: %f + %f = %f\n",
 		    float_value[0].f, float_value[1].f, nf);  */
-		fpu_store_float_value(cp, fd, nf, output_fmt,
+		fpu_store_float_value(fr, cp, fd, nf, output_fmt,
 		    float_value[0].nan || float_value[1].nan);
 		break;
 	case FPU_OP_SUB:
 		nf = float_value[0].f - float_value[1].f;
 		/*  debug("  sub: %f - %f = %f\n",
 		    float_value[0].f, float_value[1].f, nf);  */
-		fpu_store_float_value(cp, fd, nf, output_fmt,
+		fpu_store_float_value(fr, cp, fd, nf, output_fmt,
 		    float_value[0].nan || float_value[1].nan);
 		break;
 	case FPU_OP_MUL:
 		nf = float_value[0].f * float_value[1].f;
 		/*  debug("  mul: %f * %f = %f\n",
 		    float_value[0].f, float_value[1].f, nf);  */
-		fpu_store_float_value(cp, fd, nf, output_fmt,
+		fpu_store_float_value(fr, cp, fd, nf, output_fmt,
 		    float_value[0].nan || float_value[1].nan);
 		break;
 	case FPU_OP_DIV:
@@ -1115,7 +1125,7 @@ static int fpu_op(struct cpu *cpu, struct mips_coproc *cp, int op, int fmt,
 		}
 		/*  debug("  div: %f / %f = %f\n",
 		    float_value[0].f, float_value[1].f, nf);  */
-		fpu_store_float_value(cp, fd, nf, output_fmt, nan);
+		fpu_store_float_value(fr, cp, fd, nf, output_fmt, nan);
 		break;
 	case FPU_OP_SQRT:
 		nan = float_value[0].nan;
@@ -1128,24 +1138,24 @@ static int fpu_op(struct cpu *cpu, struct mips_coproc *cp, int op, int fmt,
 			nan = 1;
 		}
 		/*  debug("  sqrt: %f => %f\n", float_value[0].f, nf);  */
-		fpu_store_float_value(cp, fd, nf, output_fmt, nan);
+		fpu_store_float_value(fr, cp, fd, nf, output_fmt, nan);
 		break;
 	case FPU_OP_ABS:
 		nf = fabs(float_value[0].f);
 		/*  debug("  abs: %f => %f\n", float_value[0].f, nf);  */
-		fpu_store_float_value(cp, fd, nf, output_fmt,
+		fpu_store_float_value(fr, cp, fd, nf, output_fmt,
 		    float_value[0].nan);
 		break;
 	case FPU_OP_NEG:
 		nf = - float_value[0].f;
 		/*  debug("  neg: %f => %f\n", float_value[0].f, nf);  */
-		fpu_store_float_value(cp, fd, nf, output_fmt,
+		fpu_store_float_value(fr, cp, fd, nf, output_fmt,
 		    float_value[0].nan);
 		break;
 	case FPU_OP_CVT:
 		nf = float_value[0].f;
 		/*  debug("  mov: %f => %f\n", float_value[0].f, nf);  */
-		fpu_store_float_value(cp, fd, nf, output_fmt,
+		fpu_store_float_value(fr, cp, fd, nf, output_fmt,
 		    float_value[0].nan);
 		break;
 	case FPU_OP_MOV:
@@ -1155,12 +1165,16 @@ static int fpu_op(struct cpu *cpu, struct mips_coproc *cp, int op, int fmt,
 		 *		for 64-bit coprocessor stuff.
 		 */
 		if (output_fmt == COP1_FMT_D || output_fmt == COP1_FMT_L) {
-			cp->reg[fd] = fs_v & 0xffffffffULL;
-			cp->reg[(fd+1) & 31] = (fs_v >> 32) & 0xffffffffULL;
-			if (cp->reg[fd] & 0x80000000ULL)
-				cp->reg[fd] |= 0xffffffff00000000ULL;
-			if (cp->reg[fd+1] & 0x80000000ULL)
-				cp->reg[fd+1] |= 0xffffffff00000000ULL;
+			if (fr)
+				cp->reg[fd] = fs_v;
+			else {
+				cp->reg[fd] = fs_v & 0xffffffffULL;
+				cp->reg[(fd+1) & 31] = (fs_v >> 32) & 0xffffffffULL;
+				if (cp->reg[fd] & 0x80000000ULL)
+					cp->reg[fd] |= 0xffffffff00000000ULL;
+				if (cp->reg[fd+1] & 0x80000000ULL)
+					cp->reg[fd+1] |= 0xffffffff00000000ULL;
+			}
 		} else {
 			cp->reg[fd] = fs_v & 0xffffffffULL;
 			if (cp->reg[fd] & 0x80000000ULL)

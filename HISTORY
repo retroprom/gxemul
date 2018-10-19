@@ -4777,3 +4777,6 @@ Changelog for GXemul:
 		in unsupported.html though, and still only diskless).
 20181019	Fixing some 8242 key encodings (used by the SGI O2 mode).
 		Better memory bank stuff for SGI O2 (128 vs 256 MB RAM).
+		Taking the FR bit of the MIPS status register into account to
+		use 64-bit floating point registers rather than pairs of 32-bit
+		registers (need for OpenBSD/sgi to work).
