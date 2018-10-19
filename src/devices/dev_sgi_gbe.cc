@@ -78,9 +78,10 @@ struct sgi_gbe_data {
 	uint32_t	i2c;			/* 0x00008  */
 	uint32_t	i2cfp;			/* 0x00010  */
 
+	uint32_t	freeze;	/* and xy */	/* 0x10000  */
+
 	uint32_t	tilesize;		/* 0x30000  */
 	uint32_t	frm_control;		/* 0x3000c  */
-	int		freeze;
 
 	uint32_t	palette[256];		/* 0x50000  */
 
@@ -397,7 +398,7 @@ DEVICE_ACCESS(sgi_gbe)
 
 	case CRMFB_VT_XY:	// 0x10000
 		if (writeflag == MEM_WRITE)
-			d->freeze = idata & ((uint32_t)1<<31)? 1 : 0;
+			d->freeze = idata & 0x80000000;
 		else {
 			/*
 			 *  vt_xy, according to Linux:
@@ -406,7 +407,7 @@ DEVICE_ACCESS(sgi_gbe)
 			 */
 			/*  odata = ((random() % (d->yres + 10)) << 12)
 			    + (random() % (d->xres + 10)) +
-			    (d->freeze? ((uint32_t)1 << 31) : 0);  */
+			    d->freeze;  */
 
 			/*
 			 *  Hack for IRIX/IP32. During startup, it waits for
@@ -415,7 +416,7 @@ DEVICE_ACCESS(sgi_gbe)
 			 *  Hack for the IP32 PROM: During startup, it waits
 			 *  for the value to be above 0x500 (I think).
 			 */
-			odata = random() & 1 ? 0x3ff : 0x501;
+			odata = d->freeze | (random() & 1 ? 0x3ff : 0x501);
 		}
 		break;
 
