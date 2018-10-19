@@ -243,16 +243,6 @@ DEVICE_ACCESS(crime)
 		total_mb += mb_per_bank;
 	}
 	
-//	d->reg[CRIME_MEM_BANK_CTRL2 / sizeof(uint64_t)] = 1;
-//	d->reg[CRIME_MEM_BANK_CTRL3 / sizeof(uint64_t)] = 1;
-/*
-	if (cpu->machine->physical_ram_in_mb == 256) {
-		d->reg[CRIME_MEM_BANK_CTRL4 / sizeof(uint64_t)] = 1;
-		d->reg[CRIME_MEM_BANK_CTRL5 / sizeof(uint64_t)] = 1;
-		d->reg[CRIME_MEM_BANK_CTRL6 / sizeof(uint64_t)] = 1;
-		d->reg[CRIME_MEM_BANK_CTRL7 / sizeof(uint64_t)] = 1;
-	}
-*/
 	if (len == 8) {
 		if (writeflag == MEM_WRITE)
 			d->reg[relative_addr / 8] = idata;
