@@ -464,8 +464,16 @@ DEVICE_ACCESS(sgi_de)
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		break;
 
-	case CRIME_DE_NULL:	// 0x21f0
-	case CRIME_DE_FLUSH:	// 0x21f8
+	case CRIME_DE_NULL:
+		debug("[ sgi_de: %s CRIME_DE_NULL: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		break;
+
+	case CRIME_DE_FLUSH:
+		debug("[ sgi_de: %s CRIME_DE_FLUSH: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		break;
 
 	default:
@@ -506,7 +514,6 @@ DEVICE_ACCESS(sgi_de)
 
 		int src_x = -1, src_y = -1;
 		if (drawmode & DE_DRAWMODE_XFER_EN) {
-			// Used by the PROM to scroll up the command window.
 			uint32_t addr_src = d->de_reg[(CRIME_DE_XFER_ADDR_SRC - 0x2000) / sizeof(uint32_t)];
 			uint32_t strd_src = d->de_reg[(CRIME_DE_XFER_STRD_SRC - 0x2000) / sizeof(uint32_t)];
 			uint32_t step_x = d->de_reg[(CRIME_DE_XFER_STEP_X - 0x2000) / sizeof(uint32_t)];
@@ -532,6 +539,7 @@ DEVICE_ACCESS(sgi_de)
 		int dst_bufdepth = 1 << ((dst_mode >> 8) & 3);
 		int src_bufdepth = 1 << ((src_mode >> 8) & 3);
 
+		// TODO: Use dx and dy rather than swapping!
 		if (x2 < x1) {
 			int tmp = x1; x1 = x2; x2 = tmp;
 		}
