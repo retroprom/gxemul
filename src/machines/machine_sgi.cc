@@ -436,7 +436,7 @@ j = 0;
 		/*  In the new framework, this would be the other way around :-), i.e.
 		    actual memory at 0x40000000 and the first 256 MB would be mirrored
 		    at address 0.  */
-		dev_ram_init(machine, 0x40000000ULL, 256 * 1048576, DEV_RAM_MIRROR, 0);
+		dev_ram_init(machine, 0x40000000ULL, machine->physical_ram_in_mb * 1048576, DEV_RAM_MIRROR, 0);
 
 		/*  Connect CRIME (Interrupt Controller) to MIPS irq 2:  */
 		snprintf(tmpstr, sizeof(tmpstr), "%s.cpu[%i].2",
@@ -652,6 +652,10 @@ MACHINE_DEFAULT_CPU(sgi)
 
 MACHINE_DEFAULT_RAM(sgi)
 {
+	// Self-compilation fails with OpenBSD/sgi 6.3 with as low as 128 MB
+	// RAM, so 256 would be better. But my O2 has 128 MB, so this is kept
+	// as 128 to simplify comparison between the real machine and the
+	// emulator.
 	machine->physical_ram_in_mb = 128;
 }
 

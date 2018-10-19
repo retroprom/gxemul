@@ -4776,3 +4776,4 @@ Changelog for GXemul:
 20181018	Updating the OpenBSD/sgi installation instructions (still
 		in unsupported.html though, and still only diskless).
 20181019	Fixing some 8242 key encodings (used by the SGI O2 mode).
+		Better memory bank stuff for SGI O2 (128 vs 256 MB RAM).

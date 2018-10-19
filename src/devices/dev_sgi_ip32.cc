@@ -208,21 +208,51 @@ DEVICE_ACCESS(crime)
 	 *  When the bank control registers contain the same value as the
 	 *  previous one, that bank is not valid. (?)
 	 *
-	 *  TODO: Make this work reliably with other sizes than 128 MB.
+	 *  TODO: Make this work reliably with other sizes than 128 or 256 MB.
 	 *  128 MB is what I have in my machine. Theoretically, up to 1 GB
 	 *  could be supported in the O2, of which the first 256 MB is
 	 *  accessible at low physical addresses (below 0x10000000).
 	 */
-	if (cpu->machine->physical_ram_in_mb != 128) {
-		fatal("sgi CRIME memory controller: TODO: other sizes than 128 MB\n");
+	if (cpu->machine->physical_ram_in_mb >= 1024) {
+		fatal("[ sgi_crime: SGI O2 can not have more than 1024 MB RAM ]\n");
 		exit(1);
 	}
-	 
-	d->reg[CRIME_MEM_BANK_CTRL0 / sizeof(uint64_t)] = 0;
-	d->reg[CRIME_MEM_BANK_CTRL1 / sizeof(uint64_t)] = 1;
-	d->reg[CRIME_MEM_BANK_CTRL2 / sizeof(uint64_t)] = 1;
-	d->reg[CRIME_MEM_BANK_CTRL3 / sizeof(uint64_t)] = 1;
 
+	int mb_per_bank;
+	if (cpu->machine->physical_ram_in_mb <= 256)
+		mb_per_bank = 32;
+	else
+		mb_per_bank = 128;
+
+	if (cpu->machine->physical_ram_in_mb % mb_per_bank) {
+		fatal("[ sgi_crime: for up to 256 MB RAM, RAM size needs to be divisible "
+			"by 32 MB. for larger RAM sizes (up to 1024 MB), it needs to be "
+			"divisible by 128 MB. ]\n");
+		exit(1);
+	}
+
+	int flag_for_128MB = mb_per_bank == 128 ? 0x100 : 0x000;
+	int total_mb = 0;
+	for (int bank = 0; bank < 8; ++bank) {
+		int b = mb_per_bank == 128 ? (bank << 2) : bank;
+		if (total_mb >= cpu->machine->physical_ram_in_mb)
+			d->reg[CRIME_MEM_BANK_CTRL0 / sizeof(uint64_t) + bank] =
+				d->reg[CRIME_MEM_BANK_CTRL0 / sizeof(uint64_t) + 0];
+		else
+			d->reg[CRIME_MEM_BANK_CTRL0 / sizeof(uint64_t) + bank] = flag_for_128MB | b;
+		total_mb += mb_per_bank;
+	}
+	
+//	d->reg[CRIME_MEM_BANK_CTRL2 / sizeof(uint64_t)] = 1;
+//	d->reg[CRIME_MEM_BANK_CTRL3 / sizeof(uint64_t)] = 1;
+/*
+	if (cpu->machine->physical_ram_in_mb == 256) {
+		d->reg[CRIME_MEM_BANK_CTRL4 / sizeof(uint64_t)] = 1;
+		d->reg[CRIME_MEM_BANK_CTRL5 / sizeof(uint64_t)] = 1;
+		d->reg[CRIME_MEM_BANK_CTRL6 / sizeof(uint64_t)] = 1;
+		d->reg[CRIME_MEM_BANK_CTRL7 / sizeof(uint64_t)] = 1;
+	}
+*/
 	if (len == 8) {
 		if (writeflag == MEM_WRITE)
 			d->reg[relative_addr / 8] = idata;
