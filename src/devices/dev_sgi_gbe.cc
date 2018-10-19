@@ -110,9 +110,9 @@ void get_rgb(struct sgi_gbe_data *d, uint32_t color, uint8_t* r, uint8_t* g, uin
 		*b = d->palette[color] >> 8;
 		break;
 	case CRMFB_MODE_TYP_RG3B2:	// Used by NetBSD
-		*r = (color >> 5) << 5;	if (*r & 0x20) *r |= 0x1f;
-		*g = (color >> 2) << 5;	if (*g & 0x20) *g |= 0x1f;
-		*b = color << 6;	if (*b & 0x40) *b |= 0x3f;
+		*r = 255 * ((color >> 5) & 7) / 7;
+		*g = 255 * ((color >> 2) & 7) / 7;
+		*b = (color & 3) * 85;
 		break;
 	default:fatal("sgi gbe get_rgb(): unimplemented mode %i\n", d->color_mode);
 		exit(1);
