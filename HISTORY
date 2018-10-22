@@ -4780,3 +4780,4 @@ Changelog for GXemul:
 		Taking the FR bit of the MIPS status register into account to
 		use 64-bit floating point registers rather than pairs of 32-bit
 		registers (need for OpenBSD/sgi to work).
+		Moving OpenBSD/sgi from unsupported.html to guestoes.html.

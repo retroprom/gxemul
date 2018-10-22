@@ -66,6 +66,7 @@ SUCH DAMAGE.
   <li><a href="#openbsdcatsinstall">OpenBSD/cats 4.0</a>
   <li><a href="#openbsdlandiskinstall">OpenBSD/landisk 6.3</a>
   <li><a href="#openbsdmvme88kinstall">OpenBSD/mvme88k 4.5</a>
+  <li><a href="#openbsdsgiinstall">OpenBSD/sgi 6.4</a>
   <li><a href="#helenos">HelenOS/testmips and testarm 0.5.0</a>
   <li><a href="#ultrixinstall">Ultrix/RISC 4.5</a>
   <li><a href="#sprite">Sprite for DECstation</a>
@@ -1896,6 +1897,173 @@ from within the guest OS.
 
 
 
+
+
+
+<p><br>
+<a name="openbsdsgiinstall"></a>
+<h3>OpenBSD/sgi:</h3>
+
+<a href="http://www.openbsd.org/sgi.html">OpenBSD/sgi</a>
+can run in GXemul on an emulated O2 (SGI-IP32), with root on NFS.
+
+<p>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<a href="20050617-openbsd-sgi.png"><img src="20050617-openbsd-sgi_small.png"></a>
+&nbsp;&nbsp;
+<a href="20181018-openbsd-sgi-o2.png"><img src="20181018-openbsd-sgi-o2-small.png"></a>
+
+<p>GXemul does not yet emulate the AHC PCI SCSI controller in the O2,
+so it needs to boot via the emulated network.
+Another emulated machine must then be used as the nfs root server, and the emulated O2 machine must boot 
+as a <a href="http://man.openbsd.org/diskless">diskless</a>
+client. Performing this setup is quite time consuming, but necessary:
+
+<p>
+<ol>
+  <li>First of all, the "<tt>nfs server</tt>" machine must be set up.
+	<a href="#netbsdpmaxinstall">Install NetBSD/pmax 8.0 from CDROM</a>,
+	perform a default install from CDROM without configuring the
+	network, but add a 1500 MB <tt>/tftpboot</tt> partition when
+	configuring the disk!
+  <p>
+  <li>On the host, download the OpenBSD distribution, and do some fixup to
+  make it possible to treat the tar files as SCSI disk images:
+<p><table border="0"><tr><td><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td><pre>wget http://ftp.openbsd.org/pub/OpenBSD/6.4/sgi/base64.tgz
+wget http://ftp.openbsd.org/pub/OpenBSD/6.4/sgi/comp64.tgz
+wget http://ftp.openbsd.org/pub/OpenBSD/6.4/sgi/xbase64.tgz
+wget http://ftp.openbsd.org/pub/OpenBSD/6.4/sgi/xfont64.tgz
+wget http://ftp.openbsd.org/pub/OpenBSD/6.4/sgi/xserv64.tgz
+wget http://ftp.openbsd.org/pub/OpenBSD/6.4/sgi/xshare64.tgz
+gunzip base64.tgz
+gunzip comp64.tgz
+gunzip xbase64.tgz
+gunzip xfont64.tgz
+gunzip xserv64.tgz
+gunzip xshare64.tgz
+dd if=/dev/zero of=/dev/stdout bs=65536 count=1 >> base64.tar
+dd if=/dev/zero of=/dev/stdout bs=65536 count=1 >> comp64.tar
+dd if=/dev/zero of=/dev/stdout bs=65536 count=1 >> xbase64.tar
+dd if=/dev/zero of=/dev/stdout bs=65536 count=1 >> xfont64.tar
+dd if=/dev/zero of=/dev/stdout bs=65536 count=1 >> xserv64.tar
+dd if=/dev/zero of=/dev/stdout bs=65536 count=1 >> xshare64.tar
+</pre></td></tr></table>
+  <li>Start the emulation of the DECstation NFS server using this command line:
+<p><table border="0"><tr><td><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td><pre>gxemul -xe 3max -d nbsd_pmax.img -d base64.tar -d comp64.tar -d xbase64.tar -d xfont64.tar -d xserv64.tar -d xshare64.tar
+</pre></td></tr></table>
+and enter the following commands to configure the server for NFS serving and
+extract the OpenBSD distribution:
+<table border="0"><tr><td><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td><pre>
+<b>echo hostname=server &gt;&gt; /etc/rc.conf
+echo ifconfig_le0=\"inet 10.0.0.2\" &gt;&gt; /etc/rc.conf
+echo nameserver 10.0.0.254 &gt;&gt; /etc/resolv.conf
+echo 10.0.0.254 &gt; /etc/mygate
+echo /tftpboot -maproot=root 10.0.0.1 &gt; /etc/exports
+echo rpcbind=YES &gt;&gt; /etc/rc.conf
+echo nfs_server=YES &gt;&gt; /etc/rc.conf
+echo mountd=YES &gt;&gt; /etc/rc.conf
+echo bootparamd=YES &gt;&gt; /etc/rc.conf
+printf "client root=10.0.0.2:/tftpboot \\\n swap=10.0.0.2:/tftpboot/swap\n" &gt; /etc/bootparams
+echo "10:20:30:00:00:10 client" &gt; /etc/ethers
+echo 10.0.0.1 client &gt; /etc/hosts
+
+cd /tftpboot
+tar xf /dev/sd1c
+tar xf /dev/sd2c
+tar xf /dev/sd3c
+tar xf /dev/sd4c
+tar xf /dev/sd5c
+tar xf /dev/sd6c
+
+tar zxfv var/sysmerge/etc.tgz
+tar zxfv var/sysmerge/xetc.tgz
+
+dd if=/dev/zero of=swap bs=1024 count=262144
+
+echo inet 10.0.0.1 > /tftpboot/etc/hostname.mec0
+echo nameserver 10.0.0.254 > /tftpboot/etc/resolv.conf
+echo 10.0.0.2:/tftpboot / nfs rw 0 0 > /tftpboot/etc/fstab
+echo 10.0.0.2:/tftpboot/swap none swap sw >> /tftpboot/etc/fstab
+
+halt</b>
+</pre></td></tr></table>
+  <li>Download the OpenBSD/sgi GENERIC and RAMDISK kernels:<pre>
+	<a href="http://ftp.openbsd.org/pub/OpenBSD/6.4/sgi/bsd.IP32">http://ftp.openbsd.org/pub/OpenBSD/6.4/sgi/bsd.IP32</a>
+	<a href="http://ftp.openbsd.org/pub/OpenBSD/6.4/sgi/bsd.rd.IP32">http://ftp.openbsd.org/pub/OpenBSD/6.4/sgi/bsd.rd.IP32</a>
+
+</pre>
+  <li>Create a configuration file called <tt>config_client</tt>:
+<table border="0"><tr><td><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td><pre>
+<font color="#2020cf">!  Configuration file for running OpenBSD/sgi diskless with
+!  a NetBSD/pmax machine as the nfs server.
+!
+!  This config file is for the client.</font>
+
+<b>net(
+	add_remote("localhost:12444")   </b>! the server<b>
+	local_port(12445)               </b>! the client<b>
+)
+
+machine(
+	name("client machine")
+	serial_nr(1)
+
+        type("sgi")
+        subtype("o2")
+	use_x11(1)
+	memory(256)
+
+        load("bsd.rd.IP32")
+        ! load("bsd.IP32")
+)
+</b>
+</pre></td></tr></table>
+	... and another configuration file for the server,
+	<tt>config_server</tt>:
+<table border="0"><tr><td><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td><pre>
+<b>net(
+	local_port(12444)               </b>! the server<b>
+	add_remote("localhost:12445")   </b>! the client<b>
+)
+
+machine(
+	name("nfs server")
+	serial_nr(2)
+
+        type("dec")
+        subtype("5000/200")
+
+        disk("nbsd_pmax.img")
+)
+</b>
+</pre></td></tr></table>
+  <li>Boot the "<tt>nfs server</tt>" and the OpenBSD/sgi
+	"<tt>client machine</tt>" as two separate emulator instances:<pre>
+	in one xterm:
+	<b>gxemul @config_server</b>
+
+	and then, in another xterm:
+	<b>gxemul @config_client</b>
+
+</pre>
+  <li>In the emulated OpenBSD/sgi client, type 's' for Shell and run these commands:
+<table border="0"><tr><td><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td><pre>
+<b>ifconfig mec0 10.0.0.1; route add default 10.0.0.254
+mount -v 10.0.0.2:/tftpboot /mnt
+cd /mnt/dev; ./MAKEDEV all; cd /; umount /mnt
+reboot</b>
+</pre></td></tr></table>
+  <li>Change bsd.rd.IP32 to bsd.IP32 in the client configuration file.
+  <li>Finally, run the client again:<pre>
+	<b>gxemul @config_client</b>
+
+</pre>and enter <tt>mec0</tt> when asked about root device. Note that booting
+	is <i>very</i> slow, so be patient.
+</ol>
+
+
+<p>Some things are not working yet, for example X11 and mouse emulation.
+It is also very slow, mostly due to having the file system on NFS.
 
 
 
