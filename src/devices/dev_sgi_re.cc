@@ -107,7 +107,7 @@ void horrible_getputpixel(bool put, struct cpu* cpu, struct sgi_re_data* d, int 
 		break;
 	case 2:	tlb = d->re_tlb_c;
 		break;
-	default:fatal("unimplemented dst_mode\n");
+	default:fatal("unimplemented dst_mode for horrible_getputpixel\n");
 		exit(1);
 	}
 
@@ -136,6 +136,15 @@ void horrible_getputpixel(bool put, struct cpu* cpu, struct sgi_re_data* d, int 
 
 	y %= 128;
 	int xofs = (x % tilewidth_in_pixels) * dst_bufdepth;
+
+	{
+		static bool warn = true;
+		if (warn && dst_bufdepth > 1) {
+			fatal("[ sgi_gbe: WARNIGN! unimplemented dst_bufdepth = %i; only printing this warning once. ]",
+				dst_bufdepth);
+			warn = false;
+		}
+	}
 
 	uint8_t buf[4];
 	if (put) {
@@ -248,9 +257,45 @@ DEVICE_ACCESS(sgi_re)
 		}
 
 		if (writeflag == MEM_WRITE) {
+			/*
+			 *  Very interesting. NetBSD writes stuff such as:
+			 *
+			 *  CRIME_RE_LINEAR_A IDATA = 8000173080001731
+			 *  CRIME_RE_LINEAR_A IDATA = 8000173280001733
+			 *  CRIME_RE_LINEAR_A IDATA = 8000173480001735
+			 *  ...
+			 *
+			 *  but the PROM writes something which looks like wrongly
+			 *  32-bit sign-extended words:
+			 *
+			 *  CRIME_RE_LINEAR_A IDATA = ffffffff80040001
+			 *  CRIME_RE_LINEAR_A IDATA = ffffffff80040003
+			 *  CRIME_RE_LINEAR_A IDATA = ffffffff80040005
+			 *  ...
+			 *
+			 *  followed by
+			 *  [ sgi_mte: STARTING TRANSFER: mode=0x00000011
+			 *    dst0=0x0000000040000000, dst1=0x0000000040007fff
+			 *    (length 0x8000), dst_y_step=0 bg=0x0, bytemask=0xffffffff ]
+			 *
+			 *  indicating that it really meant to put both 0x80040000
+			 *  and 0x80040001 into the first LINEAR_A entry.
+			 *
+			 *  The first guess would be a bug in the implementation of
+			 *  one or more instructions in the emulator while coming up
+			 *  with those values, but debugging the PROM so far has NOT
+			 *  revealed any such bug. It may even be that the PROM code
+			 *  is buggy (?) and never really set the LINEAR entries
+			 *  correctly. Perhaps the hardware simply ignores the
+			 *  weird values and does not fill it (using the MTE)
+			 *  when asked to.
+			 */
+			// printf("CRIME_RE_LINEAR_A IDATA = %016llx\n", (long long)idata);
 			int tlbi = ((relative_addr & 0x7f) >> 2) & 0x1f;
-			d->re_linear_a[tlbi] = idata;
-			debug("d->re_linear_a[%i] = 0x%08x\n", tlbi, d->re_linear_a[tlbi]);
+			d->re_linear_a[tlbi] = idata >> 32ULL;
+			d->re_linear_a[tlbi+1] = idata;
+			debug("[ d->re_linear_a[%i] = 0x%08x, [%i] = 0x%08x ]\n",
+				tlbi, d->re_linear_a[tlbi], tlbi+1, d->re_linear_a[tlbi+1]);
 		} else {
 			fatal("TODO: read from CRIME_RE_LINEAR_A\n");
 			exit(1);
@@ -263,8 +308,10 @@ DEVICE_ACCESS(sgi_re)
 
 		if (writeflag == MEM_WRITE) {
 			int tlbi = ((relative_addr & 0x7f) >> 2) & 0x1f;
-			d->re_linear_b[tlbi] = idata;
-			debug("d->re_linear_b[%i] = 0x%08x\n", tlbi, d->re_linear_b[tlbi]);
+			d->re_linear_b[tlbi] = idata >> 32ULL;
+			d->re_linear_b[tlbi+1] = idata;
+			debug("[ d->re_linear_b[%i] = 0x%08x, [%i] = 0x%08x ]\n",
+				tlbi, d->re_linear_b[tlbi], tlbi+1, d->re_linear_b[tlbi+1]);
 		} else {
 			fatal("TODO: read from CRIME_RE_LINEAR_B\n");
 			exit(1);
@@ -374,6 +421,54 @@ DEVICE_ACCESS(sgi_de)
 		debug("[ sgi_de: %s CRIME_DE_DRAWMODE: 0x%016llx ]\n",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		break;
+
+	case CRIME_DE_SCRMASK0:
+		debug("[ sgi_de: %s CRIME_DE_SCRMASK0: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		if (writeflag == MEM_WRITE && idata != 0)
+			fatal("[ sgi_de: TODO: non-zero CRIME_DE_SCRMASK0: 0x%016llx ]\n", idata);
+		break;
+
+	case CRIME_DE_SCRMASK1:
+		debug("[ sgi_de: %s CRIME_DE_SCRMASK1: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		if (writeflag == MEM_WRITE && idata != 0)
+			fatal("[ sgi_de: TODO: non-zero CRIME_DE_SCRMASK1: 0x%016llx ]\n", idata);
+		break;
+
+	case CRIME_DE_SCRMASK2:
+		debug("[ sgi_de: %s CRIME_DE_SCRMASK2: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		if (writeflag == MEM_WRITE && idata != 0)
+			fatal("[ sgi_de: TODO: non-zero CRIME_DE_SCRMASK2: 0x%016llx ]\n", idata);
+		break;
+
+	case CRIME_DE_SCRMASK3:
+		debug("[ sgi_de: %s CRIME_DE_SCRMASK3: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		if (writeflag == MEM_WRITE && idata != 0)
+			fatal("[ sgi_de: TODO: non-zero CRIME_DE_SCRMASK3: 0x%016llx ]\n", idata);
+		break;
+
+	case CRIME_DE_SCRMASK4:
+		debug("[ sgi_de: %s CRIME_DE_SCRMASK4: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		if (writeflag == MEM_WRITE && idata != 0)
+			fatal("[ sgi_de: TODO: non-zero CRIME_DE_SCRMASK4: 0x%016llx ]\n", idata);
+		break;
+
+	case CRIME_DE_SCISSOR:
+		debug("[ sgi_de: %s CRIME_DE_SCISSOR: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		if (writeflag == MEM_WRITE && idata != 0)
+			fatal("[ sgi_de: TODO: non-zero CRIME_DE_SCISSOR: 0x%016llx ]\n", idata);
 		break;
 
 	case CRIME_DE_PRIMITIVE:

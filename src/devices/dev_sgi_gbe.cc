@@ -71,8 +71,6 @@
 
 struct sgi_gbe_data {
 	// CRM / GBE registers:
-	int		xres, yres;
-
 	uint32_t	ctrlstat;		/* 0x00000  */
 	uint32_t	dotclock;		/* 0x00004  */
 	uint32_t	i2c;			/* 0x00008  */
@@ -93,6 +91,7 @@ struct sgi_gbe_data {
 	uint32_t	cursor_bitmap[64];	/* 0x78000  */
 
 	// Emulator's representation:
+	int		xres, yres;
 	int 		width_in_tiles;
 	int		partial_pixels;
 	int		bitdepth;
@@ -701,7 +700,7 @@ void dev_sgi_gbe_init(struct machine *machine, struct memory *mem, uint64_t base
 	// Grayscale palette, most likely overwritten immediately by the
 	// guest operating system.
 	for (int i = 0; i < 256; ++i)
-		d->palette[i] = (i<<24) + (i<<16) + (i<<8);
+		d->palette[i] = i * 0x01010100;
 
 	d->fb_data = dev_fb_init(machine, mem, FAKE_GBE_FB_ADDRESS,
 	    VFB_GENERIC, d->xres, d->yres, d->xres, d->yres, 24, "SGI GBE");
