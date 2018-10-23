@@ -410,9 +410,7 @@ j = 0;
 		strlcat(machineName, " (O2)", MACHINE_NAME_MAXBUF);
 
 		/*
-		 *  TODO: Find out where the phys ram is actually located.
-		 *
-		 *  The IP32 prom seems to probe "bank 0" with the following
+		 *  The IP32 prom probes "bank 0" with the following
 		 *  TLB entries:
 		 *
 		 *  00: vaddr=0000000000000000 (global):  p0=0x040000000 D p1=0x041000000 D (16MB)
@@ -421,7 +419,7 @@ j = 0;
 		 *  03: vaddr=0000000006000000 (global):  p0=0x046000000 D p1=0x047000000 D (16MB)
 		 *
 		 *  In other words, it uses real memory at 0x40000000 and up.
-		 *  However, it is also accessible at 0x0.
+		 *  However, it is _also_ accessible at physical address 0x0.
 		 *
 		 *  Max amount of RAM in an O2 is 1 GB. However, devices start at
 		 *  0x14000000 (or below that), so 256 MB is the most that the legacy GXemul
