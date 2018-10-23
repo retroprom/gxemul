@@ -423,7 +423,38 @@ struct mace_data {
 	unsigned char		reg[DEV_MACE_LENGTH];
 	struct interrupt	irq_periph;
 	struct interrupt	irq_misc;
+	int			prev_assert_periph;
+	int			prev_assert_misc;
 };
+
+
+void mace_interrupt_reassert(struct mace_data *d)
+{
+	uint8_t s4 = d->reg[MACE_ISA_INT_STATUS+4] & d->reg[MACE_ISA_INT_MASK+4];
+	uint8_t s5 = d->reg[MACE_ISA_INT_STATUS+5] & d->reg[MACE_ISA_INT_MASK+5];
+	uint8_t s6 = d->reg[MACE_ISA_INT_STATUS+6] & d->reg[MACE_ISA_INT_MASK+6];
+	uint8_t s7 = d->reg[MACE_ISA_INT_STATUS+7] & d->reg[MACE_ISA_INT_MASK+7];
+
+	int assert_periph = s4 | s5 ? 1 : 0;
+	int assert_misc = s6 | s7 ? 1 : 0;
+
+	if (assert_periph != d->prev_assert_periph) {
+		d->prev_assert_periph = assert_periph;
+		if (assert_periph)
+			INTERRUPT_ASSERT(d->irq_periph);
+		else
+			INTERRUPT_DEASSERT(d->irq_periph);
+	}
+
+	if (assert_misc != d->prev_assert_misc) {
+		d->prev_assert_misc = assert_misc;
+		if (assert_misc)
+			INTERRUPT_ASSERT(d->irq_misc);
+		else
+			INTERRUPT_DEASSERT(d->irq_misc);
+	}
+}
+
 
 
 /*
@@ -440,35 +471,19 @@ void mace_interrupt_assert(struct interrupt *interrupt)
 	d->reg[MACE_ISA_INT_STATUS + 6] |= ((line >> 8) & 255);
 	d->reg[MACE_ISA_INT_STATUS + 7] |= (line & 255);
 
-	/*  High bits = PERIPH  */
-	if ((d->reg[MACE_ISA_INT_STATUS+4] & d->reg[MACE_ISA_INT_MASK+4]) |
-	    (d->reg[MACE_ISA_INT_STATUS+5] & d->reg[MACE_ISA_INT_MASK+5]))
-		INTERRUPT_ASSERT(d->irq_periph);
-
-	/*  Low bits = MISC  */
-	if ((d->reg[MACE_ISA_INT_STATUS+6] & d->reg[MACE_ISA_INT_MASK+6]) |
-	    (d->reg[MACE_ISA_INT_STATUS+7] & d->reg[MACE_ISA_INT_MASK+7]))
-		INTERRUPT_ASSERT(d->irq_misc);
+	mace_interrupt_reassert(d);
 }
 void mace_interrupt_deassert(struct interrupt *interrupt)
 {
 	struct mace_data *d = (struct mace_data *) interrupt->extra;
 	uint32_t line = 1 << interrupt->line;
 
-	d->reg[MACE_ISA_INT_STATUS + 4] |= ((line >> 24) & 255);
-	d->reg[MACE_ISA_INT_STATUS + 5] |= ((line >> 16) & 255);
-	d->reg[MACE_ISA_INT_STATUS + 6] |= ((line >> 8) & 255);
-	d->reg[MACE_ISA_INT_STATUS + 7] |= (line & 255);
+	d->reg[MACE_ISA_INT_STATUS + 4] &= ~((line >> 24) & 255);
+	d->reg[MACE_ISA_INT_STATUS + 5] &= ~((line >> 16) & 255);
+	d->reg[MACE_ISA_INT_STATUS + 6] &= ~((line >> 8) & 255);
+	d->reg[MACE_ISA_INT_STATUS + 7] &= ~(line & 255);
 
-	/*  High bits = PERIPH  */
-	if (!((d->reg[MACE_ISA_INT_STATUS+4] & d->reg[MACE_ISA_INT_MASK+4]) |
-	    (d->reg[MACE_ISA_INT_STATUS+5] & d->reg[MACE_ISA_INT_MASK+5])))
-		INTERRUPT_DEASSERT(d->irq_periph);
-
-	/*  Low bits = MISC  */
-	if (!((d->reg[MACE_ISA_INT_STATUS+6] & d->reg[MACE_ISA_INT_MASK+6]) |
-	    (d->reg[MACE_ISA_INT_STATUS+7] & d->reg[MACE_ISA_INT_MASK+7])))
-		INTERRUPT_DEASSERT(d->irq_misc);
+	mace_interrupt_reassert(d);
 }
 
 
@@ -506,17 +521,7 @@ DEVICE_ACCESS(mace)
 		break;
 	case MACE_ISA_INT_MASK:		/*  Current interrupt mask  */
 	case MACE_ISA_INT_MASK + 4:
-		if ((d->reg[MACE_ISA_INT_STATUS+4]&d->reg[MACE_ISA_INT_MASK+4])|
-		    (d->reg[MACE_ISA_INT_STATUS+5]&d->reg[MACE_ISA_INT_MASK+5]))
-			INTERRUPT_ASSERT(d->irq_periph);
-		else
-			INTERRUPT_DEASSERT(d->irq_periph);
-
-		if ((d->reg[MACE_ISA_INT_STATUS+6]&d->reg[MACE_ISA_INT_MASK+6])|
-		    (d->reg[MACE_ISA_INT_STATUS+7]&d->reg[MACE_ISA_INT_MASK+7]))
-			INTERRUPT_ASSERT(d->irq_misc);
-		else
-			INTERRUPT_DEASSERT(d->irq_misc);
+		mace_interrupt_reassert(d);
 		break;
 
 	default:
@@ -555,10 +560,9 @@ DEVINIT(mace)
 	INTERRUPT_CONNECT(tmpstr, d->irq_misc);
 
 	/*
-	 *  For Mace interrupts PERIPH_SERIAL and PERIPH_MISC,
+	 *  For CRIME interrupts PERIPH_SERIAL and PERIPH_MISC,
 	 *  register 32 mace interrupts each.
 	 */
-	/*  Register 32 crime interrupts (hexadecimal names):  */
 	for (i=0; i<32; i++) {
 		struct interrupt templ;
 		char name[400];

@@ -4781,3 +4781,4 @@ Changelog for GXemul:
 		use 64-bit floating point registers rather than pairs of 32-bit
 		registers (need for OpenBSD/sgi to work).
 		Moving OpenBSD/sgi from unsupported.html to guestoes.html.
+20181022	Fixing broken MACE interrupt mechanism for SGI O2.
