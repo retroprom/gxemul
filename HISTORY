@@ -4762,13 +4762,14 @@ Changelog for GXemul:
 		Changing from 64 to 128 MB ram for the O2; this matches what
 		my real O2 has, and it is now detected correctly both by OSes
 		and the PROM.
-		Implementing the O2's GBE cursor; both bitmap and crosshair modes
-		work exactly like on the real machine now.
+		Implementing the O2's GBE cursor; both bitmap and crosshair
+		modes work exactly like on the real machine now.
 		Finally fixed the bug which caused scroll-up to not work when
 		running the O2's PROM.
 20181016	More work on the O2 graphics; managed to get rid of the Linux
 		tweaked special case rendering mode.
-		Splitting the O2 GBE into a GBE part and a Rendering Engine part.
+		Splitting the O2 GBE into a GBE part and a Rendering Engine
+		part.
 20181017	Refactored the register representation in dev_sgi_ip32's crime
 		interrupt controller.
 		Adding a horrible hack to enable the use of a RAM_MIRROR at
