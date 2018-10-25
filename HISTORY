@@ -4786,3 +4786,4 @@ Changelog for GXemul:
 20181025	Implementing MTE_MODE_COPY in the SGI O2 memory transfer engine
 		to allow NetBSD to scroll up the framebuffer.
 		Made the pckbc work with NetBSD/sgimips.
+		Only allow SGI O2 MTE memory fills to pages that are in a TLB.

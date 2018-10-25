@@ -55,9 +55,6 @@
 #include "thirdparty/sgi_gl.h"
 
 
-#define	ZERO_CHUNK_LEN		4096
-
-
 struct sgi_re_data {
 	// Rendering engine registers:
 	uint16_t	re_tlb_a[256];
@@ -874,13 +871,11 @@ DEVICE_ACCESS(sgi_mte)
 		uint64_t dst1 = d->mte_reg[(CRIME_MTE_DST1 - 0x3000) / sizeof(uint32_t)];
 		int32_t dst_y_step = d->mte_reg[(CRIME_MTE_DST_Y_STEP - 0x3000) / sizeof(uint32_t)];
 		uint64_t dstlen = dst1 - dst0 + 1;
-		unsigned char zerobuf[ZERO_CHUNK_LEN];
+		unsigned char zerobuf[4096];
 		int depth = 8 << ((mode & MTE_MODE_DEPTH_MASK) >> MTE_DEPTH_SHIFT);
 		int src = (mode & MTE_MODE_SRC_BUF_MASK) >> MTE_SRC_TLB_SHIFT;
 		uint32_t bytemask = d->mte_reg[(CRIME_MTE_BYTEMASK - 0x3000) / sizeof(uint32_t)];
 		uint32_t bg = d->mte_reg[(CRIME_MTE_BG - 0x3000) / sizeof(uint32_t)];
-
-		// TODO: copy from src0/src1?
 
 		debug("[ sgi_mte: STARTING TRANSFER: mode=0x%08x dst0=0x%016llx,"
 		    " dst1=0x%016llx (length 0x%llx), dst_y_step=%i bg=0x%x, bytemask=0x%x ]\n",
@@ -944,6 +939,7 @@ DEVICE_ACCESS(sgi_mte)
 			}
 			break;
 		case MTE_TLB_LIN_A:
+		case MTE_TLB_LIN_B:
 			// Used by the PROM to zero-fill memory (?).
 			if (mode & MTE_MODE_COPY) {
 				fatal("[ sgi_mte: unimplemented MTE_MODE_COPY ]");
@@ -977,10 +973,25 @@ DEVICE_ACCESS(sgi_mte)
 			 *  the ability to write to the start of memory this way,
 			 *  it would not work in the emulator.)
 			 */
-			if (dst0 >= 0x40000000 && dst0 < 0x40004000 && dst1 > 0x40004000) {
-				dst0 += 0x4000;
-				dstlen -= 0x4000;
-			}
+			// if (dst0 >= 0x40000000 && dst0 < 0x40004000 && dst1 > 0x40004000) {
+			//	dst0 += 0x4000;
+			//	dstlen -= 0x4000;
+			// }
+
+			/*
+			 *  HUH?
+			 *
+			 *  Note that due to a bug (?) in the PROM firmware when it
+			 *  is setting up the TLB entries, only every _second_ page is
+			 *  actually put correctly in the TLB. This means that even
+			 *  though it then tries to fill 0x40000000 .. 0x40007fff with
+			 *  zeroes, it only fills 0x40001000 .. 0x40001fff,
+			 *  0x40003000 .. 0x40003fff and so on!
+			 *
+			 *  So the Horrible hack above is not needed.
+			 *
+			 *  Ironic.
+			 */
 
 			memset(zerobuf, bg, dstlen < sizeof(zerobuf) ? dstlen : sizeof(zerobuf));
 			fill_addr = dst0;
@@ -991,8 +1002,34 @@ DEVICE_ACCESS(sgi_mte)
 				else
 					fill_len = dstlen;
 
-				cpu->memory_rw(cpu, mem, fill_addr, zerobuf, fill_len,
-					MEM_WRITE, NO_EXCEPTIONS | PHYSICAL);
+				uint64_t starting_page = fill_addr & ~0xfff;
+				uint64_t ending_page = (fill_addr + fill_len - 1) & ~0xfff;
+				if (starting_page != ending_page) {
+					fill_len = starting_page + 4096 - fill_addr;
+				}
+
+				// Find starting_page in the TLB in question.
+				starting_page >>= 12;
+				uint32_t *tlb = dst_tlb == MTE_TLB_LIN_A ? d->re_linear_a : d->re_linear_b;
+				bool match = false;
+				for (int i = 0; i < 32; ++i) {
+					uint32_t entry = tlb[i];
+					if (entry & 0x80000000) {
+						entry &= ~0x80000000;
+						if (entry == starting_page) {
+							match = true;
+							break;
+						}
+					}
+				}
+				
+				if (match) {
+					cpu->memory_rw(cpu, mem, fill_addr, zerobuf, fill_len,
+						MEM_WRITE, NO_EXCEPTIONS | PHYSICAL);
+				} else {
+					debug("[ sgi_mte: WARNING: address 0x%x not found in TLB? Ignoring fill. ]\n",
+						(long long)fill_addr);
+				}
 
 				fill_addr += fill_len;
 				dstlen -= sizeof(zerobuf);
