@@ -528,11 +528,11 @@ DEVICE_ACCESS(sgi_mec)
 		break;
 	default:
 		if (writeflag == MEM_WRITE)
-			fatal("[ sgi_mec: unimplemented write to address"
+			debug("[ sgi_mec: unimplemented write to address"
 			    " 0x%llx, data=0x%016llx ]\n",
 			    (long long)relative_addr, (long long)idata);
 		else
-			fatal("[ sgi_mec: unimplemented read from address"
+			debug("[ sgi_mec: unimplemented read from address"
 			    " 0x%llx ]\n", (long long)relative_addr);
 	}
 
