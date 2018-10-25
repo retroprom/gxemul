@@ -146,6 +146,9 @@ DEVICE_TICK(sgi_gbe)
 	if (!cpu->machine->x11_md.in_use)
 		return;
 
+	if (!(d->frm_control & CRMFB_DMA_ENABLE))
+		return;
+
 	// NetBSD's crmfbreg.h documents the tileptr as having a "9 bit shift",
 	// but IRIX seems to put a value ending in 0x......80 there, and the
 	// last part of that address seems to matter.

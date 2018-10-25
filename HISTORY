@@ -4785,3 +4785,4 @@ Changelog for GXemul:
 20181022	Fixing broken MACE interrupt mechanism for SGI O2.
 20181025	Implementing MTE_MODE_COPY in the SGI O2 memory transfer engine
 		to allow NetBSD to scroll up the framebuffer.
+		Made the pckbc work with NetBSD/sgimips.

@@ -54,7 +54,10 @@
 /*  #define debug fatal  */
 
 
-#define	MAX_8042_QUEUELEN	256
+// Should be 256 to emulate a real 8042? Having a larger value allows
+// pasting of larger text chunks which is useful in the emulator.
+// #define	MAX_8042_QUEUELEN	256
+#define	MAX_8042_QUEUELEN	32768
 
 #define	PC_DATA			0
 #define	PC_CMD			0
@@ -136,6 +139,7 @@ int pckbc_get_code(struct pckbc_data *d, int port)
 		fatal("[ pckbc: queue empty, port %i! ]\n", port);
 	else
 		d->tail[port] = (d->tail[port]+1) % MAX_8042_QUEUELEN;
+
 	return d->key_queue[port][d->tail[port]];
 }
 
@@ -148,6 +152,10 @@ int pckbc_get_code(struct pckbc_data *d, int port)
  *
  *  For unknown reason, these are listed as "scancode 2" (!) at
  *  https://www.win.tue.nl/~aeb/linux/kbd/scancodes-10.html#scancodesets
+ *
+ *  NOTE/TODO: This one lists CTRL as 0x11, but it needs to be 0x14 for
+ *  OpenBSD to accept it.
+ *  http://nixdoc.net/man-pages/irix/man7/pckeyboard.7.html
  */
 static void ascii_to_pc_scancodes_type3(int a, struct pckbc_data *d)
 {
@@ -183,7 +191,7 @@ static void ascii_to_pc_scancodes_type3(int a, struct pckbc_data *d)
 	if (shift)
 		pckbc_add_code(d, 0x12, p);
 	if (ctrl)
-		pckbc_add_code(d, 0x14, p);	// or 0x11? TODO
+		pckbc_add_code(d, 0x14, p);	// OpenBSD/sgi wants 0x14; PROM wants 0x11? TODO
 
 	/*
 	 *  Note: The ugly hack used to add release codes for all of these
@@ -272,7 +280,7 @@ static void ascii_to_pc_scancodes_type3(int a, struct pckbc_data *d)
 	}
 	if (ctrl) {
 		pckbc_add_code(d, 0xf0, p);
-		pckbc_add_code(d, 0x14, p);	// or 0x11? TODO
+		pckbc_add_code(d, 0x11, p);	// or 0x11? TODO
 	}
 }
 
@@ -291,7 +299,7 @@ static void ascii_to_pc_scancodes_type2(int a, struct pckbc_data *d)
 	int p = 0;	/*  port  */
 	int shift = 0, ctrl = 0;
 
-	if (d->translation_table == 3 || d->type == PCKBC_8242) {
+	if (d->translation_table == 3) {
 		ascii_to_pc_scancodes_type3(a, d);
 		return;
 	}
@@ -464,10 +472,13 @@ DEVICE_TICK(pckbc)
 
 		if (d->head[port_nr] != d->tail[port_nr] && ints_enabled) {
 			debug("[ pckbc: interrupt port %i ]\n", port_nr);
-			if (port_nr == 0)
-				INTERRUPT_ASSERT(d->irq_keyboard);
-			else
-				INTERRUPT_ASSERT(d->irq_mouse);
+			if (!d->currently_asserted[port_nr]) {
+				if (port_nr == 0)
+					INTERRUPT_ASSERT(d->irq_keyboard);
+				else
+					INTERRUPT_ASSERT(d->irq_mouse);
+			}
+
 			d->currently_asserted[port_nr] = 1;
 		} else {
 			if (d->currently_asserted[port_nr]) {
@@ -476,6 +487,7 @@ DEVICE_TICK(pckbc)
 				else
 					INTERRUPT_DEASSERT(d->irq_mouse);
 			}
+
 			d->currently_asserted[port_nr] = 0;
 		}
 	}
@@ -494,11 +506,24 @@ static void dev_pckbc_command(struct pckbc_data *d, int port_nr)
 	if (d->type == PCKBC_8242)
 		cmd = d->reg[PS2_TXBUF];
 
+	// fatal("[ pckbc: (port %i) command 0x%02x ]\n", port_nr, cmd);
+
 	if (d->state == STATE_WAITING_FOR_TRANSLTABLE) {
-		debug("[ pckbc: (port %i) switching to translation table "
+		fatal("[ pckbc: (port %i) switching to translation table "
 		    "0x%02x ]\n", port_nr, cmd);
 		switch (cmd) {
-		case 2:
+		case 1:	// Horrible hack: NetBSD/sgimips wants "type 1",
+			// which is implemented as type 2 here.
+			if (d->type == PCKBC_8242) {
+				d->translation_table = 2;
+			}
+			break;
+		case 2:	// Horrible hack: OpenBSD/sgi wants "type 2",
+			// which is implemented as type 3 here:
+			if (d->type == PCKBC_8242) {
+				d->translation_table = 3;
+			}
+			break;
 		case 3:	d->translation_table = cmd;
 			break;
 		default:fatal("[ pckbc: (port %i) translation table "
@@ -609,7 +634,7 @@ static void dev_pckbc_command(struct pckbc_data *d, int port_nr)
 		 *  Disable interrupts during reset, or Linux 2.6
 		 *  prints warnings about spurious interrupts.
 		 */
-		d->rx_int_enable = 0;
+		// d->rx_int_enable = 0;
 		break;
 
 	default:
@@ -915,9 +940,13 @@ int dev_pckbc_init(struct machine *machine, struct memory *mem,
 	CHECK_ALLOCATION(d = (struct pckbc_data *) malloc(sizeof(struct pckbc_data)));
 	memset(d, 0, sizeof(struct pckbc_data));
 
-	if (type == PCKBC_8242)
-		len = 0x40;
+	d->translation_table = 2;
 
+	if (type == PCKBC_8242) {
+		len = 0x40;
+		d->translation_table = 3;
+	}
+	
 	if (type == PCKBC_JAZZ) {
 		type = PCKBC_8042;
 		len = DEV_PCKBC_LENGTH + 0x60;
@@ -929,7 +958,6 @@ int dev_pckbc_init(struct machine *machine, struct memory *mem,
 	d->type              = type;
 	d->in_use            = in_use;
 	d->pc_style_flag     = pc_style_flag;
-	d->translation_table = 2;
 	d->rx_int_enable     = 1;
 	d->output_byte       = 0x02;	/*  A20 enable on PCs  */
 

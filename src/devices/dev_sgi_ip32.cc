@@ -95,14 +95,17 @@ void crime_interrupt_reassert(struct crime_data *d)
 		d->reg[CRIME_SOFTINT / sizeof(uint64_t)] |
 		d->reg[CRIME_HARDINT / sizeof(uint64_t)];
 
+	d->reg[CRIME_INTSTAT / sizeof(uint64_t)] = status;
+
 	status &= d->reg[CRIME_INTMASK / sizeof(uint64_t)];
 
-	/*printf("CRIME SOFTINT=0x%08x HARDINT=0x%08x => 0x%08x, INTMASK=0x%08x\n",
+#if 0
+	printf("CRIME SOFTINT=0x%08x HARDINT=0x%08x => 0x%08x, INTMASK=0x%08x\n",
 		(uint32_t)d->reg[CRIME_SOFTINT / sizeof(uint64_t)],
 		(uint32_t)d->reg[CRIME_HARDINT / sizeof(uint64_t)],
 		(uint32_t)status,
 		(uint32_t)d->reg[CRIME_INTMASK / sizeof(uint64_t)]);
-	*/
+#endif
 	
 	int asserted = !!status;
 
@@ -200,6 +203,10 @@ DEVICE_ACCESS(crime)
 	d->reg[CRIME_REV / sizeof(uint64_t)] = d->use_fb? 0xa1 : 0x11;
 
 	d->reg[CRIME_CONTROL / sizeof(uint64_t)] = CRIME_CONTROL_ENDIANESS;
+
+	d->reg[CRIME_INTSTAT / sizeof(uint64_t)] =
+		(d->reg[CRIME_SOFTINT / sizeof(uint64_t)] |
+		d->reg[CRIME_HARDINT / sizeof(uint64_t)]);
 
 	/*
 	 *  Amount of memory.  Bit 8 of bank control set ==> 128MB instead
@@ -362,8 +369,8 @@ DEVICE_ACCESS(crime)
 
 	d->reg[CRIME_HARDINT / sizeof(uint64_t)] = preserved_CRIME_HARDINT;
 	d->reg[CRIME_INTSTAT / sizeof(uint64_t)] =
-		d->reg[CRIME_SOFTINT / sizeof(uint64_t)] |
-		d->reg[CRIME_HARDINT / sizeof(uint64_t)];
+		(d->reg[CRIME_SOFTINT / sizeof(uint64_t)] |
+		d->reg[CRIME_HARDINT / sizeof(uint64_t)]);
 
 	if (writeflag == MEM_READ)
 		memory_writemax64(cpu, data, len, odata);
@@ -438,6 +445,19 @@ void mace_interrupt_reassert(struct mace_data *d)
 	int assert_periph = s4 | s5 ? 1 : 0;
 	int assert_misc = s6 | s7 ? 1 : 0;
 
+/*
+printf("status=%02x%02x%02x%02x mask=%02x%02x%02x%02x => periph = %i misc = %i\n",
+d->reg[MACE_ISA_INT_STATUS+4],
+d->reg[MACE_ISA_INT_STATUS+5],
+d->reg[MACE_ISA_INT_STATUS+6],
+d->reg[MACE_ISA_INT_STATUS+7],
+d->reg[MACE_ISA_INT_MASK+4],
+d->reg[MACE_ISA_INT_MASK+5],
+d->reg[MACE_ISA_INT_MASK+6],
+d->reg[MACE_ISA_INT_MASK+7],
+ assert_periph, assert_misc);
+*/
+
 	if (assert_periph != d->prev_assert_periph) {
 		d->prev_assert_periph = assert_periph;
 		if (assert_periph)
@@ -492,6 +512,9 @@ DEVICE_ACCESS(mace)
 	size_t i;
 	struct mace_data *d = (struct mace_data *) extra;
 
+	uint8_t old_mace_isa_flash_nic_reg =
+		d->reg[MACE_ISA_FLASH_NIC_REG + 7];
+
 	if (writeflag == MEM_WRITE)
 		memcpy(&d->reg[relative_addr], data, len);
 	else
@@ -506,6 +529,16 @@ DEVICE_ACCESS(mace)
 		// resulting MACE_ISA_NIC_DATA (or does it write data as well?)
 		// In any case, onewire is too complicated to implement right
 		// now. TODO.
+		{
+			uint8_t change = d->reg[MACE_ISA_FLASH_NIC_REG + 7]
+				^ old_mace_isa_flash_nic_reg;
+			if (change & MACE_ISA_LED_RED)
+				fatal("[ mace: turning RED led %s ]\n",
+					d->reg[MACE_ISA_FLASH_NIC_REG + 7] & MACE_ISA_LED_RED ? "ON" : "OFF");
+			if (change & MACE_ISA_LED_GREEN)
+				fatal("[ mace: turning GREEN led %s ]\n",
+					d->reg[MACE_ISA_FLASH_NIC_REG + 7] & MACE_ISA_LED_GREEN ? "ON" : "OFF");
+		}
 		break;
 
 	case MACE_ISA_INT_STATUS:	/*  Current interrupt assertions  */
@@ -556,7 +589,7 @@ DEVINIT(mace)
 	INTERRUPT_CONNECT(tmpstr, d->irq_periph);
 
 	snprintf(tmpstr, sizeof(tmpstr), "%s.0x%x",
-	    devinit->interrupt_path, CRIME_INT_PERIPH_SERIAL);
+	    devinit->interrupt_path, CRIME_INT_PERIPH_MISC);
 	INTERRUPT_CONNECT(tmpstr, d->irq_misc);
 
 	/*
