@@ -129,7 +129,7 @@ void horrible_getputpixel(bool put, struct cpu* cpu, struct sgi_re_data* d, int 
 		return;
 	}
 	
-	tileptr &= 0x7fffffff;
+	tileptr &= 0x7fff0000;
 
 	y %= 128;
 	int xofs = (x % tilewidth_in_pixels) * dst_bufdepth;
@@ -137,7 +137,7 @@ void horrible_getputpixel(bool put, struct cpu* cpu, struct sgi_re_data* d, int 
 	{
 		static bool warn = true;
 		if (warn && dst_bufdepth > 1) {
-			fatal("[ sgi_gbe: WARNIGN! unimplemented dst_bufdepth = %i; only printing this warning once. ]",
+			fatal("[ sgi_gbe: WARNING! unimplemented dst_bufdepth = %i; only printing this warning once. ]",
 				dst_bufdepth);
 			warn = false;
 		}
@@ -877,11 +877,11 @@ DEVICE_ACCESS(sgi_mte)
 		uint32_t bytemask = d->mte_reg[(CRIME_MTE_BYTEMASK - 0x3000) / sizeof(uint32_t)];
 		uint32_t bg = d->mte_reg[(CRIME_MTE_BG - 0x3000) / sizeof(uint32_t)];
 
-		debug("[ sgi_mte: STARTING TRANSFER: mode=0x%08x dst0=0x%016llx,"
-		    " dst1=0x%016llx (length 0x%llx), dst_y_step=%i bg=0x%x, bytemask=0x%x ]\n",
+		debug("[ sgi_mte: STARTING: mode=0x%08x dst0=0x%016llx,"
+		    " dst1=0x%016llx, dst_y_step=%i bg=0x%x, bytemask=0x%x ]\n",
 		    mode,
 		    (long long)dst0, (long long)dst1,
-		    (long long)dstlen, dst_y_step, (int)bg, (int)bytemask);
+		    dst_y_step, (int)bg, (int)bytemask);
 
 		if (dst_y_step != 0 && dst_y_step != 1) {
 			fatal("[ sgi_mte: TODO! unimplemented dst_y_step %i ]", dst_y_step);
@@ -913,16 +913,16 @@ DEVICE_ACCESS(sgi_mte)
 			// Used by NetBSD's crmfb_fill_rect. It puts graphical
 			// coordinates in dst0 and dst1.
 			{
-				int x1 = dst0 >> 12;
+				int x1 = (dst0 >> 16) & 0xfff;
 				int y1 = dst0 & 0xfff;
-				int x2 = dst1 >> 12;
+				int x2 = (dst1 >> 16) & 0xfff;
 				int y2 = dst1 & 0xfff;
 				x1 /= (depth / 8);
 				x2 /= (depth / 8);
 
-				int src_x1 = src0 >> 12;
+				int src_x1 = (src0 >> 16) & 0xfff;
 				int src_y1 = src0 & 0xfff;
-				// int src_x2 = src1 >> 12;
+				// int src_x2 = (src1 >> 16) & 0xfff;
 				// int src_y2 = src1 & 0xfff;
 				src_x1 /= (depth / 8);
 				// src_x2 /= (depth / 8);
@@ -946,7 +946,7 @@ DEVICE_ACCESS(sgi_mte)
 				exit(1);
 			}
 
-			debug("[ sgi_mte: TODO STARTING TRANSFER: mode=0x%08x dst0=0x%016llx,"
+			debug("[ sgi_mte: LINEAR TRANSFER: mode=0x%08x dst0=0x%016llx,"
 			    " dst1=0x%016llx (length 0x%llx), dst_y_step=%i bg=0x%x, bytemask=0x%x ]\n",
 			    mode,
 			    (long long)dst0, (long long)dst1,
@@ -1068,10 +1068,8 @@ DEVICE_ACCESS(sgi_de_status)
 {
 	// struct sgi_re_data *d = (struct sgi_re_data *) extra;
 	uint64_t idata = 0, odata = 0;
-	// int regnr;
 
 	idata = memory_readmax64(cpu, data, len);
-	// regnr = relative_addr / sizeof(uint32_t);
 
 	relative_addr += 0x4000;
 
@@ -1082,6 +1080,10 @@ DEVICE_ACCESS(sgi_de_status)
 			CRIME_DE_SETUP_IDLE |
 			CRIME_DE_PIXPIPE_IDLE |
 			CRIME_DE_MTE_IDLE;
+
+		/*
+		 *  TODO: Actually simulate pipeline of a number of commands?
+		 */
 		break;
 
 	default:
