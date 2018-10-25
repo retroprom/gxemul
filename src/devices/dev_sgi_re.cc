@@ -809,13 +809,13 @@ DEVICE_ACCESS(sgi_mte)
 		break;
 
 	case CRIME_MTE_SRC0:
-		fatal("[ sgi_mte: %s CRIME_MTE_SRC0: 0x%016llx ]\n",
+		debug("[ sgi_mte: %s CRIME_MTE_SRC0: 0x%016llx ]\n",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		break;
 
 	case CRIME_MTE_SRC1:
-		fatal("[ sgi_mte: %s CRIME_MTE_SRC1: 0x%016llx ]\n",
+		debug("[ sgi_mte: %s CRIME_MTE_SRC1: 0x%016llx ]\n",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		break;
@@ -868,6 +868,8 @@ DEVICE_ACCESS(sgi_mte)
 
 	if (startFlag && writeflag == MEM_WRITE) {
 		uint32_t mode = d->mte_reg[(CRIME_MTE_MODE - 0x3000) / sizeof(uint32_t)];
+		uint64_t src0 = d->mte_reg[(CRIME_MTE_SRC0 - 0x3000) / sizeof(uint32_t)];
+		uint64_t src1 = d->mte_reg[(CRIME_MTE_SRC1 - 0x3000) / sizeof(uint32_t)];
 		uint64_t dst0 = d->mte_reg[(CRIME_MTE_DST0 - 0x3000) / sizeof(uint32_t)];
 		uint64_t dst1 = d->mte_reg[(CRIME_MTE_DST1 - 0x3000) / sizeof(uint32_t)];
 		int32_t dst_y_step = d->mte_reg[(CRIME_MTE_DST_Y_STEP - 0x3000) / sizeof(uint32_t)];
@@ -901,11 +903,6 @@ DEVICE_ACCESS(sgi_mte)
 			exit(1);
 		}
 
-		if (mode & MTE_MODE_COPY) {
-			fatal("[ sgi_mte: unimplemented MTE_MODE_COPY ]");
-			exit(1);
-		}
-
 		if (mode & MTE_MODE_STIPPLE) {
 			fatal("[ sgi_mte: unimplemented MTE_MODE_STIPPLE ]");
 			exit(1);
@@ -926,13 +923,31 @@ DEVICE_ACCESS(sgi_mte)
 				int y2 = dst1 & 0xfff;
 				x1 /= (depth / 8);
 				x2 /= (depth / 8);
+
+				int src_x1 = src0 >> 12;
+				int src_y1 = src0 & 0xfff;
+				int src_x2 = src1 >> 12;
+				int src_y2 = src1 & 0xfff;
+				src_x1 /= (depth / 8);
+				src_x2 /= (depth / 8);
+
 				for (int y = y1; y <= y2; ++y)
-					for  (int x = x1; x <= x2; ++x)
+					for  (int x = x1; x <= x2; ++x) {
+						if (mode & MTE_MODE_COPY) {
+							horrible_getputpixel(false, cpu, d, dst_tlb, depth / 8,
+								x - x1 + src_x1, y - y1 + src_y1, &bg);
+						}
+
 						horrible_getputpixel(true, cpu, d, dst_tlb, depth / 8, x, y, &bg);
+					}
 			}
 			break;
 		case MTE_TLB_LIN_A:
 			// Used by the PROM to zero-fill memory (?).
+			if (mode & MTE_MODE_COPY) {
+				fatal("[ sgi_mte: unimplemented MTE_MODE_COPY ]");
+				exit(1);
+			}
 
 			debug("[ sgi_mte: TODO STARTING TRANSFER: mode=0x%08x dst0=0x%016llx,"
 			    " dst1=0x%016llx (length 0x%llx), dst_y_step=%i bg=0x%x, bytemask=0x%x ]\n",

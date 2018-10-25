@@ -4783,3 +4783,5 @@ Changelog for GXemul:
 		registers (need for OpenBSD/sgi to work).
 		Moving OpenBSD/sgi from unsupported.html to guestoes.html.
 20181022	Fixing broken MACE interrupt mechanism for SGI O2.
+20181025	Implementing MTE_MODE_COPY in the SGI O2 memory transfer engine
+		to allow NetBSD to scroll up the framebuffer.
