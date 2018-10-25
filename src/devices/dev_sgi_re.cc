@@ -908,6 +908,7 @@ DEVICE_ACCESS(sgi_mte)
 			exit(1);
 		}
 
+		int src_tlb = (mode & MTE_MODE_SRC_BUF_MASK) >> MTE_SRC_TLB_SHIFT;
 		int dst_tlb = (mode & MTE_MODE_DST_BUF_MASK) >> MTE_DST_TLB_SHIFT;
 		
 		switch (dst_tlb) {
@@ -926,15 +927,15 @@ DEVICE_ACCESS(sgi_mte)
 
 				int src_x1 = src0 >> 12;
 				int src_y1 = src0 & 0xfff;
-				int src_x2 = src1 >> 12;
-				int src_y2 = src1 & 0xfff;
+				// int src_x2 = src1 >> 12;
+				// int src_y2 = src1 & 0xfff;
 				src_x1 /= (depth / 8);
-				src_x2 /= (depth / 8);
+				// src_x2 /= (depth / 8);
 
 				for (int y = y1; y <= y2; ++y)
 					for  (int x = x1; x <= x2; ++x) {
 						if (mode & MTE_MODE_COPY) {
-							horrible_getputpixel(false, cpu, d, dst_tlb, depth / 8,
+							horrible_getputpixel(false, cpu, d, src_tlb, depth / 8,
 								x - x1 + src_x1, y - y1 + src_y1, &bg);
 						}
 
