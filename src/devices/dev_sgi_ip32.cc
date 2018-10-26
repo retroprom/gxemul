@@ -76,7 +76,6 @@ struct crime_data {
 	uint64_t		reg[DEV_CRIME_LENGTH / sizeof(uint64_t)];
 
 	uint64_t		last_microseconds;
-	uint64_t		extra_increments;
 
 	struct interrupt	irq;
 	int			prev_asserted;
@@ -137,14 +136,8 @@ void crime_interrupt_deassert(struct interrupt *interrupt)
 }
 
 
-/*
- *  dev_crime_tick():
- *
- *  Updates CRIME_TIME (at 66 MHz) and reassert CRIME interrupts.
- */
-DEVICE_TICK(crime)
+void crime_update_crime_time(struct crime_data* d)
 {
-	struct crime_data *d = (struct crime_data *) extra;
 	struct timeval tv;
 	
 	gettimeofday(&tv, NULL);
@@ -155,10 +148,8 @@ DEVICE_TICK(crime)
 
 	uint64_t delta = microseconds - d->last_microseconds;
 
-	// The delta to add is the 66 per microsecond, minus any extra
-	// increments that have already been done due to reading the
-	// register.
-	int64_t to_add = delta * 66 - d->extra_increments;
+	// The delta to add is 66 per microsecond.
+	int64_t to_add = delta * 66;
 
 	if (to_add >= 1) {
 		// NetBSD says CRIME_TIME_MASK = 0x0000ffffffffffffULL
@@ -168,9 +159,20 @@ DEVICE_TICK(crime)
 			(uint32_t)(d->reg[CRIME_TIME / sizeof(uint64_t)] + to_add);
 
 		d->last_microseconds = microseconds;
-		d->extra_increments = 0;
 	}
+}
 
+
+/*
+ *  dev_crime_tick():
+ *
+ *  Updates CRIME_TIME (at 66 MHz) and reassert CRIME interrupts.
+ */
+DEVICE_TICK(crime)
+{
+	struct crime_data *d = (struct crime_data *) extra;
+
+	crime_update_crime_time(d);
 	crime_interrupt_reassert(d);
 }
 
@@ -343,11 +345,7 @@ DEVICE_ACCESS(crime)
 		break;
 
 	case CRIME_TIME:	/*  0x038  */
-		// Subtly increase the timer tick; useful if some
-		// code loops and reads this. A value of 66 means
-		// 1 millisecond (at 66 MHz).
-		d->reg[CRIME_TIME / sizeof(uint64_t)] += 7;
-		d->extra_increments += 7;
+		crime_update_crime_time(d);
 		break;
 
 	default:

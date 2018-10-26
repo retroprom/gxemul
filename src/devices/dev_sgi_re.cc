@@ -108,13 +108,13 @@ void horrible_getputpixel(bool put, struct cpu* cpu, struct sgi_re_data* d, int 
 		exit(1);
 	}
 
-	if (x < 0 || y < 0 || x >= 2048)
+	if (x < 0 || y < 0 || x >= 2048 || y >= 2048)
 		return;
 
 	int tilewidth_in_pixels = 512 / dst_bufdepth;
 	
 	int tile_nr_x = x / tilewidth_in_pixels;
-	int tile_nr_y = y / 128;
+	int tile_nr_y = y >> 7;
 
 	int w = 2048 / tilewidth_in_pixels;	// Always 4 tiles wide? Probably not in non-8-bit-modes
 	int tile_nr = tile_nr_y * w + tile_nr_x;
@@ -131,7 +131,7 @@ void horrible_getputpixel(bool put, struct cpu* cpu, struct sgi_re_data* d, int 
 	
 	tileptr &= 0x7fff0000;
 
-	y %= 128;
+	y &= 127;
 	int xofs = (x % tilewidth_in_pixels) * dst_bufdepth;
 
 	{
@@ -597,9 +597,6 @@ DEVICE_ACCESS(sgi_de)
 		uint32_t y2 = d->de_reg[(CRIME_DE_X_VERTEX_1 - 0x2000) / sizeof(uint32_t)]& 0xfff;
 		size_t x, y;
 
-		// TODO: Take drawmode, rop, bg, and planemask into account etc.
-		// rop 12 = xor netbsd cursor?
-
 		debug("[ sgi_de: STARTING DRAWING COMMAND: op = 0x%08x,"
 		    " x1=%i y1=%i x2=%i y2=%i fg=0x%x bg=0x%x pattern=0x%08x ]\n",
 		    op, x1, y1, x2, y2, fg, bg, pattern);
@@ -625,91 +622,84 @@ DEVICE_ACCESS(sgi_de)
 			}
 		}
 
+		if (!(drawmode & DE_DRAWMODE_PLANEMASK)) {
+			printf("!DE_DRAWMODE_PLANEMASK: TODO\n");
+		}
+		
+		if ((drawmode & DE_DRAWMODE_BYTEMASK) != DE_DRAWMODE_BYTEMASK) {
+			printf("not all DE_DRAWMODE_BYTEMASK set: TODO\n");
+		}
+		
+		// primitive rendering direction
 		int dx = op & DE_PRIM_RL ? -1 :  1;
 		int dy = op & DE_PRIM_TB ?  1 : -1;
 
+		// bufdepth = 1, 2, or 4.
 		int dst_bufdepth = 1 << ((dst_mode >> 8) & 3);
 		int src_bufdepth = 1 << ((src_mode >> 8) & 3);
 
-		// TODO: Use dx and dy rather than swapping!
-		if (x2 < x1) {
-			int tmp = x1; x1 = x2; x2 = tmp;
-		}
-		if (y2 < y1) {
-			int tmp = y1; y1 = y2; y2 = tmp;
-		}
-		
+		uint16_t saved_src_x = src_x;
+		uint16_t endx = (x2 + dx) & 0x7ff;
+		uint16_t endy = (y2 + dy) & 0x7ff;
+
+		/*
+		 *  It seems that depending on the width of the line to draw,
+		 *  the upper 16 bits of the pattern are "skipped". (This is
+		 *  needed to make the PROM work nicely.)
+		 */
+		if (drawmode & DE_DRAWMODE_LINE_STIP && x2-x1 <= 15)
+			pattern <<= 16;
+
 		switch (op & 0xff000000) {
 		case DE_PRIM_LINE:
-			/*
-			 *  Used by the PROM to draw text characters and
-			 *  icons on the screen.
-			 */
-			if (x2-x1 <= 15)
-				pattern <<= 16;
-
-			x=x1; y=y1;
-			while (x <= x2 && y <= y2) {
-				if (pattern & 0x80000000UL)
-					horrible_getputpixel(true, cpu, d, (dst_mode & 0x00001c00) >> 10,
-						dst_bufdepth, x, y, &fg);
-
-				pattern <<= 1;
-				x++;
-				if (x > x2) {
-					x = x1;
-					y++;
-				}
-			}
-			break;
 		case DE_PRIM_RECTANGLE:
-			/*
-			 *  Used by the PROM to fill parts of the background,
-			 *  and used by NetBSD/OpenBSD to draw text characters.
-			 */
-			if (drawmode & DE_DRAWMODE_XFER_EN) {
-				// Pixel colors copied from another source.
-				// TODO: Actually take top-to-bottom and left-to-right
-				// settings into account. Right now it's kind of ignored.
-				if (dx < 0) { src_x -= (x2-x1); dx = 1; }
-				if (dy < 0) { src_y -= (y2-y1); dy = 1; }
-				int saved_src_x = src_x;
-				for (y=y1; y<=y2; y+=1) {
-					src_x = saved_src_x;
-					for (x = x1; x <= x2; x+=1) {
-						uint32_t color;
-						horrible_getputpixel(false, cpu, d, (src_mode & 0x00001c00) >> 10,
-							src_bufdepth, src_x, src_y, &color);
-						if (drawmode & DE_DRAWMODE_ROP && rop == OPENGL_LOGIC_OP_COPY_INVERTED)
-							color = 255 - color;
-
-						horrible_getputpixel(true, cpu, d, (dst_mode & 0x00001c00) >> 10,
-							dst_bufdepth, x, y, &color);
-						src_x += dx;
-					}
-					src_y += dy;
-				}
-			} else {
-				// Plain color.
-				for (y=y1; y<=y2; y++)
-					for (x = x1; x <= x2; ++x) {
-						// TODO: Most likely not correct, but it allows
-						// both NetBSD and the PROM to work for now...
-						uint32_t color = fg;
-						if (drawmode & DE_DRAWMODE_OPAQUE_STIP)
-							color = (pattern & 0x80000000UL) ? fg : bg;
-
-						horrible_getputpixel(true, cpu, d, (dst_mode & 0x00001c00) >> 10,
-							dst_bufdepth, x, y, &color);
-						pattern <<= 1;
-					}
-			}
 			break;
-
-		default:fatal("[ sgi_de: UNIMPLEMENTED drawing command: op = 0x%08x,"
+		default:fatal("[ sgi_de: UNIMPLEMENTED drawing op = 0x%08x,"
 			    " x1=%i y1=%i x2=%i y2=%i fg=0x%x bg=0x%x pattern=0x%08x ]\n",
 			    op, x1, y1, x2, y2, fg, bg, pattern);
 			exit(1);
+		}
+
+		// Drawing is limited to 2048 x 2048 pixel space.
+		for (y = y1; y != endy; y = (y + dy) & 0x7ff) {
+			src_x = saved_src_x;
+			for (x = x1; x != endx; x = (x + dx) & 0x7ff) {
+				uint32_t color = fg;
+
+				// Pixel colors copied from another source.
+				// (OpenBSD draws characters using this mechanism.)
+				if (drawmode & DE_DRAWMODE_XFER_EN)
+					horrible_getputpixel(false, cpu, d,
+						(src_mode & 0x00001c00) >> 10,
+						src_bufdepth, src_x, src_y, &color);
+
+				// Raster-OP.
+				// TODO: Other ops.
+				// TODO: Should this be before or after other things?
+				if (drawmode & DE_DRAWMODE_ROP && rop == OPENGL_LOGIC_OP_COPY_INVERTED)
+					color = 255 - color;
+
+				// NetBSD draws characters using this mechanism.
+				if (drawmode & DE_DRAWMODE_OPAQUE_STIP)
+					color = (pattern & 0x80000000UL) ? fg : bg;
+
+				// The PROM draws bitmaps using this mechanism.
+				bool draw = true;
+				if (drawmode & DE_DRAWMODE_LINE_STIP)
+					draw = (pattern & 0x80000000UL)? true : false;
+
+				if (draw)
+					horrible_getputpixel(true, cpu, d,
+						(dst_mode & 0x00001c00) >> 10,
+						dst_bufdepth, x, y, &color);
+
+				// I'm not sure if the pattern rotates, or is just
+				// shifted out, so for now it is a rotate.
+				pattern = (pattern << 1) | (pattern >> 31);
+
+				src_x = (src_x + dx) & 0x7ff;
+			}
+			src_y = (src_y + dy) & 0x7ff;
 		}
 	}
 
@@ -927,6 +917,11 @@ DEVICE_ACCESS(sgi_mte)
 				// int src_y2 = src1 & 0xfff;
 				src_x1 /= (depth / 8);
 				// src_x2 /= (depth / 8);
+
+				if (y1 > y2 || x1 > x2) {
+					fatal("sgi_mte: TODO: y1 > y2 || x1 > x2\n");
+					exit(1);
+				}
 
 				for (int y = y1; y <= y2; ++y)
 					for  (int x = x1; x <= x2; ++x) {

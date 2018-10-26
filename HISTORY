@@ -4787,3 +4787,5 @@ Changelog for GXemul:
 		to allow NetBSD to scroll up the framebuffer.
 		Made the pckbc work with NetBSD/sgimips.
 		Only allow SGI O2 MTE memory fills to pages that are in a TLB.
+20181026	Some cleanup and refactoring of the O2 rendering engine and 
+		other things.

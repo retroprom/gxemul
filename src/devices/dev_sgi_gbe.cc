@@ -77,6 +77,8 @@ struct sgi_gbe_data {
 	uint32_t	i2cfp;			/* 0x00010  */
 
 	uint32_t	freeze;	/* and xy */	/* 0x10000  */
+	uint32_t	y_intr01;		/* 0x10020  */
+	uint32_t	y_intr23;		/* 0x10024  */
 
 	uint32_t	tilesize;		/* 0x30000  */
 	uint32_t	frm_control;		/* 0x3000c  */
@@ -146,12 +148,24 @@ DEVICE_TICK(sgi_gbe)
 	if (!cpu->machine->x11_md.in_use)
 		return;
 
+	// If not frozen...
+	if (!(d->freeze & 0x80000000)) {
+		// ... check if the guest OS wants interrupts based on Y:
+		if ((d->y_intr01 & CRMFB_INTR_0_MASK) != 0xfff000 ||
+		    (d->y_intr01 & CRMFB_INTR_1_MASK) != 0xfff ||
+		    (d->y_intr23 & CRMFB_INTR_2_MASK) != 0xfff000 ||
+		    (d->y_intr23 & CRMFB_INTR_3_MASK) != 0xfff) {
+			fatal("[ sgi_gbe: WARNING: Y interrupts not yet implemented. ]\n");
+		}
+	}
+
 	if (!(d->frm_control & CRMFB_DMA_ENABLE))
 		return;
 
 	// NetBSD's crmfbreg.h documents the tileptr as having a "9 bit shift",
 	// but IRIX seems to put a value ending in 0x......80 there, and the
 	// last part of that address seems to matter.
+	// TODO: Double-check this with the real hardware.
 	tiletable = (d->frm_control & 0xffffff80);
 
 #ifdef GBE_DEBUG
@@ -442,6 +456,16 @@ DEVICE_ACCESS(sgi_gbe)
 		// TODO.
 		break;
 
+	case CRMFB_VT_INTR01:	// 0x10020
+		if (writeflag == MEM_WRITE)
+			d->y_intr01 = idata;
+		break;
+
+	case CRMFB_VT_INTR23:	// 0x10024
+		if (writeflag == MEM_WRITE)
+			d->y_intr23 = idata;
+		break;
+
 	case 0x10028:	// 0x10028
 	case 0x1002c:	// 0x1002c
 	case 0x10030:	// 0x10030
@@ -699,6 +723,10 @@ void dev_sgi_gbe_init(struct machine *machine, struct memory *mem, uint64_t base
 			CRMFB_CTRLSTAT_GPIO4_SENSE |
 			CRMFB_CTRLSTAT_GPIO3_INPUT |
 			(CRMFB_CTRLSTAT_CHIPID_MASK & 1);
+
+	// Set a value in the interrupt register that will "never happen" by default.
+	d->y_intr01 = (0xfff << 12) | 0xfff;
+	d->y_intr23 = (0xfff << 12) | 0xfff;
 
 	// Grayscale palette, most likely overwritten immediately by the
 	// guest operating system.
