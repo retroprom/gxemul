@@ -1,4 +1,4 @@
-arcbios.cc  ARCBIOS emulation
+arcbios.cc  ARCBIOS and ARCS emulation
 dec_prom.cc  DECstation PROM emulation
 dreamcast.cc  Dreamcast PROM emulation
 dreamcast_scramble.cc  Dreamcast emulation (helper module)
