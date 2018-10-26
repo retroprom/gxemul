@@ -140,10 +140,7 @@ void crime_interrupt_deassert(struct interrupt *interrupt)
 /*
  *  dev_crime_tick():
  *
- *  Updates CRIME_TIME and reassert CRIME interrupts.
- *
- *  A R10000 is detected as running at
- *  CRIME_SPEED_FACTOR * 66 MHz. (TODO: verify?)
+ *  Updates CRIME_TIME (at 66 MHz) and reassert CRIME interrupts.
  */
 DEVICE_TICK(crime)
 {
@@ -152,29 +149,27 @@ DEVICE_TICK(crime)
 	
 	gettimeofday(&tv, NULL);
 
-	uint64_t microseconds = tv.tv_sec * 1000000000 + tv.tv_usec;
+	uint64_t microseconds = tv.tv_sec * 1000000 + tv.tv_usec;
 	if (d->last_microseconds == 0)
 		d->last_microseconds = microseconds;
 
 	uint64_t delta = microseconds - d->last_microseconds;
-
-	d->last_microseconds = microseconds;
 
 	// The delta to add is the 66 per microsecond, minus any extra
 	// increments that have already been done due to reading the
 	// register.
 	int64_t to_add = delta * 66 - d->extra_increments;
 
-	if (to_add < 1)
-		to_add = 1;
+	if (to_add >= 1) {
+		// NetBSD says CRIME_TIME_MASK = 0x0000ffffffffffffULL
+		// but my O2 seems to use only the lower 32 bits as an
+		// _unsigned_ value. (TODO: Double-check this again.)
+		d->reg[CRIME_TIME / sizeof(uint64_t)] =
+			(uint32_t)(d->reg[CRIME_TIME / sizeof(uint64_t)] + to_add);
 
-	// NetBSD says CRIME_TIME_MASK = 0x0000ffffffffffffULL
-	// but my O2 seems to use only the lower 32 bits as an
-	// unsigned value. (TODO: Double-check this again.)
-	d->reg[CRIME_TIME / sizeof(uint64_t)] =
-		(uint32_t)(d->reg[CRIME_TIME / sizeof(uint64_t)] + to_add);
-
-	d->extra_increments = 0;
+		d->last_microseconds = microseconds;
+		d->extra_increments = 0;
+	}
 
 	crime_interrupt_reassert(d);
 }
@@ -315,10 +310,10 @@ DEVICE_ACCESS(crime)
 			 *  0x200 = watchdog timer (according to NetBSD)
 			 *  0x800 = "reboot" used by the IP32 PROM
 			 */
-			if (idata & 0x200) {
-				idata &= ~0x200;
+			if (idata & CRIME_CONTROL_DOG_ENABLE) {
+				idata &= ~CRIME_CONTROL_DOG_ENABLE;
 			}
-			if (idata & 0x800) {
+			if (idata & CRIME_CONTROL_HARD_RESET) {
 				int j;
 
 				/*  This is used by the IP32 PROM's
@@ -327,8 +322,11 @@ DEVICE_ACCESS(crime)
 					cpu->machine->cpus[j]->running = 0;
 				cpu->machine->
 				    exit_without_entering_debugger = 1;
-				idata &= ~0x800;
+				idata &= ~CRIME_CONTROL_HARD_RESET;
 			}
+
+			idata &= ~CRIME_CONTROL_ENDIANESS;
+
 			if (idata != 0)
 				fatal("[ CRIME_CONTROL: unimplemented "
 				    "control 0x%016llx ]\n", (long long)idata);
@@ -345,11 +343,11 @@ DEVICE_ACCESS(crime)
 		break;
 
 	case CRIME_TIME:	/*  0x038  */
-		// Subtly increase the timer tick by 66; useful if some
-		// code loops and reads this. 66 means 1 millisecond
-		// at 66 MHz.
-		d->reg[CRIME_TIME / sizeof(uint64_t)] += 66;
-		d->extra_increments += 66;
+		// Subtly increase the timer tick; useful if some
+		// code loops and reads this. A value of 66 means
+		// 1 millisecond (at 66 MHz).
+		d->reg[CRIME_TIME / sizeof(uint64_t)] += 7;
+		d->extra_increments += 7;
 		break;
 
 	default:
@@ -533,10 +531,10 @@ DEVICE_ACCESS(mace)
 			uint8_t change = d->reg[MACE_ISA_FLASH_NIC_REG + 7]
 				^ old_mace_isa_flash_nic_reg;
 			if (change & MACE_ISA_LED_RED)
-				fatal("[ mace: turning RED led %s ]\n",
+				debug("[ mace: turning RED led %s ]\n",
 					d->reg[MACE_ISA_FLASH_NIC_REG + 7] & MACE_ISA_LED_RED ? "ON" : "OFF");
 			if (change & MACE_ISA_LED_GREEN)
-				fatal("[ mace: turning GREEN led %s ]\n",
+				debug("[ mace: turning GREEN led %s ]\n",
 					d->reg[MACE_ISA_FLASH_NIC_REG + 7] & MACE_ISA_LED_GREEN ? "ON" : "OFF");
 		}
 		break;

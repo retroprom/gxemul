@@ -902,24 +902,33 @@ Malta:
 
 SGI O2:
 	ps2 8242:
-		netbsd doesn't work with keyboard at all!
+		better/nicer handling of keymap 1 (netbsd), 2 (openbsd?), 3 (PROM?)
 		mouse (netbsd X, and PROM, and openbsd?)
+		openbsd doesn't detect keyboard/mouse?
+		irix doesn't detect keyboard/mouse either? maybe.
 
-	scsi! this is probably time consuming.
+	PROM in GXemul says "SGI-CRM, Rev B", but my real O2 says Rev C?
+
+	scsi! this is probably very time consuming.
 
 	graphics:
 		horrible_getputpixel:
 			non-8-bit pixel formats?
 			GBE_CMODE_RGB10 etc from openbsd's header file?
+			performance?
+		actually emulate "pipeline" and detect pipeline overruns,
+			i.e. require guest OSes to wait? but then, when to
+			execute commands in the pipeline? (low-prio)
 		correct x,y direction for primitives!
 		i2c vga data, for NetBSD etc.
-		3D graphics? i.e. depth buffers etc.
+		3D graphics? i.e. depth buffers, triangles, etc.
 
-	CRIME interrupt controller:
-		better memory bank representation, so that other sizes than
-			128 MB RAM can be emulated
+	ds2502_get_eaddr: ds2502_read_rom failed!
+		PROM complains during bootup. Non-critical but could be worth implementing.
 
 	audio?
+	
+	video?
 
 HPCmips:
 	x)  Mouse/pad support! :)

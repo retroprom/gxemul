@@ -518,9 +518,8 @@ j = 0;
 
 		machine->main_console_handle = j;
 
-		/*  TODO: Once this works, it should be enabled
-		    always, not just when using X!  */
-		if (machine->x11_md.in_use) {
+		{
+			/*  keyb+mouse (mace irq numbers)  */
 			char tmpstr1[1000];
 			char tmpstr2[1000];
 			snprintf(tmpstr1, sizeof(tmpstr1),
@@ -537,8 +536,9 @@ j = 0;
 			    PCKBC_8242, tmpstr1,
 			    tmpstr2, machine->x11_md.in_use,
 			    0);
-			/*  keyb+mouse (mace irq numbers)  */
-			machine->main_console_handle = i;
+
+			if (machine->x11_md.in_use)
+				machine->main_console_handle = i;
 		}
 
 		snprintf(tmpstr, sizeof(tmpstr),
@@ -547,13 +547,6 @@ j = 0;
 		    CRIME_INT_PERIPH_MISC, 8);
 		dev_mc146818_init(machine, mem, 0x1f3a0000, tmpstr,
 		    MC146818_SGI, 0x40);  /*  mcclock0  */
-
-		/*  TODO: _WHERE_ does the z8530 interrupt?  */
-		snprintf(tmpstr, sizeof(tmpstr), "z8530 addr=0x1fbd9830 "
-		    "irq=%s.cpu[%i].2 addr_mult=4",
-		    machine->path, machine->bootstrap_cpu);
-//		machine->main_console_handle = (size_t)
-//		    device_add(machine, tmpstr);
 
 		/*
 		 *  PCI devices:   (according to NetBSD's GENERIC
