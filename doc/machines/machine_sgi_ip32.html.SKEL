@@ -5,9 +5,6 @@ for experiments with primarily
 <a href="http://www.netbsd.org/ports/sgimips/">NetBSD/sgimips</a>,
 <a href="http://openbsd.org/sgi.html">OpenBSD/sgi</a>, and
 <a href="http://ftp.debian.org/debian/dists/Debian8.11/main/installer-mips/current/images/r5k-ip32/">Linux for O2</a>.
-(Emulating the hardware well enough to run the raw PROM image from an SGI O2
-correctly, or to run IRIX, would likely be much harder than getting
-open source operating systems to run.)
 
 
 <p><br>
@@ -25,9 +22,15 @@ time to write a converter tool yourself, there is an example converter in
 the GXemul source code distribution: <tt>experiments/sgiprom_to_bin</tt>.)
 
 <p>
-<font color="#ff0000">NOTE: RUNNING THE PROM DOES NOT WORK YET! These are preliminary
-instructions on how it <i>may</i> work when the new GXemul framework, and the SGI O2
-emulation in that framework, is complete enough.</font>
+<font color="#ff0000">NOTE: THE SGI O2 EMULATION MODE IN THE NEW FRAMEWORK
+IS <b>NOT WORKING YET AT ALL</b>! These are preliminary
+instructions on how it <i>may</i> work when the new GXemul framework, and
+in particular the SGI O2 emulation within that framework, is complete enough.</font>
+
+<p>
+<font color="#ff0000">The new framework is planned to support things such
+as emulation of real CPU caches, and RAM at a non-zero base address,
+features used by the SGI O2 (and its PROM).</font>
 
 <p>Assuming you have extracted the PROM from your real machine into a
 file called <tt>prom</tt>, the following example shows how to start up the
@@ -53,7 +56,7 @@ GXemul>
 
 <p><br><b>Legacy framework</b>
 
-<p>As the new framework is not working yet, and especially the SGI O2
+<p>As the new framework is <b>not</b> working yet, and especially the SGI O2
 emulation mode in it, the following notes about the <i>legacy framework</i>
 may also be of interest.
 
@@ -61,13 +64,13 @@ may also be of interest.
 the following command line may be used as a starting point:
 
 <pre>
-$ <b>gxemul -Q -X -e o2 0xbfc00000:prom</b>
+$ <b>gxemul -QXeo2 0xbfc00000:prom</b>
 </pre>
 
-<p>-Q turns off GXemul's built-in PROM emulation, allowing raw PROM images
-to be used. -X is used to display the graphical framebuffer. (-X can be
-omitted if only serial console is what you want.) And finally, -e o2 selects
-the emulation mode. 0xbfc00000 is the standard ROM address for MIPS-based
+<p><tt>-Q</tt> turns off GXemul's built-in PROM emulation, allowing raw PROM images
+to be used. <tt>-X</tt> is used to display the graphical framebuffer. (<tt>-X</tt> can be
+omitted if only serial console is what you want.) And finally, <tt>-e o2</tt> selects
+the O2 emulation mode. 0xbfc00000 is the standard ROM address for MIPS-based
 systems.
 
 <p>
@@ -85,8 +88,8 @@ is from the emulator.
 NOTE: The SGI O2 PROM does some hardware tests during startup that do not
 work in GXemul, in particular cache detection. So right now,
 there is a hack/workaround which skips cache detection in an ugly way.
-This only works with PROM versions 2.3 and 4.13. For other versions, it
-must be manually skipped.</font>
+This has been verified to work with PROM versions 2.3, 4.13, and 4.18.
+For other versions, it may need to be manually skipped.</font>
 
 <p>With a IP32 PROM version 4.13 for example, if the hack is commented out,
 the cache detection routine at 0xbfc05180 must be skipped:
@@ -105,10 +108,19 @@ continue
 was set to something starting with 'g', output will be graphical, otherwise
 it will be to serial console.
 
-<p>Note however that almost nothing works. <b>Most importantly</b>, SCSI is not
-implemented for the SGI O2, so the emulated machine will not be that
-meaningful. Also, the graphics is only <i>barely</i> emulated; when the PROM
-attempts to scroll up, nothing happens.
+<p>Note however that almost nothing works; <b>most importantly, SCSI is not
+implemented for the SGI O2</b>, so the emulated machine will not be able
+to boot from any kind of disk or CDROM. Audio
+or video hardware is not emulated at all yet either.
+Also, the graphics emulation is very likely to be wrong. 
+
+<p>Experimenting with the PROM from your own machine may be fun, but
+having a PROM image is <i>not</i> needed if what you want to do is to
+run guest operating systems. In that case, skip the PROM image, skip the
+<tt>-Q</tt> command line option, and simply supply the name of the
+operating system kernel to run instead. Any PROM calls will get faked
+responses by the emulator.
+
 
 <p><hr>
 </body>
