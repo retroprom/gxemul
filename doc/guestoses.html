@@ -52,7 +52,7 @@ SUCH DAMAGE.
   <li><a href="#netbsdcobaltinstall">NetBSD/cobalt 7.1.2</a>
   <li><a href="#netbsdevbmipsinstall">NetBSD/evbmips 7.1.2</a>
   <li><a href="#netbsdalgorinstall">NetBSD/algor 5.0.2</a>
-  <li><a href="#netbsdsgimips">NetBSD/sgimips 5.0</a>
+  <li><a href="#netbsdsgimips">NetBSD/sgimips 8.0</a>
   <li><a href="#netbsdcatsinstall">NetBSD/cats 5.0</a>
   <li><a href="#netbsdevbarminstall">NetBSD/evbarm 2.1</a>
   <li><a href="#netbsdnetwinderinstall">NetBSD/netwinder 3.1</a>
@@ -579,33 +579,33 @@ generic kernel:<pre>
 <a href="20060623-netbsd-sgimips-3.0.png"><img src="20060623-netbsd-sgimips-3.0_small.png"></a>
 
 <p><a href="http://www.netbsd.org/ports/sgimips/">NetBSD/sgimips</a> can run
-in GXemul on an emulated O2 (SGI-IP32). However, GXemul does not yet
-emulate the AHC PCI SCSI controller in the O2. (I have mailed Adaptec
-several times, asking for documentation, but never received any reply.)
-NetBSD can still run in the emulator, as long as it doesn't use SCSI.
-
-<p>For a simple test with the ramdisk/install kernel, try 
-dowloading<pre>
-	<a href="ftp://ftp.NetBSD.org/pub/NetBSD/NetBSD-3.1/sgimips/binary/kernel/netbsd-INSTALL32_IP3x.gz">ftp://ftp.NetBSD.org/pub/NetBSD/NetBSD-3.1/sgimips/binary/kernel/netbsd-INSTALL32_IP3x.gz</a>
-
-</pre>and run&nbsp;&nbsp;<b><tt>gxemul -x -e o2 netbsd-INSTALL32_IP3x.gz</tt></b>.
-
-<p>It is possible to set up an environment for netbooting the emulated SGI
-machine off of another emulated machine. Performing this setup is quite
-time consuming, but necessary:
+in GXemul on an emulated SGI O2 (also known as IP32). The SCSI controller
+is not emulated yet, so NetBSD needs to boot with root-on-NFS:
 
 <p>
 <ol>
-  <li>First of all, the "<tt>nfs server</tt>" machine must be set up.
-	This needs to have a 750 MB <tt>/tftpboot</tt> partition.
-	<a href="#netbsdpmaxinstall">Install NetBSD/pmax from CDROM</a>.
-	(Don't forget to add the extra partition!)
+  <li>First of all, an "<tt>nfs server</tt>" machine must be set up.
+	This needs to have a 1800 MB <tt>/tftpboot</tt> partition.
+	<a href="#netbsdpmaxinstall">Install NetBSD/pmax 8.0 from CDROM</a>.
+	Do not configure the network and do not install any X11 packages on the
+	nfs server, as they are not needed.
+	<i>Don't forget to add the extra partition!<i>
   <p>
-  <li>Configure the nfs server machine to act as an nfs server.
-	Start up the emulated DECstation:<pre>
-	<b>gxemul -e 3max -d nbsd_pmax.img</b>
-</pre>and enter the following commands as <tt>root</tt>
-	inside the emulator:
+
+  <li>Download the files corresponding to a NetBSD/sgimips CD-ROM iso image, and the
+	GENERIC and INSTALL kernels:<pre>
+	<a href="ftp://ftp.NetBSD.org/pub/NetBSD/NetBSD-8.0/sgimips/binary/kernel/netbsd-GENERIC32_IP3x.gz">ftp://ftp.NetBSD.org/pub/NetBSD/NetBSD-8.0/sgimips/binary/kernel/netbsd-GENERIC32_IP3x.gz</a>
+	<a href="ftp://ftp.NetBSD.org/pub/NetBSD/NetBSD-8.0/sgimips/binary/kernel/netbsd-INSTALL32_IP3x.gz">ftp://ftp.NetBSD.org/pub/NetBSD/NetBSD-8.0/sgimips/binary/kernel/netbsd-INSTALL32_IP3x.gz</a>
+
+	wget -np -l 0 -r <a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-8.0/sgimips/binary/sets/">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-8.0/sgimips/binary/sets/</a>
+	mkisofs -U -o sgimips.iso ftp.netbsd.org/pub/NetBSD/NetBSD-8.0
+
+</pre>
+  <li>Start the DECstation emulation:<pre>
+	<b>gxemul -e 3max -d nbsd_pmax.img -d sgimips.iso</b>
+
+</pre>Log in as root, configure the pmax machine as an NFS server,
+	and extract the files from the sgimips CD-ROM image:
 <p><table border="0"><tr><td><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td><pre>
 <b>echo hostname=server &gt;&gt; /etc/rc.conf
 echo ifconfig_le0=\"inet 10.0.0.2\" &gt;&gt; /etc/rc.conf
@@ -629,32 +629,15 @@ client:\
 </b>(press CTRL-D)
 <b>echo "10:20:30:00:00:10 client" &gt; /etc/ethers
 echo 10.0.0.1 client &gt; /etc/hosts
-reboot</b>
-</pre></td></tr></table>
-  <p>
-  <li>Download the files corresponding to a NetBSD/sgimips CD-ROM iso image, and the
-	GENERIC and INSTALL kernels:<pre>
-	<a href="ftp://ftp.NetBSD.org/pub/NetBSD/NetBSD-5.0/sgimips/binary/kernel/netbsd-GENERIC32_IP3x.gz">ftp://ftp.NetBSD.org/pub/NetBSD/NetBSD-5.0/sgimips/binary/kernel/netbsd-GENERIC32_IP3x.gz</a>
-	<a href="ftp://ftp.NetBSD.org/pub/NetBSD/NetBSD-5.0/sgimips/binary/kernel/netbsd-INSTALL32_IP3x.gz">ftp://ftp.NetBSD.org/pub/NetBSD/NetBSD-5.0/sgimips/binary/kernel/netbsd-INSTALL32_IP3x.gz</a>
 
-	wget -np -l 0 -r <a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0/sgimips/binary/sets/">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0/sgimips/binary/sets/</a>
-	mkisofs -U -o sgimips.iso ftp.netbsd.org/pub/NetBSD/NetBSD-5.0
-
-</pre>
-  <li>Start the DECstation emulation again:<pre>
-	<b>gxemul -e 3max -d nbsd_pmax.img -d sgimips.iso</b>
-
-</pre>and extract the files from the sgimips CD-ROM image to the
-	DECstation disk image:
-<p><table border="0"><tr><td><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td><pre>
-<b>cd /tftpboot; mount /dev/cd0a /mnt
-for a in /mnt/*/binary/sets/[bcegmt]*.tgz; do echo $a; tar zxfp $a; done
+cd /tftpboot; mount /dev/cd0a /mnt
+for a in /mnt/*/binary/sets/[bcegmtx]*.tgz; do echo $a; tar zxfp $a; done
 echo 10.0.0.2:/tftpboot / nfs rw 0 0 &gt; /tftpboot/etc/fstab
 echo rc_configured=YES &gt;&gt; /tftpboot/etc/rc.conf
 echo 10.0.0.254 &gt;&gt; /tftpboot/etc/mygate
 echo nameserver 10.0.0.254 &gt;&gt; /tftpboot/etc/resolv.conf
 echo rc_configured=YES &gt;&gt; /tftpboot/etc/rc.conf
-dd if=/dev/zero of=swap bs=1024 count=65536
+dd if=/dev/zero of=swap bs=1024 count=262144
 cd /; umount /mnt; halt</b>
 </pre></td></tr></table>
   <p>
@@ -674,6 +657,8 @@ machine(
 
         type("sgi")
         subtype("o2")
+	use_x11(1)
+	memory(256)
 
         load("netbsd-INSTALL32_IP3x.gz")</b>
         ! load("netbsd-GENERIC32_IP3x.gz")<b>
@@ -733,7 +718,7 @@ commands in separate xterms!)<pre>
 	<b>gxemul @config_client</b>
 </pre>
 
-<p>When asked for "<tt>root device:</tt>" etc. on the client machine, enter
+<p>If/when asked for "<tt>root device:</tt>" etc. on the client machine, enter
 the following values:<pre>
 	root device: <b>mec0</b>
 	dump device: 				<b>(leave blank)</b>
@@ -747,12 +732,6 @@ the following values:<pre>
 </pre>
 
 <p>Note: Netbooting like this is very slow, so you need a lot of patience.
-For example, when NetBSD says "<tt>nfs_boot: trying DHCP/BOOTP</tt>",
-there will be a long pause, even on a very fast host machine. The reason
-for this is mostly because the emulator doesn't deal with timing issues
-very well, but also because NetBSD tries IPv6 first, before falling back
-to IPv4.
-
 
 
 
@@ -2057,12 +2036,12 @@ reboot</b>
   <li>Finally, run the client again:<pre>
 	<b>gxemul @config_client</b>
 
-</pre>and enter <tt>mec0</tt> when asked about root device. Note that booting
-	is <i>very</i> slow, so be patient.
+</pre>If the root device is not auto-detected, enter <tt>mec0</tt>.
+	Note that booting is <i>very</i> slow, so be patient.
 </ol>
 
 
-<p>Some things are not working yet, for example X11 and mouse emulation.
+<p>Many things are not working yet, for example X11 and mouse emulation.
 It is also very slow, mostly due to having the file system on NFS.
 
 
