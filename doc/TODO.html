@@ -901,6 +901,11 @@ Malta:
 		2. Implement the NIC.
 
 SGI O2:
+	netbsd starts in "enter pathname of shell" mode; should start netbooting
+		in a more automated fashion?
+
+	netbsd randomly quits 'startx' without showing anything?
+
 	ps2 8242:
 		better/nicer handling of keymap 1 (netbsd), 2 (openbsd?), 3 (PROM?)
 		mouse (netbsd X, and PROM, and openbsd?)
@@ -909,16 +914,31 @@ SGI O2:
 
 	PROM in GXemul says "SGI-CRM, Rev B", but my real O2 says Rev C?
 
-	scsi! this is probably very time consuming.
+	scsi! this will be very time consuming.
 
 	graphics:
 		horrible_getputpixel:
-			non-8-bit pixel formats?
+			non-8-bit pixel formats? 32-bit formats used by NetBSD/OpenBSD in X11
 			GBE_CMODE_RGB10 etc from openbsd's header file?
 			performance?
 		actually emulate "pipeline" and detect pipeline overruns,
 			i.e. require guest OSes to wait? but then, when to
 			execute commands in the pipeline? (low-prio)
+			get -w 0xb5004000:
+						LEVEL	RD_PTR	WR_PTR	BUF_START
+				0x1e029a68	00	29	29	08
+				0x1e02baea	00	2b	2b	1a
+				0x1e03befa	00	3b	3b	3a
+				0x1e029a68	00	29	29	08
+				0x1e00a289	00	0a	0a	09
+				0x1e03df7c	00	3d	3d	3c
+				0x1e00003f	00	00	00	3f
+				0x1e02fbee	00	2f	2f	2e
+				0x1e02cb2b	00	2c	2c	2b
+				0x1e00b2ca	00	0b	0b	0a
+				0x1e008207	00	08	08	07
+				0x1e = all idle
+
 		i2c vga data, for NetBSD etc.
 		3D graphics? i.e. depth buffers, triangles, etc.
 
@@ -928,6 +948,8 @@ SGI O2:
 	audio?
 	
 	video?
+
+	write some kind of test program to simplify comparisons of the real O2 to the emulator
 
 HPCmips:
 	x)  Mouse/pad support! :)
