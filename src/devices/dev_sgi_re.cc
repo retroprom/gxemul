@@ -83,6 +83,9 @@ struct sgi_re_data {
  *
  *  Tiles are always 512 _bytes_ wide, and 128 pixels high. For 32-bit color
  *  modes, for example, that means 128 x 128 pixels.
+ *
+ *  For "linear" modes, y is ignored and x is an offset to select which linear
+ *  TLB entry to use.
  */
 void horrible_getputpixel(bool put, struct cpu* cpu, struct sgi_re_data* d, int dst_mode,
 	int dst_bufdepth /* in bytes */, int x, int y, uint32_t* color)
@@ -94,21 +97,9 @@ void horrible_getputpixel(bool put, struct cpu* cpu, struct sgi_re_data* d, int 
 	// #define DE_MODE_LIN_A           0x00001000
 	// #define DE_MODE_LIN_B           0x00001400
 	uint32_t mode = dst_mode & 0x7;
+	bool linear = mode > 3;
 
-	uint16_t* tlb = NULL;
-	
-	switch (mode) {
-	case 0:	tlb = d->re_tlb_a;
-		break;
-	case 1:	tlb = d->re_tlb_b;
-		break;
-	case 2:	tlb = d->re_tlb_c;
-		break;
-	default:fatal("unimplemented dst_mode for horrible_getputpixel\n");
-		exit(1);
-	}
-
-	if (x < 0 || y < 0 || x >= 2048 || y >= 2048)
+	if (!linear && (x < 0 || y < 0 || x >= 2048 || y >= 2048))
 		return;
 
 	int tilewidth_in_pixels = 512 / dst_bufdepth;
@@ -116,12 +107,38 @@ void horrible_getputpixel(bool put, struct cpu* cpu, struct sgi_re_data* d, int 
 	int tile_nr_x = x / tilewidth_in_pixels;
 	int tile_nr_y = y >> 7;
 
-	int w = 2048 / tilewidth_in_pixels;	// Always 4 tiles wide? Probably not in non-8-bit-modes
-	int tile_nr = tile_nr_y * w + tile_nr_x;
+	int tile_nr = tile_nr_y * 16 + tile_nr_x;
+
+	y &= 127;
+	int xofs = (x % tilewidth_in_pixels) * dst_bufdepth;
+	int ofs = 512 * y + xofs;
+
+	uint32_t tileptr = 0;
+
+	switch (mode) {
+	case 0:	tileptr = d->re_tlb_a[tile_nr] << 16;
+		break;
+	case 1:	tileptr = d->re_tlb_b[tile_nr] << 16;
+		break;
+	case 2:	tileptr = d->re_tlb_c[tile_nr] << 16;
+		break;
+	case 4:	tile_nr = x >> 12;
+		*color = random();
+		if (tile_nr >= 32)
+			return;
+		tileptr = 0x80000000 | (d->re_linear_a[tile_nr] << 12);
+		ofs = x & 4095;
+		// TODO... probably not correct!
+		printf("tileptr = %08x x = %i y = %i tile_nr = %i ofs = %i\n", tileptr, x, y, tile_nr, ofs);
+		break;
+	default:fatal("unimplemented dst_mode %i for horrible_getputpixel (%s), x=%i y=%i\n",
+			mode, put ? "put" : "get", x, y);
+		// exit(1);
+		*color = random();
+		return;
+	}
 
 	// The highest bit seems to be set for a "valid" tile pointer.
-	uint32_t tileptr = tlb[tile_nr] << 16;
-
 	if (!(tileptr & 0x80000000)) {
 		//printf("dst_mode %i, tile_nr = %i,  tileptr = 0x%llx\n", dst_mode, tile_nr, (long long)tileptr);
 		//fatal("sgi gbe horrible_getputpixel: unexpected non-set high bit of tileptr?\n");
@@ -129,34 +146,34 @@ void horrible_getputpixel(bool put, struct cpu* cpu, struct sgi_re_data* d, int 
 		return;
 	}
 	
-	tileptr &= 0x7fff0000;
-
-	y &= 127;
-	int xofs = (x % tilewidth_in_pixels) * dst_bufdepth;
-
-	{
-		static bool warn = true;
-		if (warn && dst_bufdepth > 1) {
-			fatal("[ sgi_gbe: WARNING! unimplemented dst_bufdepth = %i; only printing this warning once. ]",
-				dst_bufdepth);
-			warn = false;
-		}
-	}
+	tileptr &= ~0x80000000;
 
 	uint8_t buf[4];
 	if (put) {
 		buf[0] = *color;
-		buf[1] = buf[2] = buf[3] = *color;	// TODO: color type!
+		
+		// TODO: color encodings?
+		if (dst_bufdepth == 4) {
+			// RGBA?
+			buf[0] = *color >> 16;
+			buf[1] = *color >> 8;
+			buf[2] = *color;
+			buf[3] = 0xff;
+		}
 
-		cpu->memory_rw(cpu, cpu->mem, tileptr + 512 * y + xofs,
+		cpu->memory_rw(cpu, cpu->mem, tileptr + ofs,
 		    buf, dst_bufdepth,
 		    MEM_WRITE, NO_EXCEPTIONS | PHYSICAL);
 	} else {
-		cpu->memory_rw(cpu, cpu->mem, tileptr + 512 * y + xofs,
+		cpu->memory_rw(cpu, cpu->mem, tileptr + ofs,
 		    buf, dst_bufdepth,
 		    MEM_READ, NO_EXCEPTIONS | PHYSICAL);
 
-		*color = buf[0] + buf[0] * 256;
+		if (dst_bufdepth == 4) {
+			// TODO: non-8-bit
+			*color = (buf[3] << 24) + (buf[2] << 16) + (buf[1] << 8);
+		} else
+			*color = buf[0];
 	}
 }
 
@@ -181,12 +198,7 @@ DEVICE_ACCESS(sgi_re)
 		}
 
 		if (writeflag == MEM_WRITE) {
-			int tlbi = ((relative_addr & 0x1ff) >> 3) & 0xff;
-			if (tlbi & 3) {
-				// TODO: openbsd writes sequences that I didn't
-				// expect...
-				return 1;
-			}
+			int tlbi = ((relative_addr & 0x1ff) >> 1) & 0xff;
 			for (size_t hwi = 0; hwi < len; hwi += sizeof(uint16_t)) {
 				d->re_tlb_a[tlbi] = data[hwi]*256 + data[hwi+1];
 				debug("d->re_tlb_a[%i] = 0x%04x\n", tlbi, d->re_tlb_a[tlbi]);
@@ -203,7 +215,7 @@ DEVICE_ACCESS(sgi_re)
 		}
 
 		if (writeflag == MEM_WRITE) {
-			int tlbi = ((relative_addr & 0x1ff) >> 3) & 0xff;
+			int tlbi = ((relative_addr & 0x1ff) >> 1) & 0xff;
 			for (size_t hwi = 0; hwi < len; hwi += sizeof(uint16_t)) {
 				d->re_tlb_b[tlbi] = data[hwi]*256 + data[hwi+1];
 				debug("d->re_tlb_b[%i] = 0x%04x\n", tlbi, d->re_tlb_b[tlbi]);
@@ -220,7 +232,7 @@ DEVICE_ACCESS(sgi_re)
 		}
 
 		if (writeflag == MEM_WRITE) {
-			int tlbi = ((relative_addr & 0x1ff) >> 3) & 0xff;
+			int tlbi = ((relative_addr & 0x1ff) >> 1) & 0xff;
 			for (size_t hwi = 0; hwi < len; hwi += sizeof(uint16_t)) {
 				d->re_tlb_c[tlbi] = data[hwi]*256 + data[hwi+1];
 				debug("d->re_tlb_c[%i] = 0x%04x\n", tlbi, d->re_tlb_c[tlbi]);
@@ -468,6 +480,8 @@ DEVICE_ACCESS(sgi_de)
 			fatal("[ sgi_de: TODO: non-zero CRIME_DE_SCISSOR: 0x%016llx ]\n", idata);
 		break;
 
+	// TODO: netbsd's Xorg writes 3fff3fff to 0x204c. (?)
+
 	case CRIME_DE_PRIMITIVE:
 		debug("[ sgi_de: %s CRIME_DE_PRIMITIVE: 0x%016llx ]\n",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
@@ -601,19 +615,32 @@ DEVICE_ACCESS(sgi_de)
 		    " x1=%i y1=%i x2=%i y2=%i fg=0x%x bg=0x%x pattern=0x%08x ]\n",
 		    op, x1, y1, x2, y2, fg, bg, pattern);
 
+		// bufdepth = 1, 2, or 4.
+		int dst_bufdepth = 1 << ((dst_mode >> 8) & 3);
+		int src_bufdepth = 1 << ((src_mode >> 8) & 3);
+
+		bool src_is_linear = false;
 		int src_x = -1, src_y = -1;
+		uint32_t step_x = 0;
 		if (drawmode & DE_DRAWMODE_XFER_EN) {
 			uint32_t addr_src = d->de_reg[(CRIME_DE_XFER_ADDR_SRC - 0x2000) / sizeof(uint32_t)];
 			uint32_t strd_src = d->de_reg[(CRIME_DE_XFER_STRD_SRC - 0x2000) / sizeof(uint32_t)];
-			uint32_t step_x = d->de_reg[(CRIME_DE_XFER_STEP_X - 0x2000) / sizeof(uint32_t)];
+			step_x = d->de_reg[(CRIME_DE_XFER_STEP_X - 0x2000) / sizeof(uint32_t)];
 			uint32_t step_y = d->de_reg[(CRIME_DE_XFER_STEP_Y - 0x2000) / sizeof(uint32_t)];
 			uint32_t addr_dst = d->de_reg[(CRIME_DE_XFER_ADDR_DST - 0x2000) / sizeof(uint32_t)];
 			uint32_t strd_dst = d->de_reg[(CRIME_DE_XFER_STRD_DST - 0x2000) / sizeof(uint32_t)];
 
-			src_x = (addr_src >> 16) & 0xfff;
-			src_y = addr_src & 0xfff;
+			src_is_linear = ((src_mode & 0x00001c00) >> 10) > 3;
 
-			if (step_x != 1 || step_y != 1) {
+			if (src_is_linear) {
+				src_x = addr_src;
+				src_y = 0;
+			} else {
+				src_x = (addr_src >> 16) & 0xfff;
+				src_y = addr_src & 0xfff;
+			}
+
+			if (step_x != dst_bufdepth || step_y != 1) {
 				fatal("[ sgi_de: unimplemented XFER addr_src=0x%x strd_src=0x%x step_x=0x%x step_y=0x%x "
 					"addr_dst=0x%x strd_dst=0x%x ]\n",
 					addr_src, strd_src, step_x, step_y, addr_dst, strd_dst);
@@ -621,6 +648,10 @@ DEVICE_ACCESS(sgi_de)
 				exit(1);
 			}
 		}
+
+		// Hack for experimenting with NetBSD/sgimips' Xorg driver...
+		if (!src_is_linear && dst_bufdepth > 1)
+			fg = random();
 
 		if (!(drawmode & DE_DRAWMODE_PLANEMASK)) {
 			printf("!DE_DRAWMODE_PLANEMASK: TODO\n");
@@ -633,10 +664,6 @@ DEVICE_ACCESS(sgi_de)
 		// primitive rendering direction
 		int dx = op & DE_PRIM_RL ? -1 :  1;
 		int dy = op & DE_PRIM_TB ?  1 : -1;
-
-		// bufdepth = 1, 2, or 4.
-		int dst_bufdepth = 1 << ((dst_mode >> 8) & 3);
-		int src_bufdepth = 1 << ((src_mode >> 8) & 3);
 
 		uint16_t saved_src_x = src_x;
 		uint16_t endx = (x2 + dx) & 0x7ff;
@@ -697,7 +724,10 @@ DEVICE_ACCESS(sgi_de)
 				// shifted out, so for now it is a rotate.
 				pattern = (pattern << 1) | (pattern >> 31);
 
-				src_x = (src_x + dx) & 0x7ff;
+				if (src_is_linear)
+					src_x += step_x;
+				else
+					src_x = (src_x + dx) & 0x7ff;
 			}
 			src_y = (src_y + dy) & 0x7ff;
 		}
