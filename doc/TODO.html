@@ -906,10 +906,13 @@ SGI O2:
 
 	netbsd randomly quits 'startx' without showing anything?
 
+	netbsd does this when starting up X:
+		[ sgi_de: unimplemented write to address 0x204c, data=0x000000003fff3fff ]
+		figure out what 0x204c means.
+
 	ps2 8242:
-		better/nicer handling of keymap 1 (netbsd), 2 (openbsd?), 3 (PROM?)
 		mouse (netbsd X, and PROM, and openbsd?)
-		openbsd doesn't detect keyboard/mouse?
+		openbsd (or rather openbsd's X?) doesn't detect keyboard/mouse?
 		irix doesn't detect keyboard/mouse either? maybe.
 
 	PROM in GXemul says "SGI-CRM, Rev B", but my real O2 says Rev C?
@@ -946,8 +949,9 @@ SGI O2:
 		PROM complains during bootup. Non-critical but could be worth implementing.
 
 	audio?
-	
-	video?
+		would be the first audio related thing in gxemul...
+
+	video? probably too complicated.
 
 	write some kind of test program to simplify comparisons of the real O2 to the emulator
 

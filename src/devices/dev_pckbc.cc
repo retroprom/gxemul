@@ -31,9 +31,15 @@
  *
  *  Quick source of good info: http://my.execpc.com/~geezer/osd/kbd/kbd.txt
  *
+ *  Some scancode listings for various types:
+ *	http://www.win.tue.nl/~aeb/linux/kbd/scancodes-1.html
+ *	http://www.computer-engineering.org/ps2keyboard/scancodes3.html
+ *	https://www.win.tue.nl/~aeb/linux/kbd/scancodes-10.html#scancodesets
+ *	http://nixdoc.net/man-pages/irix/man7/pckeyboard.7.html
  *
  *  TODOs:
  *	Finish the rewrite for 8242.
+ *	Mouse input.
  */
 
 #include <stdio.h>
@@ -89,9 +95,9 @@ struct pckbc_data {
 	int		rx_int_enable;
 	int		tx_int_enable;
 
-	int		keyscanning_enabled;
+	int		scanning_enabled[2];
 	int		translation_table;
-	int		state;
+	int		state[2];
 	int		cmdbyte;
 	int		output_byte;
 	int		last_scancode;
@@ -145,169 +151,15 @@ int pckbc_get_code(struct pckbc_data *d, int port)
 
 
 /*
- *  ascii_to_scancodes_type3():
+ *  ascii_to_scancodes_type1():
  *
  *  Conversion from ASCII codes to default (US) keyboard scancodes.
- *  (See http://www.computer-engineering.org/ps2keyboard/scancodes3.html)
- *
- *  For unknown reason, these are listed as "scancode 2" (!) at
- *  https://www.win.tue.nl/~aeb/linux/kbd/scancodes-10.html#scancodesets
- *
- *  NOTE/TODO: This one lists CTRL as 0x11, but it needs to be 0x14 for
- *  OpenBSD to accept it.
- *  http://nixdoc.net/man-pages/irix/man7/pckeyboard.7.html
  */
-static void ascii_to_pc_scancodes_type3(int a, struct pckbc_data *d)
+static void ascii_to_pc_scancodes_type1(int a, struct pckbc_data *d)
 {
 	int old_head;
 	int p = 0;	/*  port  */
 	int shift = 0, ctrl = 0;
-
-	if (a >= 'A' && a <= 'Z') { a += 32; shift = 1; }
-	if ((a >= 1 && a <= 26) && (a!='\n' && a!='\t' && a!='\b' && a!='\r'))
-		{ a += 96; ctrl = 1; }
-	if (a=='!')  {	a = '1'; shift = 1; }
-	if (a=='@')  {	a = '2'; shift = 1; }
-	if (a=='#')  {	a = '3'; shift = 1; }
-	if (a=='$')  {	a = '4'; shift = 1; }
-	if (a=='%')  {	a = '5'; shift = 1; }
-	if (a=='^')  {	a = '6'; shift = 1; }
-	if (a=='&')  {	a = '7'; shift = 1; }
-	if (a=='*')  {	a = '8'; shift = 1; }
-	if (a=='(')  {	a = '9'; shift = 1; }
-	if (a==')')  {	a = '0'; shift = 1; }
-	if (a=='_')  {	a = '-'; shift = 1; }
-	if (a=='+')  {	a = '='; shift = 1; }
-	if (a=='{')  {	a = '['; shift = 1; }
-	if (a=='}')  {	a = ']'; shift = 1; }
-	if (a==':')  {	a = ';'; shift = 1; }
-	if (a=='"')  {	a = '\''; shift = 1; }
-	if (a=='|')  {	a = '\\'; shift = 1; }
-	if (a=='<')  {	a = ','; shift = 1; }
-	if (a=='>')  {	a = '.'; shift = 1; }
-	if (a=='?')  {	a = '/'; shift = 1; }
-	if (a=='~')  {	a = '`'; shift = 1; }
-
-	if (shift)
-		pckbc_add_code(d, 0x12, p);
-	if (ctrl)
-		pckbc_add_code(d, 0x14, p);	// OpenBSD/sgi wants 0x14; PROM wants 0x11? TODO
-
-	/*
-	 *  Note: The ugly hack used to add release codes for all of these
-	 *  keys is as follows:  we remember how much of the kbd buf that
-	 *  is in use here, before we add any scancode. After we've added
-	 *  one or more scancodes (ie an optional shift + another key)
-	 *  then we add 0xf0 + the last scancode _if_ the kbd buf was altered.
-	 */
-
-	old_head = d->head[p];
-
-	if (a==27)	pckbc_add_code(d, 0x08, p);
-
-	if (a=='1')	pckbc_add_code(d, 0x16, p);
-	if (a=='2')	pckbc_add_code(d, 0x1e, p);
-	if (a=='3')	pckbc_add_code(d, 0x26, p);
-	if (a=='4')	pckbc_add_code(d, 0x25, p);
-	if (a=='5')	pckbc_add_code(d, 0x2e, p);
-	if (a=='6')	pckbc_add_code(d, 0x36, p);
-	if (a=='7')	pckbc_add_code(d, 0x3d, p);
-	if (a=='8')	pckbc_add_code(d, 0x3e, p);
-	if (a=='9')	pckbc_add_code(d, 0x46, p);
-	if (a=='0')	pckbc_add_code(d, 0x45, p);
-	if (a=='-')	pckbc_add_code(d, 0x4e, p);
-	if (a=='=')	pckbc_add_code(d, 0x55, p);
-
-	if (a=='\b')	pckbc_add_code(d, 0x66, p);
-
-	if (a=='\t')	pckbc_add_code(d, 0x0d, p);
-	if (a=='q')	pckbc_add_code(d, 0x15, p);
-	if (a=='w')	pckbc_add_code(d, 0x1d, p);
-	if (a=='e')	pckbc_add_code(d, 0x24, p);
-	if (a=='r')	pckbc_add_code(d, 0x2d, p);
-	if (a=='t')	pckbc_add_code(d, 0x2c, p);
-	if (a=='y')	pckbc_add_code(d, 0x35, p);
-	if (a=='u')	pckbc_add_code(d, 0x3c, p);
-	if (a=='i')	pckbc_add_code(d, 0x43, p);
-	if (a=='o')	pckbc_add_code(d, 0x44, p);
-	if (a=='p')	pckbc_add_code(d, 0x4d, p);
-
-	if (a=='[')	pckbc_add_code(d, 0x54, p);
-	if (a==']')	pckbc_add_code(d, 0x5b, p);
-
-	if (a=='\n' || a=='\r')	pckbc_add_code(d, 0x5a, p);
-
-	if (a=='a')	pckbc_add_code(d, 0x1c, p);
-	if (a=='s')	pckbc_add_code(d, 0x1b, p);
-	if (a=='d')	pckbc_add_code(d, 0x23, p);
-	if (a=='f')	pckbc_add_code(d, 0x2b, p);
-	if (a=='g')	pckbc_add_code(d, 0x34, p);
-	if (a=='h')	pckbc_add_code(d, 0x33, p);
-	if (a=='j')	pckbc_add_code(d, 0x3b, p);
-	if (a=='k')	pckbc_add_code(d, 0x42, p);
-	if (a=='l')	pckbc_add_code(d, 0x4b, p);
-
-	if (a==';')	pckbc_add_code(d, 0x4c, p);
-	if (a=='\'')	pckbc_add_code(d, 0x52, p);
-	if (a=='`')	pckbc_add_code(d, 0x0e, p);	// ?
-	if (a=='\\')	pckbc_add_code(d, 0x5d, p);	// 0x5c?
-
-	if (a=='z')	pckbc_add_code(d, 0x1a, p);
-	if (a=='x')	pckbc_add_code(d, 0x22, p);
-	if (a=='c')	pckbc_add_code(d, 0x21, p);
-	if (a=='v')	pckbc_add_code(d, 0x2a, p);
-	if (a=='b')	pckbc_add_code(d, 0x32, p);
-	if (a=='n')	pckbc_add_code(d, 0x31, p);
-	if (a=='m')	pckbc_add_code(d, 0x3a, p);
-
-	if (a==',')	pckbc_add_code(d, 0x41, p);
-	if (a=='.')	pckbc_add_code(d, 0x49, p);
-	if (a=='/')	pckbc_add_code(d, 0x4a, p);
-
-	if (a==' ')	pckbc_add_code(d, 0x29, p);
-
-	/*  Add release code, if a key was pressed:  */
-	if (d->head[p] != old_head) {
-		int code = d->key_queue[p][d->head[p]];
-		pckbc_add_code(d, 0xf0, p);
-		pckbc_add_code(d, code, p);
-	}
-
-	/*  Release shift and ctrl:  */
-	if (shift) {
-		pckbc_add_code(d, 0xf0, p);
-		pckbc_add_code(d, 0x12, p);
-	}
-	if (ctrl) {
-		pckbc_add_code(d, 0xf0, p);
-		pckbc_add_code(d, 0x11, p);	// or 0x11? TODO
-	}
-}
-
-
-/*
- *  ascii_to_scancodes_type2():
- *
- *  Conversion from ASCII codes to default (US) keyboard scancodes.
- *  (See http://www.win.tue.nl/~aeb/linux/kbd/scancodes-1.html)
- *
- *  NOTE/TODO: This seems to be type 2, not type 1.
- */
-static void ascii_to_pc_scancodes_type2(int a, struct pckbc_data *d)
-{
-	int old_head;
-	int p = 0;	/*  port  */
-	int shift = 0, ctrl = 0;
-
-	if (d->translation_table == 3) {
-		ascii_to_pc_scancodes_type3(a, d);
-		return;
-	}
-
-	if (d->translation_table != 2) {
-		fatal("[ ascii_to_pc_scancodes: unimplemented type! ]\n");
-		return;
-	}
 
 	if (a >= 'A' && a <= 'Z') { a += 32; shift = 1; }
 	if ((a >= 1 && a <= 26) && (a!='\n' && a!='\t' && a!='\b' && a!='\r'))
@@ -448,15 +300,317 @@ static void ascii_to_pc_scancodes_type2(int a, struct pckbc_data *d)
 }
 
 
+/*
+ *  ascii_to_scancodes_type2():
+ *
+ *  Conversion from ASCII codes to default (US) keyboard scancodes.
+ */
+static void ascii_to_pc_scancodes_type2(int a, struct pckbc_data *d)
+{
+	int old_head;
+	int p = 0;	/*  port  */
+	int shift = 0, ctrl = 0;
+
+	if (a >= 'A' && a <= 'Z') { a += 32; shift = 1; }
+	if ((a >= 1 && a <= 26) && (a!='\n' && a!='\t' && a!='\b' && a!='\r'))
+		{ a += 96; ctrl = 1; }
+	if (a=='!')  {	a = '1'; shift = 1; }
+	if (a=='@')  {	a = '2'; shift = 1; }
+	if (a=='#')  {	a = '3'; shift = 1; }
+	if (a=='$')  {	a = '4'; shift = 1; }
+	if (a=='%')  {	a = '5'; shift = 1; }
+	if (a=='^')  {	a = '6'; shift = 1; }
+	if (a=='&')  {	a = '7'; shift = 1; }
+	if (a=='*')  {	a = '8'; shift = 1; }
+	if (a=='(')  {	a = '9'; shift = 1; }
+	if (a==')')  {	a = '0'; shift = 1; }
+	if (a=='_')  {	a = '-'; shift = 1; }
+	if (a=='+')  {	a = '='; shift = 1; }
+	if (a=='{')  {	a = '['; shift = 1; }
+	if (a=='}')  {	a = ']'; shift = 1; }
+	if (a==':')  {	a = ';'; shift = 1; }
+	if (a=='"')  {	a = '\''; shift = 1; }
+	if (a=='|')  {	a = '\\'; shift = 1; }
+	if (a=='<')  {	a = ','; shift = 1; }
+	if (a=='>')  {	a = '.'; shift = 1; }
+	if (a=='?')  {	a = '/'; shift = 1; }
+	if (a=='~')  {	a = '`'; shift = 1; }
+
+	if (shift)
+		pckbc_add_code(d, 0x12, p);
+	if (ctrl)
+		pckbc_add_code(d, 0x14, p);
+
+	/*
+	 *  Note: The ugly hack used to add release codes for all of these
+	 *  keys is as follows:  we remember how much of the kbd buf that
+	 *  is in use here, before we add any scancode. After we've added
+	 *  one or more scancodes (ie an optional shift + another key)
+	 *  then we add 0xf0 + the last scancode _if_ the kbd buf was altered.
+	 */
+
+	old_head = d->head[p];
+
+	if (a==27)	pckbc_add_code(d, 0x76, p);
+
+	if (a=='1')	pckbc_add_code(d, 0x16, p);
+	if (a=='2')	pckbc_add_code(d, 0x1e, p);
+	if (a=='3')	pckbc_add_code(d, 0x26, p);
+	if (a=='4')	pckbc_add_code(d, 0x25, p);
+	if (a=='5')	pckbc_add_code(d, 0x2e, p);
+	if (a=='6')	pckbc_add_code(d, 0x36, p);
+	if (a=='7')	pckbc_add_code(d, 0x3d, p);
+	if (a=='8')	pckbc_add_code(d, 0x3e, p);
+	if (a=='9')	pckbc_add_code(d, 0x46, p);
+	if (a=='0')	pckbc_add_code(d, 0x45, p);
+	if (a=='-')	pckbc_add_code(d, 0x4e, p);
+	if (a=='=')	pckbc_add_code(d, 0x55, p);
+
+	if (a=='\b')	pckbc_add_code(d, 0x66, p);
+
+	if (a=='\t')	pckbc_add_code(d, 0x0d, p);
+	if (a=='q')	pckbc_add_code(d, 0x15, p);
+	if (a=='w')	pckbc_add_code(d, 0x1d, p);
+	if (a=='e')	pckbc_add_code(d, 0x24, p);
+	if (a=='r')	pckbc_add_code(d, 0x2d, p);
+	if (a=='t')	pckbc_add_code(d, 0x2c, p);
+	if (a=='y')	pckbc_add_code(d, 0x35, p);
+	if (a=='u')	pckbc_add_code(d, 0x3c, p);
+	if (a=='i')	pckbc_add_code(d, 0x43, p);
+	if (a=='o')	pckbc_add_code(d, 0x44, p);
+	if (a=='p')	pckbc_add_code(d, 0x4d, p);
+
+	if (a=='[')	pckbc_add_code(d, 0x54, p);
+	if (a==']')	pckbc_add_code(d, 0x5b, p);
+
+	if (a=='\n' || a=='\r')	pckbc_add_code(d, 0x5a, p);
+
+	if (a=='a')	pckbc_add_code(d, 0x1c, p);
+	if (a=='s')	pckbc_add_code(d, 0x1b, p);
+	if (a=='d')	pckbc_add_code(d, 0x23, p);
+	if (a=='f')	pckbc_add_code(d, 0x2b, p);
+	if (a=='g')	pckbc_add_code(d, 0x34, p);
+	if (a=='h')	pckbc_add_code(d, 0x33, p);
+	if (a=='j')	pckbc_add_code(d, 0x3b, p);
+	if (a=='k')	pckbc_add_code(d, 0x42, p);
+	if (a=='l')	pckbc_add_code(d, 0x4b, p);
+
+	if (a==';')	pckbc_add_code(d, 0x4c, p);
+	if (a=='\'')	pckbc_add_code(d, 0x52, p);
+	if (a=='`')	pckbc_add_code(d, 0x0e, p);	// ?
+	if (a=='\\')	pckbc_add_code(d, 0x5d, p);	// 0x5c?
+
+	if (a=='z')	pckbc_add_code(d, 0x1a, p);
+	if (a=='x')	pckbc_add_code(d, 0x22, p);
+	if (a=='c')	pckbc_add_code(d, 0x21, p);
+	if (a=='v')	pckbc_add_code(d, 0x2a, p);
+	if (a=='b')	pckbc_add_code(d, 0x32, p);
+	if (a=='n')	pckbc_add_code(d, 0x31, p);
+	if (a=='m')	pckbc_add_code(d, 0x3a, p);
+
+	if (a==',')	pckbc_add_code(d, 0x41, p);
+	if (a=='.')	pckbc_add_code(d, 0x49, p);
+	if (a=='/')	pckbc_add_code(d, 0x4a, p);
+
+	if (a==' ')	pckbc_add_code(d, 0x29, p);
+
+	/*  Add release code, if a key was pressed:  */
+	if (d->head[p] != old_head) {
+		int code = d->key_queue[p][d->head[p]];
+		pckbc_add_code(d, 0xf0, p);
+		pckbc_add_code(d, code, p);
+	}
+
+	/*  Release shift and ctrl:  */
+	if (shift) {
+		pckbc_add_code(d, 0xf0, p);
+		pckbc_add_code(d, 0x12, p);
+	}
+	if (ctrl) {
+		pckbc_add_code(d, 0xf0, p);
+		pckbc_add_code(d, 0x14, p);
+	}
+}
+
+
+/*
+ *  ascii_to_scancodes_type3():
+ *
+ *  Conversion from ASCII codes to default (US) keyboard scancodes.
+ */
+static void ascii_to_pc_scancodes_type3(int a, struct pckbc_data *d)
+{
+	int old_head;
+	int p = 0;	/*  port  */
+	int shift = 0, ctrl = 0;
+
+	if (a >= 'A' && a <= 'Z') { a += 32; shift = 1; }
+	if ((a >= 1 && a <= 26) && (a!='\n' && a!='\t' && a!='\b' && a!='\r'))
+		{ a += 96; ctrl = 1; }
+	if (a=='!')  {	a = '1'; shift = 1; }
+	if (a=='@')  {	a = '2'; shift = 1; }
+	if (a=='#')  {	a = '3'; shift = 1; }
+	if (a=='$')  {	a = '4'; shift = 1; }
+	if (a=='%')  {	a = '5'; shift = 1; }
+	if (a=='^')  {	a = '6'; shift = 1; }
+	if (a=='&')  {	a = '7'; shift = 1; }
+	if (a=='*')  {	a = '8'; shift = 1; }
+	if (a=='(')  {	a = '9'; shift = 1; }
+	if (a==')')  {	a = '0'; shift = 1; }
+	if (a=='_')  {	a = '-'; shift = 1; }
+	if (a=='+')  {	a = '='; shift = 1; }
+	if (a=='{')  {	a = '['; shift = 1; }
+	if (a=='}')  {	a = ']'; shift = 1; }
+	if (a==':')  {	a = ';'; shift = 1; }
+	if (a=='"')  {	a = '\''; shift = 1; }
+	if (a=='|')  {	a = '\\'; shift = 1; }
+	if (a=='<')  {	a = ','; shift = 1; }
+	if (a=='>')  {	a = '.'; shift = 1; }
+	if (a=='?')  {	a = '/'; shift = 1; }
+	if (a=='~')  {	a = '`'; shift = 1; }
+
+	if (shift)
+		pckbc_add_code(d, 0x12, p);
+	if (ctrl)
+		pckbc_add_code(d, 0x11, p);
+
+	/*
+	 *  Note: The ugly hack used to add release codes for all of these
+	 *  keys is as follows:  we remember how much of the kbd buf that
+	 *  is in use here, before we add any scancode. After we've added
+	 *  one or more scancodes (ie an optional shift + another key)
+	 *  then we add 0xf0 + the last scancode _if_ the kbd buf was altered.
+	 */
+
+	old_head = d->head[p];
+
+	if (a==27)	pckbc_add_code(d, 0x08, p);
+
+	if (a=='1')	pckbc_add_code(d, 0x16, p);
+	if (a=='2')	pckbc_add_code(d, 0x1e, p);
+	if (a=='3')	pckbc_add_code(d, 0x26, p);
+	if (a=='4')	pckbc_add_code(d, 0x25, p);
+	if (a=='5')	pckbc_add_code(d, 0x2e, p);
+	if (a=='6')	pckbc_add_code(d, 0x36, p);
+	if (a=='7')	pckbc_add_code(d, 0x3d, p);
+	if (a=='8')	pckbc_add_code(d, 0x3e, p);
+	if (a=='9')	pckbc_add_code(d, 0x46, p);
+	if (a=='0')	pckbc_add_code(d, 0x45, p);
+	if (a=='-')	pckbc_add_code(d, 0x4e, p);
+	if (a=='=')	pckbc_add_code(d, 0x55, p);
+
+	if (a=='\b')	pckbc_add_code(d, 0x66, p);
+
+	if (a=='\t')	pckbc_add_code(d, 0x0d, p);
+	if (a=='q')	pckbc_add_code(d, 0x15, p);
+	if (a=='w')	pckbc_add_code(d, 0x1d, p);
+	if (a=='e')	pckbc_add_code(d, 0x24, p);
+	if (a=='r')	pckbc_add_code(d, 0x2d, p);
+	if (a=='t')	pckbc_add_code(d, 0x2c, p);
+	if (a=='y')	pckbc_add_code(d, 0x35, p);
+	if (a=='u')	pckbc_add_code(d, 0x3c, p);
+	if (a=='i')	pckbc_add_code(d, 0x43, p);
+	if (a=='o')	pckbc_add_code(d, 0x44, p);
+	if (a=='p')	pckbc_add_code(d, 0x4d, p);
+
+	if (a=='[')	pckbc_add_code(d, 0x54, p);
+	if (a==']')	pckbc_add_code(d, 0x5b, p);
+
+	if (a=='\n' || a=='\r')	pckbc_add_code(d, 0x5a, p);
+
+	if (a=='a')	pckbc_add_code(d, 0x1c, p);
+	if (a=='s')	pckbc_add_code(d, 0x1b, p);
+	if (a=='d')	pckbc_add_code(d, 0x23, p);
+	if (a=='f')	pckbc_add_code(d, 0x2b, p);
+	if (a=='g')	pckbc_add_code(d, 0x34, p);
+	if (a=='h')	pckbc_add_code(d, 0x33, p);
+	if (a=='j')	pckbc_add_code(d, 0x3b, p);
+	if (a=='k')	pckbc_add_code(d, 0x42, p);
+	if (a=='l')	pckbc_add_code(d, 0x4b, p);
+
+	if (a==';')	pckbc_add_code(d, 0x4c, p);
+	if (a=='\'')	pckbc_add_code(d, 0x52, p);
+	if (a=='`')	pckbc_add_code(d, 0x0e, p);	// ?
+	if (a=='\\')	pckbc_add_code(d, 0x5d, p);	// 0x5c?
+
+	if (a=='z')	pckbc_add_code(d, 0x1a, p);
+	if (a=='x')	pckbc_add_code(d, 0x22, p);
+	if (a=='c')	pckbc_add_code(d, 0x21, p);
+	if (a=='v')	pckbc_add_code(d, 0x2a, p);
+	if (a=='b')	pckbc_add_code(d, 0x32, p);
+	if (a=='n')	pckbc_add_code(d, 0x31, p);
+	if (a=='m')	pckbc_add_code(d, 0x3a, p);
+
+	if (a==',')	pckbc_add_code(d, 0x41, p);
+	if (a=='.')	pckbc_add_code(d, 0x49, p);
+	if (a=='/')	pckbc_add_code(d, 0x4a, p);
+
+	if (a==' ')	pckbc_add_code(d, 0x29, p);
+
+	/*  Add release code, if a key was pressed:  */
+	if (d->head[p] != old_head) {
+		int code = d->key_queue[p][d->head[p]];
+		pckbc_add_code(d, 0xf0, p);
+		pckbc_add_code(d, code, p);
+	}
+
+	/*  Release shift and ctrl:  */
+	if (shift) {
+		pckbc_add_code(d, 0xf0, p);
+		pckbc_add_code(d, 0x12, p);
+	}
+	if (ctrl) {
+		pckbc_add_code(d, 0xf0, p);
+		pckbc_add_code(d, 0x11, p);
+	}
+}
+
+
 DEVICE_TICK(pckbc)
 {
 	struct pckbc_data *d = (struct pckbc_data *) extra;
 	int port_nr, ch, ints_enabled;
 
-	if (d->in_use && console_charavail(d->console_handle)) {
-		ch = console_readchar(d->console_handle);
-		if (ch >= 0)
-			ascii_to_pc_scancodes_type2(ch, d);
+	if (d->in_use) {
+		while (console_charavail(d->console_handle)) {
+			ch = console_readchar(d->console_handle);
+			if (ch >= 0) {
+				switch (d->translation_table) {
+				case 1:	ascii_to_pc_scancodes_type1(ch, d);
+					break;
+				case 2:	ascii_to_pc_scancodes_type2(ch, d);
+					break;
+				case 3:	ascii_to_pc_scancodes_type3(ch, d);
+					break;
+				default:fatal("[ pckbc: unimplemented translation table type %i ]\n",
+						d->translation_table);
+				}
+			}
+		}
+	}
+
+	// TODO: Actual mouse movement.
+	if (d->state[1] == STATE_NORMAL && d->scanning_enabled[1] && (random() & 1023)==0) {
+		// See "The default protocol" at
+		// https://www.win.tue.nl/~aeb/linux/kbd/scancodes-13.html
+		int r = random() & 3;
+		if (r == 0) {
+			pckbc_add_code(d, 0x00, 1);
+			pckbc_add_code(d, 0x01, 1);
+			pckbc_add_code(d, 0x00, 1);
+		} else if (r == 1) {
+			pckbc_add_code(d, 0x10, 1);
+			pckbc_add_code(d, 0xff, 1);
+			pckbc_add_code(d, 0x00, 1);
+		} else if (r == 2) {
+			pckbc_add_code(d, 0x00, 1);
+			pckbc_add_code(d, 0x00, 1);
+			pckbc_add_code(d, 0x01, 1);
+		} else if (r == 3) {
+			pckbc_add_code(d, 0x20, 1);
+			pckbc_add_code(d, 0x00, 1);
+			pckbc_add_code(d, 0xff, 1);
+		}
 	}
 
 	ints_enabled = d->rx_int_enable;
@@ -467,9 +621,10 @@ DEVICE_TICK(pckbc)
 		ints_enabled = 0;
 
 	for (port_nr=0; port_nr<2; port_nr++) {
-		/*  Cause receive interrupt, if there's something in the
-		    receive buffer: (Otherwise deassert the interrupt.)  */
-
+		/*
+		 *  Cause receive interrupt, if there's something in the
+		 *  receive buffer: (Otherwise deassert the interrupt.)
+		 */
 		if (d->head[port_nr] != d->tail[port_nr] && ints_enabled) {
 			debug("[ pckbc: interrupt port %i ]\n", port_nr);
 			if (!d->currently_asserted[port_nr]) {
@@ -501,71 +656,72 @@ DEVICE_TICK(pckbc)
  */
 static void dev_pckbc_command(struct pckbc_data *d, int port_nr)
 {
-	int cmd = d->reg[PC_CMD];
+	int cmd = d->type == PCKBC_8242 ? d->reg[PS2_TXBUF] : d->reg[PC_CMD];
 
-	if (d->type == PCKBC_8242)
-		cmd = d->reg[PS2_TXBUF];
+	debug("[ pckbc: (port %i) command 0x%02x ]\n", port_nr, cmd);
 
-	// fatal("[ pckbc: (port %i) command 0x%02x ]\n", port_nr, cmd);
-
-	if (d->state == STATE_WAITING_FOR_TRANSLTABLE) {
-		fatal("[ pckbc: (port %i) switching to translation table "
+	if (d->state[port_nr] == STATE_WAITING_FOR_TRANSLTABLE) {
+		debug("[ pckbc: (port %i) switching to translation table "
 		    "0x%02x ]\n", port_nr, cmd);
+
 		switch (cmd) {
-		case 1:	// Horrible hack: NetBSD/sgimips wants "type 1",
-			// which is implemented as type 2 here.
-			if (d->type == PCKBC_8242) {
-				d->translation_table = 2;
-			}
+		case 0:	// TODO. "Writing 0xf0 followed by 0 queries the mode,
+			//  resulting in a scancode byte 43, 41 or 3f from the
+			//  keyboard." according to
+			// https://www.win.tue.nl/~aeb/linux/kbd/scancodes-10.html#scancodesets
+			fatal("[ pckbc: TODO: return current translation table ]\n");
 			break;
-		case 2:	// Horrible hack: OpenBSD/sgi wants "type 2",
-			// which is implemented as type 3 here:
-			if (d->type == PCKBC_8242) {
-				d->translation_table = 3;
-			}
-			break;
+		case 1:	// Fall-through.
+		case 2:	// Fall-through.
 		case 3:	d->translation_table = cmd;
 			break;
 		default:fatal("[ pckbc: (port %i) translation table "
 			    "0x%02x is NOT YET IMPLEMENTED ]\n",
 			    port_nr, cmd);
 		}
+
+		// Hack for OpenBSD/cats and NetBSD/cats:
+		if (d->type != PCKBC_8242) {
+			fatal("[ pckbc: TODO: hack for non-8242. figure out how to deal with this ]\n");
+			d->translation_table = 1;
+		}
+
 		pckbc_add_code(d, KBR_ACK, port_nr);
-		d->state = STATE_NORMAL;
+		d->state[port_nr] = STATE_NORMAL;
 		return;
 	}
 
-	if (d->state == STATE_WAITING_FOR_RATE) {
-		debug("[ pckbc: (port %i) received Typematic Rate data: "
+	if (d->state[port_nr] == STATE_WAITING_FOR_RATE) {
+		fatal("[ pckbc: (port %i) received Typematic/Sample Rate data: "
 		    "0x%02x ]\n", port_nr, cmd);
 		pckbc_add_code(d, KBR_ACK, port_nr);
-		d->state = STATE_NORMAL;
+		d->state[port_nr] = STATE_NORMAL;
 		return;
 	}
 
-	if (d->state == STATE_WAITING_FOR_ONEKEY_MB) {
+	if (d->state[port_nr] == STATE_WAITING_FOR_ONEKEY_MB) {
 		debug("[ pckbc: (port %i) received One-key make/break data: "
 		    "0x%02x ]\n", port_nr, cmd);
 		pckbc_add_code(d, KBR_ACK, port_nr);
-		d->state = STATE_NORMAL;
+		d->state[port_nr] = STATE_NORMAL;
 		return;
 	}
 
-	if (d->state == STATE_WAITING_FOR_AUX) {
+	if (d->state[port_nr] == STATE_WAITING_FOR_AUX) {
 		debug("[ pckbc: (port %i) received aux data: "
 		    "0x%02x ]\n", port_nr, cmd);
 		/*  Echo back.  */
 		pckbc_add_code(d, cmd, port_nr);
-		d->state = STATE_NORMAL;
+		d->state[port_nr] = STATE_NORMAL;
 		return;
 	}
 
-	if (d->state == STATE_WAITING_FOR_AUX_OUT) {
+	if (d->state[port_nr] == STATE_WAITING_FOR_AUX_OUT) {
 		debug("[ pckbc: (port %i) received aux out data: "
 		    "0x%02x ]\n", port_nr, cmd);
 		/*  Echo back.  */
 		pckbc_add_code(d, cmd, port_nr);
-		d->state = STATE_NORMAL;
+		d->state[port_nr] = STATE_NORMAL;
 		return;
 	}
 
@@ -584,18 +740,22 @@ static void dev_pckbc_command(struct pckbc_data *d, int port_nr)
 		pckbc_add_code(d, KBR_ACK, port_nr);
 		break;
 
+	case KBC_ECHO:
+		pckbc_add_code(d, KBR_ECHO, port_nr);
+		break;
+
 	case KBC_SETTABLE:
 		pckbc_add_code(d, KBR_ACK, port_nr);
-		d->state = STATE_WAITING_FOR_TRANSLTABLE;
+		d->state[port_nr] = STATE_WAITING_FOR_TRANSLTABLE;
 		break;
 
 	case KBC_ENABLE:
-		d->keyscanning_enabled = 1;
+		d->scanning_enabled[port_nr] = 1;
 		pckbc_add_code(d, KBR_ACK, port_nr);
 		break;
 
 	case KBC_DISABLE:
-		d->keyscanning_enabled = 0;
+		d->scanning_enabled[port_nr] = 0;
 		pckbc_add_code(d, KBR_ACK, port_nr);
 		break;
 
@@ -611,9 +771,12 @@ static void dev_pckbc_command(struct pckbc_data *d, int port_nr)
 		break;
 
 	case KBC_TYPEMATIC:
-		/*  Set typematic (auto-repeat) delay/speed:  */
+		/*
+		 *  Keyboard: Set typematic (auto-repeat) delay/speed.
+		 *  PS/2 mouse: Set sample ratre.
+		 */
 		pckbc_add_code(d, KBR_ACK, port_nr);
-		d->state = STATE_WAITING_FOR_RATE;
+		d->state[port_nr] = STATE_WAITING_FOR_RATE;
 		break;
 
 	case KBC_ALLKEYS_TMB:
@@ -624,7 +787,7 @@ static void dev_pckbc_command(struct pckbc_data *d, int port_nr)
 	case KBC_ONEKEY_MB:
 		/*  "Make one key typematic/make/break"  */
 		pckbc_add_code(d, KBR_ACK, port_nr);
-		d->state = STATE_WAITING_FOR_ONEKEY_MB;
+		d->state[port_nr] = STATE_WAITING_FOR_ONEKEY_MB;
 		break;
 
 	case KBC_RESET:
@@ -635,12 +798,12 @@ static void dev_pckbc_command(struct pckbc_data *d, int port_nr)
 		 *  prints warnings about spurious interrupts.
 		 */
 		// d->rx_int_enable = 0;
+		d->scanning_enabled[port_nr] = 0;
 		break;
 
 	default:
-		fatal("[ pckbc: (port %i) UNIMPLEMENTED 8048 command"
-		    " 0x%02x ]\n", port_nr, cmd);
-		// exit(1);
+		fatal("[ pckbc: UNIMPLEMENTED command"
+		    " 0x%02x (port %i) ]\n", cmd, port_nr);
 	}
 }
 
@@ -708,14 +871,14 @@ if (x&1)
 
 	case 0:		/*  data  */
 		if (writeflag==MEM_READ) {
-			switch (d->state) {
+			switch (d->state[port_nr]) {
 			case STATE_RDCMDBYTE:
 				odata = d->cmdbyte;
-				d->state = STATE_NORMAL;
+				d->state[port_nr] = STATE_NORMAL;
 				break;
 			case STATE_RDOUTPUT:
 				odata = d->output_byte;
-				d->state = STATE_NORMAL;
+				d->state[port_nr] = STATE_NORMAL;
 				break;
 			default:if (d->head[0] != d->tail[0]) {
 					odata = pckbc_get_code(d, 0);
@@ -733,16 +896,16 @@ if (x&1)
 				debug(" %02x", data[i]);
 			debug(" ]\n");
 
-			switch (d->state) {
+			switch (d->state[port_nr]) {
 			case STATE_LDCMDBYTE:
 				d->cmdbyte = idata;
 				d->rx_int_enable = d->cmdbyte &
 				    (KC8_KENABLE | KC8_MENABLE) ? 1 : 0;
-				d->state = STATE_NORMAL;
+				d->state[port_nr] = STATE_NORMAL;
 				break;
 			case STATE_LDOUTPUT:
 				d->output_byte = idata;
-				d->state = STATE_NORMAL;
+				d->state[port_nr] = STATE_NORMAL;
 				break;
 			default:d->reg[relative_addr] = idata;
 				dev_pckbc_command(d, port_nr);
@@ -757,11 +920,11 @@ if (x&1)
 
 			/*  "Data in buffer" bit  */
 			if (d->head[0] != d->tail[0] ||
-			    d->state == STATE_RDCMDBYTE ||
-			    d->state == STATE_RDOUTPUT)
+			    d->state[port_nr] == STATE_RDCMDBYTE ||
+			    d->state[port_nr] == STATE_RDOUTPUT)
 				odata |= KBS_DIB;
 
-			if (d->state == STATE_RDCMDBYTE)
+			if (d->state[port_nr] == STATE_RDCMDBYTE)
 				odata |= KBS_OCMD;
 
 			odata |= KBS_NOSEC;
@@ -781,10 +944,10 @@ if (x&1)
 				    these. NetBSD sends these.  */
 				break;
 			case K_RDCMDBYTE:
-				d->state = STATE_RDCMDBYTE;
+				d->state[port_nr] = STATE_RDCMDBYTE;
 				break;
 			case K_LDCMDBYTE:
-				d->state = STATE_LDCMDBYTE;
+				d->state[port_nr] = STATE_LDCMDBYTE;
 				break;
 			case 0xa7:
 				d->cmdbyte |= KC8_MDISABLE;
@@ -808,24 +971,24 @@ if (x&1)
 				d->cmdbyte &= ~KC8_KDISABLE;
 				break;
 			case 0xd0:
-				d->state = STATE_RDOUTPUT;
+				d->state[port_nr] = STATE_RDOUTPUT;
 				break;
 			case 0xd1:
-				d->state = STATE_LDOUTPUT;
+				d->state[port_nr] = STATE_LDOUTPUT;
 				break;
 			case 0xd3:	/*  write to auxiliary device
 					    output buffer  */
 				debug("[ pckbc: CONTROL 0xd3, TODO ]\n");
-				d->state = STATE_WAITING_FOR_AUX_OUT;
+				d->state[port_nr] = STATE_WAITING_FOR_AUX_OUT;
 				break;
 			case 0xd4:	/*  write to auxiliary port  */
 				debug("[ pckbc: CONTROL 0xd4, TODO ]\n");
-				d->state = STATE_WAITING_FOR_AUX;
+				d->state[port_nr] = STATE_WAITING_FOR_AUX;
 				break;
 			default:
 				fatal("[ pckbc: unknown CONTROL 0x%x ]\n",
 				    (int)idata);
-				d->state = STATE_NORMAL;
+				d->state[port_nr] = STATE_NORMAL;
 			}
 		}
 		break;
@@ -853,7 +1016,7 @@ if (x&1)
 		if (writeflag==MEM_READ) {
 			/*  TODO: What should be returned if no data 
 			    is available?  */
-			odata = random() & 0xff;
+			odata = 0;
 			if (d->head[port_nr] != d->tail[port_nr])
 				odata = pckbc_get_code(d, port_nr);
 			debug("[ pckbc: read from port %i, PS2_RXBUF: "
@@ -960,6 +1123,10 @@ int dev_pckbc_init(struct machine *machine, struct memory *mem,
 	d->pc_style_flag     = pc_style_flag;
 	d->rx_int_enable     = 1;
 	d->output_byte       = 0x02;	/*  A20 enable on PCs  */
+
+	// Default is ENABLE keyboard but DISABLE mouse port:
+	d->scanning_enabled[0] = 1;
+	d->scanning_enabled[1] = 0;
 
 	d->console_handle = console_start_slave_inputonly(
 	    machine, "pckbc", d->in_use);

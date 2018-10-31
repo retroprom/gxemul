@@ -4793,4 +4793,5 @@ Changelog for GXemul:
 20181030	Updating NetBSD/sgimips guest OS instructions to version 8.0.
 		Some progress on the hw accelerated graphics operations used
 		by NetBSD/sgimips' Xorg driver.
-
+20181031	Better separation of pckbc scancode translation tables 1, 2,
+		and 3, and beginning to play around with PS/2 mouse movement.
