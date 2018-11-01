@@ -35,6 +35,12 @@
  *  TODO:
  *
  *	x)  tx and rx interrupts/ring/slot stuff
+ *
+ *  A note about word length for reads/writes:
+ *
+ *	The PROM uses (at least) 32-bit reads/writes
+ *	NetBSD uses (at least) 64-bit reads/writes
+ *	OpenBSD uses both 32-bit and 64-bit reads/writes
  */
 
 #include <stdio.h>
@@ -55,6 +61,7 @@
 #include "thirdparty/if_mecreg.h"
 
 // #define debug fatal
+// #define MEC_DEBUG
 
 #define	MEC_TICK_SHIFT		14
 
@@ -395,45 +402,64 @@ DEVICE_ACCESS(sgi_mec)
 	uint64_t idata = 0, odata = 0;
 	int regnr;
 
+	uint64_t old_int_status = d->reg[MEC_INT_STATUS / sizeof(uint64_t)];
+	uint64_t old_tx_ring_ptr = d->reg[MEC_TX_RING_PTR / sizeof(uint64_t)];
+
 	if (writeflag == MEM_WRITE)
 		idata = memory_readmax64(cpu, data, len);
 
 	regnr = relative_addr / sizeof(uint64_t);
 
-	/*  Treat most registers as read/write, by default.  */
-	if (writeflag == MEM_WRITE) {
-		switch (relative_addr) {
-		case MEC_INT_STATUS:	/*  0x08  */
-			/*  Clear bits on write:  (This is just a guess)  */
-			d->reg[regnr] = (d->reg[regnr] & ~0xff)
-			    | ((d->reg[regnr] & ~idata) & 0xff);
-			break;
-		case MEC_TX_RING_PTR:	/*  0x30  */
-			idata &= MEC_TX_RING_WRITE_PTR;
-			d->reg[regnr] = (d->reg[regnr] &
-			    ~MEC_TX_RING_WRITE_PTR) | idata;
-			/*  TODO  */
-			break;
-		default:
+	if (len == sizeof(uint64_t)) {
+		if (writeflag == MEM_WRITE)
 			d->reg[regnr] = idata;
+		else
+			odata = d->reg[regnr];
+	} else if (len == sizeof(uint32_t)) {
+		if (writeflag == MEM_WRITE) {
+			if (relative_addr & 4)
+				d->reg[regnr] = (d->reg[regnr] & ~0xffffffffULL) | (uint32_t)idata;
+			else
+				d->reg[regnr] = (d->reg[regnr] & 0xffffffffULL) | ((uint64_t)idata << 32ULL);
+		} else {
+			odata = d->reg[regnr];
+			if (relative_addr & 4)
+				odata = (int32_t)odata;
+			else
+				odata = (odata >> 32ULL);
 		}
-	} else
-		odata = d->reg[regnr];
+	} else {
+		fatal("[ sgi_mec: unimplemented len %i ]\n", len);
+	}
 
-	switch (relative_addr) {
+#ifdef MEC_DEBUG
+	if (writeflag == MEM_WRITE)
+		fatal("[ sgi_mec: write to address"
+		    " 0x%llx, len %i, data=0x%016llx ]\n",
+		    (long long)relative_addr, len, (long long)idata);
+#endif
+
+	switch (relative_addr & ~7) {
 	case MEC_MAC_CONTROL:	/*  0x00  */
 		if (writeflag)
 			mec_control_write(cpu, d, idata);
 		else {
-			/*  Fake "revision 1":  */
+			/*  1 means "Revision 2" in hinv output, as per my O2. (1 + value?)  */
 			odata &= ~MEC_MAC_REVISION;
 			odata |= 1 << MEC_MAC_REVISION_SHIFT;
 		}
 		break;
 	case MEC_INT_STATUS:	/*  0x08  */
-		if (writeflag)
+		if (writeflag) {
+			/*  Clear bits on write:  (This is just a guess)  */
+			uint64_t writtenvalue = d->reg[MEC_INT_STATUS / sizeof(uint64_t)];
+
+			d->reg[MEC_INT_STATUS / sizeof(uint64_t)] =
+				 old_int_status
+				 & ~(writtenvalue & MEC_INT_STATUS_MASK);
 			debug("[ sgi_mec: write to MEC_INT_STATUS: "
 			    "0x%016llx ]\n", (long long)idata);
+		}
 		break;
 	case MEC_DMA_CONTROL:	/*  0x10  */
 		if (writeflag) {
@@ -463,9 +489,14 @@ DEVICE_ACCESS(sgi_mec)
 			    "0x%016llx ]\n", (long long)idata);
 		break;
 	case MEC_TX_RING_PTR:	/*  0x30  */
-		if (writeflag)
+		if (writeflag) {
+			uint64_t writtenvalue = d->reg[MEC_TX_RING_PTR / sizeof(uint64_t)];
+			writtenvalue &= MEC_TX_RING_WRITE_PTR;
+			d->reg[regnr] = (old_tx_ring_ptr & ~MEC_TX_RING_WRITE_PTR) | writtenvalue;
+
 			debug("[ sgi_mec: write to MEC_TX_RING_PTR: "
 			    "0x%016llx ]\n", (long long)idata);
+		}
 		break;
 	case MEC_PHY_DATA:	/*  0x64  */
 		if (writeflag)
@@ -538,6 +569,13 @@ DEVICE_ACCESS(sgi_mec)
 
 	if (writeflag == MEM_READ)
 		memory_writemax64(cpu, data, len, odata);
+
+#ifdef MEC_DEBUG
+	if (writeflag == MEM_READ)
+		fatal("[ sgi_mec: read from address"
+		    " 0x%llx, len %i, data=0x%llx ]\n", (long long)relative_addr,
+		    	len, (long long)odata);
+#endif
 
 	dev_sgi_mec_tick(cpu, extra);
 

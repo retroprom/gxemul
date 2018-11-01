@@ -4795,3 +4795,5 @@ Changelog for GXemul:
 		by NetBSD/sgimips' Xorg driver.
 20181031	Better separation of pckbc scancode translation tables 1, 2,
 		and 3, and beginning to play around with PS/2 mouse movement.
+20181101	Fixes to the SGI O2 mec ethernet implementation's register
+		alignment to correctly support mixed 32/64-bit access.
