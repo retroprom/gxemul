@@ -87,35 +87,38 @@ struct sgi_re_data {
  *  For "linear" modes, y is ignored and x is an offset to select which linear
  *  TLB entry to use.
  */
-void horrible_getputpixel(bool put, struct cpu* cpu, struct sgi_re_data* d, int dst_mode,
-	int dst_bufdepth /* in bytes */, int x, int y, uint32_t* color)
+void horrible_getputpixel(bool put, struct cpu* cpu, struct sgi_re_data* d,
+	int x, int y, uint32_t* color, int mode)
 {
+	uint32_t color_mode = mode & DE_MODE_TYPE_MASK;
+	int bufdepth = 1 << ((mode >> 8) & 3); 
+
 	// dst_mode (see NetBSD's crmfbreg.h):
 	// #define DE_MODE_TLB_A           0x00000000
 	// #define DE_MODE_TLB_B           0x00000400
 	// #define DE_MODE_TLB_C           0x00000800
 	// #define DE_MODE_LIN_A           0x00001000
 	// #define DE_MODE_LIN_B           0x00001400
-	uint32_t mode = dst_mode & 0x7;
-	bool linear = mode > 3;
+	uint32_t tlb_mode = (mode >> 10) & 0x7;
+	bool linear = tlb_mode > 3;
 
 	if (!linear && (x < 0 || y < 0 || x >= 2048 || y >= 2048))
 		return;
 
-	int tilewidth_in_pixels = 512 / dst_bufdepth;
+	int tilewidth_in_pixels = 512 / bufdepth;
 	
 	int tile_nr_x = x / tilewidth_in_pixels;
 	int tile_nr_y = y >> 7;
 
-	int tile_nr = tile_nr_y * 16 + tile_nr_x;
+	unsigned int tile_nr = tile_nr_y * 16 + tile_nr_x;
 
 	y &= 127;
-	int xofs = (x % tilewidth_in_pixels) * dst_bufdepth;
+	int xofs = (x % tilewidth_in_pixels) * bufdepth;
 	int ofs = 512 * y + xofs;
 
 	uint32_t tileptr = 0;
 
-	switch (mode) {
+	switch (tlb_mode) {
 	case 0:	tileptr = d->re_tlb_a[tile_nr] << 16;
 		break;
 	case 1:	tileptr = d->re_tlb_b[tile_nr] << 16;
@@ -123,7 +126,6 @@ void horrible_getputpixel(bool put, struct cpu* cpu, struct sgi_re_data* d, int 
 	case 2:	tileptr = d->re_tlb_c[tile_nr] << 16;
 		break;
 	case 4:	tile_nr = x >> 12;
-		*color = random();
 		if (tile_nr >= 32)
 			return;
 		tileptr = 0x80000000 | (d->re_linear_a[tile_nr] << 12);
@@ -150,30 +152,59 @@ void horrible_getputpixel(bool put, struct cpu* cpu, struct sgi_re_data* d, int 
 
 	uint8_t buf[4];
 	if (put) {
-		buf[0] = *color;
-		
-		// TODO: color encodings?
-		if (dst_bufdepth == 4) {
-			// RGBA?
-			buf[0] = *color >> 16;
+		switch (color_mode) {
+		case DE_MODE_TYPE_CI:
+			buf[0] = *color;
+			break;
+		case DE_MODE_TYPE_RGB:
+			buf[0] = *color >> 24;
+			buf[1] = *color >> 16;
+			buf[2] = *color >> 8;
+			buf[3] = 0;
+			break;
+		case DE_MODE_TYPE_RGBA:
+			buf[0] = *color >> 24;
+			buf[1] = *color >> 16;
+			buf[2] = *color >> 8;
+			buf[3] = *color;
+			break;
+		case DE_MODE_TYPE_ABGR:
+			buf[0] = *color;
 			buf[1] = *color >> 8;
-			buf[2] = *color;
-			buf[3] = 0xff;
+			buf[2] = *color >> 16;
+			buf[3] = *color >> 24;
+			break;
+		default:buf[0] = random();
+			buf[1] = random();
+			buf[2] = random();
+			buf[3] = random();
+			// TODO.
+			fatal("[ put: color mode = 0x%x ]\n", color_mode);
 		}
 
 		cpu->memory_rw(cpu, cpu->mem, tileptr + ofs,
-		    buf, dst_bufdepth,
-		    MEM_WRITE, NO_EXCEPTIONS | PHYSICAL);
+		    buf, bufdepth, MEM_WRITE, NO_EXCEPTIONS | PHYSICAL);
 	} else {
 		cpu->memory_rw(cpu, cpu->mem, tileptr + ofs,
-		    buf, dst_bufdepth,
-		    MEM_READ, NO_EXCEPTIONS | PHYSICAL);
+		    buf, bufdepth, MEM_READ, NO_EXCEPTIONS | PHYSICAL);
 
-		if (dst_bufdepth == 4) {
-			// TODO: non-8-bit
-			*color = (buf[3] << 24) + (buf[2] << 16) + (buf[1] << 8);
-		} else
+		switch (color_mode) {
+		case DE_MODE_TYPE_CI:
 			*color = buf[0];
+			break;
+		case DE_MODE_TYPE_RGB:
+			*color = (buf[1] << 24) + (buf[2] << 16) + (buf[3] << 8);
+			break;
+		case DE_MODE_TYPE_RGBA:
+			*color = (buf[0] << 24) + (buf[1] << 16) + (buf[2] << 8) + buf[3];
+			break;
+		case DE_MODE_TYPE_ABGR:
+			*color = (buf[3] << 24) + (buf[2] << 16) + (buf[1] << 8) + buf[0];
+			break;
+		default:// Read "raw" 32-bit value:
+			*color = (buf[3] << 24) + (buf[2] << 16) + (buf[1] << 8) + buf[0];
+			fatal("[ get: color mode = 0x%x ]\n", color_mode);
+		}
 	}
 }
 
@@ -387,12 +418,12 @@ DEVICE_ACCESS(sgi_de)
 	 *  Treat all registers as read/write, by default.  Sometimes these
 	 *  are accessed as 32-bit words, sometimes as 64-bit words.
 	 */
-	if (len != 4) {
+	if (len == 8) {
 		if (writeflag == MEM_WRITE) {
-			d->de_reg[regnr] = idata >> 32;
+			d->de_reg[regnr] = idata >> 32ULL;
 			d->de_reg[regnr+1] = idata;
 		} else
-			odata = ((uint64_t)d->de_reg[regnr] << 32) +
+			odata = ((uint64_t)d->de_reg[regnr] << 32ULL) +
 			    d->de_reg[regnr+1];
 	} else if (len == 4) {
 		if (writeflag == MEM_WRITE)
@@ -597,8 +628,8 @@ DEVICE_ACCESS(sgi_de)
 		uint32_t drawmode = d->de_reg[(CRIME_DE_DRAWMODE - 0x2000) / sizeof(uint32_t)];
 		uint32_t dst_mode = d->de_reg[(CRIME_DE_MODE_DST - 0x2000) / sizeof(uint32_t)];
 		uint32_t src_mode = d->de_reg[(CRIME_DE_MODE_SRC - 0x2000) / sizeof(uint32_t)];
-		uint32_t fg = d->de_reg[(CRIME_DE_FG - 0x2000) / sizeof(uint32_t)] & 255;
-		uint32_t bg = d->de_reg[(CRIME_DE_BG - 0x2000) / sizeof(uint32_t)] & 255;
+		uint32_t fg = d->de_reg[(CRIME_DE_FG - 0x2000) / sizeof(uint32_t)];
+		uint32_t bg = d->de_reg[(CRIME_DE_BG - 0x2000) / sizeof(uint32_t)];
 		uint32_t pattern = d->de_reg[(CRIME_DE_STIPPLE_PAT - 0x2000) / sizeof(uint32_t)];
 		//uint32_t stipple_mode = d->de_reg[(CRIME_DE_STIPPLE_MODE - 0x2000) / sizeof(uint32_t)];
 		uint32_t rop = d->de_reg[(CRIME_DE_ROP - 0x2000) / sizeof(uint32_t)];
@@ -612,21 +643,22 @@ DEVICE_ACCESS(sgi_de)
 		size_t x, y;
 
 		debug("[ sgi_de: STARTING DRAWING COMMAND: op = 0x%08x,"
-		    " x1=%i y1=%i x2=%i y2=%i fg=0x%x bg=0x%x pattern=0x%08x ]\n",
-		    op, x1, y1, x2, y2, fg, bg, pattern);
+		    " drawmode=0x%x src_mode=0x%x dst_mode=0x%x x1=%i y1=%i"
+		    " x2=%i y2=%i fg=0x%x bg=0x%x pattern=0x%08x ]\n",
+		    op, drawmode, src_mode, dst_mode, x1, y1, x2, y2, fg, bg, pattern);
 
 		// bufdepth = 1, 2, or 4.
 		int dst_bufdepth = 1 << ((dst_mode >> 8) & 3);
-		int src_bufdepth = 1 << ((src_mode >> 8) & 3);
+		//int src_bufdepth = 1 << ((src_mode >> 8) & 3);
 
 		bool src_is_linear = false;
 		int src_x = -1, src_y = -1;
-		uint32_t step_x = 0;
+		int32_t step_x = 0;
 		if (drawmode & DE_DRAWMODE_XFER_EN) {
 			uint32_t addr_src = d->de_reg[(CRIME_DE_XFER_ADDR_SRC - 0x2000) / sizeof(uint32_t)];
 			uint32_t strd_src = d->de_reg[(CRIME_DE_XFER_STRD_SRC - 0x2000) / sizeof(uint32_t)];
 			step_x = d->de_reg[(CRIME_DE_XFER_STEP_X - 0x2000) / sizeof(uint32_t)];
-			uint32_t step_y = d->de_reg[(CRIME_DE_XFER_STEP_Y - 0x2000) / sizeof(uint32_t)];
+			int32_t step_y = d->de_reg[(CRIME_DE_XFER_STEP_Y - 0x2000) / sizeof(uint32_t)];
 			uint32_t addr_dst = d->de_reg[(CRIME_DE_XFER_ADDR_DST - 0x2000) / sizeof(uint32_t)];
 			uint32_t strd_dst = d->de_reg[(CRIME_DE_XFER_STRD_DST - 0x2000) / sizeof(uint32_t)];
 
@@ -648,10 +680,6 @@ DEVICE_ACCESS(sgi_de)
 				exit(1);
 			}
 		}
-
-		// Hack for experimenting with NetBSD/sgimips' Xorg driver...
-		if (!src_is_linear && dst_bufdepth > 1)
-			fg = random();
 
 		if (!(drawmode & DE_DRAWMODE_PLANEMASK)) {
 			printf("!DE_DRAWMODE_PLANEMASK: TODO\n");
@@ -699,8 +727,7 @@ DEVICE_ACCESS(sgi_de)
 				// (OpenBSD draws characters using this mechanism.)
 				if (drawmode & DE_DRAWMODE_XFER_EN)
 					horrible_getputpixel(false, cpu, d,
-						(src_mode & 0x00001c00) >> 10,
-						src_bufdepth, src_x, src_y, &color);
+						src_x, src_y, &color, src_mode);
 
 				// Raster-OP.
 				// TODO: Other ops.
@@ -719,8 +746,7 @@ DEVICE_ACCESS(sgi_de)
 
 				if (draw)
 					horrible_getputpixel(true, cpu, d,
-						(dst_mode & 0x00001c00) >> 10,
-						dst_bufdepth, x, y, &color);
+						x, y, &color, dst_mode);
 
 				// I'm not sure if the pattern rotates, or is just
 				// shifted out, so for now it is a rotate.
@@ -950,14 +976,25 @@ DEVICE_ACCESS(sgi_mte)
 					exit(1);
 				}
 
+				uint32_t src_mode = (src_tlb << 10) + (((mode & MTE_MODE_DEPTH_MASK) >> MTE_DEPTH_SHIFT) << 8);
+				uint32_t dst_mode = (dst_tlb << 10) + (((mode & MTE_MODE_DEPTH_MASK) >> MTE_DEPTH_SHIFT) << 8);
+
+				// Hack. The MTE perhaps doesn't deal with colors per se,
+				// but this makes sure that we copy 32 bits when doing 32-bit
+				// transfers.
+				if (depth == 4) {
+					src_mode |= DE_MODE_TYPE_RGBA;
+					dst_mode |= DE_MODE_TYPE_RGBA;
+				}
+
 				for (int y = y1; y <= y2; ++y)
 					for  (int x = x1; x <= x2; ++x) {
 						if (mode & MTE_MODE_COPY) {
-							horrible_getputpixel(false, cpu, d, src_tlb, depth / 8,
-								x - x1 + src_x1, y - y1 + src_y1, &bg);
+							horrible_getputpixel(false, cpu, d,
+								x - x1 + src_x1, y - y1 + src_y1, &bg, src_mode);
 						}
 
-						horrible_getputpixel(true, cpu, d, dst_tlb, depth / 8, x, y, &bg);
+						horrible_getputpixel(true, cpu, d, x, y, &bg, dst_mode);
 					}
 			}
 			break;
