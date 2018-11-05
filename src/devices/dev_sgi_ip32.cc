@@ -146,7 +146,13 @@ void crime_update_crime_time(struct crime_data* d)
 	if (d->last_microseconds == 0)
 		d->last_microseconds = microseconds;
 
-	uint64_t delta = microseconds - d->last_microseconds;
+	int64_t delta = microseconds - d->last_microseconds;
+
+	if (delta < 0) {
+		fatal("[ crime_update_crime_time: host system time went backwards? ]\n");
+		d->last_microseconds = microseconds;
+		delta = 0;
+	}
 
 	// The delta to add is 66 per microsecond.
 	int64_t to_add = delta * 66;
@@ -508,6 +514,8 @@ DEVICE_ACCESS(mace)
 	size_t i;
 	struct mace_data *d = (struct mace_data *) extra;
 
+	d->reg[MACE_ISA_FLASH_NIC_REG + 7] |= MACE_ISA_PWD_CLEAR;
+
 	uint8_t old_mace_isa_flash_nic_reg =
 		d->reg[MACE_ISA_FLASH_NIC_REG + 7];
 
@@ -516,7 +524,7 @@ DEVICE_ACCESS(mace)
 	else
 		memcpy(data, &d->reg[relative_addr], len);
 
-	switch (relative_addr) {
+	switch (relative_addr & ~7) {
 
 	case MACE_ISA_FLASH_NIC_REG:
 		// I think the PROM attempts to read the machine's ethernet
@@ -525,20 +533,49 @@ DEVICE_ACCESS(mace)
 		// resulting MACE_ISA_NIC_DATA (or does it write data as well?)
 		// In any case, onewire is too complicated to implement right
 		// now. TODO.
+		if (writeflag)
 		{
-			uint8_t change = d->reg[MACE_ISA_FLASH_NIC_REG + 7]
-				^ old_mace_isa_flash_nic_reg;
-			if (change & MACE_ISA_LED_RED)
-				debug("[ mace: turning RED led %s ]\n",
-					d->reg[MACE_ISA_FLASH_NIC_REG + 7] & MACE_ISA_LED_RED ? "ON" : "OFF");
-			if (change & MACE_ISA_LED_GREEN)
-				debug("[ mace: turning GREEN led %s ]\n",
-					d->reg[MACE_ISA_FLASH_NIC_REG + 7] & MACE_ISA_LED_GREEN ? "ON" : "OFF");
+			/*
+			 *  The NetBSD defines are called "RED" and "GREEN",
+			 *  and are documented like this:
+			 *
+			 *	1=> Illuminate RED LED
+			 *
+			 *  (and similarly for GREEN). But on my O2, it feels
+			 *  like the other way around (i.e. 1 = do NOT illuminate
+			 *  that LED color). Also, having it this way is more
+			 *  compatible with how NetBSD, OpenBSD, and the PROM
+			 *  actually use the LED.
+			 */
+			uint8_t change = (d->reg[MACE_ISA_FLASH_NIC_REG + 7]
+				^ old_mace_isa_flash_nic_reg) &
+				(MACE_ISA_LED_RED | MACE_ISA_LED_GREEN);
+			if (change) {
+				switch (d->reg[MACE_ISA_FLASH_NIC_REG + 7] & (MACE_ISA_LED_RED | MACE_ISA_LED_GREEN)) {
+				case 0:	debug("[ mace: turning LED WHITE/ORANGE ]\n");
+					break;
+				case MACE_ISA_LED_RED:
+					debug("[ mace: turning LED GREEN ]\n");
+					break;
+				case MACE_ISA_LED_GREEN:
+					debug("[ mace: turning LED RED ]\n");
+					break;
+				default:fatal("[ mace: turning LED OFF ]\n");
+					break;
+				}
+			}
+			
+//printf("%02x: MACE_ISA_NIC_DEASSERT = %i, DATA = %i\n",
+	//d->reg[MACE_ISA_FLASH_NIC_REG + 7],
+//d->reg[MACE_ISA_FLASH_NIC_REG + 7] & MACE_ISA_NIC_DEASSERT,
+	//d->reg[MACE_ISA_FLASH_NIC_REG + 7] & MACE_ISA_NIC_DATA);
+		} else {
+//			data[len-1] ^= (random() & MACE_ISA_NIC_DATA);
+//			data[len-1] |= MACE_ISA_NIC_DEASSERT;
 		}
 		break;
 
 	case MACE_ISA_INT_STATUS:	/*  Current interrupt assertions  */
-	case MACE_ISA_INT_STATUS + 4:
 		/*  don't dump debug info for these  */
 		if (writeflag == MEM_WRITE) {
 			fatal("[ NOTE/TODO: WRITE to mace intr: "
@@ -549,7 +586,6 @@ DEVICE_ACCESS(mace)
 		}
 		break;
 	case MACE_ISA_INT_MASK:		/*  Current interrupt mask  */
-	case MACE_ISA_INT_MASK + 4:
 		mace_interrupt_reassert(d);
 		break;
 
