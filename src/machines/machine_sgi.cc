@@ -462,7 +462,7 @@ j = 0;
 		 *	1f200000	vout
 		 *	1f280000	enet (mec0, MAC-110 Ethernet)
 		 *	1f300000	perif:
-		 *	  1f300000	  audio
+		 *	  1f300000	  audio ("a3"?)
 		 *	  1f310000	  isa
 		 *	    1f318000	    (unknown, accessed by Irix' pciio_pio_write64 and by the PROM during bootup)
 		 *	    1f31c000	    (unknown, accessed by the PROM during bootup)
