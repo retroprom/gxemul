@@ -621,13 +621,13 @@ echo "bootps dgram udp wait root /usr/sbin/bootpd bootpd -d 4 -h 10.0.0.2" &gt;&
 cat &gt;&gt; /etc/bootptab
 client:\
         :ht=ether:\
-        :ha=102030000010:\
+        :ha=082030000010:\
         :sm=255.0.0.0:\
         :lg=10.0.0.254:\
         :ip=10.0.0.1:\
         :rp=/tftpboot:
 </b>(press CTRL-D)
-<b>echo "10:20:30:00:00:10 client" &gt; /etc/ethers
+<b>echo "08:20:30:00:00:10 client" &gt; /etc/ethers
 echo 10.0.0.1 client &gt; /etc/hosts
 
 cd /tftpboot; mount /dev/cd0a /mnt
@@ -1943,7 +1943,7 @@ echo nfs_server=YES &gt;&gt; /etc/rc.conf
 echo mountd=YES &gt;&gt; /etc/rc.conf
 echo bootparamd=YES &gt;&gt; /etc/rc.conf
 printf "client root=10.0.0.2:/tftpboot \\\n swap=10.0.0.2:/tftpboot/swap\n" &gt; /etc/bootparams
-echo "10:20:30:00:00:10 client" &gt; /etc/ethers
+echo "08:20:30:00:00:10 client" &gt; /etc/ethers
 echo 10.0.0.1 client &gt; /etc/hosts
 
 cd /tftpboot
