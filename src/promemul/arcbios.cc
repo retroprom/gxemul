@@ -2323,15 +2323,15 @@ static void arc_environment_setup(struct machine *machine, int is64bit,
 			add_environment_string(cpu, "diskless=1", &addr);
 
 			store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-			add_environment_string(cpu, "bootfile=bootp()server:/var/boot/client/unix", &addr);
+			add_environment_string(cpu, "bootfile=bootp()10.0.0.2:/var/boot/client/unix", &addr);
 
 			store_pointer_and_advance(cpu, &addr2, addr, is64bit);
 			add_environment_string(cpu,
-			    "SystemPartition=bootp()server:/var/boot/client",
+			    "SystemPartition=bootp()10.0.0.2:/var/boot/client",
 			    &addr);
 			store_pointer_and_advance(cpu, &addr2, addr, is64bit);
 			add_environment_string(cpu,
-			    "OSLoadPartition=bootp()server:/var/boot/client",
+			    "OSLoadPartition=bootp()10.0.0.2:/var/boot/client",
 			    &addr);
 		} else {
 			store_pointer_and_advance(cpu, &addr2, addr, is64bit);
@@ -2385,13 +2385,17 @@ static void arc_environment_setup(struct machine *machine, int is64bit,
 		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
 		add_environment_string(cpu, primary_ether_addr, &addr);
 		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-		add_environment_string(cpu, "verbose=istrue", &addr);
+		add_environment_string(cpu, "verbose=1", &addr);
 		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
 		add_environment_string(cpu, "showconfig=istrue", &addr);
 		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
 		add_environment_string(cpu, "diagmode=v", &addr);
 		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
 		add_environment_string(cpu, "kernname=unix", &addr);
+		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
+		add_environment_string(cpu, "dlserver=10.0.0.2", &addr);
+		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
+		add_environment_string(cpu, "srvaddr=10.0.0.2", &addr);
 	} else {
 		char *tmp;
 		size_t mlen = ARC_BOOTSTR_BUFLEN;
