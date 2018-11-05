@@ -767,6 +767,18 @@ NOTE: MOST of the stuff below are from pre-0.6.0, so the comments may be
 
 
 Legacy-mode Debugger:
+	In the trace output when showing strings, show "..." if the string
+	was longer than the default max length.
+	
+		<f("apa",42,...)>
+	
+	shoudl be
+	
+		<f("apa"...,42,...)>
+
+	if 3 was the max string length, to indicate that apa was cut off.
+
+
 	Extend the
 		put [b|h|w|d|q] addr, data    modify emulated memory contents
 	command with a "s" (string) mode, where data is a string. Also
@@ -778,6 +790,7 @@ Legacy-mode Debugger:
 	or
 
 		put z 0x80008000, "apa"
+
 
 	Extend the debugger with a "find" command as well, similar to
 	put but with a range?
