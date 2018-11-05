@@ -28,7 +28,8 @@
  *  COMMENT: SGI IP32 "mec" ethernet
  *
  *  Used by the SGI O2 emulation mode.
- *  Based on how NetBSD and OpenBSD use the hardware.
+ *  Based on how NetBSD and OpenBSD use the hardware, just about enough to let
+ *  those OSes boot with root-on-nfs.
  *
  *  http://www.openbsd.org/cgi-bin/cvsweb/src/sys/arch/sgi/dev/if_mec.c
  *
@@ -38,9 +39,10 @@
  *
  *  A note about word length for reads/writes:
  *
- *	The PROM uses (at least) 32-bit reads/writes
- *	NetBSD uses (at least) 64-bit reads/writes
- *	OpenBSD uses both 32-bit and 64-bit reads/writes
+ *	NetBSD uses (at least) 64-bit reads/writes.
+ *	OpenBSD uses both 32-bit and 64-bit reads/writes.
+ *	The PROM uses (at least) 32-bit reads/writes and 16-bit reads (from
+ *		offsets 0x34 and 0x36)!
  *
  *  Random googling reveals this NetBSD dmesg about the PHYs:
  *
@@ -420,6 +422,10 @@ DEVICE_ACCESS(sgi_mec)
 
 	regnr = relative_addr / sizeof(uint64_t);
 
+	if ((relative_addr & ~7) == MEC_TX_RING_PTR_ALIAS)
+		relative_addr -= 8;
+
+	// Support both 32-bit and 64-bit big-endian loads and stores...
 	if (len == sizeof(uint64_t)) {
 		if (writeflag == MEM_WRITE)
 			d->reg[regnr] = idata;
@@ -438,8 +444,23 @@ DEVICE_ACCESS(sgi_mec)
 			else
 				odata = (odata >> 32ULL);
 		}
+	} else if (len == sizeof(uint16_t)) {
+		if (writeflag == MEM_WRITE) {
+			fatal("[ sgi_mec: unimplemented %s len %i (addr 0x%x) ]\n",
+				writeflag ? "write" : "read", len, (long long)relative_addr);
+		} else if ((relative_addr & 7) == 4) {
+			odata = d->reg[regnr];
+			odata = (uint16_t)(odata >> 16);
+		} else if ((relative_addr & 7) == 6) {
+			odata = d->reg[regnr];
+			odata = (uint16_t)odata;
+		} else {
+			fatal("[ sgi_mec: unimplemented %s len %i (addr 0x%x) ]\n",
+				writeflag ? "write" : "read", len, (long long)relative_addr);
+		}
 	} else {
-		fatal("[ sgi_mec: unimplemented len %i ]\n", len);
+		fatal("[ sgi_mec: unimplemented %s len %i (addr 0x%x) ]\n",
+			writeflag ? "write" : "read", len, (long long)relative_addr);
 	}
 
 #ifdef MEC_DEBUG
@@ -449,6 +470,7 @@ DEVICE_ACCESS(sgi_mec)
 		    (long long)relative_addr, len, (long long)idata);
 #endif
 
+	// ... and then treat the registers as 64-bit aligned:
 	switch (relative_addr & ~7) {
 	case MEC_MAC_CONTROL:	/*  0x00  */
 		if (writeflag)
@@ -498,7 +520,7 @@ DEVICE_ACCESS(sgi_mec)
 			debug("[ sgi_mec: write to MEC_RX_ALIAS: "
 			    "0x%016llx ]\n", (long long)idata);
 		break;
-	case MEC_TX_RING_PTR:	/*  0x30  */
+	case MEC_TX_RING_PTR:		/*  0x30  */
 		if (writeflag) {
 			uint64_t writtenvalue = d->reg[MEC_TX_RING_PTR / sizeof(uint64_t)];
 			writtenvalue &= MEC_TX_RING_WRITE_PTR;
@@ -508,11 +530,10 @@ DEVICE_ACCESS(sgi_mec)
 			    "0x%016llx ]\n", (long long)idata);
 		}
 		break;
-	case MEC_PHY_DATA_PAD:	/*  0x60  */
-	case MEC_PHY_DATA:	/*  0x64  */
+	case MEC_PHY_DATA:	/*  0x60  */
 		{
-			int dev = (d->reg[MEC_PHY_ADDRESS_PAD / sizeof(uint64_t)] & MEC_PHY_ADDR_DEVICE) >> MEC_PHY_ADDR_DEVSHIFT;
-			int reg = d->reg[MEC_PHY_ADDRESS_PAD / sizeof(uint64_t)] & MEC_PHY_ADDR_REGISTER;
+			int dev = (d->reg[MEC_PHY_ADDRESS / sizeof(uint64_t)] & MEC_PHY_ADDR_DEVICE) >> MEC_PHY_ADDR_DEVSHIFT;
+			int reg = d->reg[MEC_PHY_ADDRESS / sizeof(uint64_t)] & MEC_PHY_ADDR_REGISTER;
 
 			if (writeflag) {
 				debug("[ sgi_mec: write to MEC_PHY_DATA (dev %i, reg %i): "
@@ -527,18 +548,14 @@ DEVICE_ACCESS(sgi_mec)
 				//	nsphy0 at mec0 phy 8: DP83840 10/100 media interface, rev. 0
 				//	nsphy0: 10baseT, 10baseT-FDX, 100baseTX, 100baseTX-FDX, auto
 				switch (reg) {
-// NetBSD and OpenBSD print more boot messages with this enabled,
-// but then fail to use the network. So it is commented out for now.
-#if 0
 				case MII_BMCR:		// 0
 					odata = BMCR_AUTOEN;
 					break;
 				case MII_BMSR:		// 1
 					odata = BMSR_100TXFDX | BMSR_100TXHDX |
 						BMSR_10TFDX | BMSR_10THDX |
-						BMSR_ANEG | BMSR_LINK;
+						BMSR_ANEG | BMSR_LINK;	// LINK means cable is connected
 					break;
-#endif
 				case MII_PHYIDR1:	// 2
 					odata = 0x2000;	// To match NetBSD's "xxNATSEMI" value.
 					break;
@@ -558,8 +575,7 @@ DEVICE_ACCESS(sgi_mec)
 			}
 		}
 		break;
-	case MEC_PHY_ADDRESS_PAD:	/*  0x68  */
-	case MEC_PHY_ADDRESS:		/*  0x6c  */
+	case MEC_PHY_ADDRESS:	/*  0x68  */
 		if (writeflag)
 			debug("[ sgi_mec: write to MEC_PHY_ADDRESS: "
 			    "0x%016llx ]\n", (long long)idata);
