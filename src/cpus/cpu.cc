@@ -241,7 +241,7 @@ void cpu_functioncall_trace(struct cpu *cpu, uint64_t f)
 	fatal("<");
 	symbol = get_symbol_name_and_n_args(&cpu->machine->symbol_context,
 	    f, &offset, &n_args);
-	if (symbol != NULL && show_symbolic_function_name)
+	if (symbol != NULL && show_symbolic_function_name && offset == 0)
 		fatal("%s", symbol);
 	else {
 		if (cpu->is_32bit)
