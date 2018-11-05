@@ -766,12 +766,27 @@ NOTE: MOST of the stuff below are from pre-0.6.0, so the comments may be
 
 
 
+Legacy-mode Debugger:
+	Extend the
+		put [b|h|w|d|q] addr, data    modify emulated memory contents
+	command with a "s" (string) mode, where data is a string. Also
+	"z" which puts a nul-terminated string in memory. It should put the
+	string there one byte at a time.
+	
+		put s 0x80008000, "apa"
+
+	or
+
+		put z 0x80008000, "apa"
+
+	Extend the debugger with a "find" command as well, similar to
+	put but with a range?
+
+		find [b|h|w|d|q|s|z] startaddr, endaddr, data
+
 MIPS:
+	o)  Floating point exception correctness. Compare to real hardware!
 	o)  Nicer MIPS status bits in register dumps.
-	o)  Floating point exception correctness.
-	o)  Fix this? Triggered by NetBSD/sgimips? Hm:
-		to_be_translated(): TODO: unimplemented instruction:
-		000000000065102c: 00200800 (d)  rot_00  at,zr,0
 	o)  Some more work on opcodes.
 		x) MIPS64 revision 2.
 			o)  Find out which actual CPUs implement the rev2 ISA!
@@ -832,7 +847,7 @@ SuperH:
 	    this mechanism for its reboot code (machine_reset).
 
 Dreamcast:
-	x)  Try to make the ROM from my real Dreamcast boot.
+	x)  Try to make the ROM from my real Dreamcast boot correctly.
 	x)  PVR:  Lots of stuff. See dev_pvr.c.
 		x)  DMA to non-0x10000000
 		x)  Textures...
@@ -901,6 +916,9 @@ Malta:
 		2. Implement the NIC.
 
 SGI O2:
+	ds2502_get_eaddr: ds2502_read_rom failed!
+		PROM complains during bootup. Needed to allow bootp() it seems.
+
 	netbsd starts in "enter pathname of shell" mode; should start netbooting
 		in a more automated fashion?
 
@@ -929,10 +947,10 @@ SGI O2:
 			execute commands in the pipeline? (low-prio)
 			get -w 0xb5004000:
 						LEVEL	RD_PTR	WR_PTR	BUF_START
-				0x1e029a68	00	29	29	08
-				0x1e02baea	00	2b	2b	1a
+				0x1e029a68	00	29	29	28
+				0x1e02baea	00	2b	2b	2a
 				0x1e03befa	00	3b	3b	3a
-				0x1e029a68	00	29	29	08
+				0x1e029a68	00	29	29	28
 				0x1e00a289	00	0a	0a	09
 				0x1e03df7c	00	3d	3d	3c
 				0x1e00003f	00	00	00	3f
@@ -944,9 +962,6 @@ SGI O2:
 
 		i2c vga data, for NetBSD etc.
 		3D graphics? i.e. depth buffers, triangles, etc.
-
-	ds2502_get_eaddr: ds2502_read_rom failed!
-		PROM complains during bootup. Non-critical but could be worth implementing.
 
 	audio?
 		would be the first audio related thing in gxemul...
