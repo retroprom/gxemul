@@ -4797,3 +4797,5 @@ Changelog for GXemul:
 		and 3, and beginning to play around with PS/2 mouse movement.
 20181101	Fixes to the SGI O2 mec ethernet implementation's register
 		alignment to correctly support mixed 32/64-bit access.
+20181102	Adding some PHY/MII related parts of the O2 mec device (not
+		needed by NetBSD/OpenBSD it seems, but by the O2 PROM).

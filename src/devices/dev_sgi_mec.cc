@@ -41,6 +41,15 @@
  *	The PROM uses (at least) 32-bit reads/writes
  *	NetBSD uses (at least) 64-bit reads/writes
  *	OpenBSD uses both 32-bit and 64-bit reads/writes
+ *
+ *  Random googling reveals this NetBSD dmesg about the PHYs:
+ *
+ *	https://mail-index.netbsd.org/port-sgimips/2008/01/27/msg000043.html
+ *
+ *	mec0 at mace0 offset 0x280000 intr 3 intrmask 0x0: MAC-110 Ethernet, rev 1
+ *	mec0: Ethernet address 08:00:69:0e:85:21
+ *	nsphy0 at mec0 phy 8: DP83840 10/100 media interface, rev. 1
+ *	nsphy0: 10baseT, 10baseT-FDX, 100baseTX, 100baseTX-FDX, auto
  */
 
 #include <stdio.h>
@@ -59,6 +68,7 @@
 #include "net.h"
 
 #include "thirdparty/if_mecreg.h"
+#include "thirdparty/mii.h"
 
 // #define debug fatal
 // #define MEC_DEBUG
@@ -498,14 +508,58 @@ DEVICE_ACCESS(sgi_mec)
 			    "0x%016llx ]\n", (long long)idata);
 		}
 		break;
+	case MEC_PHY_DATA_PAD:	/*  0x60  */
 	case MEC_PHY_DATA:	/*  0x64  */
-		if (writeflag)
-			fatal("[ sgi_mec: write to MEC_PHY_DATA: "
-			    "0x%016llx ]\n", (long long)idata);
-		else
-			odata = 0;	/*  ?  */
+		{
+			int dev = (d->reg[MEC_PHY_ADDRESS_PAD / sizeof(uint64_t)] & MEC_PHY_ADDR_DEVICE) >> MEC_PHY_ADDR_DEVSHIFT;
+			int reg = d->reg[MEC_PHY_ADDRESS_PAD / sizeof(uint64_t)] & MEC_PHY_ADDR_REGISTER;
+
+			if (writeflag) {
+				debug("[ sgi_mec: write to MEC_PHY_DATA (dev %i, reg %i): "
+				    "0x%016llx ]\n",
+				    dev, reg, (long long)idata);
+			}
+			
+			odata = 0;
+
+			if (dev == 8) {
+				// https://dmesgd.nycbug.org/index.cgi?do=view&id=2828 says:
+				//	nsphy0 at mec0 phy 8: DP83840 10/100 media interface, rev. 0
+				//	nsphy0: 10baseT, 10baseT-FDX, 100baseTX, 100baseTX-FDX, auto
+				switch (reg) {
+// NetBSD and OpenBSD print more boot messages with this enabled,
+// but then fail to use the network. So it is commented out for now.
+#if 0
+				case MII_BMCR:		// 0
+					odata = BMCR_AUTOEN;
+					break;
+				case MII_BMSR:		// 1
+					odata = BMSR_100TXFDX | BMSR_100TXHDX |
+						BMSR_10TFDX | BMSR_10THDX |
+						BMSR_ANEG | BMSR_LINK;
+					break;
+#endif
+				case MII_PHYIDR1:	// 2
+					odata = 0x2000;	// To match NetBSD's "xxNATSEMI" value.
+					break;
+				case MII_PHYIDR2:	// 3
+					odata = 0x5c00;	// To match NetBSD's "xxNATSEMI" value.
+					break;
+				default:
+					fatal("[ sgi_mec: unimplemented %s PHY register %i ]\n",
+						writeflag ? "write to" : "read from", reg);
+				}
+			}
+
+			if (!writeflag) {
+				debug("[ sgi_mec: read from MEC_PHY_DATA (dev %i, reg %i): "
+				    "0x%016llx ]\n",
+				    dev, reg, (long long)odata);
+			}
+		}
 		break;
-	case MEC_PHY_ADDRESS:	/*  0x6c  */
+	case MEC_PHY_ADDRESS_PAD:	/*  0x68  */
+	case MEC_PHY_ADDRESS:		/*  0x6c  */
 		if (writeflag)
 			debug("[ sgi_mec: write to MEC_PHY_ADDRESS: "
 			    "0x%016llx ]\n", (long long)idata);
@@ -514,13 +568,6 @@ DEVICE_ACCESS(sgi_mec)
 		if (writeflag)
 			debug("[ sgi_mec: write to MEC_PHY_READ_INITIATE: "
 			    "0x%016llx ]\n", (long long)idata);
-		break;
-	case 0x74:
-		if (writeflag)
-			debug("[ sgi_mec: write to 0x74: 0x%016llx ]\n",
-			    (long long)idata);
-		else
-			debug("[ sgi_mec: read from 0x74 ]\n");
 		break;
 	case MEC_STATION:	/*  0xa0  */
 		if (writeflag)
@@ -559,11 +606,11 @@ DEVICE_ACCESS(sgi_mec)
 		break;
 	default:
 		if (writeflag == MEM_WRITE)
-			debug("[ sgi_mec: unimplemented write to address"
+			fatal("[ sgi_mec: unimplemented write to address"
 			    " 0x%llx, data=0x%016llx ]\n",
 			    (long long)relative_addr, (long long)idata);
 		else
-			debug("[ sgi_mec: unimplemented read from address"
+			fatal("[ sgi_mec: unimplemented read from address"
 			    " 0x%llx ]\n", (long long)relative_addr);
 	}
 
