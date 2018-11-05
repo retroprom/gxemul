@@ -129,7 +129,7 @@ void horrible_getputpixel(bool put, struct cpu* cpu, struct sgi_re_data* d, int 
 		tileptr = 0x80000000 | (d->re_linear_a[tile_nr] << 12);
 		ofs = x & 4095;
 		// TODO... probably not correct!
-		printf("tileptr = %08x x = %i y = %i tile_nr = %i ofs = %i\n", tileptr, x, y, tile_nr, ofs);
+		// printf("tileptr = %08x x = %i y = %i tile_nr = %i ofs = %i\n", tileptr, x, y, tile_nr, ofs);
 		break;
 	default:fatal("unimplemented dst_mode %i for horrible_getputpixel (%s), x=%i y=%i\n",
 			mode, put ? "put" : "get", x, y);
@@ -688,6 +688,8 @@ DEVICE_ACCESS(sgi_de)
 		}
 
 		// Drawing is limited to 2048 x 2048 pixel space.
+		// TODO: MAYBE it is really -2048 to 2027, i.e. 12 bits of pixel
+		// space. Perhaps it is possible to figure out experimentally some day.
 		for (y = y1; y != endy; y = (y + dy) & 0x7ff) {
 			src_x = saved_src_x;
 			for (x = x1; x != endx; x = (x + dx) & 0x7ff) {
@@ -909,11 +911,6 @@ DEVICE_ACCESS(sgi_mte)
 			exit(1);
 		}
 
-		if (depth != 8) {
-			fatal("[ sgi_mte: unimplemented MTE_DEPTH_x ]");
-			exit(1);
-		}
-
 		if (src != 0) {
 			fatal("[ sgi_mte: unimplemented SRC ]");
 			exit(1);
@@ -969,6 +966,11 @@ DEVICE_ACCESS(sgi_mte)
 			// Used by the PROM to zero-fill memory (?).
 			if (mode & MTE_MODE_COPY) {
 				fatal("[ sgi_mte: unimplemented MTE_MODE_COPY ]");
+				exit(1);
+			}
+
+			if (depth != 8) {
+				fatal("[ sgi_mte: unimplemented MTE_DEPTH_x ]");
 				exit(1);
 			}
 
