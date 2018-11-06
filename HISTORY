@@ -4799,3 +4799,5 @@ Changelog for GXemul:
 		alignment to correctly support mixed 32/64-bit access.
 20181102	Adding some PHY/MII related parts of the O2 mec device (not
 		needed by NetBSD/OpenBSD it seems, but by the O2 PROM).
+20181106	Splitting SGI O2 rectangle drawing and line drawing into
+		separate parts; NetBSD/sgimips' Xorg now looks reasonable.
