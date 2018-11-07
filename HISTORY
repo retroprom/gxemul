@@ -4801,3 +4801,6 @@ Changelog for GXemul:
 		needed by NetBSD/OpenBSD it seems, but by the O2 PROM).
 20181106	Splitting SGI O2 rectangle drawing and line drawing into
 		separate parts; NetBSD/sgimips' Xorg now looks reasonable.
+20181107	Progress on PS/2 mouse emulation; NetBSD accepts it as "pms0
+		at macekbc0" in the SGI O2 emulation mode. (No actual host
+		mouse input yet though.)

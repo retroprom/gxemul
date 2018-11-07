@@ -56,7 +56,7 @@
 #include "thirdparty/kbdreg.h"
 
 
-/*  #define PCKBC_DEBUG  */
+// #define PCKBC_DEBUG
 /*  #define debug fatal  */
 
 
@@ -72,11 +72,16 @@
 #define	PS2_TXBUF		0
 #define	PS2_RXBUF		1
 #define	PS2_CONTROL		2
+#define         PS2_CONTROL_TXINTEN   (1 << 2)
+#define         PS2_CONTROL_RXINTEN   (1 << 3)
 #define	PS2_STATUS		3
+#define         PS2_STATUS_TXEMPTY    (1 << 3)
+#define         PS2_STATUS_RXFULL     (1 << 4)
 
-#define	PS2	100
+#define	PS2	100	// internal offset
 
 #define	PCKBC_TICKSHIFT		15
+
 
 struct pckbc_data {
 	int		console_handle;
@@ -92,8 +97,8 @@ struct pckbc_data {
 
 	/*  TODO: one of these for each port?  */
 	int		clocksignal;
-	int		rx_int_enable;
-	int		tx_int_enable;
+	int		rx_int_enable[2];
+	int		tx_int_enable[2];
 
 	int		scanning_enabled[2];
 	int		translation_table;
@@ -566,11 +571,49 @@ static void ascii_to_pc_scancodes_type3(int a, struct pckbc_data *d)
 }
 
 
+void pckbc_reassert_interrupts(struct pckbc_data *d)
+{
+	bool ints_enabled = true;
+
+	// if (d->cmdbyte & KC8_KDISABLE)
+	//	ints_enabled = false;
+
+	for (int port_nr = 0; port_nr < 2; port_nr++) {
+		/*
+		 *  Cause receive interrupt, if there's something in the
+		 *  receive buffer: (Otherwise deassert the interrupt.)
+		 */
+		if (d->head[port_nr] != d->tail[port_nr] && ints_enabled && d->rx_int_enable[port_nr]) {
+			if (!d->currently_asserted[port_nr]) {
+				// fatal("[ pckbc: interrupt port %i ]\n", port_nr);
+				if (port_nr == 0)
+					INTERRUPT_ASSERT(d->irq_keyboard);
+				else
+					INTERRUPT_ASSERT(d->irq_mouse);
+			}
+
+			d->currently_asserted[port_nr] = 1;
+		} else {
+			if (d->currently_asserted[port_nr]) {
+				// fatal("[ pckbc: DEASSERT interrupt port %i ]\n", port_nr);
+				if (port_nr == 0)
+					INTERRUPT_DEASSERT(d->irq_keyboard);
+				else
+					INTERRUPT_DEASSERT(d->irq_mouse);
+			}
+
+			d->currently_asserted[port_nr] = 0;
+		}
+	}
+}
+
+
 DEVICE_TICK(pckbc)
 {
 	struct pckbc_data *d = (struct pckbc_data *) extra;
-	int port_nr, ch, ints_enabled;
+	int ch;
 
+	// Keyboard input:
 	if (d->in_use) {
 		while (console_charavail(d->console_handle)) {
 			ch = console_readchar(d->console_handle);
@@ -589,63 +632,38 @@ DEVICE_TICK(pckbc)
 		}
 	}
 
-	// TODO: Actual mouse movement.
-	if (d->state[1] == STATE_NORMAL && d->scanning_enabled[1] && (random() & 1023)==0) {
+	// Mouse input:
+	// TODO: Actual mouse movement. This is just for debugging/experimentation.
+#if 1
+	if (d->state[1] == STATE_NORMAL && d->scanning_enabled[1] && (random() & 7)==0) {
 		// See "The default protocol" at
 		// https://www.win.tue.nl/~aeb/linux/kbd/scancodes-13.html
-		int r = random() & 3;
+		int r = random() % 5;
 		if (r == 0) {
-			pckbc_add_code(d, 0x00, 1);
+			pckbc_add_code(d, 0x08, 1);
 			pckbc_add_code(d, 0x01, 1);
 			pckbc_add_code(d, 0x00, 1);
 		} else if (r == 1) {
-			pckbc_add_code(d, 0x10, 1);
+			pckbc_add_code(d, 0x18, 1);
 			pckbc_add_code(d, 0xff, 1);
 			pckbc_add_code(d, 0x00, 1);
 		} else if (r == 2) {
-			pckbc_add_code(d, 0x00, 1);
+			pckbc_add_code(d, 0x08, 1);
 			pckbc_add_code(d, 0x00, 1);
 			pckbc_add_code(d, 0x01, 1);
 		} else if (r == 3) {
-			pckbc_add_code(d, 0x20, 1);
+			pckbc_add_code(d, 0x28, 1);
 			pckbc_add_code(d, 0x00, 1);
 			pckbc_add_code(d, 0xff, 1);
+		} else if (r == 4 && (random() & 63) == 0) {
+			pckbc_add_code(d, 0x09, 1);	// left click
+			pckbc_add_code(d, 0x00, 1);
+			pckbc_add_code(d, 0x00, 1);
 		}
 	}
+#endif
 
-	ints_enabled = d->rx_int_enable;
-
-	/*  TODO: mouse movements?  */
-
-	if (d->cmdbyte & KC8_KDISABLE)
-		ints_enabled = 0;
-
-	for (port_nr=0; port_nr<2; port_nr++) {
-		/*
-		 *  Cause receive interrupt, if there's something in the
-		 *  receive buffer: (Otherwise deassert the interrupt.)
-		 */
-		if (d->head[port_nr] != d->tail[port_nr] && ints_enabled) {
-			debug("[ pckbc: interrupt port %i ]\n", port_nr);
-			if (!d->currently_asserted[port_nr]) {
-				if (port_nr == 0)
-					INTERRUPT_ASSERT(d->irq_keyboard);
-				else
-					INTERRUPT_ASSERT(d->irq_mouse);
-			}
-
-			d->currently_asserted[port_nr] = 1;
-		} else {
-			if (d->currently_asserted[port_nr]) {
-				if (port_nr == 0)
-					INTERRUPT_DEASSERT(d->irq_keyboard);
-				else
-					INTERRUPT_DEASSERT(d->irq_mouse);
-			}
-
-			d->currently_asserted[port_nr] = 0;
-		}
-	}
+	pckbc_reassert_interrupts(d);
 }
 
 
@@ -658,7 +676,11 @@ static void dev_pckbc_command(struct pckbc_data *d, int port_nr)
 {
 	int cmd = d->type == PCKBC_8242 ? d->reg[PS2_TXBUF] : d->reg[PC_CMD];
 
-	debug("[ pckbc: (port %i) command 0x%02x ]\n", port_nr, cmd);
+#if 0
+	// Mouse port debugging:
+	if (port_nr == 1)
+		fatal("[ pckbc: (port %i) command 0x%02x ]\n", port_nr, cmd);
+#endif
 
 	if (d->state[port_nr] == STATE_WAITING_FOR_TRANSLTABLE) {
 		debug("[ pckbc: (port %i) switching to translation table "
@@ -692,7 +714,7 @@ static void dev_pckbc_command(struct pckbc_data *d, int port_nr)
 	}
 
 	if (d->state[port_nr] == STATE_WAITING_FOR_RATE) {
-		fatal("[ pckbc: (port %i) received Typematic/Sample Rate data: "
+		debug("[ pckbc: (port %i) received Typematic/Sample Rate data: "
 		    "0x%02x ]\n", port_nr, cmd);
 		pckbc_add_code(d, KBR_ACK, port_nr);
 		d->state[port_nr] = STATE_NORMAL;
@@ -764,10 +786,17 @@ static void dev_pckbc_command(struct pckbc_data *d, int port_nr)
 		break;
 
 	case KBC_GETID:
-		/*  Get keyboard ID.  NOTE/TODO: Ugly hardcoded answer.  */
+		/*  Get keyboard/mouse ID.  NOTE/TODO: Ugly hardcoded answer.  */
 		pckbc_add_code(d, KBR_ACK, port_nr);
-		pckbc_add_code(d, 0xab, port_nr);
-		pckbc_add_code(d, 0x41, port_nr);
+		
+		if (port_nr == 0) {
+			// Keyboard:
+			pckbc_add_code(d, 0xab, port_nr);
+			pckbc_add_code(d, 0x41, port_nr);
+		} else {
+			// Mouse:
+			pckbc_add_code(d, 0x00, port_nr);
+		}
 		break;
 
 	case KBC_TYPEMATIC:
@@ -793,6 +822,13 @@ static void dev_pckbc_command(struct pckbc_data *d, int port_nr)
 	case KBC_RESET:
 		pckbc_add_code(d, KBR_ACK, port_nr);
 		pckbc_add_code(d, KBR_RSTDONE, port_nr);
+
+		if (port_nr == 1) {
+			// Mouse (based on NetBSD's pckbport/pms.c) sends
+			// mouse ID after RSTDONE:
+			pckbc_add_code(d, 0x00, port_nr);
+		}
+
 		/*
 		 *  Disable interrupts during reset, or Linux 2.6
 		 *  prints warnings about spurious interrupts.
@@ -802,6 +838,7 @@ static void dev_pckbc_command(struct pckbc_data *d, int port_nr)
 		break;
 
 	default:
+		pckbc_add_code(d, KBR_RESEND, port_nr); // Error
 		fatal("[ pckbc: UNIMPLEMENTED command"
 		    " 0x%02x (port %i) ]\n", cmd, port_nr);
 	}
@@ -891,15 +928,17 @@ if (x&1)
 			/*  debug("[ pckbc: read from DATA: 0x%02x ]\n",
 			    (int)odata);  */
 		} else {
-			debug("[ pckbc: write to DATA:");
-			for (i=0; i<len; i++)
-				debug(" %02x", data[i]);
-			debug(" ]\n");
-
+			if (port_nr == 1) {
+				fatal("[ pckbc: write to DATA:");
+				for (i=0; i<len; i++)
+					fatal(" %02x", data[i]);
+				fatal(" ]\n");
+			}
+			
 			switch (d->state[port_nr]) {
 			case STATE_LDCMDBYTE:
 				d->cmdbyte = idata;
-				d->rx_int_enable = d->cmdbyte &
+				d->rx_int_enable[port_nr] = d->cmdbyte &
 				    (KC8_KENABLE | KC8_MENABLE) ? 1 : 0;
 				d->state[port_nr] = STATE_NORMAL;
 				break;
@@ -914,8 +953,6 @@ if (x&1)
 		break;
 	case 1:		/*  control  */
 		if (writeflag==MEM_READ) {
-			dev_pckbc_tick(cpu, d);
-
 			odata = 0;
 
 			/*  "Data in buffer" bit  */
@@ -1035,19 +1072,26 @@ if (x&1)
 			debug("[ pckbc: write to port %i, PS2_CONTROL:"
 			    " 0x%llx ]\n", port_nr, (long long)idata);
 			d->clocksignal = (idata & 0x10) ? 1 : 0;
-			d->rx_int_enable = (idata & 0x08) ? 1 : 0;
-			d->tx_int_enable = (idata & 0x04) ? 1 : 0;
+			d->rx_int_enable[port_nr] = (idata & PS2_CONTROL_RXINTEN) ? 1 : 0;
+			d->tx_int_enable[port_nr] = (idata & PS2_CONTROL_TXINTEN) ? 1 : 0;
+
+			// HACK/TODO: NetBSD/sgimips' X11 seems to work when
+			// interrupts are enabled, but it seems to not turn
+			// them on. Having this here makes it work, but it not
+			// the correct solution.
+			if (port_nr == 1) {
+				d->rx_int_enable[port_nr] = 1;
+			}
 		}
 		break;
 
 	case PS2 + PS2_STATUS:
 		if (writeflag==MEM_READ) {
-			/* 0x08 = transmit buffer empty  */
-			odata = d->clocksignal + 0x08;
+			odata = d->clocksignal + PS2_STATUS_TXEMPTY;
 
 			if (d->head[port_nr] != d->tail[port_nr]) {
-				/*  0x10 = receicer data available (?)  */
-				odata |= 0x10;
+				/*  receiced data available  */
+				odata |= PS2_STATUS_RXFULL;
 			}
 
 			//debug("[ pckbc: read from port %i, PS2_STATUS: "
@@ -1082,7 +1126,7 @@ if (x&1)
 	if (writeflag == MEM_READ)
 		memory_writemax64(cpu, data, len, odata);
 
-	dev_pckbc_tick(cpu, d);
+	pckbc_reassert_interrupts(d);
 
 	return 1;
 }
@@ -1121,7 +1165,8 @@ int dev_pckbc_init(struct machine *machine, struct memory *mem,
 	d->type              = type;
 	d->in_use            = in_use;
 	d->pc_style_flag     = pc_style_flag;
-	d->rx_int_enable     = 1;
+	d->rx_int_enable[0]  = 1;
+	d->rx_int_enable[1]  = 0;
 	d->output_byte       = 0x02;	/*  A20 enable on PCs  */
 
 	// Default is ENABLE keyboard but DISABLE mouse port:
