@@ -4804,3 +4804,4 @@ Changelog for GXemul:
 20181107	Progress on PS/2 mouse emulation; NetBSD accepts it as "pms0
 		at macekbc0" in the SGI O2 emulation mode. (No actual host
 		mouse input yet though.)
+20181108	Implementing host X11 mouse input for the pckbc device.

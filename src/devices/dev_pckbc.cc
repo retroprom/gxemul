@@ -36,10 +36,6 @@
  *	http://www.computer-engineering.org/ps2keyboard/scancodes3.html
  *	https://www.win.tue.nl/~aeb/linux/kbd/scancodes-10.html#scancodesets
  *	http://nixdoc.net/man-pages/irix/man7/pckeyboard.7.html
- *
- *  TODOs:
- *	Finish the rewrite for 8242.
- *	Mouse input.
  */
 
 #include <stdio.h>
@@ -109,6 +105,10 @@ struct pckbc_data {
 
 	unsigned	key_queue[2][MAX_8042_QUEUELEN];
 	int		head[2], tail[2];
+
+	int		mouse_x;
+	int		mouse_y;
+	int		mouse_buttons;
 };
 
 #define	STATE_NORMAL			0
@@ -633,35 +633,50 @@ DEVICE_TICK(pckbc)
 	}
 
 	// Mouse input:
-	// TODO: Actual mouse movement. This is just for debugging/experimentation.
-#if 1
-	if (d->state[1] == STATE_NORMAL && d->scanning_enabled[1] && (random() & 7)==0) {
-		// See "The default protocol" at
-		// https://www.win.tue.nl/~aeb/linux/kbd/scancodes-13.html
-		int r = random() % 5;
-		if (r == 0) {
-			pckbc_add_code(d, 0x08, 1);
-			pckbc_add_code(d, 0x01, 1);
-			pckbc_add_code(d, 0x00, 1);
-		} else if (r == 1) {
-			pckbc_add_code(d, 0x18, 1);
-			pckbc_add_code(d, 0xff, 1);
-			pckbc_add_code(d, 0x00, 1);
-		} else if (r == 2) {
-			pckbc_add_code(d, 0x08, 1);
-			pckbc_add_code(d, 0x00, 1);
-			pckbc_add_code(d, 0x01, 1);
-		} else if (r == 3) {
-			pckbc_add_code(d, 0x28, 1);
-			pckbc_add_code(d, 0x00, 1);
-			pckbc_add_code(d, 0xff, 1);
-		} else if (r == 4 && (random() & 63) == 0) {
-			pckbc_add_code(d, 0x09, 1);	// left click
-			pckbc_add_code(d, 0x00, 1);
-			pckbc_add_code(d, 0x00, 1);
+	/*  Don't do mouse updates if we're running in serial console mode:  */
+	if (cpu->machine->x11_md.in_use && d->state[1] == STATE_NORMAL && d->scanning_enabled[1]) {
+		int mouse_x, mouse_y, mouse_buttons, mouse_fb_nr;
+		console_getmouse(&mouse_x, &mouse_y, &mouse_buttons, &mouse_fb_nr);
+
+		int xdelta = mouse_x - d->mouse_x;
+		int ydelta = d->mouse_y - mouse_y;	// note: inverted
+
+		const int m = 100;
+
+		if (xdelta > m)
+			xdelta = m;
+		if (xdelta < -m)
+			xdelta = -m;
+		if (ydelta > m)
+			ydelta = m;
+		if (ydelta < -m)
+			ydelta = -m;
+
+		/*  Only send update if there is an actual diff.  */
+		if (xdelta != 0 || ydelta != 0 || d->mouse_buttons != mouse_buttons) {
+			d->mouse_x = mouse_x;
+			d->mouse_y = mouse_y;
+			d->mouse_buttons = mouse_buttons;
+
+			// See "The default protocol" at
+			// https://www.win.tue.nl/~aeb/linux/kbd/scancodes-13.html
+			uint8_t b1 = 0x08;
+			uint8_t b2 = xdelta;
+			uint8_t b3 = ydelta;
+
+			b1 |= (mouse_buttons & 4) >> 2;	// Left
+			b1 |= (mouse_buttons & 2) << 1;	// Middle
+			b1 |= (mouse_buttons & 1) << 1;	// Right
+			b1 |= ((xdelta >> 8) & 1) << 4;
+			b1 |= ((ydelta >> 8) & 1) << 5;
+
+			// printf("x=%i y=%i b1=%02x %02x %02x\n", xdelta, ydelta, b1,b2,b3);
+
+			pckbc_add_code(d, b1, 1);
+			pckbc_add_code(d, b2, 1);
+			pckbc_add_code(d, b3, 1);
 		}
 	}
-#endif
 
 	pckbc_reassert_interrupts(d);
 }
