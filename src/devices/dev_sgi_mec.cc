@@ -562,6 +562,9 @@ DEVICE_ACCESS(sgi_mec)
 				case MII_PHYIDR2:	// 3
 					odata = 0x5c00;	// To match NetBSD's "xxNATSEMI" value.
 					break;
+				case 23:	// MII_NSPHY_PCR
+					odata = 0x20; // PCR_CIMDIS
+					break;
 				default:
 					fatal("[ sgi_mec: unimplemented %s PHY register %i ]\n",
 						writeflag ? "write to" : "read from", reg);
