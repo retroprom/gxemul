@@ -929,6 +929,12 @@ Malta:
 		2. Implement the NIC.
 
 SGI O2:
+	differences between real hardware and NetBSD's header files?
+		RED/GREEN LED: 1 on real hardware turns off, not on!
+		nr of bits for the tile ptr
+		20008 vs 30008 in crmfb?
+		crime time bit mask?
+
 	ds2502_get_eaddr: ds2502_read_rom failed!
 		PROM complains during bootup. Needed to allow bootp() it seems.
 
@@ -942,7 +948,6 @@ SGI O2:
 		figure out what 0x204c means.
 
 	ps2 8242:
-		mouse (netbsd X, and PROM, and openbsd?)
 		openbsd (or rather openbsd's X?) doesn't detect keyboard/mouse?
 		irix doesn't detect keyboard/mouse either? maybe.
 
@@ -951,10 +956,12 @@ SGI O2:
 	scsi! this will be very time consuming.
 
 	graphics:
+		netbsd maybe still triggers some acceleration bugs when moving X11 windows?
+		
 		horrible_getputpixel:
-			non-8-bit pixel formats? 32-bit formats used by NetBSD/OpenBSD in X11
 			GBE_CMODE_RGB10 etc from openbsd's header file?
 			performance?
+
 		actually emulate "pipeline" and detect pipeline overruns,
 			i.e. require guest OSes to wait? but then, when to
 			execute commands in the pipeline? (low-prio)
