@@ -512,7 +512,14 @@ DEVICE_ACCESS(sgi_de)
 			fatal("[ sgi_de: TODO: non-zero CRIME_DE_SCISSOR: 0x%016llx ]\n", idata);
 		break;
 
-	// TODO: netbsd's Xorg writes 3fff3fff to 0x204c. (?)
+	case CRIME_DE_SCISSOR + 4:
+		// NetBSD writes 0x3fff3fff here. "High" part of SCISSOR register?
+		debug("[ sgi_de: %s CRIME_DE_SCISSOR+4: 0x%016llx ]\n",
+		    writeflag == MEM_WRITE ? "write to" : "read from",
+		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
+		if (writeflag == MEM_WRITE && idata != 0x3fff3fff)
+			fatal("[ sgi_de: TODO: CRIME_DE_SCISSOR+4: 0x%016llx ]\n", idata);
+		break;
 
 	case CRIME_DE_PRIMITIVE:
 		debug("[ sgi_de: %s CRIME_DE_PRIMITIVE: 0x%016llx ]\n",
@@ -666,7 +673,7 @@ DEVICE_ACCESS(sgi_de)
 
 		// bufdepth = 1, 2, or 4.
 		int dst_bufdepth = 1 << ((dst_mode >> 8) & 3);
-		//int src_bufdepth = 1 << ((src_mode >> 8) & 3);
+		int src_bufdepth = 1 << ((src_mode >> 8) & 3);
 
 		bool src_is_linear = false;
 		int src_x = -1, src_y = -1;
@@ -689,12 +696,13 @@ DEVICE_ACCESS(sgi_de)
 				src_y = addr_src & 0x7ff;
 			}
 
-			if (step_x != dst_bufdepth || step_y != 1) {
-				fatal("[ sgi_de: unimplemented XFER addr_src=0x%x strd_src=0x%x step_x=0x%x step_y=0x%x "
+			if (step_x != src_bufdepth || (step_y != 0 && step_y != 1)) {
+				fatal("[ sgi_de: unimplemented XFER addr_src=0x%x src_bufdepth=%i "
+					"strd_src=0x%x step_x=0x%x step_y=0x%x "
 					"addr_dst=0x%x strd_dst=0x%x ]\n",
-					addr_src, strd_src, step_x, step_y, addr_dst, strd_dst);
+					addr_src, src_bufdepth, strd_src, step_x, step_y, addr_dst, strd_dst);
 
-				exit(1);
+				// exit(1);
 			}
 		}
 
@@ -753,6 +761,11 @@ DEVICE_ACCESS(sgi_de)
 				y = (y2 * i + y1 * (linelen-i)) / linelen;
 
 				uint32_t color = fg;
+				uint32_t oldcolor = fg;
+
+				if (drawmode & DE_DRAWMODE_ROP && rop != OPENGL_LOGIC_OP_COPY)
+					horrible_getputpixel(false, cpu, d,
+						x, y, &oldcolor, dst_mode);
 
 				bool draw = true;
 				if (drawmode & DE_DRAWMODE_LINE_STIP) {
@@ -765,8 +778,36 @@ DEVICE_ACCESS(sgi_de)
 				// Raster-OP.
 				// TODO: Other ops.
 				// TODO: Should this be before or after other things?
-				if (drawmode & DE_DRAWMODE_ROP && rop == OPENGL_LOGIC_OP_COPY_INVERTED)
-					color = 0xffffffff - color;
+				if (drawmode & DE_DRAWMODE_ROP) {
+					switch (rop) {
+					case OPENGL_LOGIC_OP_COPY:
+						// color = color;
+						break;
+					case OPENGL_LOGIC_OP_XOR:
+						color = oldcolor ^ color;
+						break;
+					case OPENGL_LOGIC_OP_COPY_INVERTED:
+						color = 0xffffffff - oldcolor;
+						break;
+					default:{
+							static char rop_used[256];
+							static bool first = true;
+
+							if (first) {
+							memset(rop_used, 0, sizeof(rop_used));
+							first = false;
+							}
+							if (!rop_used[rop & 255]) {
+								rop_used[rop & 255] = 1;
+								fatal("[ sgi_de: LINE: rop[0x%02x] used! ]\n", rop & 255);
+							}
+
+							if (rop >> 8) {
+								fatal("[ sgi_de: LINE: rop > 255: 0x%08x ]\n", rop);
+							}
+						}
+					}
+				}
 
 				if (draw)
 					horrible_getputpixel(true, cpu, d,
@@ -783,6 +824,11 @@ DEVICE_ACCESS(sgi_de)
 				src_x = saved_src_x;
 				for (x = x1; x != endx; x = (x + dx) & 0x7ff) {
 					uint32_t color = fg;
+					uint32_t oldcolor = fg;
+
+					if (drawmode & DE_DRAWMODE_ROP && rop != OPENGL_LOGIC_OP_COPY)
+						horrible_getputpixel(false, cpu, d,
+							x, y, &oldcolor, dst_mode);
 
 					// Pixel colors copied from another source.
 					// (OpenBSD draws characters using this mechanism.)
@@ -801,8 +847,36 @@ DEVICE_ACCESS(sgi_de)
 					// Raster-OP.
 					// TODO: Other ops.
 					// TODO: Should this be before or after other things?
-					if (drawmode & DE_DRAWMODE_ROP && rop == OPENGL_LOGIC_OP_COPY_INVERTED)
-						color = 0xffffffff - color;
+					if (drawmode & DE_DRAWMODE_ROP) {
+						switch (rop) {
+						case OPENGL_LOGIC_OP_COPY:
+							// color = color;
+							break;
+						case OPENGL_LOGIC_OP_XOR:
+							color = oldcolor ^ color;
+							break;
+						case OPENGL_LOGIC_OP_COPY_INVERTED:
+							color = 0xffffffff - oldcolor;
+							break;
+						default:{
+								static char rop_used[256];
+								static bool first = true;
+
+								if (first) {
+								memset(rop_used, 0, sizeof(rop_used));
+								first = false;
+								}
+								if (!rop_used[rop & 255]) {
+									rop_used[rop & 255] = 1;
+									fatal("[ sgi_de: RECT: rop[0x%02x] used! ]\n", rop & 255);
+								}
+
+								if (rop >> 8) {
+									fatal("[ sgi_de: RECT: rop > 255: 0x%08x ]\n", rop);
+								}
+							}
+						}
+					}
 
 					if (draw)
 						horrible_getputpixel(true, cpu, d,
@@ -1001,9 +1075,9 @@ DEVICE_ACCESS(sgi_mte)
 		    (long long)dst0, (long long)dst1,
 		    dst_y_step, (int)bg, (int)bytemask);
 
-		if (dst_y_step != 0 && dst_y_step != 1) {
+		if (dst_y_step != 0 && dst_y_step != 1 && dst_y_step != -1) {
 			fatal("[ sgi_mte: TODO! unimplemented dst_y_step %i ]", dst_y_step);
-			exit(1);
+			// exit(1);
 		}
 
 		if (src != 0) {
@@ -1040,11 +1114,9 @@ DEVICE_ACCESS(sgi_mte)
 				src_x1 /= (depth / 8);
 				// src_x2 /= (depth / 8);
 
-				if (y1 > y2 || x1 > x2) {
-					fatal("sgi_mte: TODO: y1 > y2 || x1 > x2\n");
-					exit(1);
-				}
-
+				int dx = x1 > x2 ? -1 : 1;
+				int dy = y1 > y2 ? -1 : 1;
+				
 				uint32_t src_mode = (src_tlb << 10) + (((mode & MTE_MODE_DEPTH_MASK) >> MTE_DEPTH_SHIFT) << 8);
 				uint32_t dst_mode = (dst_tlb << 10) + (((mode & MTE_MODE_DEPTH_MASK) >> MTE_DEPTH_SHIFT) << 8);
 
@@ -1056,15 +1128,22 @@ DEVICE_ACCESS(sgi_mte)
 					dst_mode |= DE_MODE_TYPE_RGBA;
 				}
 
-				for (int y = y1; y <= y2; ++y)
-					for  (int x = x1; x <= x2; ++x) {
+				int src_y = src_y1;
+				for (int y = y1; y != y2+dy; y += dy) {
+					int src_x = src_x1;
+					
+					for  (int x = x1; x != x2+dx; x += dx) {
 						if (mode & MTE_MODE_COPY) {
 							horrible_getputpixel(false, cpu, d,
-								x - x1 + src_x1, y - y1 + src_y1, &bg, src_mode);
+								src_x, src_y, &bg, src_mode);
+							src_x += dx;
 						}
 
 						horrible_getputpixel(true, cpu, d, x, y, &bg, dst_mode);
 					}
+					
+					src_y += dy;
+				}
 			}
 			break;
 		case MTE_TLB_LIN_A:

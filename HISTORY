@@ -4805,3 +4805,5 @@ Changelog for GXemul:
 		at macekbc0" in the SGI O2 emulation mode. (No actual host
 		mouse input yet though.)
 20181108	Implementing host X11 mouse input for the pckbc device.
+20181112	More work on the O2 rendering engine Raster Ops. Moving windows
+		within NetBSD's X11 now looks as it should.
