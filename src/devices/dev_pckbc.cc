@@ -53,7 +53,7 @@
 
 
 // #define PCKBC_DEBUG
-/*  #define debug fatal  */
+// #define debug fatal
 
 
 // Should be 256 to emulate a real 8042? Having a larger value allows
@@ -811,6 +811,7 @@ static void dev_pckbc_command(struct pckbc_data *d, int port_nr)
 		} else {
 			// Mouse:
 			pckbc_add_code(d, 0x00, port_nr);
+			pckbc_add_code(d, 0x00, port_nr);
 		}
 		break;
 
@@ -1133,11 +1134,12 @@ if (x&1)
 	}
 
 	/*  SGI? TODO: fix  */
+#if 0
 	if (len == 8)
 		odata |= (odata << 8) | (odata << 16) | (odata << 24) |
 		    (odata << 32) | (odata << 40) | (odata << 48) |
 		    (odata << 56);
-
+#endif
 	if (writeflag == MEM_READ)
 		memory_writemax64(cpu, data, len, odata);
 
