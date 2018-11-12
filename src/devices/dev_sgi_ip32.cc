@@ -514,6 +514,16 @@ DEVICE_ACCESS(mace)
 	size_t i;
 	struct mace_data *d = (struct mace_data *) extra;
 
+	/*
+	 *  My O2 returns the following when dumping 0xbf310000 and forward:
+	 *
+	 *  +0x00: 0x0000000000000010 0x000000000000001e
+	 *  +0x10: 0x0000000000000000 0x0000000000000000
+	 *
+	 *  and then the following addresses result in the same data as
+	 *  0xbf310000.
+	 */
+	d->reg[MACE_ISA_RINGBASE + 7] = 0x10;
 	d->reg[MACE_ISA_FLASH_NIC_REG + 7] |= MACE_ISA_PWD_CLEAR;
 
 	uint8_t old_mace_isa_flash_nic_reg =
@@ -525,6 +535,9 @@ DEVICE_ACCESS(mace)
 		memcpy(data, &d->reg[relative_addr], len);
 
 	switch (relative_addr & ~7) {
+
+	case MACE_ISA_RINGBASE:
+		break;
 
 	case MACE_ISA_FLASH_NIC_REG:
 		// I think the PROM attempts to read the machine's ethernet
