@@ -36,11 +36,34 @@ still one of the guest OSes that works best.
 
 <p><br>The changes between release 0.6.0.2 and 0.6.1 include:
 
+<p>Old framework:
 <ul>
-	<li>TODO... sgi framebuffer, openbsd/sgi moved to supported,
-		some ARM thumb stuff...
+	<li><b>SGI O2 emulation progress:</b>
+	<ul>
+		<li>Graphical framebuffer:
+		Previously, only serial console was possible when
+		running NetBSD/sgimips as a guest OS, but now it is
+		also possible to use graphical framebuffer for both
+		text console use and for X11.
+
+		<li>OpenBSD/sgi has been moved from "unsupported" to
+		supported.
+	</ul>
+	
+	<p>
+	<li><b>ARM Thumb:</b>
+	<ul>
+		<li>Some initial THUMB disassembly support.
+		<li>Slow (non-dyntrans) interpretation of THUMB code.
+	</ul>
 </ul>
 
+<!--
+<p>New framework:
+<ul>
+	<li>...
+</ul>
+-->
 
 
 <p><br>Please read the HISTORY file for more details.
