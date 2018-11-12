@@ -2387,7 +2387,9 @@ static void arc_environment_setup(struct machine *machine, int is64bit,
 		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
 		add_environment_string(cpu, "verbose=1", &addr);
 		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-		add_environment_string(cpu, "showconfig=istrue", &addr);
+		// showconfig 0 means don't show. 1 means show some.
+		// 2 means show more. TODO: higher values?
+		add_environment_string(cpu, "showconfig=3", &addr);
 		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
 		add_environment_string(cpu, "diagmode=v", &addr);
 		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
