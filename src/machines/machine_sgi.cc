@@ -565,6 +565,17 @@ j = 0;
 		/*  bus_pci_add(machine, pci_data, mem, 0, 0, 0,
 		    "ne2000");  TODO  */
 
+		/*
+		 *  OpenBSD accesses the SCSI controller at paddr=0x2800010xx.
+		 *  Note that the 2 is above 32-bit range.
+		 *
+		 *  TODO: Investigate what this actually means. Possibly
+		 *  a bug in GXemul's 64-bit instructions? Or perhaps it really
+		 *  is correct.
+		 */
+		dev_ram_init(machine, 0x280000000ULL, 0x01000000, DEV_RAM_MIRROR, 0x18000000);
+
+
 		// ahc0:
 		/*  TODO: Make it possible to add the controller, regardless of
 			the existence of disks!  */
