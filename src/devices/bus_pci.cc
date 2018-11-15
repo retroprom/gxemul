@@ -63,10 +63,9 @@
 
 extern int verbose;
 
-
-#ifdef UNSTABLE_DEVEL
-#define debug fatal
-#endif
+// #ifdef UNSTABLE_DEVEL
+// #define debug fatal
+// #endif
 
 
 /*
@@ -521,34 +520,26 @@ PCIINIT(ali_m5229)
 
 
 /*
- *  Adaptec AHC SCSI controller.
+ *  Adaptec AHC SCSI controller, with values as they are in my SGI O2.
  */
 
-#define PCI_VENDOR_ADP  0x9004          /* Adaptec */
-#define PCI_VENDOR_ADP2 0x9005          /* Adaptec (2nd PCI Vendor ID) */
-#define PCI_PRODUCT_ADP_2940U   0x8178          /* AHA-2940 Ultra */
-#define PCI_PRODUCT_ADP_2940UP  0x8778          /* AHA-2940 Ultra Pro */
+#define PCI_VENDOR_ADP			0x9004          /* Adaptec */
+#define PCI_PRODUCT_ADP_AIC7880		0x8078          /* AIC7880 */
 
 PCIINIT(ahc)
 {
-	/*  Numbers taken from a Adaptec 2940U:  */
-	/*  http://mail-index.netbsd.org/netbsd-bugs/2000/04/29/0000.html  */
-
 	PCI_SET_DATA(PCI_ID_REG, PCI_ID_CODE(PCI_VENDOR_ADP,
-	    PCI_PRODUCT_ADP_2940U));
+	    PCI_PRODUCT_ADP_AIC7880));
 
-	PCI_SET_DATA(PCI_COMMAND_STATUS_REG, 0x02900007);
+	PCI_SET_DATA(PCI_COMMAND_STATUS_REG, 0x02800046);
 
 	PCI_SET_DATA(PCI_CLASS_REG, PCI_CLASS_CODE(PCI_CLASS_MASS_STORAGE,
 	    PCI_SUBCLASS_MASS_STORAGE_SCSI, 0) + 0x01);
 
-	PCI_SET_DATA(PCI_BHLC_REG, 0x00004008);
+	PCI_SET_DATA(PCI_BHLC_REG, 0x00001020);
 
-	/*  1 = type i/o. 0x0000e801;  address?  */
-	/*  second address reg = 0xf1002000?  */
-	PCI_SET_DATA(PCI_MAPREG_START + 0x00, 0x00000001);
-	PCI_SET_DATA(PCI_MAPREG_START + 0x04, 0x00000000);
-
+	PCI_SET_DATA(PCI_MAPREG_START + 0x00, 0xffffff01);
+	PCI_SET_DATA(PCI_MAPREG_START + 0x04, 0x80001000);
 	PCI_SET_DATA(PCI_MAPREG_START + 0x08, 0x00000000);
 	PCI_SET_DATA(PCI_MAPREG_START + 0x0c, 0x00000000);
 	PCI_SET_DATA(PCI_MAPREG_START + 0x10, 0x00000000);
@@ -558,22 +549,20 @@ PCIINIT(ahc)
 	/*  Subsystem vendor ID? 0x78819004?  */
 	PCI_SET_DATA(PCI_MAPREG_START + 0x1c, 0x00000000);
 
-	PCI_SET_DATA(0x30, 0xef000000);
-	PCI_SET_DATA(PCI_CAPLISTPTR_REG, 0x000000dc);
-	PCI_SET_DATA(0x38, 0x00000000);
-	PCI_SET_DATA(PCI_INTERRUPT_REG, 0x08080109);	/*  interrupt pin A  */
+	PCI_SET_DATA(0x30, 0x80010000);
+	PCI_SET_DATA(PCI_INTERRUPT_REG, 0x08080100);	/*  interrupt pin  */
+
+	PCI_SET_DATA(0x40, 0x00000180);
+	PCI_SET_DATA(0x40, 0x00000180);
+
 
 	/*
 	 *  TODO:  this address is based on what NetBSD/sgimips uses
-	 *  on SGI IP32 (O2). Fix this!
+	 *  on SGI IP32 (O2). Fix this! Allow devices to move? Or
+	 *  implement PCI space redirection at least!
 	 */
 
-	device_add(machine, "ahc addr=0x18000000");
-
-	/*  OpenBSD/sgi snapshots sometime between 2005-03-11 and
-	    2005-04-04 changed to using 0x1a000000:  */
-	dev_ram_init(machine, 0x1a000000, 0x2000000, DEV_RAM_MIRROR,
-	    0x18000000);
+	device_add(machine, "ahc addr=0x18001000");
 }
 
 

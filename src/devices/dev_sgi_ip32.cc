@@ -63,12 +63,13 @@
 
 // #define debug fatal
 
+// #define MACEPCI_DEBUG
+
 #define	CRIME_TICKSHIFT			14
 
 
 struct macepci_data {
 	struct pci_data *pci_data;
-	uint32_t	reg[DEV_MACEPCI_LENGTH / 4];
 };
 
 #define	DEV_CRIME_LENGTH		0x280
@@ -185,6 +186,22 @@ DEVICE_TICK(crime)
 
 DEVICE_ACCESS(crime)
 {
+	/*
+	 *  The CRIME is memory mapped as 0x80 bytes, starting at
+	 *  physical 0x14000000.
+	 *
+	 *  On my real O2:
+	 *
+	 *  0x14000080..0x140000ff is the same as 0x14000000..0x1400007f.
+	 *  0x14000100..0x1400017f is the same as 0x14000000..0x1400007f.
+	 *  0x14000180..0x140001ff is the same as 0x14000000..0x1400007f.
+	 *
+	 *  (I assume that real code will never access the above "mirrors",
+	 *  but it would be trivial to add redirection so that such code
+	 *  would work too.)
+	 *
+	 *  Memory control then starts at 0x14000200.
+	 */
 	struct crime_data *d = (struct crime_data *) extra;
 	uint64_t idata = 0, odata = 0;
 	uint64_t preserved_CRIME_HARDINT = d->reg[CRIME_HARDINT / sizeof(uint64_t)];
@@ -683,8 +700,16 @@ DEVICE_ACCESS(macepci)
 	uint64_t idata = 0, odata=0;
 	int res = 1, bus, dev, func, pcireg;
 
-	if (writeflag == MEM_WRITE)
+	if (len != 4)
+		fatal("[ macepci: unimplemented len %i ]\n", len);
+
+	if (writeflag == MEM_WRITE) {
 		idata = memory_readmax64(cpu, data, len);
+#ifdef MACEPCI_DEBUG
+		fatal("[ macepci: write to address 0x%x, data=0x%02x (len %i) ]\n",
+		    (int)relative_addr, (int)idata, len);
+#endif
+	}
 
 	/*  Read from/write to the macepci:  */
 	switch (relative_addr) {
@@ -692,21 +717,32 @@ DEVICE_ACCESS(macepci)
 	case 0x00:	/*  Error address  */
 		if (writeflag == MEM_WRITE) {
 		} else {
-			odata = 0;
+			/*  My real O2 returns 0x4000.  */
+			odata = 0x4000;
 		}
 		break;
 
 	case 0x04:	/*  Error flags  */
 		if (writeflag == MEM_WRITE) {
 		} else {
-			odata = 0x06;
+			/*  My real O2 returns 0x00100006.  */
+			odata = 0x00100006;
+		}
+		break;
+
+	case 0x08:	/*  TODO: Unknown?  */
+		if (writeflag == MEM_WRITE) {
+		} else {
+			/*  My real O2 returns 0xff000500.  */
+			odata = 0xff000500;
 		}
 		break;
 
 	case 0x0c:	/*  Revision number  */
 		if (writeflag == MEM_WRITE) {
 		} else {
-			odata = 0x01;
+			/*  My real O2 returns 0x00000001.  */
+			odata = 0x00000001;
 		}
 		break;
 
@@ -722,17 +758,26 @@ DEVICE_ACCESS(macepci)
 
 	default:
 		if (writeflag == MEM_WRITE) {
-			debug("[ macepci: unimplemented write to address "
+			fatal("[ macepci: unimplemented write to address "
 			    "0x%x, data=0x%02x ]\n",
 			    (int)relative_addr, (int)idata);
 		} else {
-			debug("[ macepci: unimplemented read from address "
+			fatal("[ macepci: unimplemented read from address "
 			    "0x%x ]\n", (int)relative_addr);
+
+			/*  My real O2 returns 0xffffffff for all unimplemented
+				registers.  */
+			odata = 0xffffffff;
 		}
 	}
 
-	if (writeflag == MEM_READ)
+	if (writeflag == MEM_READ) {
 		memory_writemax64(cpu, data, len, odata);
+#ifdef MACEPCI_DEBUG
+		fatal("[ macepci: read from address 0x%x, data=0x%02x (len %i) ]\n",
+		    (int)relative_addr, (int)odata, len);
+#endif
+	}
 
 	return res;
 }
