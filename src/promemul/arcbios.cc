@@ -2374,6 +2374,8 @@ static void arc_environment_setup(struct machine *machine, int is64bit,
 		add_environment_string(cpu, "crt_option=1", &addr);
 		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
 		add_environment_string(cpu, "netaddr=10.0.0.1", &addr);
+		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
+		add_environment_string(cpu, "netmask=255.0.0.0", &addr);
 
 		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
 		add_environment_string(cpu, "keybd=US", &addr);
@@ -2389,7 +2391,7 @@ static void arc_environment_setup(struct machine *machine, int is64bit,
 		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
 		// showconfig 0 means don't show. 1 means show some.
 		// 2 means show more. TODO: higher values?
-		add_environment_string(cpu, "showconfig=3", &addr);
+		add_environment_string(cpu, "showconfig=255", &addr);
 		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
 		add_environment_string(cpu, "diagmode=v", &addr);
 		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
