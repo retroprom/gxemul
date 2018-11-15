@@ -463,7 +463,7 @@ int DYNTRANS_RUN_INSTR_DEF(struct cpu *cpu)
 void DYNTRANS_FUNCTION_TRACE_DEF(struct cpu *cpu, int n_args)
 {
 	int show_symbolic_function_name = 1;
-        char strbuf[50];
+        char strbuf[55];
 	char *symbol;
 	uint64_t ot;
 	int x, print_dots = 1, n_args_to_print =
@@ -528,10 +528,18 @@ void DYNTRANS_FUNCTION_TRACE_DEF(struct cpu *cpu, int n_args)
 
 		if (d > -256 && d < 256)
 			fatal("%i", (int)d);
-		else if (memory_points_to_string(cpu, cpu->mem, d, 1))
-			fatal("\"%s\"", memory_conv_to_string(cpu,
-			    cpu->mem, d, strbuf, sizeof(strbuf)));
-		else if (symbol != NULL && ot == 0 &&
+		else if (memory_points_to_string(cpu, cpu->mem, d, 1)) {
+			memset(strbuf, 0, sizeof(strbuf));
+			memory_conv_to_string(cpu,
+			    cpu->mem, d, strbuf, sizeof(strbuf));
+			fatal("\"%s\"", strbuf);
+			// TODO: This shows "..." when the string is longer
+			// _or exactly the max length_. An improvement would
+			// be to detect the case where the string is exactly
+			// the max length and not show "..." then.
+			if (strlen(strbuf) >= sizeof(strbuf)-1)
+				fatal("...");
+		} else if (symbol != NULL && ot == 0 &&
 		    show_symbolic_function_name)
 			fatal("&%s", symbol);
 		else {

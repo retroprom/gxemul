@@ -767,18 +767,6 @@ NOTE: MOST of the stuff below are from pre-0.6.0, so the comments may be
 
 
 Legacy-mode Debugger:
-	In the trace output when showing strings, show "..." if the string
-	was longer than the default max length.
-	
-		<f("apa",42,...)>
-	
-	shoudl be
-	
-		<f("apa"...,42,...)>
-
-	if 3 was the max string length, to indicate that apa was cut off.
-
-
 	Extend the
 		put [b|h|w|d|q] addr, data    modify emulated memory contents
 	command with a "s" (string) mode, where data is a string. Also
@@ -936,20 +924,15 @@ SGI O2:
 		crime time bit mask?
 
 	ds2502_get_eaddr: ds2502_read_rom failed!
-		PROM complains during bootup. Needed to allow bootp() it seems.
+		PROM complains during bootup. Needed to get further with bootp() diskless booting.
 
 	netbsd starts in "enter pathname of shell" mode; should start netbooting
 		in a more automated fashion?
 
 	netbsd randomly quits 'startx' without showing anything?
 
-	netbsd does this when starting up X:
-		[ sgi_de: unimplemented write to address 0x204c, data=0x000000003fff3fff ]
-		figure out what 0x204c means.
-
 	ps2 8242:
-		openbsd (or rather openbsd's X?) doesn't detect keyboard/mouse?
-		irix doesn't detect keyboard/mouse either? maybe.
+		openbsd's X11 doesn't detect keyboard/mouse?
 
 	PROM in GXemul says "SGI-CRM, Rev B", but my real O2 says Rev C?
 
@@ -985,6 +968,8 @@ SGI O2:
 
 	audio?
 		would be the first audio related thing in gxemul...
+
+	VICE?
 
 	video? probably too complicated.
 
