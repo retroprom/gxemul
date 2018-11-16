@@ -911,8 +911,13 @@ int diskimage_add(struct machine *machine, char *fname)
 
 	d->writable = access(fname, W_OK) == 0? 1 : 0;
 
-	if (d->is_a_cdrom || prefix_r)
+	if (d->is_a_cdrom || prefix_r) {
 		d->writable = 0;
+	} else {
+		if (!d->writable) {
+			debug("NOTE: '%s' is read-only in the host file system, but 'r:' was not used.\n\n", d->fname);
+		}
+	}
 
 	d->f = fopen(fname, d->writable? "r+" : "r");
 	if (d->f == NULL) {
