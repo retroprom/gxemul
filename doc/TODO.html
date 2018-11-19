@@ -15,24 +15,25 @@
 <a href="./">Back to the index.</a>
 
 
-<p>Because of severe lack of spare time that can be allocated to the GXemul
-project, the first 0.6.x releases will most likely not be very meaningful to
-end-users, since almost all old features will be deprecated/legacy features,
-and the new features will only work with <tt>testm88k</tt> (which most users
-will not care about), or other partially implemented emulation modes.
-Still, it feels like the way to go forward.
+<p><br>
+Here are some things, in no specific order, that I'd like to fix or
+implement in GXemul. (Some items in this list are perhaps already fixed.)
 
-<p>(The name "0.5.x" was skipped. This was the C++ version that was supposed
-to be a complete rewrite from scratch, with no legacy mode support.
-There was not enough spare time.)
+<p>This list is split between the new framework (written in C++, version 0.6),
+and the older framework which was written in C.
+
+<p>
+<ul>
+	<li><a href="#new">New framework</a>
+	<li><a href="#legacy">Legacy framework</a>
+	<p>
+	<li><a href="#release">Release checklist</a>
+</ul>
 
 
-<p><pre>
+<p><br><h4><a name="new">New framework</a></h4>
 
-Some things, in no specific order, that I'd like to fix:
-(Some items in this list are perhaps already fixed.)
-
-<i>Legend:
+<p><pre><i>Legend:
 
 [ ] = not started yet, or just planning/thinking about it
 [/] = started, either "on paper" or actual implementation
@@ -256,6 +257,11 @@ Some things, in no specific order, that I'd like to fix:
 	     the 16-bit-encoded variant of the rectangle drawing demo (on both
 	     64-bit and 32-bit emulated CPUs).
 	[ ]  All the other devices (interrupts, ethernet, serial, SMP, ...)
+
+  [ ]   Intel i960 CPU and machine modes.
+
+  	[ ]  HP 700/RX emulation.
+  	[ ]  Cyclone/VH i960 evaluation board emulation (for uClinux/i960).
 
   [ ]	SPARC64? Would be nice; multithreaded Niagara emulation etc.
 
@@ -749,24 +755,14 @@ Some things, in no specific order, that I'd like to fix:
 	[ ]  errno emulation layer
 	[ ]  ioctl emulation layer for all devices :-[
 	[ ]  struct conversions for many syscalls
+</pre>
 
 
 
--------------------------------------------------------------------------------
 
-NOTE: MOST of the stuff below are from pre-0.6.0, so the comments may be
-      a bit out of date, or more likely, only correspond to the LEGACY parts
-      of the code.
-      
-      The long-term goal is to rewrite everything using the new framework,
-      and therefore the comments below will either be incorporated in the
-      rewrite, or they are not applicable any longer.
+<p><br><h4><a name="legacy">Legacy framework</a></h4>
 
--------------------------------------------------------------------------------
-
-
-
-Legacy-mode Debugger:
+<p><pre>Legacy-mode Debugger:
 	Extend the
 		put [b|h|w|d|q] addr, data    modify emulated memory contents
 	command with a "s" (string) mode, where data is a string. Also
@@ -923,6 +919,10 @@ SGI O2:
 		20008 vs 30008 in crmfb?
 		crime time bit mask?
 
+	bus_pci / O2's pci:
+		reconfigurable memory space redirect?
+		ahc scsi controller! this will be very time consuming.
+
 	ds2502_get_eaddr: ds2502_read_rom failed!
 		PROM complains during bootup. Needed to get further with bootp() diskless booting.
 
@@ -930,15 +930,16 @@ SGI O2:
 		in a more automated fashion?
 
 	netbsd randomly quits 'startx' without showing anything?
+		sometimes also randomly places windows differently.
 
 	ps2 8242:
 		openbsd's X11 doesn't detect keyboard/mouse?
 
 	PROM in GXemul says "SGI-CRM, Rev B", but my real O2 says Rev C?
 
-	scsi! this will be very time consuming.
-
 	graphics:
+		allow other resolutions than 1280x1024? netbsd seems to support it (?).
+
 		netbsd maybe still triggers some acceleration bugs when moving X11 windows?
 		
 		horrible_getputpixel:
@@ -972,8 +973,6 @@ SGI O2:
 	VICE?
 
 	video? probably too complicated.
-
-	write some kind of test program to simplify comparisons of the real O2 to the emulator
 
 HPCmips:
 	x)  Mouse/pad support! :)
@@ -1184,39 +1183,31 @@ is kept here, so that the same mistakes may be avoided in the rewrite.]
 		    emulator)
 	o)  Generalize the framebuffer stuff by moving _ALL_ X11
 		specific code to a separate module.
-
-Release checklist:
-	Build on as many platforms as possible.
-	Install as many as possible of the Guest OSes in the documentation;
-		the documentation may need to be updated if there are
-		regressions. (This can take a whole day.)
-	Update the README file.
-	Update the RELEASE NOTES.
-	TODO updates (i.e. set goals for the _next_ release, if possible).
-	HISTORY (mention the release).
-	SVN branch/tag.
-	Send SVN dump to Sourceforge.
-	Tarball creation (make_release.sh)
-	Home page update: version numbers, architectures?
-	Home page News page update: new Release.
-	sync homepage to sourceforge
-	#GXemul on FreeNode (IRC): version number in topic
-	Sourceforge File Release (upload the tarball).
-	gxemul-users mail
-	Freshmeat
-	Wikipedia page (version number and date, possibly architectures update,
-		or description update).
-		https://secure.wikimedia.org/wikipedia/en/wiki/GXemul
-	Send mail to package maintainers (if they are not subscribed
-		to the mailing list(s))
-	If new arch:
-		Linux-MIPS wiki page
-		https://secure.wikimedia.org/wikipedia/en/wiki/Comparison_of_platform_virtual_machines
-		Ohloh description page
-		gavare.se main page
-
--------------------------------------------------------------------------------
 </pre>
+
+
+
+
+<p><br><h4><a name="release">Release checklist</a></h4>
+
+<p><ul>
+	<li>Build on as many platforms as possible.
+	<li>Install as many as possible of the Guest OSes in the documentation;
+		the documentation may need to be updated if there are
+		regressions.
+	<li>Update the <tt>README</tt> and <tt>RELEASE</tt> notes.
+	<li>TODO updates (i.e. set goals for the <i>next</i> release, if possible).
+	<li>HISTORY (mention the release).
+	<li>SVN branch/tag.
+	<li>Tarball creation (make_release.sh)
+	<li>Home page <i>Download page</i> update: version numbers, architectures?
+	<li>Home page <i>News page</i> update: new Release.
+	<li>Sync the homepage to the web server.
+	<li>Mention release on #GXemul on FreeNode (IRC), set version number in topic if possible
+	<li>Sourceforge File Release (upload the tarball).
+	<li>gxemul-users mail, content similar to the RELEASE notes.
+</ul>
+
 </body>
 </html>
 
