@@ -72,12 +72,9 @@ DEVICE_ACCESS(ahc)
 
 	idata = memory_readmax64(cpu, data, len);
 
-	/*  YUCK! SGI uses reversed order inside 32-bit words:  */
+	/*  SGI uses weird reversed order addresses:  */
 	if (cpu->byte_order == EMUL_BIG_ENDIAN)
-		relative_addr = (relative_addr & ~0x3)
-		    | (3 - (relative_addr & 3));
-
-	relative_addr %= DEV_AHC_LENGTH;
+		relative_addr ^= 3;
 
 	if (len != 1)
 		fatal("[ ahc: ERROR! Unimplemented len %i ]\n", len);

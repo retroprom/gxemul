@@ -546,7 +546,6 @@ PCIINIT(ahc)
 	PCI_SET_DATA(PCI_MAPREG_START + 0x14, 0x00000000);
 	PCI_SET_DATA(PCI_MAPREG_START + 0x18, 0x00000000);
 
-	/*  Subsystem vendor ID? 0x78819004?  */
 	PCI_SET_DATA(PCI_MAPREG_START + 0x1c, 0x00000000);
 
 	PCI_SET_DATA(0x30, 0x80010000);
@@ -562,7 +561,8 @@ PCIINIT(ahc)
 	 *  implement PCI space redirection at least!
 	 */
 
-	device_add(machine, "ahc addr=0x18001000");
+	// device_add(machine, "ahc addr=0x1a001000");
+	device_add(machine, "ahc addr=0x18002000");
 }
 
 
