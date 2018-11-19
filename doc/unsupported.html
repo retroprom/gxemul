@@ -45,7 +45,7 @@ SUCH DAMAGE.
 
 <p><br>
 <ul>
-  <li><a href="#helenosmaltabe">HelenOS/maltabe 0.7.2</a>
+  <li><a href="#helenosmalta">HelenOS/malta 0.7.2</a>
   <li><a href="#helenosrpi">HelenOS/rpi 0.7.2</a>
   <li><a href="#helenosppc">HelenOS/ppc 0.7.1</a>
   <li><a href="#mach">Mach/PMAX</a>
@@ -83,20 +83,24 @@ cases, it contains notes about starting guest OSes that are not complete
 
 
 <p><br>
-<a name="helenosmaltabe"></a>
-<h3>HelenOS/maltabe:</h3>
+<a name="helenosmalta"></a>
+<h3>HelenOS/malta:</h3>
 
 <p>Modern versions of HelenOS <i>almost</i> run in GXemul,
-using the Malta big-endian emulation mode, without a graphical framebuffer.
-The PCI devices in GXemul are not detected/supported yet.
+using the Malta emulation mode, without a graphical framebuffer.
+The PCI devices in GXemul do not seem to be correctly emulated yet.
 
 <p>To run HelenOS for Malta in GXemul:
 <ol>
   <li>Download the HelenOS kernel:<pre>
 	<a href="http://www.helenos.org/releases/HelenOS-0.7.2-mips32-malta-be.boot">http://www.helenos.org/releases/HelenOS-0.7.2-mips32-malta-be.boot</a>
+    or
+	<a href="http://www.helenos.org/releases/HelenOS-0.7.2-mips32-malta-le.boot">http://www.helenos.org/releases/HelenOS-0.7.2-mips32-malta-le.boot</a>
   </pre>
   <li>Start GXemul using the following command line:<pre>
   	<b>gxemul -e maltabe HelenOS-0.7.2-mips32-malta-be.boot</b>
+    or
+  	<b>gxemul -e malta HelenOS-0.7.2-mips32-malta-le.boot</b>
   </pre>
 </ol>
 
