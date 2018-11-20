@@ -111,6 +111,8 @@ struct sgi_gbe_data {
 
 void get_rgb(struct sgi_gbe_data *d, uint32_t color, uint8_t* r, uint8_t* g, uint8_t* b)
 {
+	// TODO: Don't switch on color_mode. For overlays, this is always 
+	// 8-bit index mode!
 	switch (d->color_mode) {
 	case CRMFB_MODE_TYP_I8:
 		color &= 0xff;
