@@ -595,6 +595,12 @@ DEVICE_ACCESS(sgi_mec)
 			    (idata >> 40) & 255, (idata >> 32) & 255,
 			    (idata >> 24) & 255, (idata >> 16) & 255,
 			    (idata >>  8) & 255, (idata >>  0) & 255);
+		else
+			fatal("[ sgi_mec: reading the MAC address as "
+			    "%02x:%02x:%02x:%02x:%02x:%02x ]\n",
+			    (odata >> 40) & 255, (odata >> 32) & 255,
+			    (odata >> 24) & 255, (odata >> 16) & 255,
+			    (odata >>  8) & 255, (odata >>  0) & 255);
 		break;
 	case MEC_STATION_ALT:	/*  0xa8  */
 		if (writeflag)
@@ -603,6 +609,12 @@ DEVICE_ACCESS(sgi_mec)
 			    (idata >> 40) & 255, (idata >> 32) & 255,
 			    (idata >> 24) & 255, (idata >> 16) & 255,
 			    (idata >>  8) & 255, (idata >>  0) & 255);
+		else
+			debug("[ sgi_mec: reading the ALTERNATIVE MAC address"
+			    " as %02x:%02x:%02x:%02x:%02x:%02x ]\n",
+			    (odata >> 40) & 255, (odata >> 32) & 255,
+			    (odata >> 24) & 255, (odata >> 16) & 255,
+			    (odata >>  8) & 255, (odata >>  0) & 255);
 		break;
 	case MEC_MULTICAST:	/*  0xb0  */
 		if (writeflag)
