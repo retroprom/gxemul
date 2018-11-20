@@ -80,10 +80,13 @@ struct sgi_gbe_data {
 	uint32_t	y_intr01;		/* 0x10020  */
 	uint32_t	y_intr23;		/* 0x10024  */
 
+	uint32_t	ovr_tilesize;		/* 0x20000  */
+	uint32_t	ovr_control;		/* 0x2000c  */
+
 	uint32_t	tilesize;		/* 0x30000  */
 	uint32_t	frm_control;		/* 0x3000c  */
 
-	uint32_t	palette[256];		/* 0x50000  */
+	uint32_t	palette[32 * 256];	/* 0x50000  */
 
 	uint32_t	cursor_pos;		/* 0x70000  */
 	uint32_t	cursor_control;		/* 0x70004  */
@@ -96,8 +99,12 @@ struct sgi_gbe_data {
 	int		xres, yres;
 	int 		width_in_tiles;
 	int		partial_pixels;
+	int 		ovr_width_in_tiles;
+	int		ovr_partial_pixels;
 	int		bitdepth;
 	int		color_mode;
+	int		cmap_select;
+	uint32_t	selected_palette[256];
 	struct vfb_data *fb_data;
 };
 
@@ -107,9 +114,9 @@ void get_rgb(struct sgi_gbe_data *d, uint32_t color, uint8_t* r, uint8_t* g, uin
 	switch (d->color_mode) {
 	case CRMFB_MODE_TYP_I8:
 		color &= 0xff;
-		*r = d->palette[color] >> 24;
-		*g = d->palette[color] >> 16;
-		*b = d->palette[color] >>  8;
+		*r = d->selected_palette[color] >> 24;
+		*g = d->selected_palette[color] >> 16;
+		*b = d->selected_palette[color] >>  8;
 		break;
 	case CRMFB_MODE_TYP_RG3B2:	// Used by NetBSD console mode
 		*r = 255 * ((color >> 5) & 7) / 7;
@@ -124,6 +131,14 @@ void get_rgb(struct sgi_gbe_data *d, uint32_t color, uint8_t* r, uint8_t* g, uin
 	default:fatal("sgi gbe get_rgb(): unimplemented mode %i\n", d->color_mode);
 		exit(1);
 	}
+}
+
+
+void select_palette(struct sgi_gbe_data *d, int palette_nr)
+{
+	memmove(&d->selected_palette[0],
+		&d->palette[256 * palette_nr],
+		256 * sizeof(uint32_t));
 }
 
 
@@ -149,6 +164,7 @@ DEVICE_TICK(sgi_gbe)
 	uint64_t tiletable;
 	unsigned char buf[16384];	/*  must be power of 2, at most 65536 */
 	int bytes_per_pixel = d->bitdepth / 8;
+	int partial_pixels, width_in_tiles;
 
 	if (!cpu->machine->x11_md.in_use)
 		return;
@@ -164,25 +180,38 @@ DEVICE_TICK(sgi_gbe)
 		}
 	}
 
-	if (!(d->frm_control & CRMFB_DMA_ENABLE))
-		return;
+	// printf("d->frm_control = %08x  d->ovr_control = %08x\n", d->frm_control,d->ovr_control);
 
 	// NetBSD's crmfbreg.h documents the tileptr as having a "9 bit shift",
 	// but IRIX seems to put a value ending in 0x......80 there, and the
 	// last part of that address seems to matter.
 	// TODO: Double-check this with the real hardware.
-	tiletable = (d->frm_control & 0xffffff80);
+	
+	if (d->ovr_control & CRMFB_DMA_ENABLE) {
+		tiletable = (d->ovr_control & 0xffffff80);
+		bytes_per_pixel = 1;
+		partial_pixels = d->ovr_partial_pixels;
+		width_in_tiles = d->ovr_width_in_tiles;
+		select_palette(d, 17);	// TODO: is it always palette nr 17 for overlays?
+	} else if (d->frm_control & CRMFB_DMA_ENABLE) {
+		tiletable = (d->frm_control & 0xffffff80);
+		partial_pixels = d->partial_pixels;
+		width_in_tiles = d->width_in_tiles;
+		select_palette(d, d->cmap_select);
+	} else {
+		return;
+	}
 
 #ifdef GBE_DEBUG
-	fatal("[ sgi_gbe: dev_sgi_gbe_tick(): tiletable = 0x%llx, linear = %i ]\n",
-		(long long)tiletable, linear);
+	fatal("[ sgi_gbe: dev_sgi_gbe_tick(): tiletable = 0x%llx, bytes_per_pixel = %i ]\n", (long long)tiletable,
+		bytes_per_pixel);
 #endif
 
 	if (tiletable == 0)
 		return;
 
 	// Nr of tiles horizontally:
-	int w = d->width_in_tiles + (d->partial_pixels > 0 ? 1 : 0);
+	int w = width_in_tiles + (partial_pixels > 0 ? 1 : 0);
 
 	// Actually, the number of tiles vertically is usually very few,
 	// but this algorithm will render "up to" 256 and abort as soon
@@ -222,14 +251,10 @@ DEVICE_TICK(sgi_gbe)
 					continue;
 				
 				// Read one line of up to 512 bytes from the tile.
-				int len = tilex < d->width_in_tiles ? 512 : (d->partial_pixels * bytes_per_pixel);
+				int len = tilex < width_in_tiles ? 512 : (partial_pixels * bytes_per_pixel);
 
 				cpu->memory_rw(cpu, cpu->mem, base + 512 * line,
 				    buf, len, MEM_READ, NO_EXCEPTIONS | PHYSICAL);
-
-#if 0
-				for (int j=0; j<len; j++) buf[j] ^= (random() & 0x21);
-#endif
 
 				int fb_offset = (x + y * d->xres) * 3;
 				int fb_len = (len / bytes_per_pixel) * 3;
@@ -512,30 +537,27 @@ DEVICE_ACCESS(sgi_gbe)
 		break;
 		
 	case CRMFB_OVR_WIDTH_TILE:	// 0x20000
-		// TODO
+		if (writeflag == MEM_WRITE) {
+			d->ovr_tilesize = idata;
+
+			d->ovr_width_in_tiles = (idata >> CRMFB_FRM_TILESIZE_WIDTH_SHIFT) & 0xff;
+			d->ovr_partial_pixels = ((idata >> CRMFB_FRM_TILESIZE_RHS_SHIFT) & 0x1f) * 32;
+
+			debug("[ sgi_gbe: OVR setting width in tiles = %i, partial pixels = %i ]\n",
+			    d->ovr_width_in_tiles, d->ovr_partial_pixels);
+		} else
+			odata = d->ovr_tilesize;
 		break;
 
-	case CRMFB_OVR_TILE_PTR:// 0x20004
-		/*
-		 *  Unknown. Hacks to get the IP32 PROM and IRIX to
-		 *  get slightly further than without these values.
-		 *
-		 *  However, IRIX says
-		 *
-		 *  "WARNING: crime idle timeout after xxxx us"
-		 *
-		 *  so perhaps it expects some form of interrupt instead.
-		 */
-		odata = random();	/*  IP32 prom test hack. TODO  */
-		/*  IRIX wants 0x20, it seems.  */
-		if (random() & 1)
-			odata = 0x20;
-		if (random() & 1)
-			odata = 0x3bf6a0;
+	case CRMFB_OVR_TILE_PTR:	// 0x20004
+		odata = d->ovr_control ^ (random() & 1);
 		break;
 
-	case CRMFB_OVR_CONTROL:	// 0x20008
-		// TODO.
+	case CRMFB_OVR_CONTROL:		// 0x20008
+		if (writeflag == MEM_WRITE)
+			d->ovr_control = idata;
+		else
+			odata = d->ovr_control;
 		break;
 
 	case CRMFB_FRM_TILESIZE:	// 0x30000:
@@ -559,25 +581,19 @@ DEVICE_ACCESS(sgi_gbe)
 		break;
 		
 	case 0x30008:
-		odata = random();	/*  IP32 prom test hack. TODO  */
-		/*  IRIX wants 0x20, it seems.  */
-		if (random() & 1)
-			odata = 0x20;
+		// TODO: Figure out exactly what the low bits do.
+		// Irix seems to want 0x20 to "sometimes" be on or off here.
+		odata = d->frm_control ^ (random() & 0x20);
 		break;
 
 	case CRMFB_FRM_CONTROL:	// 0x3000c
 		/*
 		 *  Writes to 3000c should be readable back at 30008?
 		 *  At least bit 0 (dma) ctrl 3.
-		 *
-		 *  Bits 31..9 = tile table pointer bits,
-		 *  Bit 1 = linear
-		 *  Bit 0 = dma
 		 */
 		if (writeflag == MEM_WRITE) {
 			d->frm_control = idata;
-			debug("[ sgi_gbe: frm_control = 0x%08x ]\n",
-			    d->frm_control);
+			debug("[ sgi_gbe: frm_control = 0x%08x ]\n", d->frm_control);
 		} else
 			odata = d->frm_control;
 		break;
@@ -591,13 +607,6 @@ DEVICE_ACCESS(sgi_gbe)
 
 	case CRMFB_DID_CONTROL:	// 0x40004
 		// TODO
-		break;
-
-	case CRMFB_WID:		// 0x48000
-		// TODO: Figure out how this really works.
-		if (writeflag == MEM_WRITE) {
-			d->color_mode = (idata >> CRMFB_MODE_TYP_SHIFT) & 7;
-		}
 		break;
 
 	case CRMFB_CMAP_FIFO:		// 0x58000
@@ -649,22 +658,35 @@ DEVICE_ACCESS(sgi_gbe)
 	 *   sgio2fb: framebuffer at ffffffffa1000000
 	 *   sgio2fb: 8192kB memory
 	 *   Console: switching to colour frame buffer device 80x30"
+	 *
+	 *  NetBSD's crmfb_set_palette, however, uses values in reverse, like this:
+	 *	val = (r << 8) | (g << 16) | (b << 24);
 	 */
 
 	default:
 		/*  WID at 0x48000 .. 0x48000 + 4*31:  */
 		if (relative_addr >= CRMFB_WID && relative_addr <= CRMFB_WID + 4 * 31) {
-			/*  ignore WID for now  */
+			// TODO: Figure out how this really works. Why are
+			// there 32 such registers?
+			if (writeflag == MEM_WRITE) {
+				d->color_mode = (idata >> CRMFB_MODE_TYP_SHIFT) & 7;
+				d->cmap_select = (idata >> CRMFB_MODE_CMAP_SELECT_SHIFT) & 0x1f;
+			}
+
 			break;
 		}
 
-		/*  RGB Palette at 0x50000 .. 0x503ff:  */
-		if (relative_addr >= CRMFB_CMAP && relative_addr <= CRMFB_CMAP + 0x3ff) {
-			int color_index = (relative_addr & 0x3ff) / 4;
-			if (writeflag == MEM_WRITE)
+		/*  RGB Palette at 0x50000 .. 0x57fff:  */
+		if (relative_addr >= CRMFB_CMAP && relative_addr < CRMFB_CMAP + 256 * 32 * sizeof(uint32_t)) {
+			int color_index = (relative_addr - CRMFB_CMAP) >> 2;
+			if (writeflag == MEM_WRITE) {
+				int cmap = color_index >> 8;
 				d->palette[color_index] = idata;
-			else
+				if (cmap == d->cmap_select)
+					d->selected_palette[color_index] = idata;
+			} else {
 				odata = d->palette[color_index];
+			}
 			break;
 		}
 

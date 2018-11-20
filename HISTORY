@@ -4809,3 +4809,5 @@ Changelog for GXemul:
 		within NetBSD's X11 now looks as it should.
 20181115	Changing the PCI product ID for the AIC7880 SCSI controller in
 		the SGI O2 emulation mode to match my real O2 (0x9004, 0x8078).
+20181120	Continuing on SGI O2 graphics: "overlays" (seem to always be
+		8 bits deep?).

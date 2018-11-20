@@ -2302,6 +2302,9 @@ static void arc_environment_setup(struct machine *machine, int is64bit,
 			    with SGI logo visible on Irix?  */
 			store_pointer_and_advance(cpu, &addr2, addr, is64bit);
 			add_environment_string(cpu, "console=g", &addr);
+
+			store_pointer_and_advance(cpu, &addr2, addr, is64bit);
+			add_environment_string(cpu, "gfx=alive", &addr);
 		} else {
 			store_pointer_and_advance(cpu, &addr2, addr, is64bit);
 			add_environment_string(cpu, "ConsoleIn=serial(0)",
@@ -2313,14 +2316,24 @@ static void arc_environment_setup(struct machine *machine, int is64bit,
 			/*  'd' or 'd2' in Irix, 'ttyS0' in Linux?  */
 			store_pointer_and_advance(cpu, &addr2, addr, is64bit);
 			add_environment_string(cpu, "console=d", &addr);
+
+			store_pointer_and_advance(cpu, &addr2, addr, is64bit);
+			add_environment_string(cpu, "gfx=dead", &addr);
 		}
 
 		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
 		add_environment_string(cpu, "AutoLoad=No", &addr);
 		
 		if (machine->bootdev_id < 0 || machine->force_netboot) {
+			/*
+			 *  diskless=1 means boot from network disk? (nfs?)
+			 *  diskless=2 means boot from network tape?
+			 */
 			store_pointer_and_advance(cpu, &addr2, addr, is64bit);
 			add_environment_string(cpu, "diskless=1", &addr);
+
+			// store_pointer_and_advance(cpu, &addr2, addr, is64bit);
+			// add_environment_string(cpu, "tapedevice=bootp()10.0.0.2:/dev/tape", &addr);
 
 			store_pointer_and_advance(cpu, &addr2, addr, is64bit);
 			add_environment_string(cpu, "bootfile=bootp()10.0.0.2:/var/boot/client/unix", &addr);
@@ -2328,6 +2341,10 @@ static void arc_environment_setup(struct machine *machine, int is64bit,
 			store_pointer_and_advance(cpu, &addr2, addr, is64bit);
 			add_environment_string(cpu,
 			    "SystemPartition=bootp()10.0.0.2:/var/boot/client",
+			    &addr);
+			store_pointer_and_advance(cpu, &addr2, addr, is64bit);
+			add_environment_string(cpu,
+			    "root=xyz",
 			    &addr);
 			store_pointer_and_advance(cpu, &addr2, addr, is64bit);
 			add_environment_string(cpu,
@@ -2365,6 +2382,8 @@ static void arc_environment_setup(struct machine *machine, int is64bit,
 		add_environment_string(cpu, "OSLoadFilename=/unix", &addr);
 		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
 		add_environment_string(cpu, "OSLoader=sash", &addr);
+		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
+		add_environment_string(cpu, "kernname=unix", &addr);
 
 		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
 		add_environment_string(cpu, "rbaud=9600", &addr);
@@ -2376,6 +2395,10 @@ static void arc_environment_setup(struct machine *machine, int is64bit,
 		add_environment_string(cpu, "netaddr=10.0.0.1", &addr);
 		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
 		add_environment_string(cpu, "netmask=255.0.0.0", &addr);
+		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
+		add_environment_string(cpu, "dlserver=10.0.0.2", &addr);
+		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
+		add_environment_string(cpu, "srvaddr=10.0.0.2", &addr);
 
 		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
 		add_environment_string(cpu, "keybd=US", &addr);
@@ -2386,6 +2409,7 @@ static void arc_environment_setup(struct machine *machine, int is64bit,
 		add_environment_string(cpu, "dbaud=9600", &addr);
 		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
 		add_environment_string(cpu, primary_ether_addr, &addr);
+
 		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
 		add_environment_string(cpu, "verbose=1", &addr);
 		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
@@ -2395,11 +2419,7 @@ static void arc_environment_setup(struct machine *machine, int is64bit,
 		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
 		add_environment_string(cpu, "diagmode=v", &addr);
 		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-		add_environment_string(cpu, "kernname=unix", &addr);
-		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-		add_environment_string(cpu, "dlserver=10.0.0.2", &addr);
-		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-		add_environment_string(cpu, "srvaddr=10.0.0.2", &addr);
+		add_environment_string(cpu, "debug_bigmem=1", &addr);
 	} else {
 		char *tmp;
 		size_t mlen = ARC_BOOTSTR_BUFLEN;

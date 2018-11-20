@@ -733,14 +733,6 @@ DEVICE_ACCESS(sgi_de)
 		uint16_t endx = (x2 + dx) & 0x7ff;
 		uint16_t endy = (y2 + dy) & 0x7ff;
 
-		/*
-		 *  It seems that depending on the length of the line to draw,
-		 *  the upper 16 bits of the pattern are "skipped". (This is
-		 *  needed to make the PROM work nicely.)
-		 */
-		if (drawmode & DE_DRAWMODE_LINE_STIP && x2-x1 <= 15)
-			pattern <<= 16;
-
 		int lx = abs((int)(x2 - x1)), ly = abs((int)(y2 - y1));
 		int linelen = lx > ly ? lx : ly;
 
@@ -748,6 +740,15 @@ DEVICE_ACCESS(sgi_de)
 		case DE_PRIM_LINE:
 			if (drawmode & DE_DRAWMODE_XFER_EN)
 				fatal("[ sgi_de: XFER_EN for LINE op? ]\n");
+
+			/*
+			 *  It seems that depending on the length of the line to draw,
+			 *  the upper 16 bits of the pattern are "skipped". (This is
+			 *  needed to make the PROM work nicely.)
+			 */
+			if (drawmode & DE_DRAWMODE_LINE_STIP && x2-x1 <= 15 && (pattern & 0xffff0000) == 0) {
+				pattern <<= 16;
+			}
 
 			// The PROM uses width 32, but NetBSD documents it as "half pixels".
 			// if ((op & DE_PRIM_LINE_WIDTH_MASK) != 2)
@@ -1297,6 +1298,10 @@ DEVICE_ACCESS(sgi_de_status)
 		/*
 		 *  TODO: Actually simulate pipeline of a number of commands?
 		 */
+		break;
+
+	case 0x4008:
+		/*  Unknown. Ignore for now.  */
 		break;
 
 	default:
