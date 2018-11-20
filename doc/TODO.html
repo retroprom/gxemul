@@ -914,10 +914,19 @@ Malta:
 
 SGI O2:
 	differences between real hardware and NetBSD's header files?
+
 		RED/GREEN LED: 1 on real hardware turns off, not on!
+
 		nr of bits for the tile ptr
+
 		20008 vs 30008 in crmfb?
+
+		CRMFB_CMAP_OVL = 0x00051400. should be 0x54400? for "color map 17" for overlays?
+
 		crime time bit mask?
+
+		NetBSD's crmfb.c crmfb_set_palette says rgb in reverse maybe?:
+			val = (r &lt;&lt; 8) | (g &lt;&lt; 16) | (b &lt;&lt; 24)
 
 	bus_pci / O2's pci:
 		reconfigurable memory space redirect?
