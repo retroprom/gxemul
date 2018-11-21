@@ -260,7 +260,13 @@ and the older framework which was written in C.
 
   [ ]   Intel i960 CPU and machine modes.
 
+	[/]  i960 instruction disassembly.
+		[X]  i960CA
+
+	[ ]  i960 instruction execution.
+
   	[ ]  HP 700/RX emulation.
+
   	[ ]  Cyclone/VH i960 evaluation board emulation (for uClinux/i960).
 
   [ ]	SPARC64? Would be nice; multithreaded Niagara emulation etc.
@@ -791,10 +797,7 @@ MIPS:
 			o)  DROTR32 and similar MIPS64 rev 2 instructions,
 			    which have a rotation bit which differs from
 			    previous ISAs.
-		x) _MAYBE_ TX79 and R5900 actually differ in their
-		   opcodes? Check this carefully!
 	o)  Dyntrans: Count register updates are probably not 100% correct yet.
-	o)  (Re)implement 128-bit loads/stores for R5900.
 	o)  Coprocessor 1x (i.e. 3) should cause cp1 exceptions, not 3?
 		(See http://lists.gnu.org/archive/html/qemu-devel/2007-05/msg00005.html)
 	o)  R4000 and others:
@@ -811,10 +814,8 @@ MIPS:
 		    Then test with OpenBSD/sgi?
 		x)  Entry LO mask (as above).
 		x)  memory space, exceptions, ...
-		x)  use cop0 framemask for tlb lookups
+		x)  use cop0 framemask for tlb lookups [maybe already working correctly?]
 		    (http://techpubs.sgi.com/library/tpl/cgi-bin/getdoc.cgi/hdwr/bks/SGI_Developer/books/R10K_UM/sgi_html/t5.Ver.2.0.book_284.html)
-	o)  Playstation 2 with NetBSD? Perhaps USB keyboard is a big step
-	    on the way to running the whole OS. (?)
 
 SuperH:
 	x)  Auto-generation of loads/stores! This should get rid of at least
@@ -934,9 +935,12 @@ SGI O2:
 	bus_pci / O2's pci:
 		reconfigurable memory space redirect?
 		ahc scsi controller! this will be very time consuming.
+		http://mail-index.netbsd.org/port-sgimips/2015/09/24/msg000711.html
+			has some "pcictl pci0 dump -d 1" output which may be worth comparing against.
 
 	ds2502_get_eaddr: ds2502_read_rom failed!
 		PROM complains during bootup. Needed to get further with bootp() diskless booting.
+		Onewire protocol that depends on microsecond timing?
 
 	netbsd starts in "enter pathname of shell" mode; should start netbooting
 		in a more automated fashion?
@@ -1203,19 +1207,22 @@ is kept here, so that the same mistakes may be avoided in the rewrite.]
 <p><br><h4><a name="release">Release checklist</a></h4>
 
 <p><ul>
-	<li>Build on as many platforms as possible.
-	<li>Install as many as possible of the Guest OSes in the documentation;
+	<li>Build on as many platforms as possible, including inside guest
+		OSes in GXemul itself.
+	<li>If there is time: Install as many as possible of the guest OSes in the documentation;
 		the documentation may need to be updated if there are
 		regressions.
+	<li>If there is even more time: see what the status is for the "unsupported"
+		guest OSes as well.
 	<li>Update the <tt>README</tt> and <tt>RELEASE</tt> notes.
 	<li>TODO updates (i.e. set goals for the <i>next</i> release, if possible).
 	<li>HISTORY (mention the release).
 	<li>SVN branch/tag.
 	<li>Tarball creation (make_release.sh)
-	<li>Home page <i>Download page</i> update: version numbers, architectures?
+	<li>Home page <i>Download page</i> update: version number and date.
 	<li>Home page <i>News page</i> update: new Release.
 	<li>Sync the homepage to the web server.
-	<li>Mention release on #GXemul on FreeNode (IRC), set version number in topic if possible
+	<li>Mention release on #GXemul on FreeNode (IRC), set version number in topic if possible.
 	<li>Sourceforge File Release (upload the tarball).
 	<li>gxemul-users mail, content similar to the RELEASE notes.
 </ul>
