@@ -656,9 +656,18 @@ DEVICE_ACCESS(sgi_de)
 		uint32_t src_mode = d->de_reg[(CRIME_DE_MODE_SRC - 0x2000) / sizeof(uint32_t)];
 		uint32_t fg = d->de_reg[(CRIME_DE_FG - 0x2000) / sizeof(uint32_t)];
 		uint32_t bg = d->de_reg[(CRIME_DE_BG - 0x2000) / sizeof(uint32_t)];
-		uint32_t pattern = d->de_reg[(CRIME_DE_STIPPLE_PAT - 0x2000) / sizeof(uint32_t)];
-		//uint32_t stipple_mode = d->de_reg[(CRIME_DE_STIPPLE_MODE - 0x2000) / sizeof(uint32_t)];
 		uint32_t rop = d->de_reg[(CRIME_DE_ROP - 0x2000) / sizeof(uint32_t)];
+
+		uint32_t stipple_mode = d->de_reg[(CRIME_DE_STIPPLE_MODE - 0x2000) / sizeof(uint32_t)];
+		uint32_t pattern = d->de_reg[(CRIME_DE_STIPPLE_PAT - 0x2000) / sizeof(uint32_t)];
+		int nr_of_bits_to_strip_to_the_left = (stipple_mode >> DE_STIP_STRTIDX_SHIFT) & 31;
+		int nr_of_bits_to_strip_to_the_right = 31 - ((stipple_mode >> DE_STIP_MAXIDX_SHIFT) & 31);
+		pattern >>= nr_of_bits_to_strip_to_the_right;
+		pattern <<= nr_of_bits_to_strip_to_the_right;
+		pattern <<= nr_of_bits_to_strip_to_the_left;
+
+		if (stipple_mode & 0xe0e0ffff)
+			fatal("[ sgi_de: UNIMPLEMENTED stipple_mode bits: 0x%08x ]\n", stipple_mode);
 
 		uint32_t x1 = (d->de_reg[(CRIME_DE_X_VERTEX_0 - 0x2000) / sizeof(uint32_t)] >> 16) & 0x7ff;
 		uint32_t y1 = d->de_reg[(CRIME_DE_X_VERTEX_0 - 0x2000) / sizeof(uint32_t)]& 0x7ff;
@@ -740,15 +749,6 @@ DEVICE_ACCESS(sgi_de)
 		case DE_PRIM_LINE:
 			if (drawmode & DE_DRAWMODE_XFER_EN)
 				fatal("[ sgi_de: XFER_EN for LINE op? ]\n");
-
-			/*
-			 *  It seems that depending on the length of the line to draw,
-			 *  the upper 16 bits of the pattern are "skipped". (This is
-			 *  needed to make the PROM work nicely.)
-			 */
-			if (drawmode & DE_DRAWMODE_LINE_STIP && x2-x1 <= 15 && (pattern & 0xffff0000) == 0) {
-				pattern <<= 16;
-			}
 
 			// The PROM uses width 32, but NetBSD documents it as "half pixels".
 			// if ((op & DE_PRIM_LINE_WIDTH_MASK) != 2)
