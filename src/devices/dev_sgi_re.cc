@@ -400,6 +400,262 @@ void dev_sgi_re_init(struct machine *machine, struct memory *mem, uint64_t basea
  *  SGI "de", NetBSD sources describes it as a "drawing engine".
  */
 
+void draw_primitive(struct cpu* cpu, struct sgi_re_data *d)
+{
+	uint32_t op = d->de_reg[(CRIME_DE_PRIMITIVE - 0x2000) / sizeof(uint32_t)];
+	uint32_t drawmode = d->de_reg[(CRIME_DE_DRAWMODE - 0x2000) / sizeof(uint32_t)];
+	uint32_t dst_mode = d->de_reg[(CRIME_DE_MODE_DST - 0x2000) / sizeof(uint32_t)];
+	uint32_t src_mode = d->de_reg[(CRIME_DE_MODE_SRC - 0x2000) / sizeof(uint32_t)];
+	uint32_t fg = d->de_reg[(CRIME_DE_FG - 0x2000) / sizeof(uint32_t)];
+	uint32_t bg = d->de_reg[(CRIME_DE_BG - 0x2000) / sizeof(uint32_t)];
+	uint32_t rop = d->de_reg[(CRIME_DE_ROP - 0x2000) / sizeof(uint32_t)];
+
+	uint32_t stipple_mode = d->de_reg[(CRIME_DE_STIPPLE_MODE - 0x2000) / sizeof(uint32_t)];
+	uint32_t pattern = d->de_reg[(CRIME_DE_STIPPLE_PAT - 0x2000) / sizeof(uint32_t)];
+	int nr_of_bits_to_strip_to_the_left = (stipple_mode >> DE_STIP_STRTIDX_SHIFT) & 31;
+	int nr_of_bits_to_strip_to_the_right = 31 - ((stipple_mode >> DE_STIP_MAXIDX_SHIFT) & 31);
+	pattern >>= nr_of_bits_to_strip_to_the_right;
+	pattern <<= nr_of_bits_to_strip_to_the_right;
+	pattern <<= nr_of_bits_to_strip_to_the_left;
+
+	int nr_of_bits_in_the_middle = 32 - nr_of_bits_to_strip_to_the_left - nr_of_bits_to_strip_to_the_right;
+
+	if (stipple_mode & 0xe0e0ffff)
+		fatal("[ sgi_de: UNIMPLEMENTED stipple_mode bits: 0x%08x ]\n", stipple_mode);
+
+	uint32_t x1 = (d->de_reg[(CRIME_DE_X_VERTEX_0 - 0x2000) / sizeof(uint32_t)] >> 16) & 0x7ff;
+	uint32_t y1 = d->de_reg[(CRIME_DE_X_VERTEX_0 - 0x2000) / sizeof(uint32_t)]& 0x7ff;
+	uint32_t x2 = (d->de_reg[(CRIME_DE_X_VERTEX_1 - 0x2000) / sizeof(uint32_t)] >> 16) & 0x7ff;
+	uint32_t y2 = d->de_reg[(CRIME_DE_X_VERTEX_1 - 0x2000) / sizeof(uint32_t)]& 0x7ff;
+	size_t x, y;
+
+	debug("[ sgi_de: STARTING DRAWING COMMAND: op = 0x%08x,"
+	    " drawmode=0x%x src_mode=0x%x dst_mode=0x%x x1=%i y1=%i"
+	    " x2=%i y2=%i fg=0x%x bg=0x%x pattern=0x%08x ]\n",
+	    op, drawmode, src_mode, dst_mode, x1, y1, x2, y2, fg, bg, pattern);
+
+	// bufdepth = 1, 2, or 4.
+	// int dst_bufdepth = 1 << ((dst_mode >> 8) & 3);
+	int src_bufdepth = 1 << ((src_mode >> 8) & 3);
+
+	bool src_is_linear = false;
+	int src_x = -1, src_y = -1;
+	int32_t step_x = 0;
+	if (drawmode & DE_DRAWMODE_XFER_EN) {
+		uint32_t addr_src = d->de_reg[(CRIME_DE_XFER_ADDR_SRC - 0x2000) / sizeof(uint32_t)];
+		uint32_t strd_src = d->de_reg[(CRIME_DE_XFER_STRD_SRC - 0x2000) / sizeof(uint32_t)];
+		step_x = d->de_reg[(CRIME_DE_XFER_STEP_X - 0x2000) / sizeof(uint32_t)];
+		int32_t step_y = d->de_reg[(CRIME_DE_XFER_STEP_Y - 0x2000) / sizeof(uint32_t)];
+		uint32_t addr_dst = d->de_reg[(CRIME_DE_XFER_ADDR_DST - 0x2000) / sizeof(uint32_t)];
+		uint32_t strd_dst = d->de_reg[(CRIME_DE_XFER_STRD_DST - 0x2000) / sizeof(uint32_t)];
+
+		src_is_linear = ((src_mode & 0x00001c00) >> 10) > 3;
+
+		if (src_is_linear) {
+			src_x = addr_src;
+			src_y = 0;
+		} else {
+			src_x = (addr_src >> 16) & 0x7ff;
+			src_y = addr_src & 0x7ff;
+		}
+
+		if (step_x != src_bufdepth || (step_y != 0 && step_y != 1)) {
+			fatal("[ sgi_de: unimplemented XFER addr_src=0x%x src_bufdepth=%i "
+				"strd_src=0x%x step_x=0x%x step_y=0x%x "
+				"addr_dst=0x%x strd_dst=0x%x ]\n",
+				addr_src, src_bufdepth, strd_src, step_x, step_y, addr_dst, strd_dst);
+
+			// exit(1);
+		}
+	}
+
+	if (!(drawmode & DE_DRAWMODE_PLANEMASK)) {
+		printf("!DE_DRAWMODE_PLANEMASK: TODO\n");
+	}
+	
+	if ((drawmode & DE_DRAWMODE_BYTEMASK) != DE_DRAWMODE_BYTEMASK) {
+		printf("not all DE_DRAWMODE_BYTEMASK set: TODO\n");
+	}
+	
+	// primitive rendering direction (not for Lines? and presumably
+	// not for Points either :-)
+	int dx = op & DE_PRIM_RL ? -1 :  1;
+	int dy = op & DE_PRIM_TB ?  1 : -1;
+
+	uint16_t saved_src_x = src_x;
+
+	/*
+	 *  Drawing is limited to 2048 x 2048 pixel space.
+	 *
+	 *  TODO: MAYBE it is really -2048 to 2027, i.e. 12 bits of
+	 *  pixel space. Perhaps it is possible to figure out
+	 *  experimentally some day, e.g. by drawing lines from
+	 *  -10,10 to 500,20 and see whether the real hardware
+	 *  interprets -10 as -10 or 0x800 - 10.
+	 */
+	uint16_t endx = (x2 + dx) & 0x7ff;
+	uint16_t endy = (y2 + dy) & 0x7ff;
+
+	int lx = abs((int)(x2 - x1)), ly = abs((int)(y2 - y1));
+	int linelen = lx > ly ? lx : ly;
+
+	switch (op & 0xff000000) {
+	case DE_PRIM_LINE:
+		if (drawmode & DE_DRAWMODE_XFER_EN)
+			fatal("[ sgi_de: XFER_EN for LINE op? ]\n");
+
+		// The PROM uses width 32, but NetBSD documents it as "half pixels".
+		// if ((op & DE_PRIM_LINE_WIDTH_MASK) != 2)
+		//	fatal("[ sgi_de: LINE_WIDTH_MASK = %i ]\n", op & DE_PRIM_LINE_WIDTH_MASK);
+
+		if (linelen == 0)
+			linelen ++;
+
+		for (int i = 0; i < ((op & DE_PRIM_LINE_SKIP_END)? linelen : linelen+1); ++i) {
+			x = (x2 * i + x1 * (linelen-i)) / linelen;
+			y = (y2 * i + y1 * (linelen-i)) / linelen;
+
+			uint32_t color = fg;
+			uint32_t oldcolor = fg;
+
+			if (drawmode & DE_DRAWMODE_ROP && rop != OPENGL_LOGIC_OP_COPY)
+				horrible_getputpixel(false, cpu, d,
+					x, y, &oldcolor, dst_mode);
+
+			bool draw = true;
+			if (drawmode & DE_DRAWMODE_LINE_STIP) {
+				if (drawmode & DE_DRAWMODE_OPAQUE_STIP)
+					color = (pattern & 0x80000000UL) ? fg : bg;
+				else
+					draw = (pattern & 0x80000000UL)? true : false;
+			}
+
+			// Raster-OP.
+			// TODO: Other ops.
+			// TODO: Should this be before or after other things?
+			if (drawmode & DE_DRAWMODE_ROP) {
+				switch (rop) {
+				case OPENGL_LOGIC_OP_COPY:
+					// color = color;
+					break;
+				case OPENGL_LOGIC_OP_XOR:
+					color = oldcolor ^ color;
+					break;
+				case OPENGL_LOGIC_OP_COPY_INVERTED:
+					color = 0xffffffff - oldcolor;
+					break;
+				default:{
+						static char rop_used[256];
+						static bool first = true;
+
+						if (first) {
+						memset(rop_used, 0, sizeof(rop_used));
+						first = false;
+						}
+						if (!rop_used[rop & 255]) {
+							rop_used[rop & 255] = 1;
+							fatal("[ sgi_de: LINE: rop[0x%02x] used! ]\n", rop & 255);
+						}
+
+						if (rop >> 8) {
+							fatal("[ sgi_de: LINE: rop > 255: 0x%08x ]\n", rop);
+						}
+					}
+				}
+			}
+
+			if (draw)
+				horrible_getputpixel(true, cpu, d,
+					x, y, &color, dst_mode);
+
+			// Rotate the stipple pattern:
+			pattern = (pattern << 1) | (pattern >> (nr_of_bits_in_the_middle-1));
+		}
+		break;
+
+	case DE_PRIM_RECTANGLE:
+		for (y = y1; y != endy; y = (y + dy) & 0x7ff) {
+			src_x = saved_src_x;
+			for (x = x1; x != endx; x = (x + dx) & 0x7ff) {
+				uint32_t color = fg;
+				uint32_t oldcolor = fg;
+
+				if (drawmode & DE_DRAWMODE_ROP && rop != OPENGL_LOGIC_OP_COPY)
+					horrible_getputpixel(false, cpu, d,
+						x, y, &oldcolor, dst_mode);
+
+				// Pixel colors copied from another source.
+				// (OpenBSD draws characters using this mechanism.)
+				if (drawmode & DE_DRAWMODE_XFER_EN)
+					horrible_getputpixel(false, cpu, d,
+						src_x, src_y, &color, src_mode);
+
+				bool draw = true;
+				if (drawmode & DE_DRAWMODE_POLY_STIP) {
+					if (drawmode & DE_DRAWMODE_OPAQUE_STIP)
+						color = (pattern & 0x80000000UL) ? fg : bg;
+					else
+						draw = (pattern & 0x80000000UL)? true : false;
+				}
+
+				// Raster-OP.
+				// TODO: Other ops.
+				// TODO: Should this be before or after other things?
+				if (drawmode & DE_DRAWMODE_ROP) {
+					switch (rop) {
+					case OPENGL_LOGIC_OP_COPY:
+						// color = color;
+						break;
+					case OPENGL_LOGIC_OP_XOR:
+						color = oldcolor ^ color;
+						break;
+					case OPENGL_LOGIC_OP_COPY_INVERTED:
+						color = 0xffffffff - oldcolor;
+						break;
+					default:{
+							static char rop_used[256];
+							static bool first = true;
+
+							if (first) {
+							memset(rop_used, 0, sizeof(rop_used));
+							first = false;
+							}
+							if (!rop_used[rop & 255]) {
+								rop_used[rop & 255] = 1;
+								fatal("[ sgi_de: RECT: rop[0x%02x] used! ]\n", rop & 255);
+							}
+
+							if (rop >> 8) {
+								fatal("[ sgi_de: RECT: rop > 255: 0x%08x ]\n", rop);
+							}
+						}
+					}
+				}
+
+				if (draw)
+					horrible_getputpixel(true, cpu, d,
+						x, y, &color, dst_mode);
+
+				// Rotate the stipple pattern:
+				pattern = (pattern << 1) | (pattern >> (nr_of_bits_in_the_middle-1));
+
+				if (src_is_linear)
+					src_x += step_x;
+				else
+					src_x = (src_x + dx) & 0x7ff;
+			}
+			
+			src_y = (src_y + dy) & 0x7ff;
+		}
+		break;
+
+	default:fatal("[ sgi_de: UNIMPLEMENTED drawing op = 0x%08x,"
+		    " x1=%i y1=%i x2=%i y2=%i fg=0x%x bg=0x%x pattern=0x%08x ]\n",
+		    op, x1, y1, x2, y2, fg, bg, pattern);
+		exit(1);
+	}
+}
+
 DEVICE_ACCESS(sgi_de)
 {
 	struct sgi_re_data *d = (struct sgi_re_data *) extra;
@@ -649,261 +905,8 @@ DEVICE_ACCESS(sgi_de)
 			    " 0x%llx ]\n", (long long)relative_addr);
 	}
 
-	if (startFlag) {
-		uint32_t op = d->de_reg[(CRIME_DE_PRIMITIVE - 0x2000) / sizeof(uint32_t)];
-		uint32_t drawmode = d->de_reg[(CRIME_DE_DRAWMODE - 0x2000) / sizeof(uint32_t)];
-		uint32_t dst_mode = d->de_reg[(CRIME_DE_MODE_DST - 0x2000) / sizeof(uint32_t)];
-		uint32_t src_mode = d->de_reg[(CRIME_DE_MODE_SRC - 0x2000) / sizeof(uint32_t)];
-		uint32_t fg = d->de_reg[(CRIME_DE_FG - 0x2000) / sizeof(uint32_t)];
-		uint32_t bg = d->de_reg[(CRIME_DE_BG - 0x2000) / sizeof(uint32_t)];
-		uint32_t rop = d->de_reg[(CRIME_DE_ROP - 0x2000) / sizeof(uint32_t)];
-
-		uint32_t stipple_mode = d->de_reg[(CRIME_DE_STIPPLE_MODE - 0x2000) / sizeof(uint32_t)];
-		uint32_t pattern = d->de_reg[(CRIME_DE_STIPPLE_PAT - 0x2000) / sizeof(uint32_t)];
-		int nr_of_bits_to_strip_to_the_left = (stipple_mode >> DE_STIP_STRTIDX_SHIFT) & 31;
-		int nr_of_bits_to_strip_to_the_right = 31 - ((stipple_mode >> DE_STIP_MAXIDX_SHIFT) & 31);
-		pattern >>= nr_of_bits_to_strip_to_the_right;
-		pattern <<= nr_of_bits_to_strip_to_the_right;
-		pattern <<= nr_of_bits_to_strip_to_the_left;
-
-		if (stipple_mode & 0xe0e0ffff)
-			fatal("[ sgi_de: UNIMPLEMENTED stipple_mode bits: 0x%08x ]\n", stipple_mode);
-
-		uint32_t x1 = (d->de_reg[(CRIME_DE_X_VERTEX_0 - 0x2000) / sizeof(uint32_t)] >> 16) & 0x7ff;
-		uint32_t y1 = d->de_reg[(CRIME_DE_X_VERTEX_0 - 0x2000) / sizeof(uint32_t)]& 0x7ff;
-		uint32_t x2 = (d->de_reg[(CRIME_DE_X_VERTEX_1 - 0x2000) / sizeof(uint32_t)] >> 16) & 0x7ff;
-		uint32_t y2 = d->de_reg[(CRIME_DE_X_VERTEX_1 - 0x2000) / sizeof(uint32_t)]& 0x7ff;
-		size_t x, y;
-
-		debug("[ sgi_de: STARTING DRAWING COMMAND: op = 0x%08x,"
-		    " drawmode=0x%x src_mode=0x%x dst_mode=0x%x x1=%i y1=%i"
-		    " x2=%i y2=%i fg=0x%x bg=0x%x pattern=0x%08x ]\n",
-		    op, drawmode, src_mode, dst_mode, x1, y1, x2, y2, fg, bg, pattern);
-
-		// bufdepth = 1, 2, or 4.
-		int dst_bufdepth = 1 << ((dst_mode >> 8) & 3);
-		int src_bufdepth = 1 << ((src_mode >> 8) & 3);
-
-		bool src_is_linear = false;
-		int src_x = -1, src_y = -1;
-		int32_t step_x = 0;
-		if (drawmode & DE_DRAWMODE_XFER_EN) {
-			uint32_t addr_src = d->de_reg[(CRIME_DE_XFER_ADDR_SRC - 0x2000) / sizeof(uint32_t)];
-			uint32_t strd_src = d->de_reg[(CRIME_DE_XFER_STRD_SRC - 0x2000) / sizeof(uint32_t)];
-			step_x = d->de_reg[(CRIME_DE_XFER_STEP_X - 0x2000) / sizeof(uint32_t)];
-			int32_t step_y = d->de_reg[(CRIME_DE_XFER_STEP_Y - 0x2000) / sizeof(uint32_t)];
-			uint32_t addr_dst = d->de_reg[(CRIME_DE_XFER_ADDR_DST - 0x2000) / sizeof(uint32_t)];
-			uint32_t strd_dst = d->de_reg[(CRIME_DE_XFER_STRD_DST - 0x2000) / sizeof(uint32_t)];
-
-			src_is_linear = ((src_mode & 0x00001c00) >> 10) > 3;
-
-			if (src_is_linear) {
-				src_x = addr_src;
-				src_y = 0;
-			} else {
-				src_x = (addr_src >> 16) & 0x7ff;
-				src_y = addr_src & 0x7ff;
-			}
-
-			if (step_x != src_bufdepth || (step_y != 0 && step_y != 1)) {
-				fatal("[ sgi_de: unimplemented XFER addr_src=0x%x src_bufdepth=%i "
-					"strd_src=0x%x step_x=0x%x step_y=0x%x "
-					"addr_dst=0x%x strd_dst=0x%x ]\n",
-					addr_src, src_bufdepth, strd_src, step_x, step_y, addr_dst, strd_dst);
-
-				// exit(1);
-			}
-		}
-
-		if (!(drawmode & DE_DRAWMODE_PLANEMASK)) {
-			printf("!DE_DRAWMODE_PLANEMASK: TODO\n");
-		}
-		
-		if ((drawmode & DE_DRAWMODE_BYTEMASK) != DE_DRAWMODE_BYTEMASK) {
-			printf("not all DE_DRAWMODE_BYTEMASK set: TODO\n");
-		}
-		
-		// primitive rendering direction (not for Lines? and presumably
-		// not for Points either :-)
-		int dx = op & DE_PRIM_RL ? -1 :  1;
-		int dy = op & DE_PRIM_TB ?  1 : -1;
-
-		uint16_t saved_src_x = src_x;
-
-		/*
-		 *  Drawing is limited to 2048 x 2048 pixel space.
-		 *
-		 *  TODO: MAYBE it is really -2048 to 2027, i.e. 12 bits of
-		 *  pixel space. Perhaps it is possible to figure out
-		 *  experimentally some day, e.g. by drawing lines from
-		 *  -10,10 to 500,20 and see whether the real hardware
-		 *  interprets -10 as -10 or 0x800 - 10.
-		 */
-		uint16_t endx = (x2 + dx) & 0x7ff;
-		uint16_t endy = (y2 + dy) & 0x7ff;
-
-		int lx = abs((int)(x2 - x1)), ly = abs((int)(y2 - y1));
-		int linelen = lx > ly ? lx : ly;
-
-		switch (op & 0xff000000) {
-		case DE_PRIM_LINE:
-			if (drawmode & DE_DRAWMODE_XFER_EN)
-				fatal("[ sgi_de: XFER_EN for LINE op? ]\n");
-
-			// The PROM uses width 32, but NetBSD documents it as "half pixels".
-			// if ((op & DE_PRIM_LINE_WIDTH_MASK) != 2)
-			//	fatal("[ sgi_de: LINE_WIDTH_MASK = %i ]\n", op & DE_PRIM_LINE_WIDTH_MASK);
-
-			if (linelen == 0)
-				linelen ++;
-
-			for (int i = 0; i < ((op & DE_PRIM_LINE_SKIP_END)? linelen : linelen+1); ++i) {
-				x = (x2 * i + x1 * (linelen-i)) / linelen;
-				y = (y2 * i + y1 * (linelen-i)) / linelen;
-
-				uint32_t color = fg;
-				uint32_t oldcolor = fg;
-
-				if (drawmode & DE_DRAWMODE_ROP && rop != OPENGL_LOGIC_OP_COPY)
-					horrible_getputpixel(false, cpu, d,
-						x, y, &oldcolor, dst_mode);
-
-				bool draw = true;
-				if (drawmode & DE_DRAWMODE_LINE_STIP) {
-					if (drawmode & DE_DRAWMODE_OPAQUE_STIP)
-						color = (pattern & 0x80000000UL) ? fg : bg;
-					else
-						draw = (pattern & 0x80000000UL)? true : false;
-				}
-
-				// Raster-OP.
-				// TODO: Other ops.
-				// TODO: Should this be before or after other things?
-				if (drawmode & DE_DRAWMODE_ROP) {
-					switch (rop) {
-					case OPENGL_LOGIC_OP_COPY:
-						// color = color;
-						break;
-					case OPENGL_LOGIC_OP_XOR:
-						color = oldcolor ^ color;
-						break;
-					case OPENGL_LOGIC_OP_COPY_INVERTED:
-						color = 0xffffffff - oldcolor;
-						break;
-					default:{
-							static char rop_used[256];
-							static bool first = true;
-
-							if (first) {
-							memset(rop_used, 0, sizeof(rop_used));
-							first = false;
-							}
-							if (!rop_used[rop & 255]) {
-								rop_used[rop & 255] = 1;
-								fatal("[ sgi_de: LINE: rop[0x%02x] used! ]\n", rop & 255);
-							}
-
-							if (rop >> 8) {
-								fatal("[ sgi_de: LINE: rop > 255: 0x%08x ]\n", rop);
-							}
-						}
-					}
-				}
-
-				if (draw)
-					horrible_getputpixel(true, cpu, d,
-						x, y, &color, dst_mode);
-
-				// I'm not sure if the pattern rotates, or is just
-				// shifted out, so for now it is a rotate.
-				pattern = (pattern << 1) | (pattern >> 31);
-			}
-			break;
-
-		case DE_PRIM_RECTANGLE:
-			for (y = y1; y != endy; y = (y + dy) & 0x7ff) {
-				src_x = saved_src_x;
-				for (x = x1; x != endx; x = (x + dx) & 0x7ff) {
-					uint32_t color = fg;
-					uint32_t oldcolor = fg;
-
-					if (drawmode & DE_DRAWMODE_ROP && rop != OPENGL_LOGIC_OP_COPY)
-						horrible_getputpixel(false, cpu, d,
-							x, y, &oldcolor, dst_mode);
-
-					// Pixel colors copied from another source.
-					// (OpenBSD draws characters using this mechanism.)
-					if (drawmode & DE_DRAWMODE_XFER_EN)
-						horrible_getputpixel(false, cpu, d,
-							src_x, src_y, &color, src_mode);
-
-					bool draw = true;
-					if (drawmode & DE_DRAWMODE_POLY_STIP) {
-						if (drawmode & DE_DRAWMODE_OPAQUE_STIP)
-							color = (pattern & 0x80000000UL) ? fg : bg;
-						else
-							draw = (pattern & 0x80000000UL)? true : false;
-					}
-
-					// Raster-OP.
-					// TODO: Other ops.
-					// TODO: Should this be before or after other things?
-					if (drawmode & DE_DRAWMODE_ROP) {
-						switch (rop) {
-						case OPENGL_LOGIC_OP_COPY:
-							// color = color;
-							break;
-						case OPENGL_LOGIC_OP_XOR:
-							color = oldcolor ^ color;
-							break;
-						case OPENGL_LOGIC_OP_COPY_INVERTED:
-							color = 0xffffffff - oldcolor;
-							break;
-						default:{
-								static char rop_used[256];
-								static bool first = true;
-
-								if (first) {
-								memset(rop_used, 0, sizeof(rop_used));
-								first = false;
-								}
-								if (!rop_used[rop & 255]) {
-									rop_used[rop & 255] = 1;
-									fatal("[ sgi_de: RECT: rop[0x%02x] used! ]\n", rop & 255);
-								}
-
-								if (rop >> 8) {
-									fatal("[ sgi_de: RECT: rop > 255: 0x%08x ]\n", rop);
-								}
-							}
-						}
-					}
-
-					if (draw)
-						horrible_getputpixel(true, cpu, d,
-							x, y, &color, dst_mode);
-
-					// I'm not sure if the pattern rotates, or is just
-					// shifted out, so for now it is a rotate.
-					pattern = (pattern << 1) | (pattern >> 31);
-
-					if (src_is_linear)
-						src_x += step_x;
-					else
-						src_x = (src_x + dx) & 0x7ff;
-				}
-				
-				src_y = (src_y + dy) & 0x7ff;
-			}
-			break;
-
-		default:fatal("[ sgi_de: UNIMPLEMENTED drawing op = 0x%08x,"
-			    " x1=%i y1=%i x2=%i y2=%i fg=0x%x bg=0x%x pattern=0x%08x ]\n",
-			    op, x1, y1, x2, y2, fg, bg, pattern);
-			exit(1);
-		}
-
-	}
+	if (startFlag)
+		draw_primitive(cpu, d);
 
 	if (writeflag == MEM_READ)
 		memory_writemax64(cpu, data, len, odata);
