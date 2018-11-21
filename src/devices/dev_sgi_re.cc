@@ -935,10 +935,210 @@ void dev_sgi_de_init(struct memory *mem, uint64_t baseaddr, struct sgi_re_data *
  *  registers.
  */
 
+void do_mte_transfer(struct cpu* cpu, struct sgi_re_data *d)
+{
+	uint32_t mode = d->mte_reg[(CRIME_MTE_MODE - 0x3000) / sizeof(uint32_t)];
+	uint64_t src0 = d->mte_reg[(CRIME_MTE_SRC0 - 0x3000) / sizeof(uint32_t)];
+	// TODO: use src1!
+	// uint64_t src1 = d->mte_reg[(CRIME_MTE_SRC1 - 0x3000) / sizeof(uint32_t)];
+	uint64_t dst0 = d->mte_reg[(CRIME_MTE_DST0 - 0x3000) / sizeof(uint32_t)];
+	uint64_t dst1 = d->mte_reg[(CRIME_MTE_DST1 - 0x3000) / sizeof(uint32_t)];
+	int32_t dst_y_step = d->mte_reg[(CRIME_MTE_DST_Y_STEP - 0x3000) / sizeof(uint32_t)];
+	uint64_t dstlen = dst1 - dst0 + 1, fill_addr;
+	unsigned char zerobuf[4096];
+	int depth = 8 << ((mode & MTE_MODE_DEPTH_MASK) >> MTE_DEPTH_SHIFT);
+	int src = (mode & MTE_MODE_SRC_BUF_MASK) >> MTE_SRC_TLB_SHIFT;
+	uint32_t bytemask = d->mte_reg[(CRIME_MTE_BYTEMASK - 0x3000) / sizeof(uint32_t)];
+	uint32_t bg = d->mte_reg[(CRIME_MTE_BG - 0x3000) / sizeof(uint32_t)];
+
+	debug("[ sgi_mte: STARTING: mode=0x%08x dst0=0x%016llx,"
+	    " dst1=0x%016llx, dst_y_step=%i bg=0x%x, bytemask=0x%x ]\n",
+	    mode,
+	    (long long)dst0, (long long)dst1,
+	    dst_y_step, (int)bg, (int)bytemask);
+
+	if (dst_y_step != 0 && dst_y_step != 1 && dst_y_step != -1) {
+		fatal("[ sgi_mte: TODO! unimplemented dst_y_step %i ]", dst_y_step);
+		// exit(1);
+	}
+
+	if (src != 0) {
+		fatal("[ sgi_mte: unimplemented SRC ]");
+		exit(1);
+	}
+
+	if (mode & MTE_MODE_STIPPLE) {
+		fatal("[ sgi_mte: unimplemented MTE_MODE_STIPPLE ]");
+		exit(1);
+	}
+
+	int src_tlb = (mode & MTE_MODE_SRC_BUF_MASK) >> MTE_SRC_TLB_SHIFT;
+	int dst_tlb = (mode & MTE_MODE_DST_BUF_MASK) >> MTE_DST_TLB_SHIFT;
+	
+	switch (dst_tlb) {
+	case MTE_TLB_A:
+	case MTE_TLB_B:
+	case MTE_TLB_C:
+		// Used by NetBSD's crmfb_fill_rect. It puts graphical
+		// coordinates in dst0 and dst1.
+		{
+			int x1 = (dst0 >> 16) & 0xfff;
+			int y1 = dst0 & 0xfff;
+			int x2 = (dst1 >> 16) & 0xfff;
+			int y2 = dst1 & 0xfff;
+			x1 /= (depth / 8);
+			x2 /= (depth / 8);
+
+			int src_x1 = (src0 >> 16) & 0xfff;
+			int src_y1 = src0 & 0xfff;
+			// int src_x2 = (src1 >> 16) & 0xfff;
+			// int src_y2 = src1 & 0xfff;
+			src_x1 /= (depth / 8);
+			// src_x2 /= (depth / 8);
+
+			int dx = x1 > x2 ? -1 : 1;
+			int dy = y1 > y2 ? -1 : 1;
+			
+			uint32_t src_mode = (src_tlb << 10) + (((mode & MTE_MODE_DEPTH_MASK) >> MTE_DEPTH_SHIFT) << 8);
+			uint32_t dst_mode = (dst_tlb << 10) + (((mode & MTE_MODE_DEPTH_MASK) >> MTE_DEPTH_SHIFT) << 8);
+
+			// Hack. The MTE perhaps doesn't deal with colors per se,
+			// but this makes sure that we copy 32 bits when doing 32-bit
+			// transfers.
+			if (depth == 4) {
+				src_mode |= DE_MODE_TYPE_RGBA;
+				dst_mode |= DE_MODE_TYPE_RGBA;
+			}
+
+			int src_y = src_y1;
+			for (int y = y1; y != y2+dy; y += dy) {
+				int src_x = src_x1;
+				
+				for  (int x = x1; x != x2+dx; x += dx) {
+					if (mode & MTE_MODE_COPY) {
+						horrible_getputpixel(false, cpu, d,
+							src_x, src_y, &bg, src_mode);
+						src_x += dx;
+					}
+
+					horrible_getputpixel(true, cpu, d, x, y, &bg, dst_mode);
+				}
+				
+				src_y += dy;
+			}
+		}
+		break;
+	case MTE_TLB_LIN_A:
+	case MTE_TLB_LIN_B:
+		// Used by the PROM to zero-fill memory (?).
+		if (mode & MTE_MODE_COPY) {
+			fatal("[ sgi_mte: unimplemented MTE_MODE_COPY ]");
+			exit(1);
+		}
+
+		if (depth != 8) {
+			fatal("[ sgi_mte: unimplemented MTE_DEPTH_x ]");
+			exit(1);
+		}
+
+		debug("[ sgi_mte: LINEAR TRANSFER: mode=0x%08x dst0=0x%016llx,"
+		    " dst1=0x%016llx (length 0x%llx), dst_y_step=%i bg=0x%x, bytemask=0x%x ]\n",
+		    mode,
+		    (long long)dst0, (long long)dst1,
+		    (long long)dstlen, dst_y_step, (int)bg, (int)bytemask);
+
+		if (bytemask != 0xffffffff) {
+			fatal("unimplemented MTE bytemask 0x%08x\n", (int)bytemask);
+			exit(1);
+		}
+
+		/*
+		 *  Horrible hack:
+		 *
+		 *  During bootup, the PROM fills memory at 0x40000000 and
+		 *  forward. This corresponds to the lowest possible RAM address.
+		 *  However, these fills are not going via the CPU's cache,
+		 *  which contains things such as the return address on the
+		 *  stack. If we _really_ write this data in the emulator (which
+		 *  doesn't emulate the cache), it would overwrite the stack.
+		 *
+		 *  So let's not.
+		 *
+		 *  (If some guest OS or firmware variant actually depends on
+		 *  the ability to write to the start of memory this way,
+		 *  it would not work in the emulator.)
+		 */
+		// if (dst0 >= 0x40000000 && dst0 < 0x40004000 && dst1 > 0x40004000) {
+		//	dst0 += 0x4000;
+		//	dstlen -= 0x4000;
+		// }
+
+		/*
+		 *  HUH?
+		 *
+		 *  Note that due to a bug (?) in the PROM firmware when it
+		 *  is setting up the TLB entries, only every _second_ page is
+		 *  actually put correctly in the TLB. This means that even
+		 *  though it then tries to fill 0x40000000 .. 0x40007fff with
+		 *  zeroes, it only fills 0x40001000 .. 0x40001fff,
+		 *  0x40003000 .. 0x40003fff and so on!
+		 *
+		 *  So the Horrible hack above is not needed.
+		 *
+		 *  Ironic.
+		 */
+
+		memset(zerobuf, bg, dstlen < sizeof(zerobuf) ? dstlen : sizeof(zerobuf));
+		fill_addr = dst0;
+		while (dstlen != 0) {
+			uint64_t fill_len;
+			if (dstlen > sizeof(zerobuf))
+				fill_len = sizeof(zerobuf);
+			else
+				fill_len = dstlen;
+
+			uint64_t starting_page = fill_addr & ~0xfff;
+			uint64_t ending_page = (fill_addr + fill_len - 1) & ~0xfff;
+			if (starting_page != ending_page) {
+				fill_len = starting_page + 4096 - fill_addr;
+			}
+
+			// Find starting_page in the TLB in question.
+			starting_page >>= 12;
+			uint32_t *tlb = dst_tlb == MTE_TLB_LIN_A ? d->re_linear_a : d->re_linear_b;
+			bool match = false;
+			for (int i = 0; i < 32; ++i) {
+				uint32_t entry = tlb[i];
+				if (entry & 0x80000000) {
+					entry &= ~0x80000000;
+					if (entry == starting_page) {
+						match = true;
+						break;
+					}
+				}
+			}
+			
+			if (match) {
+				cpu->memory_rw(cpu, cpu->mem, fill_addr, zerobuf, fill_len,
+					MEM_WRITE, NO_EXCEPTIONS | PHYSICAL);
+			} else {
+				debug("[ sgi_mte: WARNING: address 0x%x not found in TLB? Ignoring fill. ]\n",
+					(long long)fill_addr);
+			}
+
+			fill_addr += fill_len;
+			dstlen -= sizeof(zerobuf);
+		}
+		break;
+	default:
+		fatal("[ sgi_mte: TODO! unimplemented dst_tlb 0x%x ]", dst_tlb);
+	}
+}
+
 DEVICE_ACCESS(sgi_mte)
 {
 	struct sgi_re_data *d = (struct sgi_re_data *) extra;
-	uint64_t idata = 0, odata = 0, fill_addr;
+	uint64_t idata = 0, odata = 0;
 	int regnr;
 	bool startFlag = relative_addr & CRIME_DE_START ? true : false;
 
@@ -1058,205 +1258,8 @@ DEVICE_ACCESS(sgi_mte)
 			    " 0x%llx ]\n", (long long)relative_addr);
 	}
 
-	if (startFlag && writeflag == MEM_WRITE) {
-		uint32_t mode = d->mte_reg[(CRIME_MTE_MODE - 0x3000) / sizeof(uint32_t)];
-		uint64_t src0 = d->mte_reg[(CRIME_MTE_SRC0 - 0x3000) / sizeof(uint32_t)];
-		// TODO: use src1!
-		// uint64_t src1 = d->mte_reg[(CRIME_MTE_SRC1 - 0x3000) / sizeof(uint32_t)];
-		uint64_t dst0 = d->mte_reg[(CRIME_MTE_DST0 - 0x3000) / sizeof(uint32_t)];
-		uint64_t dst1 = d->mte_reg[(CRIME_MTE_DST1 - 0x3000) / sizeof(uint32_t)];
-		int32_t dst_y_step = d->mte_reg[(CRIME_MTE_DST_Y_STEP - 0x3000) / sizeof(uint32_t)];
-		uint64_t dstlen = dst1 - dst0 + 1;
-		unsigned char zerobuf[4096];
-		int depth = 8 << ((mode & MTE_MODE_DEPTH_MASK) >> MTE_DEPTH_SHIFT);
-		int src = (mode & MTE_MODE_SRC_BUF_MASK) >> MTE_SRC_TLB_SHIFT;
-		uint32_t bytemask = d->mte_reg[(CRIME_MTE_BYTEMASK - 0x3000) / sizeof(uint32_t)];
-		uint32_t bg = d->mte_reg[(CRIME_MTE_BG - 0x3000) / sizeof(uint32_t)];
-
-		debug("[ sgi_mte: STARTING: mode=0x%08x dst0=0x%016llx,"
-		    " dst1=0x%016llx, dst_y_step=%i bg=0x%x, bytemask=0x%x ]\n",
-		    mode,
-		    (long long)dst0, (long long)dst1,
-		    dst_y_step, (int)bg, (int)bytemask);
-
-		if (dst_y_step != 0 && dst_y_step != 1 && dst_y_step != -1) {
-			fatal("[ sgi_mte: TODO! unimplemented dst_y_step %i ]", dst_y_step);
-			// exit(1);
-		}
-
-		if (src != 0) {
-			fatal("[ sgi_mte: unimplemented SRC ]");
-			exit(1);
-		}
-
-		if (mode & MTE_MODE_STIPPLE) {
-			fatal("[ sgi_mte: unimplemented MTE_MODE_STIPPLE ]");
-			exit(1);
-		}
-
-		int src_tlb = (mode & MTE_MODE_SRC_BUF_MASK) >> MTE_SRC_TLB_SHIFT;
-		int dst_tlb = (mode & MTE_MODE_DST_BUF_MASK) >> MTE_DST_TLB_SHIFT;
-		
-		switch (dst_tlb) {
-		case MTE_TLB_A:
-		case MTE_TLB_B:
-		case MTE_TLB_C:
-			// Used by NetBSD's crmfb_fill_rect. It puts graphical
-			// coordinates in dst0 and dst1.
-			{
-				int x1 = (dst0 >> 16) & 0xfff;
-				int y1 = dst0 & 0xfff;
-				int x2 = (dst1 >> 16) & 0xfff;
-				int y2 = dst1 & 0xfff;
-				x1 /= (depth / 8);
-				x2 /= (depth / 8);
-
-				int src_x1 = (src0 >> 16) & 0xfff;
-				int src_y1 = src0 & 0xfff;
-				// int src_x2 = (src1 >> 16) & 0xfff;
-				// int src_y2 = src1 & 0xfff;
-				src_x1 /= (depth / 8);
-				// src_x2 /= (depth / 8);
-
-				int dx = x1 > x2 ? -1 : 1;
-				int dy = y1 > y2 ? -1 : 1;
-				
-				uint32_t src_mode = (src_tlb << 10) + (((mode & MTE_MODE_DEPTH_MASK) >> MTE_DEPTH_SHIFT) << 8);
-				uint32_t dst_mode = (dst_tlb << 10) + (((mode & MTE_MODE_DEPTH_MASK) >> MTE_DEPTH_SHIFT) << 8);
-
-				// Hack. The MTE perhaps doesn't deal with colors per se,
-				// but this makes sure that we copy 32 bits when doing 32-bit
-				// transfers.
-				if (depth == 4) {
-					src_mode |= DE_MODE_TYPE_RGBA;
-					dst_mode |= DE_MODE_TYPE_RGBA;
-				}
-
-				int src_y = src_y1;
-				for (int y = y1; y != y2+dy; y += dy) {
-					int src_x = src_x1;
-					
-					for  (int x = x1; x != x2+dx; x += dx) {
-						if (mode & MTE_MODE_COPY) {
-							horrible_getputpixel(false, cpu, d,
-								src_x, src_y, &bg, src_mode);
-							src_x += dx;
-						}
-
-						horrible_getputpixel(true, cpu, d, x, y, &bg, dst_mode);
-					}
-					
-					src_y += dy;
-				}
-			}
-			break;
-		case MTE_TLB_LIN_A:
-		case MTE_TLB_LIN_B:
-			// Used by the PROM to zero-fill memory (?).
-			if (mode & MTE_MODE_COPY) {
-				fatal("[ sgi_mte: unimplemented MTE_MODE_COPY ]");
-				exit(1);
-			}
-
-			if (depth != 8) {
-				fatal("[ sgi_mte: unimplemented MTE_DEPTH_x ]");
-				exit(1);
-			}
-
-			debug("[ sgi_mte: LINEAR TRANSFER: mode=0x%08x dst0=0x%016llx,"
-			    " dst1=0x%016llx (length 0x%llx), dst_y_step=%i bg=0x%x, bytemask=0x%x ]\n",
-			    mode,
-			    (long long)dst0, (long long)dst1,
-			    (long long)dstlen, dst_y_step, (int)bg, (int)bytemask);
-
-			if (bytemask != 0xffffffff) {
-				fatal("unimplemented MTE bytemask 0x%08x\n", (int)bytemask);
-				exit(1);
-			}
-
-			/*
-			 *  Horrible hack:
-			 *
-			 *  During bootup, the PROM fills memory at 0x40000000 and
-			 *  forward. This corresponds to the lowest possible RAM address.
-			 *  However, these fills are not going via the CPU's cache,
-			 *  which contains things such as the return address on the
-			 *  stack. If we _really_ write this data in the emulator (which
-			 *  doesn't emulate the cache), it would overwrite the stack.
-			 *
-			 *  So let's not.
-			 *
-			 *  (If some guest OS or firmware variant actually depends on
-			 *  the ability to write to the start of memory this way,
-			 *  it would not work in the emulator.)
-			 */
-			// if (dst0 >= 0x40000000 && dst0 < 0x40004000 && dst1 > 0x40004000) {
-			//	dst0 += 0x4000;
-			//	dstlen -= 0x4000;
-			// }
-
-			/*
-			 *  HUH?
-			 *
-			 *  Note that due to a bug (?) in the PROM firmware when it
-			 *  is setting up the TLB entries, only every _second_ page is
-			 *  actually put correctly in the TLB. This means that even
-			 *  though it then tries to fill 0x40000000 .. 0x40007fff with
-			 *  zeroes, it only fills 0x40001000 .. 0x40001fff,
-			 *  0x40003000 .. 0x40003fff and so on!
-			 *
-			 *  So the Horrible hack above is not needed.
-			 *
-			 *  Ironic.
-			 */
-
-			memset(zerobuf, bg, dstlen < sizeof(zerobuf) ? dstlen : sizeof(zerobuf));
-			fill_addr = dst0;
-			while (dstlen != 0) {
-				uint64_t fill_len;
-				if (dstlen > sizeof(zerobuf))
-					fill_len = sizeof(zerobuf);
-				else
-					fill_len = dstlen;
-
-				uint64_t starting_page = fill_addr & ~0xfff;
-				uint64_t ending_page = (fill_addr + fill_len - 1) & ~0xfff;
-				if (starting_page != ending_page) {
-					fill_len = starting_page + 4096 - fill_addr;
-				}
-
-				// Find starting_page in the TLB in question.
-				starting_page >>= 12;
-				uint32_t *tlb = dst_tlb == MTE_TLB_LIN_A ? d->re_linear_a : d->re_linear_b;
-				bool match = false;
-				for (int i = 0; i < 32; ++i) {
-					uint32_t entry = tlb[i];
-					if (entry & 0x80000000) {
-						entry &= ~0x80000000;
-						if (entry == starting_page) {
-							match = true;
-							break;
-						}
-					}
-				}
-				
-				if (match) {
-					cpu->memory_rw(cpu, mem, fill_addr, zerobuf, fill_len,
-						MEM_WRITE, NO_EXCEPTIONS | PHYSICAL);
-				} else {
-					debug("[ sgi_mte: WARNING: address 0x%x not found in TLB? Ignoring fill. ]\n",
-						(long long)fill_addr);
-				}
-
-				fill_addr += fill_len;
-				dstlen -= sizeof(zerobuf);
-			}
-			break;
-		default:
-			fatal("[ sgi_mte: TODO! unimplemented dst_tlb 0x%x ]", dst_tlb);
-			return 1;
-		}
-	}
+	if (startFlag)
+		do_mte_transfer(cpu, d);
 
 	if (writeflag == MEM_READ)
 		memory_writemax64(cpu, data, len, odata);
