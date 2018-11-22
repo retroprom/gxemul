@@ -4813,3 +4813,6 @@ Changelog for GXemul:
 		8 bits deep?).
 20181121	Getting rid of a hack in the O2 rendering code for "stipple
 		patterns", by looking at the "stipple mode" register.
+20181122	Fixing an old very annoying bug where floating point number
+		0x0 was interpreted as 2.22507e-308 rather than 0.0. Thanks to
+		Maya Rashish (coypu@SDF.ORG) for reproting the bug.

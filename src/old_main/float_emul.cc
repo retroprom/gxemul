@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2004-2018  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -65,7 +65,7 @@ void ieee_interpret_float_value(uint64_t x, struct ieee_float_value *fvp,
 		    "unimplemented format %i\n", fmt);
 	}
 
-	/*  exponent:  */
+	/*  Get the Exponent:  */
 	exponent = 0;
 	switch (fmt) {
 	case IEEE_FMT_W:
@@ -82,7 +82,7 @@ void ieee_interpret_float_value(uint64_t x, struct ieee_float_value *fvp,
 		    "format %i\n", fmt);
 	}
 
-	/*  nan:  */
+	/*  Is this a Not-A-Number?  */
 	nan = 0;
 	switch (fmt) {
 	case IEEE_FMT_S:
@@ -101,27 +101,39 @@ void ieee_interpret_float_value(uint64_t x, struct ieee_float_value *fvp,
 		goto no_reasonable_result;
 	}
 
-	/*  fraction:  */
+	/*  Calculate the fraction:  */
 	fraction = 0.0;
+
 	switch (fmt) {
+
 	case IEEE_FMT_W:
 		{
 			int32_t r_int = x;
 			fraction = r_int;
 		}
 		break;
+
 	case IEEE_FMT_L:
 		{
 			int64_t r_int = x;
 			fraction = r_int;
 		}
 		break;
+
 	case IEEE_FMT_S:
 	case IEEE_FMT_D:
 		/*  sign:  */
-		sign = (x >> 31) & 1;
 		if (fmt == IEEE_FMT_D)
 			sign = (x >> 63) & 1;
+		else
+			sign = (x >> 31) & 1;
+
+		if (x == 0 ||
+		    (fmt == IEEE_FMT_D && x == 0x8000000000000000ULL) ||
+		    (fmt == IEEE_FMT_S && x == 0x80000000ULL)) {
+			fvp->f = 0.0;
+			goto zero_or_no_reasonable_result;
+		}
 
 		fraction = 0.0;
 		for (i=0; i<n_frac; i++) {
@@ -130,9 +142,11 @@ void ieee_interpret_float_value(uint64_t x, struct ieee_float_value *fvp,
 			if (bit)
 				fraction += 1.0;
 		}
+
 		/*  Add implicit bit 0:  */
 		fraction = (fraction / 2.0) + 1.0;
 		break;
+
 	default:fatal("ieee_interpret_float_value(): "
 		    "unimplemented format %i\n", fmt);
 	}
@@ -141,7 +155,7 @@ void ieee_interpret_float_value(uint64_t x, struct ieee_float_value *fvp,
 	fvp->f = fraction;
 
 #ifdef IEEE_DEBUG
-	fatal("{ ieee: x=%016"PRIx64" sign=%i exponent=%i frac=%f ",
+	fatal("{ ieee: x=%016"PRIx64" => sign=%i exponent=%i frac=%f ",
 	    (uint64_t) x, sign, exponent, fraction);
 #endif
 
@@ -165,6 +179,7 @@ void ieee_interpret_float_value(uint64_t x, struct ieee_float_value *fvp,
 			fvp->f /= 2.0;
 	}
 
+zero_or_no_reasonable_result:
 	if (sign)
 		fvp->f = -fvp->f;
 
@@ -172,7 +187,7 @@ no_reasonable_result:
 	fvp->nan = nan;
 
 #ifdef IEEE_DEBUG
-	fatal("f=%f }\n", fvp->f);
+	fatal("nan=%i (f=%f) }\n", nan, fvp->f);
 #endif
 }
 

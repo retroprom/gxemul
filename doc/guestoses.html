@@ -183,7 +183,7 @@ follow these instructions:
 <p><ol>
   <li>Create an empty harddisk image, which will be the root disk
 	that NetBSD installs itself onto:<pre>
-	<b>dd if=/dev/zero of=nbsd_pmax.img bs=1024 count=1 seek=3800000</b>
+	<b>dd if=/dev/zero of=nbsd_pmax.img bs=1024 count=1 seek=7800000</b>
 
 </pre>
   <li>Download a NetBSD CD-ROM iso image:<pre>
@@ -194,6 +194,9 @@ follow these instructions:
 	<b>gxemul -X -e 3max -d nbsd_pmax.img -d b:NetBSD-7.1.2-pmax.iso</b>
 </pre>
 </ol>
+
+<p>(NetBSD 8.0 can also be installed, but for some reason, the Xorg server
+is missing after installation, so 7.1.2 is preferred if you want to use X.)
 
 <p>If you do not want to use the graphical framebuffer during the 
 install, you can skip the <b><tt>-X</tt></b> command line option.
@@ -585,7 +588,7 @@ is not emulated yet, so NetBSD needs to boot with root-on-NFS:
 <p>
 <ol>
   <li>First of all, an "<tt>nfs server</tt>" machine must be set up.
-	This needs to have a 1800 MB <tt>/tftpboot</tt> partition.
+	This needs to have a 4000 MB <tt>/tftpboot</tt> partition.
 	<a href="#netbsdpmaxinstall">Install NetBSD/pmax 8.0 from CDROM</a>.
 	Do not configure the network and do not install any X11 packages on the
 	nfs server, as they are not needed.
@@ -1903,7 +1906,7 @@ client. Performing this setup is quite time consuming, but necessary:
   <li>First of all, the "<tt>nfs server</tt>" machine must be set up.
 	<a href="#netbsdpmaxinstall">Install NetBSD/pmax 8.0 from CDROM</a>,
 	perform a default install from CDROM without configuring the
-	network, but add a 1500 MB <tt>/tftpboot</tt> partition when
+	network, but add a 4000 MB <tt>/tftpboot</tt> partition when
 	configuring the disk!
   <p>
   <li>On the host, download the OpenBSD distribution, and do some fixup to
