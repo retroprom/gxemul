@@ -401,6 +401,24 @@ int f(void)
 		str("\n");
 	}
 
+	str("1.0 + 1.0:\t");
+	{
+		float x1, x2, x;
+		x1 = f_1_0();
+		x2 = f_1_0();
+		x = x1 + x2;
+		print_float(&x);
+		str("\t");
+	}
+	{
+		double x1, x2, x;
+		x1 = d_1_0();
+		x2 = d_1_0();
+		x = x1 + x2;
+		print_double(&x);
+		str("\n");
+	}
+
 	str("1.0 + -1.0:\t");
 	{
 		float x1, x2, x;
@@ -450,6 +468,294 @@ int f(void)
 		double x1, x2, x;
 		x1 = d_1_7();
 		x2 = d_0_0();
+		x = x1 + x2;
+		print_double(&x);
+		str("\n");
+	}
+
+	str("42 + 0.0:\t");
+	{
+		float x1, x2, x;
+		x1 = f_42();
+		x2 = f_0_0();
+		x = x1 + x2;
+		print_float(&x);
+		str("\t");
+	}
+	{
+		double x1, x2, x;
+		x1 = d_42();
+		x2 = d_0_0();
+		x = x1 + x2;
+		print_double(&x);
+		str("\n");
+	}
+
+	str("42 + 42:\t");
+	{
+		float x1, x2, x;
+		x1 = f_42();
+		x2 = f_42();
+		x = x1 + x2;
+		print_float(&x);
+		str("\t");
+	}
+	{
+		double x1, x2, x;
+		x1 = d_42();
+		x2 = d_42();
+		x = x1 + x2;
+		print_double(&x);
+		str("\n");
+	}
+
+	str("-42 + 42:\t");
+	{
+		float x1, x2, x;
+		x1 = f_m42();
+		x2 = f_42();
+		x = x1 + x2;
+		print_float(&x);
+		str("\t");
+	}
+	{
+		double x1, x2, x;
+		x1 = d_m42();
+		x2 = d_42();
+		x = x1 + x2;
+		print_double(&x);
+		str("\n");
+	}
+
+	str("0.0 + inf:\t");
+	{
+		float x1, x2, x;
+		x1 = f_0_0();
+		x2 = f_inf();
+		x = x1 + x2;
+		print_float(&x);
+		str("\t");
+	}
+	{
+		double x1, x2, x;
+		x1 = d_0_0();
+		x2 = d_inf();
+		x = x1 + x2;
+		print_double(&x);
+		str("\n");
+	}
+
+	str("0.0 + -inf:\t");
+	{
+		float x1, x2, x;
+		x1 = f_0_0();
+		x2 = f_m_inf();
+		x = x1 + x2;
+		print_float(&x);
+		str("\t");
+	}
+	{
+		double x1, x2, x;
+		x1 = d_0_0();
+		x2 = d_m_inf();
+		x = x1 + x2;
+		print_double(&x);
+		str("\n");
+	}
+
+	str("inf + inf:\t");
+	{
+		float x1, x2, x;
+		x1 = f_inf();
+		x2 = f_inf();
+		x = x1 + x2;
+		print_float(&x);
+		str("\t");
+	}
+	{
+		double x1, x2, x;
+		x1 = d_inf();
+		x2 = d_inf();
+		x = x1 + x2;
+		print_double(&x);
+		str("\n");
+	}
+
+	str("inf + -inf:\t");
+	{
+		float x1, x2, x;
+		x1 = f_inf();
+		x2 = f_m_inf();
+		x = x1 + x2;
+		print_float(&x);
+		str("\t");
+	}
+	{
+		double x1, x2, x;
+		x1 = d_inf();
+		x2 = d_m_inf();
+		x = x1 + x2;
+		print_double(&x);
+		str("\n");
+	}
+
+	str("-inf + -inf:\t");
+	{
+		float x1, x2, x;
+		x1 = f_m_inf();
+		x2 = f_m_inf();
+		x = x1 + x2;
+		print_float(&x);
+		str("\t");
+	}
+	{
+		double x1, x2, x;
+		x1 = d_m_inf();
+		x2 = d_m_inf();
+		x = x1 + x2;
+		print_double(&x);
+		str("\n");
+	}
+
+	str("inf + 1.7:\t");
+	{
+		float x1, x2, x;
+		x1 = f_inf();
+		x2 = f_1_7();
+		x = x1 + x2;
+		print_float(&x);
+		str("\t");
+	}
+	{
+		double x1, x2, x;
+		x1 = d_inf();
+		x2 = d_1_7();
+		x = x1 + x2;
+		print_double(&x);
+		str("\n");
+	}
+
+	str("inf + nan:\t");
+	{
+		float x1, x2, x;
+		x1 = f_inf();
+		x2 = f_nan();
+		x = x1 + x2;
+		print_float(&x);
+		str("\t");
+	}
+	{
+		double x1, x2, x;
+		x1 = d_inf();
+		x2 = d_nan();
+		x = x1 + x2;
+		print_double(&x);
+		str("\n");
+	}
+
+	str("nan + 0.0:\t");
+	{
+		float x1, x2, x;
+		x1 = f_nan();
+		x2 = f_0_0();
+		x = x1 + x2;
+		print_float(&x);
+		str("\t");
+	}
+	{
+		double x1, x2, x;
+		x1 = d_nan();
+		x2 = d_0_0();
+		x = x1 + x2;
+		print_double(&x);
+		str("\n");
+	}
+
+	str("nan_x + 0.0:\t");
+	{
+		float x1, x2, x;
+		x1 = f_nan_x();
+		x2 = f_0_0();
+		x = x1 + x2;
+		print_float(&x);
+		str("\t");
+	}
+	{
+		double x1, x2, x;
+		x1 = d_nan_x();
+		x2 = d_0_0();
+		x = x1 + x2;
+		print_double(&x);
+		str("\n");
+	}
+
+	str("nan + 1.7:\t");
+	{
+		float x1, x2, x;
+		x1 = f_nan();
+		x2 = f_1_7();
+		x = x1 + x2;
+		print_float(&x);
+		str("\t");
+	}
+	{
+		double x1, x2, x;
+		x1 = d_nan();
+		x2 = d_1_7();
+		x = x1 + x2;
+		print_double(&x);
+		str("\n");
+	}
+
+	str("nan_x + 1.7:\t");
+	{
+		float x1, x2, x;
+		x1 = f_nan_x();
+		x2 = f_1_7();
+		x = x1 + x2;
+		print_float(&x);
+		str("\t");
+	}
+	{
+		double x1, x2, x;
+		x1 = d_nan_x();
+		x2 = d_1_7();
+		x = x1 + x2;
+		print_double(&x);
+		str("\n");
+	}
+
+	str("nan + nan_x:\t");
+	{
+		float x1, x2, x;
+		x1 = f_nan();
+		x2 = f_nan_x();
+		x = x1 + x2;
+		print_float(&x);
+		str("\t");
+	}
+	{
+		double x1, x2, x;
+		x1 = d_nan();
+		x2 = d_nan_x();
+		x = x1 + x2;
+		print_double(&x);
+		str("\n");
+	}
+
+	str("nan_x + nan:\t");
+	{
+		float x1, x2, x;
+		x1 = f_nan_x();
+		x2 = f_nan();
+		x = x1 + x2;
+		print_float(&x);
+		str("\t");
+	}
+	{
+		double x1, x2, x;
+		x1 = d_nan_x();
+		x2 = d_nan();
 		x = x1 + x2;
 		print_double(&x);
 		str("\n");

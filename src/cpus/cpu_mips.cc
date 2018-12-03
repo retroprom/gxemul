@@ -309,6 +309,11 @@ int mips_cpu_new(struct cpu *cpu, struct memory *mem, struct machine *machine,
 			cpu->translate_v2p = translate_v2p_generic;
 	}
 
+	// TODO: Consider moving to src/machine/machine_test.cc?
+	// This is only here to make the floating point tests work out-of-the-box.
+	if (!cpu->is_32bit)
+		cpu->cd.mips.coproc[0]->reg[COP0_STATUS] |= STATUS_FR;
+
 	if (cpu->machine->prom_emulation) {
 		/*
 		 *  Default behaviour of jumping to 0xbfc00000 should be

@@ -1020,7 +1020,7 @@ static void fpu_store_float_value(bool fr, struct mips_coproc *cp, int fd,
 	double nf, int fmt, int nan)
 {
 	int ieee_fmt = mips_fmt_to_ieee_fmt[fmt];
-	uint64_t r = ieee_store_float_value(nf, ieee_fmt, nan);
+	uint64_t r = ieee_store_float_value(nf, ieee_fmt);
 
 	/*
 	 *  TODO: This is for 32-bit mode. It has to be updated later

@@ -11,8 +11,8 @@ diff fptest_hostnative.output fptest.output
 
 MIPS (64-bit)
 -------------
-mips64-unknown-elf-gcc -DMIPS -I../../src/include/testmachine -g fptest.c -O2 -mips4 -mabi=64 -c -G 0
-mips64-unknown-elf-gcc -DMIPS -I../../src/include/testmachine -g fpconst.c -O2 -mips4 -mabi=64 -c -G 0
+mips64-unknown-elf-gcc -DMIPS -I../../src/include/testmachine -g fptest.c -O0 -mips4 -mabi=64 -c -G 0
+mips64-unknown-elf-gcc -DMIPS -I../../src/include/testmachine -g fpconst.c -O0 -mips4 -mabi=64 -c -G 0
 mips64-unknown-elf-ld -Ttext 0xa800000000030000 -e f fptest.o fpconst.o -o fptest --oformat=elf64-bigmips
 file fptest
 ../../gxemul -qE oldtestmips fptest > fptest.output
@@ -21,8 +21,8 @@ diff fptest_hostnative.output fptest.output
 
 MIPS (32-bit)
 -------------
-mips64-unknown-elf-gcc -DMIPS -I../../src/include/testmachine -g fptest.c -O2 -mips1 -mabi=32 -c -G 0
-mips64-unknown-elf-gcc -DMIPS -I../../src/include/testmachine -g fpconst.c -O2 -mips1 -mabi=32 -c -G 0
+mips64-unknown-elf-gcc -DMIPS -I../../src/include/testmachine -g fptest.c -O0 -mips1 -mabi=32 -c -G 0
+mips64-unknown-elf-gcc -DMIPS -I../../src/include/testmachine -g fpconst.c -O0 -mips1 -mabi=32 -c -G 0
 mips64-unknown-elf-ld -Ttext 0x80030000 -e f fptest.o fpconst.o -o fptest
 file fptest
 ../../gxemul -C 4Kc -qE oldtestmips fptest > fptest.output

@@ -49,11 +49,44 @@
 void ieee_interpret_float_value(uint64_t x, struct ieee_float_value *fvp,
 	int fmt)
 {
+	memset(fvp, 0, sizeof(struct ieee_float_value));
+
+#if 0
+	// HACK: Use the host's float/double representation:
+	switch (fmt) {
+	case IEEE_FMT_S:
+		{
+			uint32_t x2 = x;
+			void* p = (void*) &x2;
+			float *pf = (float*) p;
+			fvp->f = *pf;
+		}
+		break;
+
+	case IEEE_FMT_D:
+		{
+			void* p = (void*) &x;
+			double *pf = (double*) p;
+			fvp->f = *pf;
+		}
+		break;
+
+	case IEEE_FMT_W:
+	case IEEE_FMT_L:
+		{
+			fvp->f = x;
+		}
+		break;
+
+	default:fatal("ieee_interpret_float_value(): "
+		    "unimplemented format %i\n", fmt);
+	}
+
+	fvp->nan = isnan(fvp->f);
+#else
 	int n_frac = 0, n_exp = 0;
 	int i, nan, sign = 0, exponent;
 	double fraction;
-
-	memset(fvp, 0, sizeof(struct ieee_float_value));
 
 	/*  n_frac and n_exp:  */
 	switch (fmt) {
@@ -86,18 +119,27 @@ void ieee_interpret_float_value(uint64_t x, struct ieee_float_value *fvp,
 	nan = 0;
 	switch (fmt) {
 	case IEEE_FMT_S:
-		if (x == 0x7fffffffULL || x == 0x7fbfffffULL)
+		sign = (x >> 31) & 1;
+		if ((x & ~0x80000000ULL) == 0x7f800000ULL) {
+			fvp->f = 1.0 / 0.0;
+			goto zero_or_no_reasonable_result;
+		}
+		if ((x & 0x7f800000ULL) == 0x7f800000ULL)
 			nan = 1;
 		break;
 	case IEEE_FMT_D:
-		if (x == 0x7fffffffffffffffULL ||
-		    x == 0x7ff7ffffffffffffULL)
+		sign = (x >> 63) & 1;
+		if ((x & ~0x8000000000000000ULL) == 0x7ff0000000000000ULL) {
+			fvp->f = 1.0 / 0.0;
+			goto zero_or_no_reasonable_result;
+		}
+		if ((x & 0x7ff0000000000000ULL) == 0x7ff0000000000000ULL)
 			nan = 1;
 		break;
 	}
 
 	if (nan) {
-		fvp->f = 1.0;
+		fvp->f = NAN;
 		goto no_reasonable_result;
 	}
 
@@ -122,12 +164,6 @@ void ieee_interpret_float_value(uint64_t x, struct ieee_float_value *fvp,
 
 	case IEEE_FMT_S:
 	case IEEE_FMT_D:
-		/*  sign:  */
-		if (fmt == IEEE_FMT_D)
-			sign = (x >> 63) & 1;
-		else
-			sign = (x >> 31) & 1;
-
 		if (x == 0 ||
 		    (fmt == IEEE_FMT_D && x == 0x8000000000000000ULL) ||
 		    (fmt == IEEE_FMT_S && x == 0x80000000ULL)) {
@@ -189,6 +225,8 @@ no_reasonable_result:
 #ifdef IEEE_DEBUG
 	fatal("nan=%i (f=%f) }\n", nan, fvp->f);
 #endif
+
+#endif
 }
 
 
@@ -197,10 +235,9 @@ no_reasonable_result:
  *
  *  Generates a 64-bit IEEE-formated value in a specific format.
  */
-uint64_t ieee_store_float_value(double nf, int fmt, int nan)
+uint64_t ieee_store_float_value(double nf, int fmt)
 {
-	int n_frac = 0, n_exp = 0, signofs=0;
-	int i, exponent;
+	int n_frac = 0, n_exp = 0, signofs = 0, i, exponent;
 	uint64_t r = 0, r2;
 	int64_t r3;
 
@@ -214,10 +251,6 @@ uint64_t ieee_store_float_value(double nf, int fmt, int nan)
 		    " %i\n", fmt);
 	}
 
-	if ((fmt == IEEE_FMT_S || fmt == IEEE_FMT_D) && nan)
-		goto store_nan;
-
-	/*  fraction:  */
 	switch (fmt) {
 	case IEEE_FMT_W:
 	case IEEE_FMT_L:
@@ -229,86 +262,88 @@ uint64_t ieee_store_float_value(double nf, int fmt, int nan)
 		r3 = (int64_t) nf;
 		r2 = r3;
 		r |= r2;
-
-		if (fmt == IEEE_FMT_W)
-			r &= 0xffffffffULL;
 		break;
 	case IEEE_FMT_S:
 	case IEEE_FMT_D:
-#ifdef IEEE_DEBUG
-		fatal("{ ieee store f=%f ", nf);
-#endif
 		/*  sign bit:  */
-		if (nf < 0.0) {
+		if (signbit(nf)) {
 			r |= ((uint64_t)1 << signofs);
-			nf = -nf;
 		}
 
-		/*
-		 *  How to convert back from double to exponent + fraction:
-		 *  The fraction should be 1.xxx, that is
-		 *  1.0 <= fraction < 2.0
-		 *
-		 *  This method is very slow but should work:
-		 *  (TODO: Fix the performance problem!)
-		 */
-		exponent = 0;
-		while (nf < 1.0 && exponent > -1023) {
-			nf *= 2.0;
-			exponent --;
-		}
-		while (nf >= 2.0 && exponent < 1023) {
-			nf /= 2.0;
-			exponent ++;
-		}
+		// printf("fpclassify(nf) = %i\n", fpclassify(nf));
+		switch (fpclassify(nf)) {
+		case FP_INFINITE:
+			if (fmt == IEEE_FMT_D)
+				r |= 0x7ff0000000000000ULL;
+			else
+				r |= 0x7f800000ULL;
+			break;
+		case FP_NAN:
+			if (fmt == IEEE_FMT_D)
+				r |= 0x7fffffffffffffffULL;
+			else
+				r |= 0x7fffffffULL;
+			break;
+		case FP_NORMAL:
+			if (signbit(nf))
+				nf = -nf;
 
-		/*  Here:   1.0 <= nf < 2.0  */
-#ifdef IEEE_DEBUG
-		fatal(" nf=%f", nf);
-#endif
-		nf -= 1.0;	/*  remove implicit first bit  */
-		for (i=n_frac-1; i>=0; i--) {
-			nf *= 2.0;
-			if (nf >= 1.0) {
-				r |= ((uint64_t)1 << i);
-				nf -= 1.0;
-			}
-		}
-
-		/*  Insert the exponent into the resulting word:  */
-		/*  (First bias, then make sure it's within range)  */
-		exponent += (((uint64_t)1 << (n_exp-1)) - 1);
-		if (exponent < 0)
+			/*
+			 *  How to convert back from double to exponent + fraction:
+			 *  The fraction should be 1.xxx, that is
+			 *  1.0 <= fraction < 2.0
+			 *
+			 *  This method is very slow but should work:
+			 *  (TODO: Fix the performance problem!)
+			 */
 			exponent = 0;
-		if (exponent >= ((int64_t)1 << n_exp))
-			exponent = ((int64_t)1 << n_exp) - 1;
-		r |= (uint64_t)exponent << n_frac;
+			while (nf < 1.0 && exponent > -1023) {
+				nf *= 2.0;
+				exponent --;
+			}
+			while (nf >= 2.0 && exponent < 1023) {
+				nf /= 2.0;
+				exponent ++;
+			}
 
-		/*  Special case for 0.0:  */
-		if (exponent == 0)
-			r = 0;
+			/*  Here:   1.0 <= nf < 2.0  */
+			nf -= 1.0;	/*  remove implicit first bit  */
+			for (i=n_frac-1; i>=0; i--) {
+				nf *= 2.0;
+				if (nf >= 1.0) {
+					r |= ((uint64_t)1 << i);
+					nf -= 1.0;
+				}
+			}
 
-#ifdef IEEE_DEBUG
-		fatal(" exp=%i, r = %016"PRIx64" }\n", exponent, (uint64_t) r);
-#endif
+			/*  Insert the exponent into the resulting word:  */
+			/*  (First bias, then make sure it's within range)  */
+			exponent += (((uint64_t)1 << (n_exp-1)) - 1);
+			if (exponent < 0)
+				exponent = 0;
+			if (exponent >= ((int64_t)1 << n_exp))
+				exponent = ((int64_t)1 << n_exp) - 1;
+			r |= (uint64_t)exponent << n_frac;
+
+			/*  Special case for 0.0:  */
+			if (exponent == 0)
+				r = 0;
+			break;
+		case FP_SUBNORMAL:
+			// TODO
+			break;
+		case FP_ZERO:
+			// r already has zeros in the lowest bits. Done.
+			break;
+		}
 		break;
 	default:/*  TODO  */
 		fatal("ieee_store_float_value(): unimplemented format %i\n",
 		    fmt);
 	}
 
-store_nan:
-	if (nan) {
-		if (fmt == IEEE_FMT_S)
-			r = 0x7fffffffULL;
-		else if (fmt == IEEE_FMT_D)
-			r = 0x7fffffffffffffffULL;
-		else
-			r = 0x7fffffffULL;
-	}
-
 	if (fmt == IEEE_FMT_S || fmt == IEEE_FMT_W)
-		r &= 0xffffffff;
+		r = (uint32_t) r;
 
 	return r;
 }

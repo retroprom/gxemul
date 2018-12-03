@@ -4816,4 +4816,5 @@ Changelog for GXemul:
 20181122	Fixing an old very annoying bug where floating point number
 		0x0 was interpreted as 2.22507e-308 rather than 0.0. Thanks to
 		Maya Rashish (coypu@SDF.ORG) for reporting the bug.
-20181203	Beginning on test/floatingpoint infrastructure.
+20181203	Beginning on test/floatingpoint infrastructure. Fixing some
+		more floating point bugs.

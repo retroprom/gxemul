@@ -850,7 +850,7 @@ X(fadd_sss)
 	ieee_interpret_float_value(s1, &f1, IEEE_FMT_S);
 	ieee_interpret_float_value(s2, &f2, IEEE_FMT_S);
 
-	d = ieee_store_float_value(f1.f + f2.f, IEEE_FMT_S, 0);
+	d = ieee_store_float_value(f1.f + f2.f, IEEE_FMT_S);
 
 	reg(ic->arg[0]) = d;
 }
@@ -873,7 +873,7 @@ X(fadd_dsd)
 	ieee_interpret_float_value(s1, &f1, IEEE_FMT_S);
 	ieee_interpret_float_value(s2, &f2, IEEE_FMT_D);
 
-	d = ieee_store_float_value(f1.f + f2.f, IEEE_FMT_D, 0);
+	d = ieee_store_float_value(f1.f + f2.f, IEEE_FMT_D);
 
 	reg(ic->arg[0]) = d >> 32;	/*  High 32-bit word,  */
 	reg(ic->arg[0] + 4) = d;	/*  and low word.  */
@@ -897,7 +897,7 @@ X(fadd_dds)
 	ieee_interpret_float_value(s1, &f1, IEEE_FMT_D);
 	ieee_interpret_float_value(s2, &f2, IEEE_FMT_S);
 
-	d = ieee_store_float_value(f1.f + f2.f, IEEE_FMT_D, 0);
+	d = ieee_store_float_value(f1.f + f2.f, IEEE_FMT_D);
 
 	reg(ic->arg[0]) = d >> 32;	/*  High 32-bit word,  */
 	reg(ic->arg[0] + 4) = d;	/*  and low word.  */
@@ -922,7 +922,7 @@ X(fadd_ddd)
 	ieee_interpret_float_value(s1, &f1, IEEE_FMT_D);
 	ieee_interpret_float_value(s2, &f2, IEEE_FMT_D);
 
-	d = ieee_store_float_value(f1.f + f2.f, IEEE_FMT_D, 0);
+	d = ieee_store_float_value(f1.f + f2.f, IEEE_FMT_D);
 
 	reg(ic->arg[0]) = d >> 32;	/*  High 32-bit word,  */
 	reg(ic->arg[0] + 4) = d;	/*  and low word.  */
@@ -946,7 +946,7 @@ X(fsub_sds)
 	ieee_interpret_float_value(s1, &f1, IEEE_FMT_D);
 	ieee_interpret_float_value(s2, &f2, IEEE_FMT_S);
 
-	d = ieee_store_float_value(f1.f - f2.f, IEEE_FMT_S, 0);
+	d = ieee_store_float_value(f1.f - f2.f, IEEE_FMT_S);
 	reg(ic->arg[0]) = d;
 }
 X(fsub_dss)
@@ -967,7 +967,7 @@ X(fsub_dss)
 	ieee_interpret_float_value(s1, &f1, IEEE_FMT_S);
 	ieee_interpret_float_value(s2, &f2, IEEE_FMT_S);
 
-	d = ieee_store_float_value(f1.f - f2.f, IEEE_FMT_D, 0);
+	d = ieee_store_float_value(f1.f - f2.f, IEEE_FMT_D);
 
 	reg(ic->arg[0]) = d >> 32;	/*  High 32-bit word,  */
 	reg(ic->arg[0] + 4) = d;	/*  and low word.  */
@@ -991,7 +991,7 @@ X(fsub_dsd)
 	ieee_interpret_float_value(s1, &f1, IEEE_FMT_S);
 	ieee_interpret_float_value(s2, &f2, IEEE_FMT_D);
 
-	d = ieee_store_float_value(f1.f - f2.f, IEEE_FMT_D, 0);
+	d = ieee_store_float_value(f1.f - f2.f, IEEE_FMT_D);
 
 	reg(ic->arg[0]) = d >> 32;	/*  High 32-bit word,  */
 	reg(ic->arg[0] + 4) = d;	/*  and low word.  */
@@ -1015,7 +1015,7 @@ X(fsub_dds)
 	ieee_interpret_float_value(s1, &f1, IEEE_FMT_D);
 	ieee_interpret_float_value(s2, &f2, IEEE_FMT_S);
 
-	d = ieee_store_float_value(f1.f - f2.f, IEEE_FMT_D, 0);
+	d = ieee_store_float_value(f1.f - f2.f, IEEE_FMT_D);
 
 	reg(ic->arg[0]) = d >> 32;	/*  High 32-bit word,  */
 	reg(ic->arg[0] + 4) = d;	/*  and low word.  */
@@ -1040,7 +1040,7 @@ X(fsub_ddd)
 	ieee_interpret_float_value(s1, &f1, IEEE_FMT_D);
 	ieee_interpret_float_value(s2, &f2, IEEE_FMT_D);
 
-	d = ieee_store_float_value(f1.f - f2.f, IEEE_FMT_D, 0);
+	d = ieee_store_float_value(f1.f - f2.f, IEEE_FMT_D);
 
 	reg(ic->arg[0]) = d >> 32;	/*  High 32-bit word,  */
 	reg(ic->arg[0] + 4) = d;	/*  and low word.  */
@@ -1063,7 +1063,7 @@ X(fmul_sss)
 	ieee_interpret_float_value(s1, &f1, IEEE_FMT_S);
 	ieee_interpret_float_value(s2, &f2, IEEE_FMT_S);
 
-	d = ieee_store_float_value(f1.f * f2.f, IEEE_FMT_S, 0);
+	d = ieee_store_float_value(f1.f * f2.f, IEEE_FMT_S);
 	reg(ic->arg[0]) = d;
 }
 X(fmul_dss)
@@ -1084,7 +1084,7 @@ X(fmul_dss)
 	ieee_interpret_float_value(s1, &f1, IEEE_FMT_S);
 	ieee_interpret_float_value(s2, &f2, IEEE_FMT_S);
 
-	d = ieee_store_float_value(f1.f * f2.f, IEEE_FMT_D, 0);
+	d = ieee_store_float_value(f1.f * f2.f, IEEE_FMT_D);
 
 	reg(ic->arg[0]) = d >> 32;	/*  High 32-bit word,  */
 	reg(ic->arg[0] + 4) = d;	/*  and low word.  */
@@ -1108,7 +1108,7 @@ X(fmul_dsd)
 	ieee_interpret_float_value(s1, &f1, IEEE_FMT_S);
 	ieee_interpret_float_value(s2, &f2, IEEE_FMT_D);
 
-	d = ieee_store_float_value(f1.f * f2.f, IEEE_FMT_D, 0);
+	d = ieee_store_float_value(f1.f * f2.f, IEEE_FMT_D);
 
 	reg(ic->arg[0]) = d >> 32;	/*  High 32-bit word,  */
 	reg(ic->arg[0] + 4) = d;	/*  and low word.  */
@@ -1132,7 +1132,7 @@ X(fmul_dds)
 	ieee_interpret_float_value(s1, &f1, IEEE_FMT_D);
 	ieee_interpret_float_value(s2, &f2, IEEE_FMT_S);
 
-	d = ieee_store_float_value(f1.f * f2.f, IEEE_FMT_D, 0);
+	d = ieee_store_float_value(f1.f * f2.f, IEEE_FMT_D);
 
 	reg(ic->arg[0]) = d >> 32;	/*  High 32-bit word,  */
 	reg(ic->arg[0] + 4) = d;	/*  and low word.  */
@@ -1157,7 +1157,7 @@ X(fmul_ddd)
 	ieee_interpret_float_value(s1, &f1, IEEE_FMT_D);
 	ieee_interpret_float_value(s2, &f2, IEEE_FMT_D);
 
-	d = ieee_store_float_value(f1.f * f2.f, IEEE_FMT_D, 0);
+	d = ieee_store_float_value(f1.f * f2.f, IEEE_FMT_D);
 
 	reg(ic->arg[0]) = d >> 32;	/*  High 32-bit word,  */
 	reg(ic->arg[0] + 4) = d;	/*  and low word.  */
@@ -1187,7 +1187,7 @@ X(fdiv_sss)
 		return;
 	}
 
-	d = ieee_store_float_value(f1.f / f2.f, IEEE_FMT_D, 0);
+	d = ieee_store_float_value(f1.f / f2.f, IEEE_FMT_D);
 
 	reg(ic->arg[0]) = d;
 }
@@ -1217,7 +1217,7 @@ X(fdiv_dsd)
 		return;
 	}
 
-	d = ieee_store_float_value(f1.f / f2.f, IEEE_FMT_D, 0);
+	d = ieee_store_float_value(f1.f / f2.f, IEEE_FMT_D);
 
 	reg(ic->arg[0]) = d >> 32;	/*  High 32-bit word,  */
 	reg(ic->arg[0] + 4) = d;	/*  and low word.  */
@@ -1249,7 +1249,7 @@ X(fdiv_ddd)
 		return;
 	}
 
-	d = ieee_store_float_value(f1.f / f2.f, IEEE_FMT_D, 0);
+	d = ieee_store_float_value(f1.f / f2.f, IEEE_FMT_D);
 
 	reg(ic->arg[0]) = d >> 32;	/*  High 32-bit word,  */
 	reg(ic->arg[0] + 4) = d;	/*  and low word.  */
@@ -1352,7 +1352,7 @@ X(flt_ss)
 		return;
 	}
 
-	reg(ic->arg[0]) = ieee_store_float_value((double)x, IEEE_FMT_S, 0);
+	reg(ic->arg[0]) = ieee_store_float_value((double)x, IEEE_FMT_S);
 }
 X(flt_ds)
 {
@@ -1366,7 +1366,7 @@ X(flt_ds)
 		return;
 	}
 
-	result = ieee_store_float_value((double)x, IEEE_FMT_D, 0);
+	result = ieee_store_float_value((double)x, IEEE_FMT_D);
 
 	reg(ic->arg[0]) = result >> 32;	/*  High 32-bit word,  */
 	reg(ic->arg[0] + 4) = result;	/*  and low word.  */
