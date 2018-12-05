@@ -938,33 +938,29 @@ void dev_sgi_de_init(struct memory *mem, uint64_t baseaddr, struct sgi_re_data *
 void do_mte_transfer(struct cpu* cpu, struct sgi_re_data *d)
 {
 	uint32_t mode = d->mte_reg[(CRIME_MTE_MODE - 0x3000) / sizeof(uint32_t)];
-	uint64_t src0 = d->mte_reg[(CRIME_MTE_SRC0 - 0x3000) / sizeof(uint32_t)];
-	// TODO: use src1!
-	// uint64_t src1 = d->mte_reg[(CRIME_MTE_SRC1 - 0x3000) / sizeof(uint32_t)];
-	uint64_t dst0 = d->mte_reg[(CRIME_MTE_DST0 - 0x3000) / sizeof(uint32_t)];
-	uint64_t dst1 = d->mte_reg[(CRIME_MTE_DST1 - 0x3000) / sizeof(uint32_t)];
+	uint32_t src0 = d->mte_reg[(CRIME_MTE_SRC0 - 0x3000) / sizeof(uint32_t)];
+	uint32_t src1 = d->mte_reg[(CRIME_MTE_SRC1 - 0x3000) / sizeof(uint32_t)];
+	uint32_t dst0 = d->mte_reg[(CRIME_MTE_DST0 - 0x3000) / sizeof(uint32_t)];
+	uint32_t dst1 = d->mte_reg[(CRIME_MTE_DST1 - 0x3000) / sizeof(uint32_t)];
+	int32_t src_y_step = d->mte_reg[(CRIME_MTE_SRC_Y_STEP - 0x3000) / sizeof(uint32_t)];
 	int32_t dst_y_step = d->mte_reg[(CRIME_MTE_DST_Y_STEP - 0x3000) / sizeof(uint32_t)];
-	uint64_t dstlen = dst1 - dst0 + 1, fill_addr;
+	uint32_t dstlen = dst1 - dst0 + 1, fill_addr;
 	unsigned char zerobuf[4096];
 	int depth = 8 << ((mode & MTE_MODE_DEPTH_MASK) >> MTE_DEPTH_SHIFT);
 	int src = (mode & MTE_MODE_SRC_BUF_MASK) >> MTE_SRC_TLB_SHIFT;
 	uint32_t bytemask = d->mte_reg[(CRIME_MTE_BYTEMASK - 0x3000) / sizeof(uint32_t)];
 	uint32_t bg = d->mte_reg[(CRIME_MTE_BG - 0x3000) / sizeof(uint32_t)];
 
-	debug("[ sgi_mte: STARTING: mode=0x%08x dst0=0x%016llx,"
-	    " dst1=0x%016llx, dst_y_step=%i bg=0x%x, bytemask=0x%x ]\n",
+	debug("[ sgi_mte: STARTING: mode=0x%08x src0=0x%08x src1=0x%08x src_y_step=%i dst0=0x%08x,"
+	    " dst1=0x%08x dst_y_step=%i bg=0x%x bytemask=0x%x ]\n",
 	    mode,
-	    (long long)dst0, (long long)dst1,
-	    dst_y_step, (int)bg, (int)bytemask);
+	    src0, src1, src_y_step,
+	    dst0, dst1, dst_y_step,
+	    bg, bytemask);
 
 	if (dst_y_step != 0 && dst_y_step != 1 && dst_y_step != -1) {
 		fatal("[ sgi_mte: TODO! unimplemented dst_y_step %i ]", dst_y_step);
 		// exit(1);
-	}
-
-	if (src != 0) {
-		fatal("[ sgi_mte: unimplemented SRC ]");
-		exit(1);
 	}
 
 	if (mode & MTE_MODE_STIPPLE) {
@@ -975,6 +971,11 @@ void do_mte_transfer(struct cpu* cpu, struct sgi_re_data *d)
 	int src_tlb = (mode & MTE_MODE_SRC_BUF_MASK) >> MTE_SRC_TLB_SHIFT;
 	int dst_tlb = (mode & MTE_MODE_DST_BUF_MASK) >> MTE_DST_TLB_SHIFT;
 	
+	if (src > MTE_TLB_C) {
+		fatal("[ sgi_mte: unimplemented SRC ]");
+		exit(1);
+	}
+
 	switch (dst_tlb) {
 	case MTE_TLB_A:
 	case MTE_TLB_B:
