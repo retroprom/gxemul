@@ -1218,6 +1218,9 @@ for a in $D; do
 	cat $a/Makefile.skel >> $a/Makefile
 done
 
+#  Undefine 'mips', to enable build on OpenBSD's MIPS platforms:
+printf "\n#undef mips\n" >> config.h
+
 #  Tail of config.h:
 printf "\n#endif  /*  CONFIG_H  */\n" >> config.h
 
