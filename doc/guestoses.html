@@ -2044,9 +2044,11 @@ reboot</b>
 </ol>
 
 
-<p>Many things are not working yet, for example X11 and mouse emulation.
+<p>Many things are not working yet, for example X11 does not start yet due
+to some bug in the keyboard emulation.
 It is also very slow, mostly due to having the file system on NFS.
-
+In order to self-compile GXemul under emulated OpenBSD/sgi, you need
+to run <tt>swapctl -a /swap</tt> as root.
 
 
 
