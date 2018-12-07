@@ -28,35 +28,29 @@ controllers.
 <p>The <a href="index.html">documentation</a> lists the machines and
 guest operating systems that 
 can be regarded as "working" in GXemul. The first guest operating 
-system that worked in GXemul is
+system that worked in GXemul was
 <a href="guestoses.html#netbsdpmaxinstall">NetBSD/pmax</a>, and that is
 still one of the guest OSes that works best.
 
 
 
-<p><br>The changes between release 0.6.0.2 and 0.6.1 include:
+<p><br>The most important change between release 0.6.0.2 and 0.6.1 is:
 
+<!--
 <p>Old framework:
+-->
 <ul>
-	<li><b>SGI O2 emulation progress:</b>
+	<li><b>SGI O2 emulation (in the Old framework):</b>
 	<ul>
 		<li>Graphical framebuffer:
 		Previously, only serial console was possible when
 		running NetBSD/sgimips as a guest OS, but now it is
 		also possible to use graphical framebuffer for both
-		text console use and for X11.
+		text console and for X11.
 
 		<li>OpenBSD/sgi has been moved from "unsupported" to
 		supported.
 	</ul>
-	<!--
-	<p>
-	<li><b>ARM Thumb:</b>
-	<ul>
-		<li>Some initial THUMB disassembly support.
-		<li>Slow (non-dyntrans) interpretation of THUMB code.
-	</ul>
-	-->
 </ul>
 
 <!--
