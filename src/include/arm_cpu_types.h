@@ -100,6 +100,7 @@
 	{ "IXP425_533",	CPU_ID_IXP425_533,ARM_XSCALE,	15, 1, 15, 1 }, \
 	\
 	{ "CORTEX-A5",	CPU_ID_CORTEXA5R0,0/*TODO*/,	15, 1, 15, 1 }, \
+	{ "SnapdragonS2",0x511f00f2,	0/*TODO*/,	15, 1, 15, 1 }, \
 	\
 	{ "80219_400",	CPU_ID_80219_400,ARM_XSCALE,	15, 1, 15, 1 }, \
 	{ "80219_600",	CPU_ID_80219_600,ARM_XSCALE,	15, 1, 15, 1 }, \

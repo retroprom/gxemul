@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2018  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -28,6 +28,7 @@
  *  This module contains functions which load executable images into (emulated)
  *  memory. File formats recognized so far are:
  *
+ *	android		Android boot.img format
  *	a.out		traditional old-style Unix binary format
  *	Mach-O		MacOS X format, etc.
  *	ecoff		old format used by Ultrix, Windows NT, etc
@@ -86,6 +87,7 @@ static int n_executables_loaded = 0;
 	}
 
 
+#include "file_android.cc"
 #include "file_aout.cc"
 #include "file_ecoff.cc"
 #include "file_elf.cc"
@@ -181,6 +183,13 @@ void file_load(struct machine *machine, struct memory *mem,
 	if (buf[0] == 0x7f && buf[1]=='E' && buf[2]=='L' && buf[3]=='F') {
 		file_load_elf(machine, mem, filename,
 		    entrypointp, arch, gpp, byte_orderp, tocp);
+		goto ret;
+	}
+
+	/*  Is it an Android boot.img?  */
+	if (memcmp("ANDROID!", &buf[0], 8) == 0) {
+		file_load_android(machine, mem, filename, 0,
+		    entrypointp, arch, byte_orderp);
 		goto ret;
 	}
 

@@ -244,6 +244,7 @@ struct machine {
 #define	MACHINE_IYONIX		5006
 #define	MACHINE_QEMU_ARM	5007
 #define	MACHINE_RPI		5008
+#define	MACHINE_ANDROIDARM	5009
 
 /*  SH:  */
 #define	MACHINE_BARESH		6000
@@ -332,6 +333,10 @@ struct machine {
 /*  LUNA88K  */
 #define MACHINE_LUNA_88K		1
 #define MACHINE_LUNA_88K2		2
+
+/*  Android ARM  */
+#define MACHINE_ANDROIDARM_SONYXPERIAMINI	1
+#define MACHINE_ANDROIDARM_FINOWX5AIR		2
 
 
 /*  For the automachine system:  */

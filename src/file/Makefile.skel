@@ -11,8 +11,8 @@ all: $(OBJS)
 
 $(OBJS): Makefile
 
-file.o: file.cc file_aout.cc file_ecoff.cc file_elf.cc file_macho.cc \
-	file_raw.cc file_srec.cc
+file.o: file.cc file_android.cc file_aout.cc file_ecoff.cc file_elf.cc \
+	file_macho.cc file_raw.cc file_srec.cc
 
 
 clean:

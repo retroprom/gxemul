@@ -1007,6 +1007,21 @@ Y(und)
 
 
 /*
+ *  uxtb:  Unsigned Extend Byte.
+ *
+ *  arg[0] = ptr to rd
+ *  arg[1] = ptr to rm
+ *  arg[2] = rotation amount (shift works too)
+ */
+X(uxtb)
+{
+	uint32_t x = reg(ic->arg[1]);
+	reg(ic->arg[0]) = (uint8_t)(x >> ic->arg[2]);
+}
+Y(uxtb)
+
+
+/*
  *  swp, swpb:  Swap (word or byte).
  *
  *  arg[0] = ptr to rd
@@ -2692,6 +2707,30 @@ X(to_be_translated)
 			goto okay;
 		}
 
+		if (iword == 0xf10c0080) {
+			/*  cpsid i. Treat as NOP for now.  */
+			ic->f = instr(nop);
+			goto okay;
+		}
+
+		if (iword == 0xf57ff04f) {
+			/*  dsb sy. Treat as NOP for now.  */
+			ic->f = instr(nop);
+			goto okay;
+		}
+
+		if (iword == 0xf57ff05f) {
+			/*  dmb sy. Treat as NOP for now.  */
+			ic->f = instr(nop);
+			goto okay;
+		}
+
+		if (iword == 0xf57ff06f) {
+			/*  isb sy. Treat as NOP for now.  */
+			ic->f = instr(nop);
+			goto okay;
+		}
+
 		switch (main_opcode) {
 		case 0xa:
 		case 0xb:
@@ -3032,6 +3071,21 @@ X(to_be_translated)
 	case 0x5:	/*  xxxx010P UBWLnnnn ddddoooo oooooooo  Immediate  */
 	case 0x6:	/*  xxxx011P UBWLnnnn ddddcccc ctt0mmmm  Register  */
 	case 0x7:
+		// Special non-loadstore encodings:
+		if (main_opcode >= 6 && iword & 0x10) {
+			if ((iword & 0x0fff03f0) == 0x06ef0070) {
+				ic->f = cond_instr(uxtb);
+				ic->arg[0] = (size_t)(&cpu->cd.arm.r[rd]);
+				ic->arg[1] = (size_t)(&cpu->cd.arm.r[rm]);
+				ic->arg[2] = ((iword & 0xc00) >> 10) << 3;
+			} else {
+				if (!cpu->translation_readahead)
+					fatal("unimplemented special non-loadstore encoding!\n");
+				goto bad;
+			}
+			break;
+		}
+	
 		ic->arg[0] = (size_t)(&cpu->cd.arm.r[rn]);
 		ic->arg[2] = (size_t)(&cpu->cd.arm.r[rd]);
 		if (rd == ARM_PC || rn == ARM_PC) {

@@ -4821,3 +4821,8 @@ Changelog for GXemul:
 
 ==============  RELEASE 0.6.1  ==============
 
+20181217	Implementing the ARM uxtb instruction.
+		Implementing a simple Android boot.img file loader, and two
+		dummy Android ARM machines ("Sony Xperia Mini" and "Finow X5
+		Air").
+		Treating ARM dsb/dmb/isb instructions as NOPs for now.

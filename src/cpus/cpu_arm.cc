@@ -1754,7 +1754,19 @@ int arm_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
 	r12 = (iw >> 12) & 15;
 	r8 = (iw >> 8) & 15;
 
-	if ((iw >> 28) == 0xf) {
+	if (iw == 0xf10c0080) {
+		debug("cpsid\ti\n");
+		return sizeof(uint32_t);
+	} else if (iw == 0xf57ff04f) {
+		debug("dsb\tsy\n");
+		return sizeof(uint32_t);
+	} else if (iw == 0xf57ff05f) {
+		debug("dmb\tsy\n");
+		return sizeof(uint32_t);
+	} else if (iw == 0xf57ff06f) {
+		debug("isb\tsy\n");
+		return sizeof(uint32_t);
+	} else if ((iw >> 28) == 0xf) {
 		switch (main_opcode) {
 		case 0xa:
 		case 0xb:
@@ -2083,6 +2095,18 @@ int arm_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
 		if ((iw & 0xfc70f000) == 0xf450f000) {
 			/*  Preload:  */
 			debug("pld\t[%s]\n", arm_regname[r16]);
+			break;
+		}
+
+		if ((iw & 0x0fff03f0) == 0x06ef0070) {
+			/*  uxtb rd,rm[,rot]:  */
+			debug("uxtb\t%s,%s",
+				arm_regname[r12],
+				arm_regname[iw & 15]);
+			int rot = ((iw & 0xc00) >> 10) << 3;
+			if (rot != 0)
+				debug(",%i", rot);
+			debug("\n");
 			break;
 		}
 
