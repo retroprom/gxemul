@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2006-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2006-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -188,8 +188,13 @@ int interrupt_handler_lookup(const char *name, struct interrupt *templ)
 
 	/*  The 'if' is an ugly hack to prevent a Compaq CC warning.  */
 	if (i >= nr_of_interrupt_handlers) {
-		printf("interrupt_handler_lookup(\"%s\") failed. "
-		    "Aborting.\n", name);
+		printf("interrupt_handler_lookup(\"%s\") failed.\n", name);
+
+		printf("Available handler paths are:\n");
+		for (i=0; i<nr_of_interrupt_handlers; i++)
+			printf("    %s\n", interrupt_handlers[i].templ.name);
+
+		printf("Aborting.\n");
 		abort();
 	}
 
