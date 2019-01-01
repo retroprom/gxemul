@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -35,6 +35,9 @@
  *
  *  and yet another one, with descriptions about THUMB semantics:
  *  https://web.eecs.umich.edu/~prabal/teaching/eecs373-f10/readings/ARM_QRC0006_UAL16.pdf
+ *
+ *  And one with the newer ARM v7 instructions:
+ *  http://vision.gel.ulaval.ca/~jflalonde/cours/1001/h17/docs/ARM_v7.pdf
  */
 
 #include <stdio.h>
@@ -1905,6 +1908,26 @@ int arm_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
 		if ((iw & 0x0fff0ff0) == 0x016f0f10) {
 			debug("clz%s\t", condition);
 			debug("%s,%s\n", arm_regname[r12], arm_regname[iw&15]);
+			break;
+		}
+
+		/*
+		 *  xxxx0011 0000mmm ddddmmm mmmmmmm    MOVW Rd,imm
+		 */
+		if ((iw & 0x0ff00000) == 0x03000000) {
+			debug("movw%s\t", condition);
+			debug("%s,#%i\n", arm_regname[r12],
+				((iw & 0xf0000) >> 4) | (iw & 0xfff));
+			break;
+		}
+
+		/*
+		 *  xxxx0011 0100mmm ddddmmm mmmmmmm    MOVT Rd,imm
+		 */
+		if ((iw & 0x0ff00000) == 0x03400000) {
+			debug("movt%s\t", condition);
+			debug("%s,#%i\n", arm_regname[r12],
+				((iw & 0xf0000) >> 4) | (iw & 0xfff));
 			break;
 		}
 

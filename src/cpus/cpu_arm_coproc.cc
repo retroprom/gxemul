@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -55,7 +55,7 @@ void arm_coproc_15(struct cpu *cpu, int opcode1, int opcode2, int l_bit,
 	/*  Some sanity checks:  */
 	if (opcode1 != 0) {
 		fatal("arm_coproc_15: opcode1 = %i, should be 0\n", opcode1);
-		exit(1);
+		// exit(1);
 	}
 	if (rd == ARM_PC) {
 		fatal("arm_coproc_15: rd = PC\n");
@@ -84,7 +84,7 @@ void arm_coproc_15(struct cpu *cpu, int opcode1, int opcode2, int l_bit,
 			break;
 		default:fatal("[ arm_coproc_15: TODO: cr0, opcode2=%i ]\n",
 			    opcode2);
-			exit(1);
+			// exit(1);
 		}
 		break;
 

@@ -4826,3 +4826,4 @@ Changelog for GXemul:
 		dummy Android ARM machines ("Sony Xperia Mini" and "Finow X5
 		Air").
 		Treating ARM dsb/dmb/isb instructions as NOPs for now.
+20190101	Implementing the ARM v7 movt and movw instructions.

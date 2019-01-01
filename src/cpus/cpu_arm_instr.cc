@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -1004,6 +1004,33 @@ X(und)
 	arm_exception(cpu, ARM_EXCEPTION_UND);
 }
 Y(und)
+
+
+/*
+ *  movt:  Move Top.
+ *
+ *  arg[1] = 32-bit immediate value. Top 16 bits are those of interest.
+ *  arg[2] = ptr to rd
+ */
+X(movt)
+{
+	reg(ic->arg[2]) &= 0xffff;
+	reg(ic->arg[2]) |= ic->arg[1];
+}
+Y(movt)
+
+
+/*
+ *  movw:  Move (Word).
+ *
+ *  arg[1] = 32-bit immediate value.
+ *  arg[2] = ptr to rd
+ */
+X(movw)
+{
+	reg(ic->arg[2]) = ic->arg[1];
+}
+Y(movw)
 
 
 /*
@@ -3052,7 +3079,23 @@ X(to_be_translated)
 		if (rn == ARM_PC || rd == ARM_PC)
 			any_pc_reg = 1;
 
-		if (!any_pc_reg && regform && (iword & 0xfff) < ARM_PC) {
+		if ((iword & 0x0ff00000) == 0x03000000) {
+			ic->arg[1] = (((iword & 0xf0000) >> 4) | (iword & 0xfff)) << 16;
+			ic->f = cond_instr(movw);
+			if (rd == ARM_PC) {
+				if (!cpu->translation_readahead)
+					fatal("movw with rd = pc?\n");
+				goto bad;
+			}
+		} else if ((iword & 0x0ff00000) == 0x03400000) {
+			ic->arg[1] = (((iword & 0xf0000) >> 4) | (iword & 0xfff)) << 16;
+			ic->f = cond_instr(movt);
+			if (rd == ARM_PC) {
+				if (!cpu->translation_readahead)
+					fatal("movt with rd = pc?\n");
+				goto bad;
+			}
+		} else if (!any_pc_reg && regform && (iword & 0xfff) < ARM_PC) {
 			ic->arg[1] = (size_t)(&cpu->cd.arm.r[rm]);
 			ic->f = arm_dpi_instr_regshort[condition_code +
 			    16 * secondary_opcode + (s_bit? 256 : 0)];
