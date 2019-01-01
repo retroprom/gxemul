@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2018-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -47,6 +47,8 @@
 
 MACHINE_SETUP(androidarm)
 {
+	char tmpstr[1000];
+
 	cpu->byte_order = EMUL_LITTLE_ENDIAN;
 
 	// Odd register values, for debugging the startup procedure.
@@ -63,6 +65,12 @@ MACHINE_SETUP(androidarm)
 		machine->machine_name = strdup("Finow X5 Air");
 
 		dev_ram_init(machine, 0x80000000, 0x40000000, DEV_RAM_MIRROR, 0x0);
+
+		snprintf(tmpstr, sizeof(tmpstr), "ns16550 irq=%s.cpu[%i].irq"
+		    " addr=0x11005000 addr_mult=4 in_use=%i",
+		    machine->path, machine->bootstrap_cpu, !machine->x11_md.in_use);
+		machine->main_console_handle = (size_t)
+		    device_add(machine, tmpstr);
 
 		dev_fb_init(machine, machine->memory,
 			0x23450000 /*  TODO addr  */, 
