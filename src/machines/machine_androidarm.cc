@@ -27,7 +27,8 @@
  *
  *  COMMENT: ARM-based "Android" machines
  *
- *  TODO. This is bogus so far.
+ *  TODO. This is bogus so far, only enough to see the Linux kernel start
+ *  executing instructions.
  *
  *  gxemul -e sony-xperia-mini -tvvK boot.img 
  *  gxemul -e finow-x5-air -tvvK boot.img 
@@ -64,8 +65,21 @@ MACHINE_SETUP(androidarm)
 	case MACHINE_ANDROIDARM_FINOWX5AIR:
 		machine->machine_name = strdup("Finow X5 Air");
 
-		dev_ram_init(machine, 0x80000000, 0x40000000, DEV_RAM_MIRROR, 0x0);
+		// 2 GB ram at 0x80000000?
+		dev_ram_init(machine, 0x80000000, 0x10000000, DEV_RAM_MIRROR, 0x0);
+		dev_ram_init(machine, 0x90000000, 0x70000000, DEV_RAM_RAM, 0x0);
 
+		// See https://github.com/torvalds/linux/blob/master/arch/arm/boot/dts/mt6580.dtsi
+		//	timer: timer@10008000
+		//	sysirq: interrupt-controller@10200100
+		//	gic: interrupt-controller@10211000
+		//	uart0: serial@11005000
+		//	uart1: serial@11006000
+
+		// "gic" interrupt controller:
+		// See https://github.com/torvalds/linux/blob/master/include/dt-bindings/interrupt-controller/arm-gic.h
+
+		// TODO: interrupt "GIC_SPI 44"
 		snprintf(tmpstr, sizeof(tmpstr), "ns16550 irq=%s.cpu[%i].irq"
 		    " addr=0x11005000 addr_mult=4 in_use=%i",
 		    machine->path, machine->bootstrap_cpu, !machine->x11_md.in_use);
@@ -129,7 +143,8 @@ MACHINE_DEFAULT_RAM(androidarm)
 	switch (machine->machine_subtype) {
 
 	case MACHINE_ANDROIDARM_FINOWX5AIR:
-		machine->physical_ram_in_mb = 2048;
+		// Ram is at 0x80000000?
+		machine->physical_ram_in_mb = 256;
 		break;
 
 	case MACHINE_ANDROIDARM_SONYXPERIAMINI:
