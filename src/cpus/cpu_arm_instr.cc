@@ -3080,7 +3080,7 @@ X(to_be_translated)
 			any_pc_reg = 1;
 
 		if ((iword & 0x0ff00000) == 0x03000000) {
-			ic->arg[1] = (((iword & 0xf0000) >> 4) | (iword & 0xfff)) << 16;
+			ic->arg[1] = (((iword & 0xf0000) >> 4) | (iword & 0xfff));
 			ic->f = cond_instr(movw);
 			if (rd == ARM_PC) {
 				if (!cpu->translation_readahead)
