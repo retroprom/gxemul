@@ -1049,6 +1049,58 @@ Y(uxtb)
 
 
 /*
+ *  sxth:  Signed Extend Halfword.
+ *
+ *  TODO: Could be optimized so that the rotation amount is "inlined".
+ *
+ *  arg[0] = ptr to rd
+ *  arg[1] = ptr to rm
+ *  arg[2] = rotation amount
+ */
+X(sxth)
+{
+	uint32_t x = reg(ic->arg[1]);
+
+	switch (ic->arg[2]) {
+	case 0:	break;
+	case 8: x >>= 8; break;
+	case 16: x >>= 16; break;
+	case 24: x = (x >> 24) | ((x & 255) << 8); break;
+	}
+
+	int16_t rotated = x;
+	reg(ic->arg[0]) = (int32_t)rotated;
+}
+Y(sxth)
+
+
+/*
+ *  uxth:  Unsigned Extend Halfword.
+ *
+ *  TODO: Could be optimized so that the rotation amount is "inlined".
+ *
+ *  arg[0] = ptr to rd
+ *  arg[1] = ptr to rm
+ *  arg[2] = rotation amount
+ */
+X(uxth)
+{
+	uint32_t x = reg(ic->arg[1]);
+
+	switch (ic->arg[2]) {
+	case 0:	break;
+	case 8: x >>= 8; break;
+	case 16: x >>= 16; break;
+	case 24: x = (x >> 24) | ((x & 255) << 8); break;
+	}
+
+	uint16_t rotated = x;
+	reg(ic->arg[0]) = (uint32_t)rotated;
+}
+Y(uxth)
+
+
+/*
  *  swp, swpb:  Swap (word or byte).
  *
  *  arg[0] = ptr to rd
@@ -3116,8 +3168,18 @@ X(to_be_translated)
 	case 0x7:
 		// Special non-loadstore encodings:
 		if (main_opcode >= 6 && iword & 0x10) {
-			if ((iword & 0x0fff03f0) == 0x06ef0070) {
+			if ((iword & 0x0fff03f0) == 0x06bf0070) {
+				ic->f = cond_instr(sxth);
+				ic->arg[0] = (size_t)(&cpu->cd.arm.r[rd]);
+				ic->arg[1] = (size_t)(&cpu->cd.arm.r[rm]);
+				ic->arg[2] = ((iword & 0xc00) >> 10) << 3;
+			} else if ((iword & 0x0fff03f0) == 0x06ef0070) {
 				ic->f = cond_instr(uxtb);
+				ic->arg[0] = (size_t)(&cpu->cd.arm.r[rd]);
+				ic->arg[1] = (size_t)(&cpu->cd.arm.r[rm]);
+				ic->arg[2] = ((iword & 0xc00) >> 10) << 3;
+			} else if ((iword & 0x0fff03f0) == 0x06ff0070) {
+				ic->f = cond_instr(uxth);
 				ic->arg[0] = (size_t)(&cpu->cd.arm.r[rd]);
 				ic->arg[1] = (size_t)(&cpu->cd.arm.r[rm]);
 				ic->arg[2] = ((iword & 0xc00) >> 10) << 3;

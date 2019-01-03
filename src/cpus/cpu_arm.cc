@@ -2114,16 +2114,43 @@ int arm_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
 	case 0x5:
 	case 0x6:
 	case 0x7:
-		/*  Special case first:  */
+		/*  Special cases first:  */
 		if ((iw & 0xfc70f000) == 0xf450f000) {
 			/*  Preload:  */
 			debug("pld\t[%s]\n", arm_regname[r16]);
 			break;
 		}
 
+		if ((iw & 0x0fff03f0) == 0x06bf0070) {
+			/*  sxth rd,rm[,rot]:  */
+			debug("sxth%s\t%s,%s",
+				condition,
+				arm_regname[r12],
+				arm_regname[iw & 15]);
+			int rot = ((iw & 0xc00) >> 10) << 3;
+			if (rot != 0)
+				debug(",%i", rot);
+			debug("\n");
+			break;
+		}
+
 		if ((iw & 0x0fff03f0) == 0x06ef0070) {
 			/*  uxtb rd,rm[,rot]:  */
-			debug("uxtb\t%s,%s",
+			debug("uxtb%s\t%s,%s",
+				condition,
+				arm_regname[r12],
+				arm_regname[iw & 15]);
+			int rot = ((iw & 0xc00) >> 10) << 3;
+			if (rot != 0)
+				debug(",%i", rot);
+			debug("\n");
+			break;
+		}
+
+		if ((iw & 0x0fff03f0) == 0x06ff0070) {
+			/*  uxth rd,rm[,rot]:  */
+			debug("uxth%s\t%s,%s",
+				condition,
 				arm_regname[r12],
 				arm_regname[iw & 15]);
 			int rot = ((iw & 0xc00) >> 10) << 3;

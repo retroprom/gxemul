@@ -4827,3 +4827,4 @@ Changelog for GXemul:
 		Air").
 		Treating ARM dsb/dmb/isb instructions as NOPs for now.
 20190101	Implementing the ARM v7 movt and movw instructions.
+20190103	Implementing the ARM sxth and uxth instructions.

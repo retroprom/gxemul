@@ -99,7 +99,7 @@ void arm_coproc_15(struct cpu *cpu, int opcode1, int opcode2, int l_bit,
 			default:fatal("Unimplemented opcode2 = %i\n", opcode2);
 				fatal("(opcode1=%i crn=%i crm=%i rd=%i l=%i)\n",
 				    opcode1, crn, crm, rd, l_bit);
-				exit(1);
+				// exit(1);
 			}
 			return;
 		}
@@ -125,7 +125,7 @@ void arm_coproc_15(struct cpu *cpu, int opcode1, int opcode2, int l_bit,
 			fatal("Unimplemented write, opcode2 = %i\n", opcode2);
 			fatal("(opcode1=%i crn=%i crm=%i rd=%i l=%i)\n",
 			    opcode1, crn, crm, rd, l_bit);
-			exit(1);
+			// exit(1);
 		}
 			
 		/*
@@ -272,14 +272,14 @@ void arm_coproc_15(struct cpu *cpu, int opcode1, int opcode2, int l_bit,
 			break;
 		default:fatal("[ arm_coproc_15: TODO: IMPLEMENTATION "
 			    "DEPENDENT! ]\n");
-			exit(1);
+			// exit(1);
 		}
 		break;
 
 	default:fatal("arm_coproc_15: unimplemented crn = %i\n", crn);
 		fatal("(opcode1=%i opcode2=%i crm=%i rd=%i l=%i)\n",
 		    opcode1, opcode2, crm, rd, l_bit);
-		exit(1);
+		// exit(1);
 	}
 }
 
