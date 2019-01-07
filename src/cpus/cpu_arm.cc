@@ -2160,6 +2160,33 @@ int arm_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
 			break;
 		}
 
+		if ((iw & 0x0fe00070) == 0x07c00010) {
+			/*  bfi rd,rn,#lsb,#width:  */
+			debug("bfi%s\t%s,%s",
+				condition,
+				arm_regname[r12],
+				arm_regname[iw & 15]);
+			int lsb = (iw >> 7) & 31;
+			int msb = (iw >> 16) & 31;
+			int width = msb - lsb + 1;
+			debug(",%i", lsb);
+			debug(",%i", width);
+			debug("\n");
+			break;
+		}
+
+		if ((iw & 0x0fe00070) == 0x07e00050) {
+			/*  ubfx rd,rn,#lsb,#width:  */
+			debug("ubfx%s\t%s,%s",
+				condition,
+				arm_regname[r12],
+				arm_regname[iw & 15]);
+			debug(",%i", (iw >> 7) & 31);
+			debug(",%i", 1 + ((iw >> 16) & 31));
+			debug("\n");
+			break;
+		}
+
 		/*
 		 *  xxxx010P UBWLnnnn ddddoooo oooooooo  Immediate form
 		 *  xxxx011P UBWLnnnn ddddcccc ctt0mmmm  Register form

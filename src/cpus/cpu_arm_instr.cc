@@ -214,8 +214,8 @@ X(invalid) {
 	cpu->pc += (low_pc << ARM_INSTR_ALIGNMENT_SHIFT);
 
 	fatal("FATAL ERROR: An internal error occured in the ARM"
-	    " dyntrans code. Please contact the author with detailed"
-	    " repro steps on how to trigger this bug. pc = 0x%08" PRIx32"\n",
+	    " dyntrans code. This could be due to an unimplemented instruction"
+	    " encoding. pc = 0x%08" PRIx32"\n",
 	    (uint32_t)cpu->pc);
 
 	cpu->cd.arm.next_ic = &nothing_call;
@@ -1098,6 +1098,57 @@ X(uxth)
 	reg(ic->arg[0]) = (uint32_t)rotated;
 }
 Y(uxth)
+
+
+/*
+ *  ubfx:  Unsigned Bit-Field Extract.
+ *
+ *  arg[0] = ptr to rd
+ *  arg[1] = ptr to rn
+ *  arg[2] = (width << 16) + lsb
+ */
+X(ubfx)
+{
+	uint32_t x = reg(ic->arg[1]);
+
+	int lsb = (uint8_t)ic->arg[2];
+	int width = ic->arg[2] >> 16;
+
+	uint32_t mask = (1 << width) - 1;
+
+	x >>= lsb;
+	x &= mask;
+
+	reg(ic->arg[0]) = x;
+}
+Y(ubfx)
+
+
+/*
+ *  bfi:  Bit-Field Insert.
+ *
+ *  arg[0] = ptr to rd
+ *  arg[1] = ptr to rn
+ *  arg[2] = (msb << 16) + lsb
+ */
+X(bfi)
+{
+	uint32_t x = reg(ic->arg[1]);
+
+	int lsb = (uint8_t)ic->arg[2];
+	int msb = ic->arg[2] >> 16;
+	int width = msb - lsb + 1;
+
+	x <<= lsb;
+
+	uint32_t mask = (1 << width) - 1;
+
+	mask <<= lsb;
+
+	reg(ic->arg[0]) &= ~mask;
+	reg(ic->arg[0]) |= (x & mask);
+}
+Y(bfi)
 
 
 /*
@@ -3183,6 +3234,20 @@ X(to_be_translated)
 				ic->arg[0] = (size_t)(&cpu->cd.arm.r[rd]);
 				ic->arg[1] = (size_t)(&cpu->cd.arm.r[rm]);
 				ic->arg[2] = ((iword & 0xc00) >> 10) << 3;
+			} else if ((iword & 0x0fe00070) == 0x07c00010) {
+				ic->f = cond_instr(bfi);
+				ic->arg[0] = (size_t)(&cpu->cd.arm.r[rd]);
+				ic->arg[1] = (size_t)(&cpu->cd.arm.r[rm]);
+				int lsb = (iword >> 7) & 31;
+				int msb = (iword >> 16) & 31;
+				ic->arg[2] = (msb << 16) + lsb;
+			} else if ((iword & 0x0fe00070) == 0x07e00050) {
+				ic->f = cond_instr(ubfx);
+				ic->arg[0] = (size_t)(&cpu->cd.arm.r[rd]);
+				ic->arg[1] = (size_t)(&cpu->cd.arm.r[rm]);
+				int lsb = (iword >> 7) & 31;
+				int width = 1 + ((iword >> 16) & 31);
+				ic->arg[2] = (width << 16) + lsb;
 			} else {
 				if (!cpu->translation_readahead)
 					fatal("unimplemented special non-loadstore encoding!\n");
