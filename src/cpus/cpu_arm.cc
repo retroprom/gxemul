@@ -1799,6 +1799,31 @@ int arm_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
 		 */
 
 		/*
+		 *  ldrex: Load Register Exclusive
+		 *  strex: Store Register Exclusive
+		 */
+		if ((iw & 0x0ff00fff) == 0x01900f9f) {
+			/*  ldrex rt[,rn]:  */
+			debug("ldrex%s\t%s,%s",
+				condition,
+				arm_regname[r12],
+				arm_regname[r16]);
+			debug("\n");
+			break;
+		}
+		if ((iw & 0x0ff00ff0) == 0x01800f90) {
+			/*  strex rd,rt[,rn]:  */
+			debug("strex%s\t%s,%s,%s",
+				condition,
+				arm_regname[r12],
+				arm_regname[iw & 15],
+				arm_regname[r16]);
+			debug("\n");
+			break;
+		}
+
+
+		/*
 		 *  Multiplication:
 		 *  xxxx0000 00ASdddd nnnnssss 1001mmmm  (Rd, Rm, Rs [,Rn])
 		 */
@@ -2147,11 +2172,41 @@ int arm_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
 			break;
 		}
 
+		// Note: uxtab is decoded AFTER uxtb.
+		if ((iw & 0x0ff003f0) == 0x06e00070) {
+			/*  uxtab rd,rn,rm[,rot]:  */
+			debug("uxtab%s\t%s,%s,%s",
+				condition,
+				arm_regname[r12],
+				arm_regname[r16],
+				arm_regname[iw & 15]);
+			int rot = ((iw & 0xc00) >> 10) << 3;
+			if (rot != 0)
+				debug(",%i", rot);
+			debug("\n");
+			break;
+		}
+
 		if ((iw & 0x0fff03f0) == 0x06ff0070) {
 			/*  uxth rd,rm[,rot]:  */
 			debug("uxth%s\t%s,%s",
 				condition,
 				arm_regname[r12],
+				arm_regname[iw & 15]);
+			int rot = ((iw & 0xc00) >> 10) << 3;
+			if (rot != 0)
+				debug(",%i", rot);
+			debug("\n");
+			break;
+		}
+
+		// Note: uxtah is decoded AFTER uxth.
+		if ((iw & 0x0ff003f0) == 0x06f00070) {
+			/*  uxtah rd,rn,rm[,rot]:  */
+			debug("uxtah%s\t%s,%s,%s",
+				condition,
+				arm_regname[r12],
+				arm_regname[r16],
 				arm_regname[iw & 15]);
 			int rot = ((iw & 0xc00) >> 10) << 3;
 			if (rot != 0)

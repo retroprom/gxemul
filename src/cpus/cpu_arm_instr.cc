@@ -2891,6 +2891,20 @@ X(to_be_translated)
 	case 0x2:
 	case 0x3:
 		/*  Check special cases first:  */
+		if ((iword & 0x0ff00fff) == 0x01900f9f) {
+			if (!cpu->translation_readahead)
+				fatal("ldrex TODO\n");
+			goto bad;
+			break;
+		}
+
+		if ((iword & 0x0ff00ff0) == 0x01800f90) {
+			if (!cpu->translation_readahead)
+				fatal("strex TODO\n");
+			goto bad;
+			break;
+		}
+
 		if ((iword & 0x0fc000f0) == 0x00000090) {
 			/*
 			 *  Multiplication:
@@ -3229,11 +3243,21 @@ X(to_be_translated)
 				ic->arg[0] = (size_t)(&cpu->cd.arm.r[rd]);
 				ic->arg[1] = (size_t)(&cpu->cd.arm.r[rm]);
 				ic->arg[2] = ((iword & 0xc00) >> 10) << 3;
+			} else if ((iword & 0x0ff003f0) == 0x06e00070) {
+				// ic->f = cond_instr(uxtab);
+				if (!cpu->translation_readahead)
+					fatal("unimplemented uxtab\n");
+				goto bad;
 			} else if ((iword & 0x0fff03f0) == 0x06ff0070) {
 				ic->f = cond_instr(uxth);
 				ic->arg[0] = (size_t)(&cpu->cd.arm.r[rd]);
 				ic->arg[1] = (size_t)(&cpu->cd.arm.r[rm]);
 				ic->arg[2] = ((iword & 0xc00) >> 10) << 3;
+			} else if ((iword & 0x0ff003f0) == 0x06f00070) {
+				// ic->f = cond_instr(uxtah);
+				if (!cpu->translation_readahead)
+					fatal("unimplemented uxtah\n");
+				goto bad;
 			} else if ((iword & 0x0fe00070) == 0x07c00010) {
 				ic->f = cond_instr(bfi);
 				ic->arg[0] = (size_t)(&cpu->cd.arm.r[rd]);

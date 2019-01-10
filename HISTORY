@@ -4828,3 +4828,5 @@ Changelog for GXemul:
 		Treating ARM dsb/dmb/isb instructions as NOPs for now.
 20190101	Implementing the ARM v7 movt and movw instructions.
 20190103	Implementing the ARM sxth, uxth, bfi, and ubfx instructions.
+20190110	Adding disassembly (but not execution yet) of ARM uxtab, uxtah,
+		ldrex, and strex instructions.
