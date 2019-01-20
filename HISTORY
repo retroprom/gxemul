@@ -4830,3 +4830,6 @@ Changelog for GXemul:
 20190103	Implementing the ARM sxth, uxth, bfi, and ubfx instructions.
 20190110	Adding disassembly (but not execution yet) of ARM uxtab, uxtah,
 		ldrex, and strex instructions.
+20190112	Making sure that when writing to mirrored RAM, any dyntrans
+		translations made in either the mirror or mirrored ranges are
+		invalidated.

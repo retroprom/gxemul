@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2011  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2004-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -81,7 +81,19 @@ DEVICE_ACCESS(ram)
 			    d->otheraddress + relative_addr, data, len,
 			    writeflag, PHYSICAL);
 			    
-			if (cpu->running && d->trace) {
+			/*  Invalidate any code translations in both the MIRRORED
+			    and the MIRROR address ranges on a write:  */
+			if (writeflag == MEM_WRITE &&
+			    cpu->invalidate_code_translation != NULL) {
+				cpu->invalidate_code_translation(
+				    cpu, d->otheraddress + relative_addr,
+				    INVALIDATE_PADDR);
+				cpu->invalidate_code_translation(
+				    cpu, d->baseaddress + relative_addr,
+				    INVALIDATE_PADDR);
+			}
+
+			if (cpu->running && d->trace && writeflag == MEM_READ) {
 				fatal("[ %s: read %i byte%s from 0x%x:",
 				    d->name, (int)len, len==1? "":"s", (int)relative_addr);
 				for (size_t i=0; i<len; i++)
@@ -105,7 +117,7 @@ DEVICE_ACCESS(ram)
 		} else {
 			memcpy(data, &d->data[relative_addr], len);
 
-			if (cpu->running && d->trace) {
+			if (cpu->running && d->trace && writeflag == MEM_READ) {
 				fatal("[ %s: read %i byte%s from 0x%x:",
 				    d->name, (int)len, len==1? "":"s", (int)relative_addr);
 				for (size_t i=0; i<len; i++)
