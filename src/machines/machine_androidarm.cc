@@ -54,18 +54,21 @@ MACHINE_SETUP(androidarm)
 
 	// Odd register values, for debugging the startup procedure.
 	// See "start:" at https://android.googlesource.com/kernel/msm/+/42bad328ba45ee4fe93216e7e99fe79a782d9155/arch/arm/boot/compressed/head.S
-	cpu->cd.arm.r[1] = 0x99911111;	// architecture ID?
-	cpu->cd.arm.r[2] = 0x99921111;	// atags struct?
+	cpu->cd.arm.r[1] = 0x77711111;	// architecture ID?
+	cpu->cd.arm.r[2] = 0x77721111;	// atags struct?
+	cpu->cd.arm.r[3] = 0x77731111;
+	cpu->cd.arm.r[4] = 0x77741111;
 
 	// Invalid link return:
-	cpu->cd.arm.r[14] = 0x00000006;
+	cpu->cd.arm.r[14] = 0x777e1116;
 
 	switch (machine->machine_subtype) {
 
 	case MACHINE_ANDROIDARM_FINOWX5AIR:
 		machine->machine_name = strdup("Finow X5 Air");
 
-		// 2 GB ram at 0x80000000?
+		// 2 GB ram at 0x80000000? Mirrored at 0 maybe? (But in GXemul's legacy
+		// framework, we have to make the mirror the other way around.)
 		dev_ram_init(machine, 0x80000000, 0x10000000, DEV_RAM_MIRROR, 0x0);
 		dev_ram_init(machine, 0x90000000, 0x70000000, DEV_RAM_RAM, 0x0);
 
@@ -87,7 +90,7 @@ MACHINE_SETUP(androidarm)
 		    device_add(machine, tmpstr);
 
 		dev_fb_init(machine, machine->memory,
-			0x23450000 /*  TODO addr  */, 
+			0x12340000 /*  TODO addr  */, 
 			VFB_GENERIC,
 			400, 400,
 			400, 400,
