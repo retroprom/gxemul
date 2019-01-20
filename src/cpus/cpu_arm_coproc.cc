@@ -54,11 +54,11 @@ void arm_coproc_15(struct cpu *cpu, int opcode1, int opcode2, int l_bit,
 
 	/*  Some sanity checks:  */
 	if (opcode1 != 0) {
-		fatal("arm_coproc_15: opcode1 = %i, should be 0\n", opcode1);
+		fatal("[ TODO: arm_coproc_15: opcode1 = %i, should be 0 ]\n", opcode1);
 		// exit(1);
 	}
 	if (rd == ARM_PC) {
-		fatal("arm_coproc_15: rd = PC\n");
+		fatal("[ TODO: arm_coproc_15: rd = PC ]\n");
 		exit(1);
 	}
 
@@ -73,16 +73,16 @@ void arm_coproc_15(struct cpu *cpu, int opcode1, int opcode2, int l_bit,
 		case 0:	if (l_bit)
 				cpu->cd.arm.r[rd] = cpu->cd.arm.cpu_type.cpu_id;
 			else
-				fatal("[ arm_coproc_15: attempt to write "
+				fatal("[ TODO: arm_coproc_15: attempt to write "
 				    "to the Main ID register? ]\n");
 			break;
 		case 1:	if (l_bit)
 				cpu->cd.arm.r[rd] = cpu->cd.arm.cachetype;
 			else
-				fatal("[ arm_coproc_15: attempt to write "
+				fatal("[ TODO: arm_coproc_15: attempt to write "
 				    "to the Cache Type register? ]\n");
 			break;
-		default:fatal("[ arm_coproc_15: TODO: cr0, opcode2=%i ]\n",
+		default:fatal("[ TODO: arm_coproc_15: cr0, opcode2=%i ]\n",
 			    opcode2);
 			// exit(1);
 		}
@@ -96,8 +96,8 @@ void arm_coproc_15(struct cpu *cpu, int opcode1, int opcode2, int l_bit,
 				break;
 			case 1:	cpu->cd.arm.r[rd] = cpu->cd.arm.auxctrl;
 				break;
-			default:fatal("Unimplemented opcode2 = %i\n", opcode2);
-				fatal("(opcode1=%i crn=%i crm=%i rd=%i l=%i)\n",
+			default:fatal("[ TODO: Unimplemented opcode2 = %i ", opcode2);
+				fatal("(opcode1=%i crn=%i crm=%i rd=%i l=%i) ]\n",
 				    opcode1, crn, crm, rd, l_bit);
 				// exit(1);
 			}
@@ -122,8 +122,8 @@ void arm_coproc_15(struct cpu *cpu, int opcode1, int opcode2, int l_bit,
 			}
 			return;
 		} else if (opcode2 != 0) {
-			fatal("Unimplemented write, opcode2 = %i\n", opcode2);
-			fatal("(opcode1=%i crn=%i crm=%i rd=%i l=%i)\n",
+			fatal("[ Unimplemented write, opcode2 = %i ", opcode2);
+			fatal("(opcode1=%i crn=%i crm=%i rd=%i l=%i)]\n",
 			    opcode1, crn, crm, rd, l_bit);
 			// exit(1);
 		}
@@ -270,14 +270,14 @@ void arm_coproc_15(struct cpu *cpu, int opcode1, int opcode2, int l_bit,
 			else
 				cpu->cd.arm.cpar = cpu->cd.arm.r[rd];
 			break;
-		default:fatal("[ arm_coproc_15: TODO: IMPLEMENTATION "
+		default:fatal("[ TODO: arm_coproc_15: IMPLEMENTATION "
 			    "DEPENDENT! ]\n");
 			// exit(1);
 		}
 		break;
 
-	default:fatal("arm_coproc_15: unimplemented crn = %i\n", crn);
-		fatal("(opcode1=%i opcode2=%i crm=%i rd=%i l=%i)\n",
+	default:fatal("[ TODO: arm_coproc_15: unimplemented crn = %i ", crn);
+		fatal("(opcode1=%i opcode2=%i crm=%i rd=%i l=%i) ]\n",
 		    opcode1, opcode2, crm, rd, l_bit);
 		// exit(1);
 	}

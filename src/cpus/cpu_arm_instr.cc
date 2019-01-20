@@ -2905,6 +2905,14 @@ X(to_be_translated)
 			break;
 		}
 
+		if ((iword & 0x0ff000f0) == 0x00600090) {
+			// mls rd,rn,rm,ra
+			if (!cpu->translation_readahead)
+				fatal("mls TODO\n");
+			goto bad;
+			break;
+		}
+		
 		if ((iword & 0x0fc000f0) == 0x00000090) {
 			/*
 			 *  Multiplication:
@@ -3035,12 +3043,9 @@ X(to_be_translated)
 				if (iword & (1<<17)) arg1 |= 0x0000ff00;
 				if (iword & (1<<18)) arg1 |= 0x00ff0000;
 				if (iword & (1<<19)) arg1 |= 0xff000000;
-				if (arg1 == 0) {
-					if (!cpu->translation_readahead)
-						fatal("msr no fields\n");
-					goto bad;
-				}
 				ic->arg[1] = arg1;
+				if (arg1 == 0)
+					ic->f = instr(nop);
 			}
 			break;
 		}

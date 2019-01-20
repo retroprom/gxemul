@@ -1822,6 +1822,19 @@ int arm_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
 			break;
 		}
 
+		/*
+		 *  Multiplication:
+		 *  xxxx0000 0110dddd aaaammmm 1001nnnn  mls rd,rn,rm,ra
+		 */
+		if ((iw & 0x0ff000f0) == 0x00600090) {
+			debug("mls%s\t", condition);
+			debug("%s,", arm_regname[r16]);
+			debug("%s,", arm_regname[iw & 15]);
+			debug("%s,", arm_regname[r8]);
+			debug("%s", arm_regname[r12]);
+			debug("\n");
+			break;
+		}
 
 		/*
 		 *  Multiplication:
@@ -2493,9 +2506,10 @@ void arm_mcr_mrc(struct cpu *cpu, uint32_t iword)
 		cpu->cd.arm.coproc[cp_num](cpu, opcode1, opcode2, l_bit,
 		    crn, crm, rd);
 	else {
-		fatal("[ arm_mcr_mrc: pc=0x%08x, iword=0x%08x: "
+		fatal("[ TODO: arm_mcr_mrc: pc=0x%08x, iword=0x%08x: "
 		    "cp_num=%i ]\n", (int)cpu->pc, iword, cp_num);
-		arm_exception(cpu, ARM_EXCEPTION_UND);
+
+		// arm_exception(cpu, ARM_EXCEPTION_UND);
 		/*  exit(1);  */
 	}
 }
