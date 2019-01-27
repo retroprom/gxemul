@@ -277,7 +277,7 @@ bool FileLoader_aout::LoadIntoComponent(refcount_ptr<Component> component, ostre
 		// Note: len + 1 for a nul terminator, for safety.
 		symbolStrings.resize(strings_len + 1);
 		file.read(&symbolStrings[0], strings_len);
-		if (file.gcount() != strings_len) {
+		if ((size_t)file.gcount() != strings_len) {
 			messages << "Failed to read all strings.\n";
 			return false;
 		}

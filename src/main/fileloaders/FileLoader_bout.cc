@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2009-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2009-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -139,7 +139,7 @@ bool FileLoader_bout::LoadIntoComponent(refcount_ptr<Component> component, ostre
 	uint32_t dataaddr = unencode32((unsigned char*)&header.a_dload, endianness);
 	uint32_t datasize = unencode32((unsigned char*)&header.a_data, endianness);
 
-	int32_t symbsize = unencode32((unsigned char*)&header.a_syms, endianness);
+	// int32_t symbsize = unencode32((unsigned char*)&header.a_syms, endianness);
 
 	messages.flags(std::ios::hex);
 	messages << "b.out: entry point 0x";
