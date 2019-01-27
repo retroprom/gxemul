@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2008-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2008-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -77,7 +77,7 @@ MACHINE_SETUP(luna88k)
 		    where h is first 32-bit word, l is second.
 		*/
 
-		for (int i = 0; i < strlen(luna88k2_fuse_string); ++i) {
+		for (size_t i = 0; i < strlen(luna88k2_fuse_string); ++i) {
 			uint32_t h = luna88k2_fuse_string[i] & 0xf0;
 			uint32_t l = luna88k2_fuse_string[i] & 0x0f;
 			store_32bit_word(cpu, FUSE_ROM_ADDR + i * 8 + 0, h << 24);
