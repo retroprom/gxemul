@@ -512,15 +512,15 @@ fi
 rm -f _testprog _testprog.error _testprog.stdout
 
 
-#  -Wextra -Wno-unused-parameter
-printf "checking whether -Wextra -Wno-unused-parameter can be used... "
-$CXX $CXXFLAGS -Wextra -Wno-unused-parameter _testprog.cc -o _testprog 1> _testprog.stdout 2>&1
+#  -Wextra -Wno-unused-parameter -Wno-cast-align
+printf "checking whether -Wextra -Wno-unused-parameter -Wno-cast-align can be used... "
+$CXX $CXXFLAGS -Wextra -Wno-unused-parameter -Wno-cast-align _testprog.cc -o _testprog 1> _testprog.stdout 2>&1
 cat _testprog.stdout >> _testprog.error
 if grep strict _testprog.error > /dev/null 2>&1; then
 	printf "no\n"
 else
 	if [ -x _testprog ]; then
-		CWARNINGS="$CWARNINGS -Wextra -Wno-unused-parameter"
+		CWARNINGS="$CWARNINGS -Wextra -Wno-unused-parameter -Wno-cast-align"
 		printf "yes\n"
 	else
 		printf "no\n"
