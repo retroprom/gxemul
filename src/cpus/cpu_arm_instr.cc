@@ -1580,6 +1580,123 @@ X(bdt_store)
 Y(bdt_store)
 
 
+/*
+ *  Load Register Exclusive (ARM "load linked"):
+ *
+ *  A Load Register Exclusive instruction initiates a RMW (read-modify-write)
+ *  sequence.
+ *
+ *  A Store Register Exclusive instruction ends the sequence.
+ *
+ *  arg[0] = ptr to rt
+ *  arg[1] = ptr to rn
+ *  arg[2] = int32_t imm offset
+ */
+X(ldrex)
+{
+	uint32_t addr = reg(ic->arg[1]) + (int32_t)ic->arg[2];
+	int low_pc;
+	uint8_t word[sizeof(uint32_t)];
+
+	/*  Synchronize the program counter:  */
+	low_pc = ((size_t)ic - (size_t)
+	    cpu->cd.arm.cur_ic_page) / sizeof(struct arm_instr_call);
+	cpu->pc &= ~((ARM_IC_ENTRIES_PER_PAGE-1) << ARM_INSTR_ALIGNMENT_SHIFT);
+	cpu->pc += (low_pc << ARM_INSTR_ALIGNMENT_SHIFT);
+
+	if (addr & (sizeof(word)-1)) {
+		fatal("TODO: ldrex unaligned access: exception\n");
+		exit(1);
+	}
+
+	if (!cpu->memory_rw(cpu, cpu->mem, addr, word,
+	    sizeof(word), MEM_READ, CACHE_DATA)) {
+		/*  An exception occurred.  */
+		return;
+	}
+
+	cpu->cd.arm.rmw = 1;
+	cpu->cd.arm.rmw_addr = addr;
+	cpu->cd.arm.rmw_len = sizeof(word);
+
+	if (cpu->byte_order == EMUL_LITTLE_ENDIAN)
+		reg(ic->arg[0]) = word[0] + (word[1] << 8)
+		    + (word[2] << 16) + (word[3] << 24);
+	else
+		reg(ic->arg[0]) = word[3] + (word[2] << 8)
+		    + (word[1] << 16) + (word[0] << 24);
+}
+Y(ldrex)
+/*
+ *  Store Register Exclusive
+ *
+ *  arg[0] = ptr to rd
+ *  arg[1] = ptr to rn
+ *  arg[2] = ptr to rt
+ */
+X(strex)
+{
+	uint32_t addr = reg(ic->arg[1]);
+	uint64_t r = reg(ic->arg[2]);
+	int low_pc, i;
+	uint8_t word[sizeof(uint32_t)];
+	
+	/*  Synchronize the program counter:  */
+	low_pc = ((size_t)ic - (size_t)
+	    cpu->cd.arm.cur_ic_page) / sizeof(struct arm_instr_call);
+	cpu->pc &= ~((ARM_IC_ENTRIES_PER_PAGE-1) << ARM_INSTR_ALIGNMENT_SHIFT);
+	cpu->pc += (low_pc << ARM_INSTR_ALIGNMENT_SHIFT);
+
+	if (addr & (sizeof(word)-1)) {
+		fatal("TODO: strex unaligned access: exception\n");
+		exit(1);
+	}
+
+	if (cpu->byte_order == EMUL_LITTLE_ENDIAN) {
+		word[0]=r; word[1]=r>>8; word[2]=r>>16; word[3]=r>>24;
+	} else {
+		word[3]=r; word[2]=r>>8; word[1]=r>>16; word[0]=r>>24;
+	}
+
+	/*  If rmw is 0, then the store failed.  (This cache-line was written
+	    to by someone else.)  */
+	if (cpu->cd.arm.rmw == 0 || cpu->cd.arm.rmw_addr != addr
+	    || cpu->cd.arm.rmw_len != sizeof(word)) {
+		reg(ic->arg[0]) = 1;	// 1 = fail.
+		cpu->cd.arm.rmw = 0;
+		return;
+	}
+
+	if (!cpu->memory_rw(cpu, cpu->mem, addr, word,
+	    sizeof(word), MEM_WRITE, CACHE_DATA)) {
+		/*  An exception occurred.  */
+		return;
+	}
+
+	/*  We succeeded. Let's invalidate everybody else's store to this
+	    cache line:  */
+	for (i=0; i<cpu->machine->ncpus; i++) {
+		if (cpu->machine->cpus[i]->cd.arm.rmw) {
+			uint64_t yaddr = addr, xaddr = cpu->machine->cpus[i]->
+			    cd.arm.rmw_addr;
+
+			/*  8-2048 bytes, implementation dependent :-(  */			
+			/*  https://stackoverflow.com/questions/11383125/do-the-arm-instructions-ldrex-strex-have-to-operate-on-cache-aligned-data  */
+			uint64_t mask = 2047;
+
+			xaddr &= mask;
+			yaddr &= mask;
+			if (xaddr == yaddr)
+				cpu->machine->cpus[i]->cd.arm.rmw = 0;
+		}
+	}
+
+	reg(ic->arg[0]) = 0;	// 0 = success
+	cpu->cd.arm.rmw = 0;
+}
+Y(strex)
+
+
 /*  Various load/store multiple instructions:  */
 extern uint32_t *multi_opcode[256];
 extern void (**multi_opcode_f[256])(struct cpu *, struct arm_instr_call *);
@@ -2892,16 +3009,33 @@ X(to_be_translated)
 	case 0x3:
 		/*  Check special cases first:  */
 		if ((iword & 0x0ff00fff) == 0x01900f9f) {
-			if (!cpu->translation_readahead)
-				fatal("ldrex TODO\n");
-			goto bad;
+			ic->arg[0] = (size_t)(&cpu->cd.arm.r[rd]);
+			ic->arg[1] = (size_t)(&cpu->cd.arm.r[rn]);
+			ic->arg[2] = 0;
+
+			if (rd == ARM_PC || rn == ARM_PC) {
+				if (!cpu->translation_readahead)
+					fatal("ldrex with pc register: TODO\n");
+				goto bad;
+			}
+			
+			ic->f = cond_instr(ldrex);
 			break;
 		}
 
 		if ((iword & 0x0ff00ff0) == 0x01800f90) {
-			if (!cpu->translation_readahead)
-				fatal("strex TODO\n");
-			goto bad;
+			ic->arg[0] = (size_t)(&cpu->cd.arm.r[rd]);
+			ic->arg[1] = (size_t)(&cpu->cd.arm.r[rn]);
+			ic->arg[2] = (size_t)(&cpu->cd.arm.r[rm]);
+
+			if (rd == ARM_PC || rm == ARM_PC || rn == ARM_PC ||
+			    rd == rm || rd == rn) {
+				if (!cpu->translation_readahead)
+					fatal("strex with bad register: TODO\n");
+				goto bad;
+			}
+			
+			ic->f = cond_instr(strex);
 			break;
 		}
 
@@ -3152,6 +3286,30 @@ X(to_be_translated)
 			break;
 		}
 
+		if ((iword & 0x0ff00000) == 0x03000000) {
+			ic->arg[0] = (size_t)(&cpu->cd.arm.r[rn]);
+			ic->arg[1] = (((iword & 0xf0000) >> 4) | (iword & 0xfff));
+			ic->arg[2] = (size_t)(&cpu->cd.arm.r[rd]);
+			ic->f = cond_instr(movw);
+			if (rd == ARM_PC) {
+				if (!cpu->translation_readahead)
+					fatal("movw with rd = pc?\n");
+				goto bad;
+			}
+			break;
+		} else if ((iword & 0x0ff00000) == 0x03400000) {
+			ic->arg[0] = (size_t)(&cpu->cd.arm.r[rn]);
+			ic->arg[1] = (((iword & 0xf0000) >> 4) | (iword & 0xfff)) << 16;
+			ic->arg[2] = (size_t)(&cpu->cd.arm.r[rd]);
+			ic->f = cond_instr(movt);
+			if (rd == ARM_PC) {
+				if (!cpu->translation_readahead)
+					fatal("movt with rd = pc?\n");
+				goto bad;
+			}
+			break;
+		}
+
 		/*
 		 *  Generic Data Processing Instructions:
 		 */
@@ -3201,23 +3359,7 @@ X(to_be_translated)
 		if (rn == ARM_PC || rd == ARM_PC)
 			any_pc_reg = 1;
 
-		if ((iword & 0x0ff00000) == 0x03000000) {
-			ic->arg[1] = (((iword & 0xf0000) >> 4) | (iword & 0xfff));
-			ic->f = cond_instr(movw);
-			if (rd == ARM_PC) {
-				if (!cpu->translation_readahead)
-					fatal("movw with rd = pc?\n");
-				goto bad;
-			}
-		} else if ((iword & 0x0ff00000) == 0x03400000) {
-			ic->arg[1] = (((iword & 0xf0000) >> 4) | (iword & 0xfff)) << 16;
-			ic->f = cond_instr(movt);
-			if (rd == ARM_PC) {
-				if (!cpu->translation_readahead)
-					fatal("movt with rd = pc?\n");
-				goto bad;
-			}
-		} else if (!any_pc_reg && regform && (iword & 0xfff) < ARM_PC) {
+		if (!any_pc_reg && regform && (iword & 0xfff) < ARM_PC) {
 			ic->arg[1] = (size_t)(&cpu->cd.arm.r[rm]);
 			ic->f = arm_dpi_instr_regshort[condition_code +
 			    16 * secondary_opcode + (s_bit? 256 : 0)];

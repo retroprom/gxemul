@@ -4835,4 +4835,4 @@ Changelog for GXemul:
 		invalidated.
 20190122	Beginning on a hack to allow emulated SGI O2 machines have more
 		than 256 MB of RAM. Works with OpenBSD/sgi so far.
-
+20190206	Implementing ARM ldrex/strex (load-linked / store-conditional).

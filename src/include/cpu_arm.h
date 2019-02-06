@@ -2,7 +2,7 @@
 #define	CPU_ARM_H
 
 /*
- *  Copyright (C) 2005-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -233,6 +233,11 @@ struct arm_cpu {
 	 *  Interrupts:
 	 */
 	int			irq_asserted;
+
+	/*  Read-Modify-Write (LDREX/STREX):  */
+	int			rmw;		/*  1 = currently active  */
+	uint32_t		rmw_len;	/*  Length of rmw modification  */
+	uint32_t		rmw_addr;	/*  Address of rmw modification  */
 
 
 	/*
