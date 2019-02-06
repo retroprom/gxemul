@@ -426,16 +426,21 @@ j = 0;
 		 *  framework can handle. Memory above that must be accessed from 0x40000000 and up.
  		 */
 
-		if (machine->physical_ram_in_mb > 256) {
-			fatal("TODO: Legacy framework cannot handle more than 256 MB for the SGI O2.\n");
+		if (machine->physical_ram_in_mb > 1024) {
+			fatal("SGI O2 cannot have more than 1 GB of RAM.\n");
 			exit(1);
 		}
 
 		/*  In the new framework, this would be the other way around :-), i.e.
 		    actual memory at 0x40000000 and the first 256 MB would be mirrored
-		    at address 0.  */
-		dev_ram_init(machine, 0x40000000ULL, machine->physical_ram_in_mb * 1048576, DEV_RAM_MIRROR, 0);
-
+		    to address 0.  */
+		{
+			int mirrorInMB = machine->physical_ram_in_mb < 256 ? machine->physical_ram_in_mb : 256;
+			dev_ram_init(machine, 0x40000000ULL, mirrorInMB * 1048576, DEV_RAM_MIRROR, 0);
+			if (machine->physical_ram_in_mb > 256)
+				dev_ram_init(machine, 0x50000000ULL, (machine->physical_ram_in_mb - 256) * 1048576, DEV_RAM_RAM, 0);
+		}
+		
 		/*  Connect CRIME (Interrupt Controller) to MIPS irq 2:  */
 		snprintf(tmpstr, sizeof(tmpstr), "%s.cpu[%i].2",
 		    machine->path, machine->bootstrap_cpu);

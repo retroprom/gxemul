@@ -4833,3 +4833,6 @@ Changelog for GXemul:
 20190112	Making sure that when writing to mirrored RAM, any dyntrans
 		translations made in either the mirror or mirrored ranges are
 		invalidated.
+20190122	Beginning on a hack to allow emulated SGI O2 machines have more
+		than 256 MB of RAM. Works with OpenBSD/sgi so far.
+

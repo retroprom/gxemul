@@ -232,15 +232,10 @@ DEVICE_ACCESS(crime)
 	 *  Amount of memory.  Bit 8 of bank control set ==> 128MB instead
 	 *  of 32MB per bank (?)
 	 *
-	 *  When the bank control registers contain the same value as the
-	 *  previous one, that bank is not valid. (?)
-	 *
-	 *  TODO: Make this work reliably with other sizes than 128 or 256 MB.
-	 *  128 MB is what I have in my machine. Theoretically, up to 1 GB
-	 *  could be supported in the O2, of which the first 256 MB is
-	 *  accessible at low physical addresses (below 0x10000000).
+	 *  According to OpenBSD, "Empty banks are reported as duplicates of
+	 *  bank #0."
 	 */
-	if (cpu->machine->physical_ram_in_mb >= 1024) {
+	if (cpu->machine->physical_ram_in_mb > 1024) {
 		fatal("[ sgi_crime: SGI O2 can not have more than 1024 MB RAM ]\n");
 		exit(1);
 	}
@@ -267,6 +262,7 @@ DEVICE_ACCESS(crime)
 				d->reg[CRIME_MEM_BANK_CTRL0 / sizeof(uint64_t) + 0];
 		else
 			d->reg[CRIME_MEM_BANK_CTRL0 / sizeof(uint64_t) + bank] = flag_for_128MB | b;
+
 		total_mb += mb_per_bank;
 	}
 	

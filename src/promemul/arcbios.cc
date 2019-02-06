@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -51,6 +51,7 @@
 
 
 extern int quiet_mode;
+extern int verbose;
 
 
 /*
@@ -440,6 +441,10 @@ void arcbios_add_memory_descriptor(struct cpu *cpu,
 	int s;
 	struct arcbios_mem arcbios_mem;
 	struct arcbios_mem64 arcbios_mem64;
+
+	if (verbose >= 2)
+		debug("arcbios_add_memory_descriptor: base=0x%llx len=0x%llx arctype=%i\n",
+			(long long)base, (long long)len, arctype);
 
 	base /= 4096;
 	len /= 4096;
@@ -2478,7 +2483,7 @@ void arcbios_init(struct machine *machine, int is64bit, uint64_t sgi_ram_offset,
 {
 	int i, alloclen = 20;
 	char *name;
-	uint64_t arc_reserved, mem_base, mem_count;
+	uint64_t arc_reserved, mem_base;
 	struct cpu *cpu = machine->cpus[0];
 	struct arcbios_sysid arcbios_sysid;
 	struct arcbios_dsp_stat arcbios_dsp_stat;
@@ -2580,13 +2585,19 @@ void arcbios_init(struct machine *machine, int is64bit, uint64_t sgi_ram_offset,
 	/*
 	 *  The first 12 MBs of RAM are simply reserved... this simplifies
 	 *  things a lot.  If there's more than 512MB of RAM, it has to be
-	 *  split in two, according to the ARC spec.  This code creates a
-	 *  number of chunks of at most 512MB each.
+	 *  split in two, according to the ARC spec.
 	 *
-	 *  NOTE:  The region of physical address space between 0x10000000 and
-	 *  0x1fffffff (256 - 512 MB) is usually occupied by memory mapped
-	 *  devices, so that portion is "lost".
+	 *  However, the region of physical address space between 0x10000000
+	 *  and 0x1fffffff (256 - 512 MB) is sometimes occupied by memory
+	 *  mapped devices, for example in the SGI O2, so that portion can not
+	 *  be used.
+	 *
+	 *  Instead, any high memory needs to be added using a machine-specific
+	 *  high address.
 	 */
+	int reserved_bottom_mem_in_mb = 12;
+	int free_type = ARCBIOS_MEM_FreeMemory;
+	
 	machine->md.arc->memdescriptor_base = ARC_MEMDESC_ADDR;
 
 	arc_reserved = 0x2000;
@@ -2598,31 +2609,45 @@ void arcbios_init(struct machine *machine, int is64bit, uint64_t sgi_ram_offset,
 	arcbios_add_memory_descriptor(cpu, sgi_ram_offset + arc_reserved,
 	    0x60000-arc_reserved, ARCBIOS_MEM_FirmwareTemporary);
 
-	mem_base = 12;
-	mem_base += sgi_ram_offset / 1048576;
+	uint64_t ram = 0;
 
-	while (mem_base < machine->physical_ram_in_mb+sgi_ram_offset/1048576) {
-		mem_count = machine->physical_ram_in_mb+sgi_ram_offset/1048576
-		    - mem_base;
+	// Default is to use a physical memory base around zero (0).
+	mem_base = sgi_ram_offset / 1048576;
 
-		/*  Skip the 256-512MB region (for devices)  */
-		if (mem_base < 256 && mem_base + mem_count > 256) {
-			mem_count = 256-mem_base;
+	while (ram < machine->physical_ram_in_mb) {
+		uint64_t to_add = machine->physical_ram_in_mb - ram;
+
+		if (to_add > 256)
+			to_add = 256;
+
+		if (ram == 0) {
+			// Skip first few MB of RAM, for reserved structures.
+			ram += reserved_bottom_mem_in_mb;
+			mem_base += reserved_bottom_mem_in_mb;
+			to_add -= reserved_bottom_mem_in_mb;
 		}
 
-		/*  At most 512MB per descriptor (at least the first 512MB
-		    must be separated this way, according to the ARC spec)  */
-		if (mem_count > 512)
-			mem_count = 512;
-
 		arcbios_add_memory_descriptor(cpu, mem_base * 1048576,
-		    mem_count * 1048576, ARCBIOS_MEM_FreeMemory);
+		    to_add * 1048576, free_type);
 
-		mem_base += mem_count;
+		ram += to_add;
+		mem_base += to_add;
 
-		/*  Skip the devices:  */
-		if (mem_base == 256)
-			mem_base = 512;
+		if (mem_base == 256) {
+			if (machine->machine_type == MACHINE_SGI &&
+			    machine->machine_subtype == 32) {
+				// mem_base = 0x50000000 / 1048576;
+				// Actually, the above does not seem to work.
+				// Perhaps the ARCS in the O2 simply says
+				// 256 MB regardless of how much more there
+				// is in the machine?
+				break;
+			} else {
+				fatal("Ignoring RAM above 256 MB! (Not yet "
+					"implemented for this machine type.)\n");
+				break;
+			}
+		}
 	}
 
 	/*
@@ -2828,11 +2853,18 @@ void arcbios_init(struct machine *machine, int is64bit, uint64_t sgi_ram_offset,
 	/*
 	 *  Defalt TLB entry for 64-bit SGI machines:
 	 */
-	if (machine->machine_type == MACHINE_SGI &&
-	    machine->machine_subtype != 12 /* TODO: ugly */ ) {
-		/*  TODO: On which models is this required?  */
-		mips_coproc_tlb_set_entry(cpu, 0, 1048576*16,
-		    0xc000000000000000ULL, 0, 1048576*16, 1,1,1,1,1, 0, 2, 2);
+	if (machine->machine_type == MACHINE_SGI) {
+		switch (machine->machine_subtype) {
+		case 12:
+			/*  TODO: Not on 12?  */
+			break;
+		case 32:
+			/*  Not needed for SGI O2?  */
+			break;
+		default:
+			mips_coproc_tlb_set_entry(cpu, 0, 1048576*16,
+			    0xc000000000000000ULL, 0, 1048576*16, 1,1,1,1,1, 0, 2, 2);
+		}
 	}
 
 

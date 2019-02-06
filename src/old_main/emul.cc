@@ -392,6 +392,12 @@ void emul_machine_setup(struct machine *m, int n_load, char **load_names,
 		debug(" (offset by %iMB)", m->memory_offset_in_mb);
 		memory_amount += 1048576 * m->memory_offset_in_mb;
 	}
+	if (m->machine_type == MACHINE_SGI && m->machine_subtype == 32) {
+		if (memory_amount > 0x10000000) {
+			memory_amount = 0x10000000;
+			debug(" (SGI O2 hack: %i MB at offset 0)", 0x10000000 / 1048576);
+		}
+	}
 	m->memory = memory_new(memory_amount, m->arch);
 	debug("\n");
 
@@ -428,9 +434,9 @@ void emul_machine_setup(struct machine *m, int n_load, char **load_names,
 	if (m->x11_md.in_use)
 		x11_init(m);
 
-	/*  Fill memory with random bytes:  */
+	/*  Fill the directly addressable memory with random bytes:  */
 	if (m->random_mem_contents) {
-		for (i=0; i<m->physical_ram_in_mb * 1048576; i+=256) {
+		for (i=0; i<(int)memory_amount; i+=256) {
 			unsigned char data[256];
 			unsigned int j;
 			for (j=0; j<sizeof(data); j++)
