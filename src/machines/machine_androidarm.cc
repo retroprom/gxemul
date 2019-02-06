@@ -52,9 +52,8 @@ MACHINE_SETUP(androidarm)
 
 	cpu->byte_order = EMUL_LITTLE_ENDIAN;
 
-	// Odd register values, for debugging the startup procedure.
 	// See "start:" at https://android.googlesource.com/kernel/msm/+/42bad328ba45ee4fe93216e7e99fe79a782d9155/arch/arm/boot/compressed/head.S
-	cpu->cd.arm.r[1] = 0x77711111;	// architecture ID?
+	cpu->cd.arm.r[1] = 0xffffffff;	// architecture ID?
 	cpu->cd.arm.r[2] = 0x77721111;	// atags struct?
 	cpu->cd.arm.r[3] = 0x77731111;
 	cpu->cd.arm.r[4] = 0x77741111;
