@@ -1757,7 +1757,10 @@ int arm_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
 	r12 = (iw >> 12) & 15;
 	r8 = (iw >> 8) & 15;
 
-	if (iw == 0xf10c0080) {
+	if (iw == 0xf10c0040) {
+		debug("cpsid\tf\n");
+		return sizeof(uint32_t);
+	} else if (iw == 0xf10c0080) {
 		debug("cpsid\ti\n");
 		return sizeof(uint32_t);
 	} else if (iw == 0xf57ff04f) {

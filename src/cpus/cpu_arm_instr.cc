@@ -660,6 +660,26 @@ Y(mlas)
 
 
 /*
+ *  mla: Multiplication with subtraction
+ *
+ *  arg[0] = copy of instruction word
+ */
+X(mls)
+{
+	/*  xxxx0000 0110dddd aaaammmm 1001nnnn  mls Rd,Rn,Rm,Ra  */
+	uint32_t iw = ic->arg[0];
+	int rd = (iw >> 16) & 15;
+	int rn = (iw >>  0) & 15;
+	int rm = (iw >>  8) & 15;
+	int ra = (iw >> 12) & 15;
+
+	cpu->cd.arm.r[rd] = cpu->cd.arm.r[ra] -
+	    cpu->cd.arm.r[rn] * cpu->cd.arm.r[rm];
+}
+Y(mls)
+
+
+/*
  *  mull: Long multiplication
  *
  *  arg[0] = copy of instruction word
@@ -2954,6 +2974,12 @@ X(to_be_translated)
 			goto okay;
 		}
 
+		if (iword == 0xf10c0040) {
+			/*  cpsid f. Treat as NOP for now.  */
+			ic->f = instr(nop);
+			goto okay;
+		}
+
 		if (iword == 0xf10c0080) {
 			/*  cpsid i. Treat as NOP for now.  */
 			ic->f = instr(nop);
@@ -3040,10 +3066,8 @@ X(to_be_translated)
 		}
 
 		if ((iword & 0x0ff000f0) == 0x00600090) {
-			// mls rd,rn,rm,ra
-			if (!cpu->translation_readahead)
-				fatal("mls TODO\n");
-			goto bad;
+			ic->arg[0] = iword;
+			ic->f = cond_instr(mls);
 			break;
 		}
 		
