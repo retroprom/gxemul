@@ -46,20 +46,22 @@
 #include "misc.h"
 
 
+uint32_t swap_if_little_endian(uint32_t v, struct cpu* cpu)
+{
+	if (cpu->byte_order == EMUL_BIG_ENDIAN)
+		return v;
+
+	return (v >> 24) | ((v & 0x00ff0000) >> 8)
+		| ((v & 0x0000ff00) << 8) | ((v & 0xff) << 24);
+}
+
+
 MACHINE_SETUP(androidarm)
 {
 	char tmpstr[1000];
+	bool use_atags = false;
 
 	cpu->byte_order = EMUL_LITTLE_ENDIAN;
-
-	// See "start:" at https://android.googlesource.com/kernel/msm/+/42bad328ba45ee4fe93216e7e99fe79a782d9155/arch/arm/boot/compressed/head.S
-	cpu->cd.arm.r[1] = 0xffffffff;	// architecture ID?
-	cpu->cd.arm.r[2] = 0x77721111;	// atags struct?
-	cpu->cd.arm.r[3] = 0x77731111;
-	cpu->cd.arm.r[4] = 0x77741111;
-
-	// Invalid link return:
-	cpu->cd.arm.r[14] = 0x777e1116;
 
 	switch (machine->machine_subtype) {
 
@@ -70,6 +72,9 @@ MACHINE_SETUP(androidarm)
 		// framework, we have to make the mirror the other way around.)
 		dev_ram_init(machine, 0x80000000, 0x10000000, DEV_RAM_MIRROR, 0x0);
 		dev_ram_init(machine, 0x90000000, 0x70000000, DEV_RAM_RAM, 0x0);
+
+		// Yet another mirror at 0x40000000?
+		dev_ram_init(machine, 0x40000000, 0x10000000, DEV_RAM_MIRROR, 0x0);
 
 		// See https://github.com/torvalds/linux/blob/master/arch/arm/boot/dts/mt6580.dtsi
 		//	timer: timer@10008000
@@ -100,6 +105,9 @@ MACHINE_SETUP(androidarm)
 	case MACHINE_ANDROIDARM_SONYXPERIAMINI:
 		machine->machine_name = strdup("Sony Xperia Mini");
 
+		// Mirror at 0x40000000?
+		dev_ram_init(machine, 0x40000000, 0x20000000, DEV_RAM_MIRROR, 0x0);
+
 		// Perhaps https://talk.sonymobile.com/t5/Xperia-mini-pro/Sk17i-in-continous-boot-loop/td-p/281671#gref
 		// could be of some help.
 
@@ -114,6 +122,21 @@ MACHINE_SETUP(androidarm)
 
 	default:printf("Unimplemented android-arm machine number.\n");
 		exit(1);
+	}
+
+	// See https://www.kernel.org/doc/Documentation/arm/Booting
+	cpu->cd.arm.r[0] = 0x00000000;
+	cpu->cd.arm.r[1] = 0xffffffff;	// architecture ID. 0xffffffff = use DT (device tree)?
+
+	if (use_atags) {
+		// ATAG list: TODO.
+		cpu->cd.arm.r[2] = 0x00002000;	// ATAGs at 8KB from start of low RAM.
+	} else {
+		// Device Tree:
+		// https://www.kernel.org/doc/Documentation/devicetree/booting-without-of.txt
+		cpu->cd.arm.r[2] = 0x08000000;	// Device Tree at 128 MB from start of RAM.
+		
+		store_32bit_word(cpu, cpu->cd.arm.r[2], swap_if_little_endian(0xd00dfeed, cpu));
 	}
 }
 
