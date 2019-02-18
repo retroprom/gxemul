@@ -1054,6 +1054,22 @@ Y(movw)
 
 
 /*
+ *  rev:  Reverse endian.
+ *
+ *  arg[0] = ptr to rd
+ *  arg[1] = ptr to rm
+ */
+X(rev)
+{
+	uint32_t v = reg(ic->arg[1]);
+
+	reg(ic->arg[0]) = (v >> 24) | ((v & 0x00ff0000) >> 8)
+		| ((v & 0x0000ff00) << 8) | ((v & 0xff) << 24);
+}
+Y(rev)
+
+
+/*
  *  uxtb:  Unsigned Extend Byte.
  *
  *  arg[0] = ptr to rd
@@ -1118,6 +1134,34 @@ X(uxth)
 	reg(ic->arg[0]) = (uint32_t)rotated;
 }
 Y(uxth)
+
+
+/*
+ *  uxtah:  Unsigned Extend and Add Byte.
+ *
+ *  arg[0] = ptr to rd
+ *  arg[1] = ptr to rn
+ *  arg[2] = ptr to rm
+ */
+X(uxtab)
+{
+	reg(ic->arg[0]) = reg(ic->arg[1]) + (uint8_t)reg(ic->arg[2]);
+}
+Y(uxtab)
+
+
+/*
+ *  uxtah:  Unsigned Extend and Add Halfword.
+ *
+ *  arg[0] = ptr to rd
+ *  arg[1] = ptr to rn
+ *  arg[2] = ptr to rm
+ */
+X(uxtah)
+{
+	reg(ic->arg[0]) = reg(ic->arg[1]) + (uint16_t)reg(ic->arg[2]);
+}
+Y(uxtah)
 
 
 /*
@@ -3404,7 +3448,11 @@ X(to_be_translated)
 	case 0x7:
 		// Special non-loadstore encodings:
 		if (main_opcode >= 6 && iword & 0x10) {
-			if ((iword & 0x0fff03f0) == 0x06bf0070) {
+			if ((iword & 0x0fff0ff0) == 0x06bf0f30) {
+				ic->f = cond_instr(rev);
+				ic->arg[0] = (size_t)(&cpu->cd.arm.r[rd]);
+				ic->arg[1] = (size_t)(&cpu->cd.arm.r[rm]);
+			} else if ((iword & 0x0fff03f0) == 0x06bf0070) {
 				ic->f = cond_instr(sxth);
 				ic->arg[0] = (size_t)(&cpu->cd.arm.r[rd]);
 				ic->arg[1] = (size_t)(&cpu->cd.arm.r[rm]);
@@ -3415,20 +3463,30 @@ X(to_be_translated)
 				ic->arg[1] = (size_t)(&cpu->cd.arm.r[rm]);
 				ic->arg[2] = ((iword & 0xc00) >> 10) << 3;
 			} else if ((iword & 0x0ff003f0) == 0x06e00070) {
-				// ic->f = cond_instr(uxtab);
-				if (!cpu->translation_readahead)
-					fatal("unimplemented uxtab\n");
-				goto bad;
+				ic->arg[0] = (size_t)(&cpu->cd.arm.r[rd]);
+				ic->arg[1] = (size_t)(&cpu->cd.arm.r[rn]);
+				ic->arg[2] = (size_t)(&cpu->cd.arm.r[rm]);
+				ic->f = cond_instr(uxtab);
+				if (iword & 0xc00) {
+					if (!cpu->translation_readahead)
+						fatal("unimplemented uxtab with rotate != 0\n");
+					goto bad;
+				}
 			} else if ((iword & 0x0fff03f0) == 0x06ff0070) {
 				ic->f = cond_instr(uxth);
 				ic->arg[0] = (size_t)(&cpu->cd.arm.r[rd]);
 				ic->arg[1] = (size_t)(&cpu->cd.arm.r[rm]);
 				ic->arg[2] = ((iword & 0xc00) >> 10) << 3;
 			} else if ((iword & 0x0ff003f0) == 0x06f00070) {
-				// ic->f = cond_instr(uxtah);
-				if (!cpu->translation_readahead)
-					fatal("unimplemented uxtah\n");
-				goto bad;
+				ic->arg[0] = (size_t)(&cpu->cd.arm.r[rd]);
+				ic->arg[1] = (size_t)(&cpu->cd.arm.r[rn]);
+				ic->arg[2] = (size_t)(&cpu->cd.arm.r[rm]);
+				ic->f = cond_instr(uxtah);
+				if (iword & 0xc00) {
+					if (!cpu->translation_readahead)
+						fatal("unimplemented uxtah with rotate != 0\n");
+					goto bad;
+				}
 			} else if ((iword & 0x0fe00070) == 0x07c00010) {
 				ic->f = cond_instr(bfi);
 				ic->arg[0] = (size_t)(&cpu->cd.arm.r[rd]);

@@ -4837,3 +4837,4 @@ Changelog for GXemul:
 		than 256 MB of RAM. Works with OpenBSD/sgi so far.
 20190206	Implementing the ARM ldrex/strex (load-linked / store-
 		conditional) instructions, and mls (multiply-and-subtract).
+20190218	Implementing the ARM rev, uxtab, and uxtah instructions.

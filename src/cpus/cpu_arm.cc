@@ -2162,6 +2162,16 @@ int arm_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
 			break;
 		}
 
+		if ((iw & 0x0fff0ff0) == 0x06bf0f30) {
+			/*  rev rd,rm:  */
+			debug("rev%s\t%s,%s",
+				condition,
+				arm_regname[r12],
+				arm_regname[iw & 15]);
+			debug("\n");
+			break;
+		}
+
 		if ((iw & 0x0fff03f0) == 0x06bf0070) {
 			/*  sxth rd,rm[,rot]:  */
 			debug("sxth%s\t%s,%s",
@@ -2257,6 +2267,13 @@ int arm_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
 			debug("\n");
 			break;
 		}
+
+		if ((iw & 0x0fffffff) == 0x07f001f2) {
+			debug("linux_bug%s\t; see https://github.com/torvalds/linux/blob/master/arch/arm/include/asm/bug.h\n",
+				condition);
+			break;
+		}
+
 
 		/*
 		 *  xxxx010P UBWLnnnn ddddoooo oooooooo  Immediate form
