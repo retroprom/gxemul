@@ -2268,6 +2268,18 @@ int arm_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
 			break;
 		}
 
+		if ((iw & 0x0fe00070) == 0x07a00050) {
+			/*  sbfx rd,rn,#lsb,#width:  */
+			debug("sbfx%s\t%s,%s",
+				condition,
+				arm_regname[r12],
+				arm_regname[iw & 15]);
+			debug(",%i", (iw >> 7) & 31);
+			debug(",%i", 1 + ((iw >> 16) & 31));
+			debug("\n");
+			break;
+		}
+
 		if ((iw & 0x0fffffff) == 0x07f001f2) {
 			debug("linux_bug%s\t; see https://github.com/torvalds/linux/blob/master/arch/arm/include/asm/bug.h\n",
 				condition);

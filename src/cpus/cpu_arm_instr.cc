@@ -1189,6 +1189,33 @@ Y(ubfx)
 
 
 /*
+ *  sbfx:  Signed Bit-Field Extract.
+ *
+ *  arg[0] = ptr to rd
+ *  arg[1] = ptr to rn
+ *  arg[2] = (width << 16) + lsb
+ */
+X(sbfx)
+{
+	uint32_t x = reg(ic->arg[1]);
+
+	int lsb = (uint8_t)ic->arg[2];
+	int width = ic->arg[2] >> 16;
+
+	uint32_t mask = (1 << width) - 1;
+	x >>= lsb;
+	x &= mask;
+
+	uint32_t topBitMask = 1 << (width-1);
+	if (x & topBitMask && width < 32)
+		x |= ~mask;
+
+	reg(ic->arg[0]) = x;
+}
+Y(sbfx)
+
+
+/*
  *  bfi:  Bit-Field Insert.
  *
  *  arg[0] = ptr to rd
@@ -3496,6 +3523,13 @@ X(to_be_translated)
 				ic->arg[2] = (msb << 16) + lsb;
 			} else if ((iword & 0x0fe00070) == 0x07e00050) {
 				ic->f = cond_instr(ubfx);
+				ic->arg[0] = (size_t)(&cpu->cd.arm.r[rd]);
+				ic->arg[1] = (size_t)(&cpu->cd.arm.r[rm]);
+				int lsb = (iword >> 7) & 31;
+				int width = 1 + ((iword >> 16) & 31);
+				ic->arg[2] = (width << 16) + lsb;
+			} else if ((iword & 0x0fe00070) == 0x07a00050) {
+				ic->f = cond_instr(sbfx);
 				ic->arg[0] = (size_t)(&cpu->cd.arm.r[rd]);
 				ic->arg[1] = (size_t)(&cpu->cd.arm.r[rm]);
 				int lsb = (iword >> 7) & 31;
