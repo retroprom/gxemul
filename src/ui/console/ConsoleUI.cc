@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007-2010  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2007-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -163,11 +163,15 @@ void ConsoleUI::ShowDebugMessage(const string& msg)
 	vector<string> lines = SplitIntoRows(msg, true);
 
 	for (size_t i=0; i<lines.size(); ++i) {
-		if (m_gxemul->GetRunState() == GXemul::Running)
-			std::cout << "[ " << m_indentationMsg << lines[i] << " ]\n";
-		else
+		if (m_gxemul->GetRunState() == GXemul::Running) {
+			if (isatty(fileno(stdout)))
+				std::cout << "\e[1m" << m_indentationMsg << lines[i] << "\e[0m\n";
+			else
+				std::cout << "[ " << m_indentationMsg << lines[i] << " ]\n";
+		} else {
 			std::cout << m_indentationMsg << lines[i] << "\n";
-
+		}
+		
 		// Replace indentation string with spaces after first
 		// line of output:
 		for (size_t j=m_indentationMsg.length(); j>0; --j)
