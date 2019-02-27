@@ -2,7 +2,7 @@
 #define	M88K_CPUCOMPONENT_H
 
 /*
- *  Copyright (C) 2009-2010  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2009-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -358,8 +358,7 @@ public:
 
 	virtual bool PreRunCheckForComponent(GXemul* gxemul);
 
-	virtual size_t DisassembleInstruction(uint64_t vaddr, size_t maxlen,
-		unsigned char *instruction, vector<string>& result);
+	virtual size_t DisassembleInstruction(uint64_t vaddr, vector<string>& result);
 
 
 	/********************************************************************/

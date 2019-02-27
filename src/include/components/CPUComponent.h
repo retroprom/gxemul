@@ -2,7 +2,7 @@
 #define	CPUCOMPONENT_H
 
 /*
- *  Copyright (C) 2008-2010  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2008-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -115,8 +115,7 @@ public:
 	 *	format.
 	 * @return The number of bytes that the instruction occupied.
 	 */	
-	virtual size_t DisassembleInstruction(uint64_t vaddr, size_t maxLen,
-		unsigned char *instruction, vector<string>& result) = 0;
+	virtual size_t DisassembleInstruction(uint64_t vaddr, vector<string>& result) = 0;
 
 
 	/********************************************************************/

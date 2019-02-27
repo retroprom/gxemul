@@ -108,7 +108,7 @@ protected:
 	virtual void (*GetDyntransToBeTranslated())(CPUDyntransComponent* cpu, DyntransIC* ic) = 0;
 
 	void DyntransToBeTranslatedBegin(struct DyntransIC*);
-	bool DyntransReadInstruction(uint16_t& iword);
+	bool DyntransReadInstruction(uint16_t& iword, int offset = 0);
 	bool DyntransReadInstruction(uint32_t& iword, int offset = 0);
 	void DyntransToBeTranslatedDone(struct DyntransIC*);
 

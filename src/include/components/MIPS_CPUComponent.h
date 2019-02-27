@@ -2,7 +2,7 @@
 #define	MIPS_CPUCOMPONENT_H
 
 /*
- *  Copyright (C) 2008-2010  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2008-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -164,8 +164,7 @@ public:
 
 	virtual bool PreRunCheckForComponent(GXemul* gxemul);
 
-	virtual size_t DisassembleInstruction(uint64_t vaddr, size_t maxlen,
-		unsigned char *instruction, vector<string>& result);
+	virtual size_t DisassembleInstruction(uint64_t vaddr, vector<string>& result);
 
 
 	/********************************************************************/
@@ -201,8 +200,7 @@ protected:
 	virtual void ShowRegisters(GXemul* gxemul, const vector<string>& arguments) const;
 
 private:
-	size_t DisassembleInstructionMIPS16(uint64_t vaddr,
-		unsigned char *instruction, vector<string>& result);
+	size_t DisassembleInstructionMIPS16(uint64_t vaddr, vector<string>& result);
 
 	bool Is32Bit() const;
 

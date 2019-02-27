@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2008-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2008-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -366,15 +366,15 @@ uint64_t MIPS_CPUComponent::PCtoInstructionAddress(uint64_t pc)
 }
 
 
-size_t MIPS_CPUComponent::DisassembleInstructionMIPS16(uint64_t vaddr,
-	unsigned char *instruction, vector<string>& result)
+size_t MIPS_CPUComponent::DisassembleInstructionMIPS16(uint64_t vaddr, vector<string>& result)
 {
+	uint16_t iword;
+
 	// Read the instruction word:
-	uint16_t iword = *((uint16_t *)(void*) instruction);
-	if (m_isBigEndian)
-		iword = BE16_TO_HOST(iword);
-	else
-		iword = LE16_TO_HOST(iword);
+	AddressSelect(vaddr);
+	bool readOk = ReadData(iword, m_isBigEndian? BigEndian : LittleEndian);
+	if (!readOk)
+		return 0;
 
 	// ... and add it to the result:
 	char tmp[5];
@@ -425,29 +425,20 @@ size_t MIPS_CPUComponent::DisassembleInstructionMIPS16(uint64_t vaddr,
 }
 
 
-size_t MIPS_CPUComponent::DisassembleInstruction(uint64_t vaddr, size_t maxLen,
-	unsigned char *instruction, vector<string>& result)
+size_t MIPS_CPUComponent::DisassembleInstruction(uint64_t vaddr, vector<string>& result)
 {
-	const bool mips16 = m_pc & 1? true : false;
+	const bool mips16 = vaddr & 1? true : false;
 	const size_t instrSize = mips16? sizeof(uint16_t) : sizeof(uint32_t);
 
-	if (maxLen < instrSize) {
-		assert(false);
-		return 0;
-	}
-
 	if (mips16)
-		return DisassembleInstructionMIPS16(vaddr,
-		    instruction, result);
+		return DisassembleInstructionMIPS16(vaddr, result);
 
 	// Read the instruction word:
-	uint32_t instructionWord = *((uint32_t *)(void*) instruction);
-	if (m_isBigEndian)
-		instructionWord = BE32_TO_HOST(instructionWord);
-	else
-		instructionWord = LE32_TO_HOST(instructionWord);
-
-	const uint32_t iword = instructionWord;
+	uint32_t iword;
+	AddressSelect(vaddr);
+	bool readOk = ReadData(iword, m_isBigEndian? BigEndian : LittleEndian);
+	if (!readOk)
+		return 0;
 
 	// ... and add it to the result:
 	{
@@ -1838,21 +1829,21 @@ static void Test_MIPS_CPUComponent_ModelChange()
 
 static void Test_MIPS_CPUComponent_Disassembly_Basic()
 {
-	refcount_ptr<Component> mips_cpu =
-	    ComponentFactory::CreateComponent("mips_cpu");
+	GXemul gxemul;
+	gxemul.GetCommandInterpreter().RunCommand("add testmips");
+
+	refcount_ptr<Component> mips_cpu = gxemul.GetRootComponent()->LookupPath("root.machine0.mainbus0.cpu0");
 	CPUComponent* cpu = mips_cpu->AsCPUComponent();
+	AddressDataBus* bus = cpu->AsAddressDataBus();
 
 	vector<string> result;
 	size_t len;
-	unsigned char instruction[sizeof(uint32_t)];
-	// This assumes that the default endianness is BigEndian...
-	instruction[0] = 0x27;
-	instruction[1] = 0xbd;
-	instruction[2] = 0xff;
-	instruction[3] = 0xd8;
 
-	len = cpu->DisassembleInstruction(0x12345678, sizeof(uint32_t),
-	    instruction, result);
+	uint32_t data32 = 0x27bdffd8;	// b 0xffffffff80004448
+	bus->AddressSelect(0xffffffff80004000ULL);
+	bus->WriteData(data32, BigEndian);
+
+	len = cpu->DisassembleInstruction(0xffffffff80004000ULL, result);
 
 	UnitTest::Assert("disassembled instruction was wrong length?", len, 4);
 	UnitTest::Assert("disassembly result incomplete?", result.size(), 3);

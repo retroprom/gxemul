@@ -4838,3 +4838,7 @@ Changelog for GXemul:
 20190206	Implementing the ARM ldrex/strex (load-linked / store-
 		conditional) instructions, and mls (multiply-and-subtract).
 20190218	Implementing the ARM rev, uxtab, and uxtah instructions.
+20190224	Implementing the ARM sbfx instruction.
+20190227	Adding a skeleton RISC-V CPU and RISC-V "virt" machine.
+		Refactoring some parts of the new framework to deal better
+		with variable length instructions during disassembly.

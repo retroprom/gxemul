@@ -324,22 +324,12 @@ void CPUComponent::ExecuteMethod(GXemul* gxemul, const string& methodName,
 
 uint64_t CPUComponent::Unassemble(int nRows, bool indicatePC, uint64_t vaddr, ostream& output)
 {
+	LookupAddressDataBus();
+	
 	vector< vector<string> > outputRows;
 
 	for (int i=0; i<nRows; i++) {
 		outputRows.push_back(vector<string>());
-
-		// TODO: GENERALIZE! Some archs will have longer
-		// instructions, or unaligned, or over page boundaries!
-		size_t maxLen = sizeof(uint32_t);
-maxLen += sizeof(uint32_t); // i960 experimentation hack
-		unsigned char instruction[maxLen];
-
-		bool readOk = true;
-		for (size_t k=0; k<maxLen; ++k) {
-			AddressSelect(vaddr + k);
-			readOk &= ReadData(instruction[k], m_isBigEndian? BigEndian : LittleEndian);
-		}
 
 		string symbol = GetSymbolRegistry().LookupAddress(vaddr, false);
 		if (symbol != "") {
@@ -358,24 +348,19 @@ maxLen += sizeof(uint32_t); // i960 experimentation hack
 
 		outputRows[outputRows.size()-1].push_back(ss.str());
 
-		if (!readOk) {
-			stringstream ss2;
-			ss2 << "\tmemory could not be read";
-			if (m_addressDataBus == NULL)
-				ss2 << "; no address/data bus connected to the CPU";
-			ss2 << "\n";
-
-			outputRows[outputRows.size()-1].push_back(ss2.str());
-			break;
+		if (m_addressDataBus == NULL) {
+			outputRows[outputRows.size()-1].push_back("; no address/data bus connected to the CPU");
 		} else {
 			vector<string> result;
 
-			size_t len = DisassembleInstruction(vaddr,
-			    maxLen, instruction, result);
+			size_t len = DisassembleInstruction(vaddr, result);
 			vaddr += len;
 
 			for (size_t j=0; j<result.size(); ++j)
 				outputRows[outputRows.size()-1].push_back(result[j]);
+
+			if (len == 0)
+				break;
 		}
 	}
 

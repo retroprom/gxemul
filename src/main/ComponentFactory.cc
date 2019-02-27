@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2008-2010  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2008-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -148,6 +148,9 @@ refcount_ptr<Component> ComponentFactory::CreateComponent(
 		    )
 			return (*componentListRunTime)[i].Create(args);
 	}
+
+	if (gxemul != NULL)
+		gxemul->GetUI()->ShowDebugMessage("Unknown component: " + componentNameAndOptionalArgs + "\n");
 
 	return NULL;
 }

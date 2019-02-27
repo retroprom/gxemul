@@ -309,11 +309,11 @@ void CPUDyntransComponent::DyntransToBeTranslatedBegin(struct DyntransIC* ic)
 }
 
 
-bool CPUDyntransComponent::DyntransReadInstruction(uint16_t& iword)
+bool CPUDyntransComponent::DyntransReadInstruction(uint16_t& iword, int offset)
 {
 	// TODO: Fast lookup.
 
-	AddressSelect(PCtoInstructionAddress(m_pc));
+	AddressSelect(PCtoInstructionAddress(m_pc + offset));
 	bool readable = ReadData(iword, m_isBigEndian? BigEndian : LittleEndian);
 
 	if (!readable) {
@@ -321,7 +321,7 @@ bool CPUDyntransComponent::DyntransReadInstruction(uint16_t& iword)
 		if (ui != NULL) {
 			stringstream ss;
 			ss.flags(std::ios::hex);
-			ss << "instruction at 0x" << PCtoInstructionAddress(m_pc)
+			ss << "instruction at 0x" << PCtoInstructionAddress(m_pc + offset)
 			    << " could not be read!";
 			ui->ShowDebugMessage(this, ss.str());
 		}

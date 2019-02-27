@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2008-2010  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2008-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -42,13 +42,13 @@ using std::ifstream;
 
 
 /*  ELF machine types as strings: (same as exec_elf.h)  */
-#define N_ELF_MACHINE_TYPES     89
+#define N_ELF_MACHINE_TYPES     244
 static const char *elf_machine_type[N_ELF_MACHINE_TYPES] = {
         "NONE", "M32", "SPARC", "386",				/*  0..3  */
-        "68K", "88K", "486", "860",				/*  4..7  */  
+        "68K", "88K", "486", "i860",				/*  4..7  */  
         "MIPS", "S370", "MIPS_RS3_LE", "RS6000",		/*  8..11  */
         "unknown12", "unknown13", "unknown14", "PARISC",	/*  12..15  */
-        "NCUBE", "VPP500", "SPARC32PLUS", "960",		/*  16..19  */
+        "NCUBE", "VPP500", "SPARC32PLUS", "i960",		/*  16..19  */
         "PPC", "PPC64", "unknown22", "unknown23",		/*  20..23  */
         "unknown24", "unknown25", "unknown26", "unknown27",	/*  24..27  */
         "unknown28", "unknown29", "unknown30", "unknown31",	/*  28..31  */
@@ -57,16 +57,54 @@ static const char *elf_machine_type[N_ELF_MACHINE_TYPES] = {
         "ARM", "ALPHA", "SH", "SPARCV9",			/*  40..43  */
         "TRICORE", "ARC", "H8_300", "H8_300H",			/*  44..47  */
         "H8S", "H8_500", "IA_64", "MIPS_X",			/*  48..51  */
-        "COLDFIRE", "68HC12", "unknown54", "unknown55",		/*  52..55  */
-        "unknown56", "unknown57", "unknown58", "unknown59",	/*  56..59  */
-        "unknown60", "unknown61", "AMD64", "unknown63",		/*  60..63  */
-        "unknown64", "unknown65", "unknown66", "unknown67",	/*  64..67  */
-        "unknown68", "unknown69", "unknown70", "unknown71",	/*  68..71  */
-        "unknown72", "unknown73", "unknown74", "unknown75",	/*  72..75  */
-        "unknown76", "unknown77", "unknown78", "unknown79",	/*  76..79  */
-        "unknown80", "unknown81", "unknown82", "AVR",		/*  80..83  */
-        "unknown84", "unknown85", "unknown86", "unknown87",	/*  84..87  */
-        "M32R"							/*  88      */
+        "COLDFIRE", "68HC12", "Fujitsu MMA", "Siemens PCP",	/*  52..55  */
+        "nCPU", "NDR1", "STARCORE", "ME16",			/*  56..59  */
+        "ST100", "TINYJ", "AMD64", "PDSP",			/*  60..63  */
+        "PDP10", "PDP11", "FX66", "ST9PLUS",			/*  64..67  */
+        "ST7", "68HC16", "68HC11", "68HC08",			/*  68..71  */
+        "68HC05", "SVX", "ST19", "VAX",				/*  72..75  */
+        "CRIS", "JAVELIN", "FIREPATH", "ZSP",			/*  76..79  */
+        "MMIX", "HUANY", "PRISM", "AVR",			/*  80..83  */
+        "FR30", "D10V", "D30V", "V850",				/*  84..87  */
+        "M32R", "MN10300", "MN10200", "picoJava",		/*  88..91  */
+        "OR1K", "ARC_A5", "Xtensa", "Alphamosaic VideoCore",	/*  92..95  */
+        "TMM_GPP", "NS32K", "TPC", "SNP1K",			/*  96..99  */
+        "unknown1xx", "unknown1xx", "unknown1xx", "unknown1xx",	/*  100..103  */
+        "unknown1xx", "unknown1xx", "unknown1xx", "unknown1xx",	/*  104..107  */
+        "unknown1xx", "unknown1xx", "unknown1xx", "unknown1xx",	/*  108..111  */
+        "unknown1xx", "unknown1xx", "unknown1xx", "unknown1xx",	/*  112..115  */
+        "unknown1xx", "unknown1xx", "unknown1xx", "unknown1xx",	/*  116..119  */
+        "unknown1xx", "unknown1xx", "unknown1xx", "unknown1xx",	/*  120..123  */
+        "unknown1xx", "unknown1xx", "unknown1xx", "unknown1xx",	/*  124..127  */
+        "unknown1xx", "unknown1xx", "unknown1xx", "unknown1xx",	/*  128..131  */
+        "unknown1xx", "unknown1xx", "unknown1xx", "unknown1xx",	/*  132..135  */
+        "unknown1xx", "unknown1xx", "unknown1xx", "unknown1xx",	/*  136..139  */
+        "unknown1xx", "unknown1xx", "unknown1xx", "unknown1xx",	/*  140..143  */
+        "unknown1xx", "unknown1xx", "unknown1xx", "unknown1xx",	/*  144..147  */
+        "unknown1xx", "unknown1xx", "unknown1xx", "unknown1xx",	/*  148..151  */
+        "unknown1xx", "unknown1xx", "unknown1xx", "unknown1xx",	/*  152..155  */
+        "unknown1xx", "unknown1xx", "unknown1xx", "unknown1xx",	/*  156..159  */
+        "unknown1xx", "unknown1xx", "unknown1xx", "unknown1xx",	/*  160..163  */
+        "unknown1xx", "unknown1xx", "unknown1xx", "unknown1xx",	/*  164..167  */
+        "unknown1xx", "unknown1xx", "unknown1xx", "unknown1xx",	/*  168..171  */
+        "unknown1xx", "unknown1xx", "unknown1xx", "unknown1xx",	/*  172..175  */
+        "unknown1xx", "unknown1xx", "unknown1xx", "unknown1xx",	/*  176..179  */
+        "unknown1xx", "unknown1xx", "unknown1xx", "unknown1xx",	/*  180..183  */
+        "unknown1xx", "unknown1xx", "unknown1xx", "TILE64",	/*  184..187  */
+        "TILEPro", "MicroBlaze", "unknown1xx", "unknown1xx",	/*  188..191  */
+        "TILE-GX", "unknown1xx", "unknown1xx", "unknown1xx",	/*  192..195  */
+        "unknown1xx", "unknown1xx", "unknown1xx", "unknown1xx",	/*  196..199  */
+        "unknown1xx", "unknown1xx", "unknown1xx", "unknown1xx",	/*  200..203  */
+        "unknown1xx", "unknown1xx", "unknown1xx", "unknown1xx",	/*  204..207  */
+        "unknown1xx", "unknown1xx", "unknown1xx", "unknown1xx",	/*  208..211  */
+        "unknown1xx", "unknown1xx", "unknown1xx", "unknown1xx",	/*  212..215  */
+        "unknown1xx", "unknown1xx", "unknown1xx", "unknown1xx",	/*  216..219  */
+        "Zilog Z80", "unknown1xx", "unknown1xx", "unknown1xx",	/*  220..223  */
+        "unknown1xx", "unknown1xx", "unknown1xx", "unknown1xx",	/*  224..227  */
+        "unknown1xx", "unknown1xx", "unknown1xx", "unknown1xx",	/*  228..231  */
+        "unknown1xx", "unknown1xx", "unknown1xx", "unknown1xx",	/*  232..235  */
+        "unknown1xx", "unknown1xx", "unknown1xx", "unknown1xx",	/*  236..239  */
+        "unknown1xx", "unknown1xx", "unknown1xx", "RISC-V",	/*  240..243  */
 };
 
 

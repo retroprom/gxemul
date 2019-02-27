@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2009-2010  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2009-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -361,22 +361,16 @@ void M88K_CPUComponent::Exception(int vector, int is_trap)
 }
 
 
-size_t M88K_CPUComponent::DisassembleInstruction(uint64_t vaddr, size_t maxLen,
-	unsigned char *instruction, vector<string>& result)
+size_t M88K_CPUComponent::DisassembleInstruction(uint64_t vaddr, vector<string>& result)
 {
-	const size_t instrSize = sizeof(uint32_t);
-
-	if (maxLen < instrSize) {
-		assert(false);
-		return 0;
-	}
+	size_t instrSize = sizeof(uint32_t);
+	uint32_t instructionWord;
 
 	// Read the instruction word:
-	uint32_t instructionWord = *((uint32_t *)(void*) instruction);
-	if (m_isBigEndian)
-		instructionWord = BE32_TO_HOST(instructionWord);
-	else
-		instructionWord = LE32_TO_HOST(instructionWord);
+	AddressSelect(vaddr);
+	bool readOk = ReadData(instructionWord, m_isBigEndian? BigEndian : LittleEndian);
+	if (!readOk)
+		return 0;
 
 	const uint32_t iw = instructionWord;
 
@@ -2556,21 +2550,22 @@ static void Test_M88K_CPUComponent_DefaultModel()
 
 static void Test_M88K_CPUComponent_Disassembly_Basic()
 {
-	refcount_ptr<Component> m88k_cpu =
-	    ComponentFactory::CreateComponent("m88k_cpu");
+	GXemul gxemul;
+	gxemul.GetCommandInterpreter().RunCommand("add testm88k");
+
+	refcount_ptr<Component> m88k_cpu = gxemul.GetRootComponent()->LookupPath("root.machine0.mainbus0.cpu0");
 	CPUComponent* cpu = m88k_cpu->AsCPUComponent();
+	AddressDataBus* bus = cpu->AsAddressDataBus();
 
 	vector<string> result;
 	size_t len;
-	unsigned char instruction[sizeof(uint32_t)];
-	// This assumes that the default endianness is BigEndian...
-	instruction[0] = 0x63;
-	instruction[1] = 0xdf;
-	instruction[2] = 0x00;
-	instruction[3] = 0x10;
 
-	len = cpu->DisassembleInstruction(0x12345678, sizeof(uint32_t),
-	    instruction, result);
+	// This assumes that the default endianness is BigEndian...
+	bus->AddressSelect(512);
+	uint32_t data32 = 0x63df0010;
+	bus->WriteData(data32, BigEndian);
+	
+	len = cpu->DisassembleInstruction(512, result);
 
 	UnitTest::Assert("disassembled instruction was wrong length?", len, 4);
 	UnitTest::Assert("disassembly result incomplete?", result.size(), 3);

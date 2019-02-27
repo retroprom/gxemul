@@ -1,8 +1,8 @@
-#ifndef I960_CPUCOMPONENT_H
-#define	I960_CPUCOMPONENT_H
+#ifndef RISCV_CPUCOMPONENT_H
+#define	RISCV_CPUCOMPONENT_H
 
 /*
- *  Copyright (C) 2018-2019  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -28,57 +28,57 @@
  *  SUCH DAMAGE.
  */
 
-// COMPONENT(i960_cpu)
+// COMPONENT(riscv_cpu)
 
 
 #include "CPUDyntransComponent.h"
 
 
-#define	N_I960_REGS		32
-#define	N_I960_SFRS		32
+// See https://riscv.org/wp-content/uploads/2015/01/riscv-calling.pdf for
+// calling convention.
 
+#define	N_RISCV_XREGS		32
 
-/*
-Register conventions according to
-https://people.cs.clemson.edu/~mark/subroutines/i960.html
-*/
-
-static const char* i960_regnames[N_I960_REGS] = {
-	"pfp",		// r0 = previous frame pointer
-	"sp",		// r1 = stack pointer
-	"rip",		// r2 = return instruction pointer
-	"r3", "r4", "r5", "r6", "r7",
-	"r8", "r9", "r10", "r11", "r12",
-	"r13", "r14", "r15",
-
-	"g0", "g1", "g2", "g3",	// parameters 0-3; return words 0-3
-	"g4", "g5", "g6", "g7", // parameters 4-7; temporaries
-	"g8", "g9", "g10", "g11", "g12",	// preserved accross call
-	"g13",		// structure return pointer
-	"g14",		// argument block pointer; leaf return address (HW)
-	"fp" 		// g15 = frame pointer (16-byte aligned HW)
+static const char* RISCV_regnames[N_RISCV_XREGS] = {
+	"zero",			// x0 = always zero
+	"ra",			// x1 = return address		Caller save
+	"sp",			// x2 = stack pointer		Callee save
+	"gp",			// x3 = global pointer
+	"tp",			// x4 = thread pointer
+	"t0", "t1", "t2",	// x5..x7 = temporaries		Caller save
+	"fp" /* or s0 */,	// x8 = frame pointer		Callee save
+	"s1",			// x9 = saved register		Callee save
+	"a0", "a1",		// x10..x11 = arguments and return values	Caller save
+	"a2", "a3", "a4", "a5",	// x12..x17 = arguments		Caller save
+	"a6", "a7",
+	"s2", "s3", "s4", "s5",	// x18..x27 = saved registers	Callee save
+	"s6", "s7", "s8", "s9",
+	"s10", "s11",
+	"t3", "t4", "t5", "t6",	// x28..x31 = temporaries	Caller save
 };
 
-#define	I960_G0		16	// offset to first parameter register
+
+// Each 16-bit part of an instruction is called a "parcel".
+#define	RISCV_MAX_PARCELS	12
 
 
 /***********************************************************************/
 
 
 /**
- * \brief A Component representing an Intel i960 processor.
+ * \brief A Component representing a RISC-V processor.
  */
-class I960_CPUComponent
+class RISCV_CPUComponent
 	: public CPUDyntransComponent
 {
 public:
 	/**
-	 * \brief Constructs a I960_CPUComponent.
+	 * \brief Constructs a RISCV_CPUComponent.
 	 */
-	I960_CPUComponent();
+	RISCV_CPUComponent();
 
 	/**
-	 * \brief Creates a I960_CPUComponent.
+	 * \brief Creates a RISCV_CPUComponent.
 	 */
 	static refcount_ptr<Component> Create(const ComponentCreateArgs& args);
 
@@ -103,8 +103,8 @@ protected:
 	virtual string VirtualAddressAsString(uint64_t vaddr)
 	{
 		stringstream ss;
-		ss.flags(std::ios::hex | std::ios::showbase | std::ios::right);
-		ss << (uint32_t)vaddr;
+		ss.flags(std::ios::hex | std::ios::right);
+		ss << std::setfill('0') << std::setw(16) << (uint64_t)vaddr;
 		return ss.str();
 	}
 
@@ -120,12 +120,11 @@ protected:
 	virtual void ShowRegisters(GXemul* gxemul, const vector<string>& arguments) const;
 
 private:
-	DECLARE_DYNTRANS_INSTR(b);
-	DECLARE_DYNTRANS_INSTR(lda_displacement);
-	DECLARE_DYNTRANS_INSTR(mov_lit_reg);
-	DECLARE_DYNTRANS_INSTR(sysctl);
+	// TODO: Instructions.
+	// DECLARE_DYNTRANS_INSTR(b);
+	// DECLARE_DYNTRANS_INSTR(mov_lit_reg);
 
-	void Translate(uint32_t iword, uint32_t iword2, struct DyntransIC* ic);
+	void Translate(uint16_t iwords[], int nparcels, struct DyntransIC* ic);
 	DECLARE_DYNTRANS_INSTR(ToBeTranslated);
 
 private:
@@ -134,17 +133,8 @@ private:
 	 */
 	string		m_model;
 
-	uint32_t	m_r[N_I960_REGS];	// r and g registers
-
-	// NOTE: The i960 "ip" register is m_pc.
-
-	uint32_t	m_i960_ac;		// Arithmetic control
-	uint32_t	m_i960_pc;		// Process control
-	uint32_t	m_i960_tc;		// Trace control
-
-	uint32_t	m_nr_of_valid_sfrs;	// depends on model
-	uint32_t	m_sfr[N_I960_SFRS];
+	uint32_t	m_x[N_RISCV_XREGS];
 };
 
 
-#endif	// I960_CPUCOMPONENT_H
+#endif	// RISCV_CPUCOMPONENT_H
