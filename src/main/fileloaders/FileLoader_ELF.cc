@@ -491,9 +491,10 @@ bool FileLoader_ELF::LoadIntoComponent(refcount_ptr<Component> component, ostrea
 			ELF_HEADER_VAR(sym32, sym64, uint64_t, st_value);
 			ELF_HEADER_VAR(sym32, sym64, uint64_t, st_size);
 
-			int bind = elf32? ELF32_ST_BIND(st_info) : ELF64_ST_BIND(st_info);
-			if (bind == STB_LOCAL)
-				continue;
+			// TODO: Is this needed?
+			//int bind = elf32? ELF32_ST_BIND(st_info) : ELF64_ST_BIND(st_info);
+			//if (bind == STB_LOCAL)
+			//	continue;
 
 			if (st_size == 0)
 				st_size ++;
@@ -523,8 +524,8 @@ bool FileLoader_ELF::LoadIntoComponent(refcount_ptr<Component> component, ostrea
 			}
 
 			// FOR DEBUGGING ONLY:
-			// messages << "symbol name '" << symbol << "', addr 0x" <<
-			//    st_value << ", size 0x" << st_size << "\n";
+			//messages << "symbol name '" << symbol << "', addr 0x" <<
+			//   st_value << ", size 0x" << st_size << "\n";
 
 			// Add this symbol to the symbol registry:
 			symbolRegistry->AddSymbol(symbol, st_value);

@@ -40,7 +40,9 @@ RISCV_CPUComponent::RISCV_CPUComponent()
 {
 	m_frequency = 25e6;
 	m_isBigEndian = false;
+
 	m_model = "RV64G";
+	m_extensions = RISCV_EXTENSION_I;
 
 	ResetState();
 
@@ -242,23 +244,71 @@ size_t RISCV_CPUComponent::DisassembleInstruction(uint64_t vaddr, vector<string>
 	result.push_back(ssHex.str());
 
 
-	int opcode =  42;
-
 	stringstream ssOpcode;
 	stringstream ssArgs;
 	stringstream ssComments;
+
+
+	/*
+	 *  See this URL for a nice ordered list of all RISC-V instructions:
+	 *
+	 *  https://github.com/rv8-io/rv8/blob/master/doc/pdf/riscv-instructions.pdf
+	 */
+
+	int opcode = iwords[0] & 0x7f;
+	int rd = (iwords[0] >> 7) & 31;
+	uint64_t requiredExtension = 0;
+
+	/*
+	 *  RV32I Base Integer Instruction Set:
+	 */
+	// TYPE-U:
+	// TYPE-UJ:
+	if (opcode == 0x6f) {
+		//  jal
+		int32_t simm = ((iwords[1] & 0x8000) << 5);
+		simm |= ((iwords[1] & 0x7fe0) >> 4);
+		simm |= ((iwords[1] & 0x0010) << 7);
+		simm |= ((iwords[1] & 0x000f) << 16);
+		simm |= ((iwords[0] & 0xf000) << 0);
+		simm <<= 11;
+		simm >>= 11;
+		ssOpcode << (rd ? "jal" : "j");
+		if (rd)
+			ssArgs << RISCV_regnames[rd] << ",";
+		uint64_t addr = vaddr + simm;
+		ssArgs.flags(std::ios::hex | std::ios::showbase);
+		ssArgs << std::setfill('0') << addr;
+		string symbol = GetSymbolRegistry().LookupAddress(addr, true);
+		if (symbol != "")
+			ssArgs << " <" + symbol + ">";
+		requiredExtension = RISCV_EXTENSION_I;
+	}
+	// TYPE-I:
+	// TYPE-SB:
+	// TYPE-S:
+	// TYPE-R:
 	
-	{
-		ssOpcode << "unknown_0x";
+	else {
+		ssOpcode << "unknown main opcode 0x";
 		ssOpcode.flags(std::ios::hex);
 		ssOpcode << std::setfill('0') << std::setw(2) << (int)opcode;
 	}
 
+
 	result.push_back(ssOpcode.str());
 	result.push_back(ssArgs.str());
+
 	string comments = ssComments.str();
 	if (comments.length() > 0)
 		result.push_back(comments);
+
+	if ((m_extensions & requiredExtension) != requiredExtension) {
+		if (comments.length() == 0)
+			result.push_back("");
+	
+		result.push_back("; extension not implemented by this CPU");
+	}
 
 	return sizeof(uint16_t) * nparcels;
 }

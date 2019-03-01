@@ -62,6 +62,10 @@ static const char* RISCV_regnames[N_RISCV_XREGS] = {
 #define	RISCV_MAX_PARCELS	12
 
 
+#define	RISCV_EXTENSION_C	(1 << 1)
+#define	RISCV_EXTENSION_I	(1 << 2)
+
+
 /***********************************************************************/
 
 
@@ -133,7 +137,9 @@ private:
 	 */
 	string		m_model;
 
-	uint32_t	m_x[N_RISCV_XREGS];
+	uint64_t	m_extensions;
+
+	uint64_t	m_x[N_RISCV_XREGS];
 };
 
 
