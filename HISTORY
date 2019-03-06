@@ -4842,3 +4842,5 @@ Changelog for GXemul:
 20190227	Adding a skeleton RISC-V CPU and RISC-V "virt" machine.
 		Refactoring some parts of the new framework to deal better
 		with variable length instructions during disassembly.
+20190306	Applying a patch from Andreas Gustafsson (gson) to set the
+		SA_RESTART flag in the timer sigaction call.
