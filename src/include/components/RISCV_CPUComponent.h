@@ -30,7 +30,7 @@
 
 // COMPONENT(riscv_cpu)
 
-
+#include <iomanip>
 #include "CPUDyntransComponent.h"
 
 
