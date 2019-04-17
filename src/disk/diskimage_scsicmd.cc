@@ -1145,10 +1145,11 @@ xferp->data_in[4] = 0x2c - 4;	/*  Additional length  */
 		break;
 
 	default:
-		fatal("[ UNIMPLEMENTED SCSI command 0x%02x, disk id=%i ]\n",
+		debug("[ UNIMPLEMENTED SCSI command 0x%02x, disk id=%i",
 		    xferp->cmd[0], id);
-		exit(1);
+		// exit(1);
 	}
+
 	debug(" ]\n");
 
 	return 1;

@@ -4844,3 +4844,5 @@ Changelog for GXemul:
 		with variable length instructions during disassembly.
 20190306	Applying a patch from Andreas Gustafsson (gson) to set the
 		SA_RESTART flag in the timer sigaction call.
+20190417	Applying most of NetBSD's patches for the gxemul package (all
+		except two).

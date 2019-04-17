@@ -2,7 +2,7 @@
 #define	CPUDYNTRANSCOMPONENT_H
 
 /*
- *  Copyright (C) 2008-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2008-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -47,9 +47,13 @@ class CPUDyntransComponent;
  * f points to a function to be executed.
  * arg[] contains arguments, such as pointers to registers, or immediate values.
  */
+class CPUDyntransComponent;
+struct DyntransIC;
+typedef void (*DyntransIC_t)(class CPUDyntransComponent*, struct DyntransIC*);
+
 struct DyntransIC
 {
-	void (*f)(CPUDyntransComponent*, DyntransIC*);
+	DyntransIC_t f;
 
 	union {
 		void* p;
@@ -105,7 +109,7 @@ public:
 protected:
 	// Implemented by specific CPU families:
 	virtual int GetDyntransICshift() const = 0;
-	virtual void (*GetDyntransToBeTranslated())(CPUDyntransComponent* cpu, DyntransIC* ic) = 0;
+	virtual DyntransIC_t GetDyntransToBeTranslated() = 0;
 
 	void DyntransToBeTranslatedBegin(struct DyntransIC*);
 	bool DyntransReadInstruction(uint16_t& iword, int offset = 0);

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2006-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2006-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -1715,8 +1715,15 @@ DEVICE_ACCESS(sh4)
 
 	case SH4_SCIF_BASE + SCIF_FDR:
 		/*  Nr of bytes in the TX and RX fifos, respectively:  */
-		odata = (console_charavail(d->scif_console_handle)? 1 : 0)
-		    + (d->scif_tx_fifo_cursize << 8);
+		{
+			int chars_avail = console_charavail(d->scif_console_handle);
+			if (chars_avail > 255) {
+				fatal("[ SH4: Too many chars avail; dropping some ]\n");
+				chars_avail = 255;
+			}
+			
+			odata = chars_avail | (d->scif_tx_fifo_cursize << 8);
+		}
 		break;
 
 	case SH4_SCIF_BASE + SCIF_SPTR:

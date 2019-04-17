@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -154,7 +154,11 @@ void footbridge_interrupt_assert(struct interrupt *interrupt)
 	struct footbridge_data *d = (struct footbridge_data *) interrupt->extra;
 	d->irq_status |= interrupt->line;
 
-	if ((d->irq_status & d->irq_enable) && !d->irq_asserted) {
+	// Patch from NetBSD:
+	// "fix hang interrupt issue. Always assert the irq's even if we have
+	//  already asserted the global irq for the device. prevents hangs with
+	//  cats."
+	if ((d->irq_status & d->irq_enable) /* && !d->irq_asserted */) {
 		d->irq_asserted = 1;
 		INTERRUPT_ASSERT(d->irq);
 	}
@@ -453,6 +457,42 @@ DEVICE_ACCESS(footbridge)
 		}
 
 		INTERRUPT_DEASSERT(d->timer_irq[timer_nr]);
+		break;
+
+	case SDRAM_BA_MASK:
+		if (writeflag == MEM_READ) {
+			fatal("[ footbridge read from sdram_ba_mask ]\n");
+			exit(1);
+		} else {
+			switch (idata) {
+			case SDRAM_MASK_256KB:
+			case SDRAM_MASK_512KB:
+			case SDRAM_MASK_1MB:
+			case SDRAM_MASK_2MB:
+			case SDRAM_MASK_4MB:
+			case SDRAM_MASK_8MB:
+			case SDRAM_MASK_16MB:
+			case SDRAM_MASK_32MB:
+			case SDRAM_MASK_64MB:
+			case SDRAM_MASK_128MB:
+			case SDRAM_MASK_256MB:
+				break;
+			default:
+				fatal("[ footbridge write to sdram_ba_mask "
+				    "%#llx ]\n", (long long)idata);
+				break;
+			}
+		}
+		break;
+	case SDRAM_BA_OFFSET:
+		if (writeflag == MEM_READ) {
+			fatal("[ footbridge read from sdram_ba_offset ]\n");
+			exit(1);
+		} else {
+			if (idata != 0)
+				fatal("[ footbridge write to sdram_ba_offset "
+				    "%#llx ]\n", (long long)idata);
+		}
 		break;
 
 	default:if (writeflag == MEM_READ) {

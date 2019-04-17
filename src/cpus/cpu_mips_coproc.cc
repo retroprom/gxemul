@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -2029,6 +2029,13 @@ void coproc_function(struct cpu *cpu, struct mips_coproc *cp, int cpnr,
 
 	if (cpnr < 2 && (((function & 0x03e007f8) == (COPz_MTCz << 21))
 	              || ((function & 0x03e007f8) == (COPz_DMTCz << 21)))) {
+		tmpvalue = cpu->cd.mips.gpr[rt];
+		if (copz == COPz_MTCz) {
+			/*  Sign-extend:  */
+			tmpvalue &= 0xffffffffULL;
+			if (tmpvalue & 0x80000000ULL)
+				tmpvalue |= 0xffffffff00000000ULL;
+		}
 		if (unassemble_only) {
 			debug("%s%i\t%s,", copz==COPz_DMTCz? "dmtc" : "mtc",
 			    cpnr, regnames[rt]);
@@ -2038,15 +2045,9 @@ void coproc_function(struct cpu *cpu, struct mips_coproc *cp, int cpnr,
 				debug("r%i", rd);
 			if (function & 7)
 				debug(",%i", (int)(function & 7));
+			debug(" [%016llx]", (long long)tmpvalue);
 			debug("\n");
 			return;
-		}
-		tmpvalue = cpu->cd.mips.gpr[rt];
-		if (copz == COPz_MTCz) {
-			/*  Sign-extend:  */
-			tmpvalue &= 0xffffffffULL;
-			if (tmpvalue & 0x80000000ULL)
-				tmpvalue |= 0xffffffff00000000ULL;
 		}
 		coproc_register_write(cpu, cpu->cd.mips.coproc[cpnr], rd,
 		    &tmpvalue, copz == COPz_DMTCz, function & 7);
