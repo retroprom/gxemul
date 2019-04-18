@@ -3,9 +3,49 @@ The <tt>hp700rx</tt> machine template tries to emulate a
 HP 700/RX X-terminal, with an i960CA processor.
 
 <p><b>TODO</b>:
-<br>Everything.
+<br>Everything. <font color="red">NOTHING ACTUALLY WORKS YET.</font>
+These are preliminary notes I am using during development.
 
-<p>Note: this should hopefully/eventually work:
+<h2>Alternative 1. Use the ROM from your real machine.</h2>
+
+<pre>$ gxemul -V -e hp700rx raw:0xfff80000:0:0xfff8b000:hp700rx-rom.bin
+GXemul (unknown version)      Copyright (C) 2003-2019  Anders Gavare
+
+  mainbus0
+  |-- cpu0  (i960CA, 25 MHz)
+  |-- ram0  (2 MB at offset 0x3fe00000)
+  \-- rom0  (512 KB at offset 0xfff80000)
+
+cpu0: raw:0xfff80000:0:0xfff8b000:hp700rx-rom.bin loaded
+      Raw file: entry point 0xfff8b000
+      loadable chunk: vaddr 0xfff80000, 524288 bytes
+
+GXemul> cp.u 
+0xfff8b000 <- 5c801610            mov      g0,g0        
+0xfff8b004    5c801610            mov      g0,g0        
+0xfff8b008    8c180402            lda      0x402,r3     
+0xfff8b00c    6518c483            sysctl   r3,r3,r3     
+0xfff8b010    8c180403            lda      0x403,r3     
+0xfff8b014    6518c483            sysctl   r3,r3,r3     
+0xfff8b018    8c180404            lda      0x404,r3     
+0xfff8b01c    6518c483            sysctl   r3,r3,r3     
+0xfff8b020    8c180405            lda      0x405,r3     
+0xfff8b024    6518c483            sysctl   r3,r3,r3     
+0xfff8b028    8c183000 001f0002   lda      0x001f0002,r3
+0xfff8b030    5c201e02            mov      2,r4         
+0xfff8b034    6520ca80            modpc    0,r3,r4      
+0xfff8b038    5c083e00            mov      0,sfr1       
+0xfff8b03c    5c003e00            mov      0,sfr0       
+0xfff8b040    8c203000 30000400   lda      0x30000400,r4
+0xfff8b048    5c081604            mov      r4,sp        
+0xfff8b04c    59185e0c            shlo     12,1,r3      
+0xfff8b050    6420c283            modac    r3,r3,r4     
+0xfff8b054    8c803000 c0003800   lda      0xc0003800,g0
+GXemul> quit 
+</pre>
+
+
+<h2>Alternative 2. Use the C2708A X-server binary.</h2>
 
 <pre>$ ./gxemul -V -e hp700rx C2708A 
 </pre>
@@ -16,11 +56,12 @@ way. For now, one way to load the binary with correct entry point is
 to use the "raw" file loader and specify addresses explicitly:
 
 <pre>$ ./gxemul -V -e hp700rx raw:0x3fe05000:0x2c:0x3fe05094:C2708A 
-GXemul (unknown version)      Copyright (C) 2003-2018  Anders Gavare
+GXemul (unknown version)      Copyright (C) 2003-2019  Anders Gavare
 
   mainbus0
-  |-- cpu0  (25 MHz)
-  \-- ram0  (2 MB at offset 0x3fe00000)
+  |-- cpu0  (i960CA, 25 MHz)
+  |-- ram0  (2 MB at offset 0x3fe00000)
+  \-- rom0  (512 KB at offset 0xfff80000)
 
 cpu0: raw:0x3fe05000:0x2c:0x3fe05094:C2708A loaded
       Raw file: entry point 0x3fe05094

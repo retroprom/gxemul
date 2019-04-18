@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2018-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -34,6 +34,8 @@
  *  2048 KB Base RAM
  *  8192 KB Expansion RAM
  *  2048 KB Video RAM
+ *
+ *  The ROM seems to be 512 KB at 0xfff80000.
  */
 
 #include "components/HP700RXMachine.h"
@@ -75,14 +77,23 @@ refcount_ptr<Component> HP700RXMachine::Create(const ComponentCreateArgs& args)
 	mainbus->AddChild(cpu);
 
 
+	// DRAM (guess)
 	refcount_ptr<Component> ram = ComponentFactory::CreateComponent("ram");
 	if (ram.IsNULL())
 		return NULL;
-
-	// DRAM (guess)
 	ram->SetVariableValue("memoryMappedBase", "0x3fe00000");
 	ram->SetVariableValue("memoryMappedSize", settings["ram"]);
 	mainbus->AddChild(ram);
+
+	// ROM
+	refcount_ptr<Component> rom = ComponentFactory::CreateComponent("ram");
+	if (rom.IsNULL())
+		return NULL;
+	rom->SetVariableValue("name", "\"rom0\"");
+	rom->SetVariableValue("memoryMappedBase", "0xfff80000");
+	rom->SetVariableValue("memoryMappedSize", "524288");
+	// rom->SetVariableValue("writeProtect", "true");
+	mainbus->AddChild(rom);
 
 	return machine;
 }
