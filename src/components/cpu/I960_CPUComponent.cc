@@ -801,6 +801,12 @@ DYNTRANS_INSTR(I960_CPUComponent,mov_lit_reg)
 }
 
 
+DYNTRANS_INSTR(I960_CPUComponent,mov_reg_reg)
+{
+	REG32(ic->arg[2]) = REG32(ic->arg[0]);
+}
+
+
 DYNTRANS_INSTR(I960_CPUComponent,sysctl)
 {
 	DYNTRANS_INSTR_HEAD(I960_CPUComponent)
@@ -901,6 +907,7 @@ void I960_CPUComponent::Translate(uint32_t iword, uint32_t iword2, struct Dyntra
 			// mov		NOTE: mov does not use src2.
 			f_lit_lit_reg = instr_mov_lit_reg;
 			f_lit_reg_reg = instr_mov_lit_reg;
+			f_reg_lit_reg = instr_mov_reg_reg;
 		} else if (op3 == 0x659) {
 			// sysctl
 			f_reg_reg_reg = instr_sysctl;
@@ -957,6 +964,8 @@ void I960_CPUComponent::Translate(uint32_t iword, uint32_t iword2, struct Dyntra
 		stringstream ss;
 		ss.flags(std::ios::hex);
 		ss << "unimplemented opcode 0x" << opcode;
+		if (opcode >= 0x58 && opcode <= 0x7f)
+			ss << ",0x" << ((iword >> 7) & 0xf);
 		ui->ShowDebugMessage(this, ss.str());
 	}
 }

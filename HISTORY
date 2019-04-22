@@ -4847,3 +4847,4 @@ Changelog for GXemul:
 20190417	Applying most of NetBSD's patches for the gxemul package (all
 		except two).
 20190418	Adding 512 KB ROM at 0xfff80000 in the HP 700/RX machine.
+20190422	Implementing the i960 "mov reg,reg" instruction.
