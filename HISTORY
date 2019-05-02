@@ -4848,3 +4848,6 @@ Changelog for GXemul:
 		except two).
 20190418	Adding 512 KB ROM at 0xfff80000 in the HP 700/RX machine.
 20190422	Implementing the i960 "mov reg,reg" instruction.
+20190502	Adding a section to the documentation about how to use the
+		emulator as a debugger (breakpoints, unassembling, single-
+		stepping, inspecting registers, and so on).
