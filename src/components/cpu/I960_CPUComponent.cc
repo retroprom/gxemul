@@ -813,13 +813,28 @@ DYNTRANS_INSTR(I960_CPUComponent,sysctl)
 
 	uint32_t message = REG32(ic->arg[0]);
 	int type = (message >> 8) & 0xff;
+	int field1 = message & 0xff;
+	
+	// type 0 = software interrupt, src1 = vector number
+	// type 1 = invalidate cache
+	// type 2 = configure cache, src1 = cache mode configuration, src2 = cache load address
+	// type 3 = reinitialize, src2 = first-IP, src3 = PRCB address
+	// type 4 = load control register, src1 = register group number
 	
 	if (type == 0x01) {
 		// Invalidate cache.
 		// Right now in GXemul, this is a NOP.
 		UI* ui = cpu->GetUI();
 		ui->ShowDebugMessage(cpu, "invalidating cache (no-op for now)");
+	} else if (type == 0x04) {
+		// Load control register.
+		// TODO.
+		UI* ui = cpu->GetUI();
+		stringstream ss;
+		ss << "TODO: load control register, group " << field1;
+		ui->ShowDebugMessage(cpu, ss.str());
 	} else {
+		stringstream ss;
 		
 		// We didn't actually do anything in this instruction.
 		cpu->m_executedCycles --;
@@ -831,7 +846,8 @@ DYNTRANS_INSTR(I960_CPUComponent,sysctl)
 		cpu->m_nextIC = &cpu->m_abortIC;
 	
 		UI* ui = cpu->GetUI();
-		ui->ShowDebugMessage(cpu, "unimplemented sysctl message type");
+		ss << "unimplemented sysctl message type " << type;
+		ui->ShowDebugMessage(cpu, ss.str());
 	}
 }
 
