@@ -17,10 +17,10 @@
 
 <p><br>
 Here are some things, in no specific order, that I'd like to fix or
-implement in GXemul. (Some items in this list are perhaps already fixed.)
+implement in GXemul. Some items in this list are perhaps already fixed.
 
-<p>This list is split between the new framework (written in C++, version 0.6),
-and the older framework which was written in C.
+<p>This list is split between the new unfinished framework, currently
+under development, and the older framework which was written in C.
 
 <p>
 <ul>
@@ -29,6 +29,22 @@ and the older framework which was written in C.
 	<p>
 	<li><a href="#release">Release checklist</a>
 </ul>
+
+
+
+<p>
+Mini-shortlist:
+<pre>
+Try OpenBSD 6.5 for all supported machine types.
+Banner-background-color at top of web pages.
+Responsive layout on homepage for e.g. mobile phones. (Width.)
+man page: move stuff about new framework further down
+New commands: find (scan for string or value in emulated memory), and put string. In both frameworks!
+Compact mode trace in the new framework: a column to the right with delta EXCEPT program counter deltas.
+Movie of O2 PROM booting, detailing what works (mouse pointer, RAM amount) and what doesn't work (audio, scsi, networking).
+Continue on i960.
+</pre>
+
 
 
 <p><br><h4><a name="new">New framework</a></h4>
@@ -41,6 +57,29 @@ and the older framework which was written in C.
 
 ------------------------------------------------------------------------
 </i>
+
+  [ ]   Intel i960 CPU and machine modes.
+
+	[/]  i960 instruction disassembly.
+		[X]  i960CA
+		[ ]  Other variants.
+
+	[/]  i960 instruction execution.
+		[ ]  Enough to run the HP 700/RX ROM.
+		[ ]  Enough to run uClinux/i960.
+
+  	[ ]  HP 700/RX emulation:
+  		[ ]  Figure out memory map by running the ROM and try on
+  		     the real machine.
+  		[ ]  Interrupt controller(s)?
+  		[ ]  Graphics
+  		[ ]  Serial port(s)
+  		[ ]  Keyboard, mouse, ...
+  		[ ]  Ethernet
+
+  	[ ]  Cyclone/VH i960 evaluation board emulation (for uClinux/i960).
+
+  [ ]	Use std::shared_ptr instead of my own hack (refcount_ptr)?
 
   [/]   Cache components.
   
@@ -257,17 +296,6 @@ and the older framework which was written in C.
 	     the 16-bit-encoded variant of the rectangle drawing demo (on both
 	     64-bit and 32-bit emulated CPUs).
 	[ ]  All the other devices (interrupts, ethernet, serial, SMP, ...)
-
-  [ ]   Intel i960 CPU and machine modes.
-
-	[/]  i960 instruction disassembly.
-		[X]  i960CA
-
-	[ ]  i960 instruction execution.
-
-  	[ ]  HP 700/RX emulation.
-
-  	[ ]  Cyclone/VH i960 evaluation board emulation (for uClinux/i960).
 
   [ ]	SPARC64? Would be nice; multithreaded Niagara emulation etc.
 
@@ -630,9 +658,7 @@ and the older framework which was written in C.
    [ ]	Components (general):
 	[ ]  "help" about components could show a file:/// link to
 	     the installed documentation about that component or
-	     machine! (If it exists.) Fallback: refer to the machine or
-	     component on gxemul.sourceforge.net (but warn about
-	     versions).
+	     machine! (If it exists.)
 	[ ]  Limit where components can be added. Like "drop targets"?
 		E.g. a machine can be added at the root, but a machine can not
 		be added on a pcibus. Similarly, a pcibus can not be added
@@ -1217,7 +1243,6 @@ is kept here, so that the same mistakes may be avoided in the rewrite.]
 	<li>Update the <tt>README</tt> and <tt>RELEASE</tt> notes.
 	<li>TODO updates (i.e. set goals for the <i>next</i> release, if possible).
 	<li>HISTORY (mention the release).
-	<li>SVN branch/tag.
 	<li>Tarball creation (make_release.sh)
 	<li>Home page <i>Download page</i> update: version number and date.
 	<li>Home page <i>News page</i> update: new Release.
