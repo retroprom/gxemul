@@ -294,15 +294,22 @@ int mips_cpu_new(struct cpu *cpu, struct memory *mem, struct machine *machine,
 
 	switch (cpu->cd.mips.cpu_type.mmu_model) {
 	case MMU3K:
+		cpu->vaddr_mask = 0x00000000ffffffffULL;
 		cpu->translate_v2p = translate_v2p_mmu3k;
 		break;
 	case MMU8K:
 		cpu->translate_v2p = translate_v2p_mmu8k;
 		break;
 	case MMU10K:
+		cpu->vaddr_mask = ENTRYHI_R_MASK | ENTRYHI_VPN2_MASK_R10K | 0x1fff;
 		cpu->translate_v2p = translate_v2p_mmu10k;
 		break;
 	default:
+		if (cpu->is_32bit)
+			cpu->vaddr_mask = 0x00000000ffffffffULL;
+		else
+			cpu->vaddr_mask = ENTRYHI_R_MASK | ENTRYHI_VPN2_MASK | 0x1fff;
+
 		if (cpu->cd.mips.cpu_type.rev == MIPS_R4100)
 			cpu->translate_v2p = translate_v2p_mmu4100;
 		else
@@ -1884,6 +1891,21 @@ void mips_cpu_exception(struct cpu *cpu, int exccode, int tlb, uint64_t vaddr,
 				reg[COP0_XCONTEXT] |= ((vaddr >> 62) & 0x3) << XCONTEXT_R_SHIFT;
 
 				/*  reg[COP0_PAGEMASK] = cpu->cd.mips.coproc[0]->tlbs[0].mask & PAGEMASK_MASK;  */
+
+				// Actually, the R10000 manual says:
+				// "When either a TLB refill, TLB invalid, or TLB modified exception occurs, the
+				//  EntryHi register is loaded with the virtual page number (VPN2) and the ASID of
+				//  the virtual address that did not have a matching TLB entry."
+				// Strange that it does not mention the 2 top bits (R).
+				//
+				// However, the MIPS64 manual says:
+				// "A TLB exception (TLB Refill, XTLB Refill, TLB Invalid, or TLB Modified) causes
+				//  the bits of the virtual address corresponding to the R and VPN2 fields to be
+				//  written into the EntryHi register."
+
+				if ((reg[COP0_ENTRYHI] & ENTRYHI_ASID) != vaddr_asid)
+					fatal("[ huh? vaddr_asid 0x%02x not same as in ENTRYHI 0x%02 ]\n",
+						vaddr_asid, reg[COP0_ENTRYHI] & ENTRYHI_ASID);
 
 				if (cpu->cd.mips.cpu_type.mmu_model == MMU10K)
 					reg[COP0_ENTRYHI] = (vaddr & (ENTRYHI_R_MASK | ENTRYHI_VPN2_MASK_R10K)) | vaddr_asid;

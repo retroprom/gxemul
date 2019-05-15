@@ -532,34 +532,22 @@ static void invalidate_asid(struct cpu *cpu, unsigned int asid)
 			uint64_t mask = cp->tlbs[i].mask;
 			uint64_t pagesize = 0x1000;
 			uint64_t tmp = mask >> 13;
+
+			int nExtraMaskBits = 0;
+
 			while ((tmp & 1)) {
 				tmp >>= 1;
 				pagesize <<= 1;
+				nExtraMaskBits ++;
 			}
 			
-			uint64_t oldvaddr;
-
-			if (cpu->cd.mips.cpu_type.mmu_model == MMU10K) {
-				oldvaddr = cp->tlbs[i].hi &
-					    (ENTRYHI_VPN2_MASK_R10K | ENTRYHI_R_MASK);
-				/*  44 addressable bits:  */
-				if (oldvaddr & 0x80000000000ULL)
-					oldvaddr |= 0x3ffff00000000000ULL;
-			} else if (cpu->is_32bit) {
-				/*  MIPS32 etc.:  */
-				oldvaddr = cp->tlbs[i].hi & ENTRYHI_VPN2_MASK;
-				oldvaddr = (int32_t)oldvaddr;
-			} else {
-				/*  Assume MMU4K  */
-				oldvaddr = cp->tlbs[i].hi &
-				    (ENTRYHI_R_MASK | ENTRYHI_VPN2_MASK);
-				/*  40 addressable bits:  */
-				if (oldvaddr & 0x8000000000ULL)
-					oldvaddr |= 0x3fffff0000000000ULL;
-			}
+			if (nExtraMaskBits & 1)
+				fatal("[ MIPS invalidate_asid: weird non-factor-of-4 mask 0x%016llx ]\n", (long long)mask);
 
 			mask |= 0x1fff;
-			oldvaddr &= ~mask;
+
+			/*  The old address to remove from the cache.  */
+			uint64_t oldvaddr = cp->tlbs[i].hi & ~mask;
 
 			// printf("pagesize = %016llx mask = %016llx\n", pagesize, mask);
 			
@@ -690,9 +678,18 @@ void coproc_register_write(struct cpu *cpu,
 				tmp &= (R2K3K_ENTRYLO_PFN_MASK |
 				    R2K3K_ENTRYLO_N | R2K3K_ENTRYLO_D |
 				    R2K3K_ENTRYLO_V | R2K3K_ENTRYLO_G);
-			} else if (cpu->cd.mips.cpu_type.mmu_model == MMU4K) {
+			} else {
+				// Both MIPS III (such as R4000) and MIPS32/MIPS64 (?)
 				tmp &= (ENTRYLO_PFN_MASK | ENTRYLO_C_MASK |
 				    ENTRYLO_D | ENTRYLO_V | ENTRYLO_G);
+
+				int c = (tmp & ENTRYLO_C_MASK) >> ENTRYLO_C_SHIFT;
+				switch (c) {
+				case 2:	// Uncached
+				case 3:	// Cached
+					break;
+				default:debug("[ MIPS coproc_register_write: unimplemented c = %i ]\n", c);
+				}
 			}
 			break;
 		case COP0_BADVADDR:
@@ -740,6 +737,8 @@ void coproc_register_write(struct cpu *cpu,
 				fatal("[ cpu%i: trying to write an invalid"
 				    " pagemask 0x%08lx to COP0_PAGEMASK ]\n",
 				    cpu->cpu_id, (long)tmp);
+			// Actually just 0xfff << shift for R10000. TODO
+			tmp &= 0xffff << PAGEMASK_SHIFT;
 			unimpl = 0;
 			break;
 		case COP0_WIRED:
@@ -1686,26 +1685,7 @@ void coproc_tlbwri(struct cpu *cpu, int randomflag)
 
 		break;
 
-	default:if (cpu->cd.mips.cpu_type.mmu_model == MMU10K) {
-			oldvaddr = cp->tlbs[index].hi &
-			    (ENTRYHI_VPN2_MASK_R10K | ENTRYHI_R_MASK);
-			/*  44 addressable bits:  */
-			if (oldvaddr & 0x80000000000ULL)
-				oldvaddr |= 0x3ffff00000000000ULL;
-		} else if (cpu->is_32bit) {
-			/*  MIPS32 etc.:  */
-			oldvaddr = cp->tlbs[index].hi & ENTRYHI_VPN2_MASK;
-			oldvaddr = (int32_t)oldvaddr;
-		} else {
-			/*  Assume MMU4K  */
-			oldvaddr = cp->tlbs[index].hi &
-			    (ENTRYHI_R_MASK | ENTRYHI_VPN2_MASK);
-			/*  40 addressable bits:  */
-			if (oldvaddr & 0x8000000000ULL)
-				oldvaddr |= 0x3fffff0000000000ULL;
-		}
-
-		{
+	default:{
 			uint64_t mask = cp->tlbs[index].mask;
 			uint64_t pagesize = 0x1000;
 			uint64_t tmp = mask >> 13;
@@ -1715,7 +1695,8 @@ void coproc_tlbwri(struct cpu *cpu, int randomflag)
 			}
 			
 			mask |= 0x1fff;
-			oldvaddr &= ~mask;
+			
+			oldvaddr = cp->tlbs[index].hi & ~mask;
 
 			// printf("pagesize = %016llx mask = %016llx\n", pagesize, mask);
 			

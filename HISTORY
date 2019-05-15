@@ -4851,3 +4851,7 @@ Changelog for GXemul:
 20190502	Adding a section to the documentation about how to use the
 		emulator as a debugger (breakpoints, unassembling, single-
 		stepping, inspecting registers, and so on).
+20190515	Making sure that when invalidating virtual addresses in
+		the dyntrans cache, take into account that not all CPUs can
+		use all 64 bits for virtual addresses. This fixes a very old
+		bug which affected Glatt MU/MK.

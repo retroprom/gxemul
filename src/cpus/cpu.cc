@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -126,6 +126,15 @@ struct cpu *cpu_new(struct memory *mem, struct machine *machine,
 	if (cpu->byte_order == EMUL_UNDEFINED_ENDIAN) {
 		fatal("\ncpu_new(): Internal bug: Endianness not set.\n");
 		exit(1);
+	}
+	
+	if (cpu->vaddr_mask == 0) {
+		if (cpu->is_32bit)
+			cpu->vaddr_mask = 0x00000000ffffffffULL;
+		else
+			cpu->vaddr_mask = (int64_t)-1;
+
+		debug("\n\ncpu_new(): Warning: vaddr_mask should be set in the CPU family's cpu_new()! Assuming 0x%16llx\n\n", (long long)cpu->vaddr_mask);
 	}
 
 	return cpu;

@@ -2,7 +2,7 @@
 #define	CPU_H
 
 /*
- *  Copyright (C) 2005-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -360,6 +360,9 @@ struct cpu {
 
 	/*  A pointer to the main memory connected to this CPU.  */
 	struct memory	*mem;
+
+	/*  A mask describing which bits of a virtual address are used.  */
+	uint64_t	vaddr_mask;
 
 	int		(*run_instr)(struct cpu *cpu);
 	int		(*memory_rw)(struct cpu *cpu,
