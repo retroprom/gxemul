@@ -100,8 +100,6 @@ public:
 	 * \brief Disassembles an instruction into readable strings.
 	 *
 	 * @param vaddr The virtual address of the program counter.
-	 * @param maxLen The number of bytes in the instruction buffer.
-	 * @param instruction A pointer to a buffer containing the instruction.
 	 * @param result A vector where the implementation will add:
 	 *	<ol>
 	 *		<li>machine code bytes in a standard notation
