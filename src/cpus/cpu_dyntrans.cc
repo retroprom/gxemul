@@ -1218,13 +1218,26 @@ void DYNTRANS_INVALIDATE_TC(struct cpu *cpu, uint64_t addr, int flags)
 		// actually point to the same physical page, and if then
 		// the virtual address 0x0000000012345000 is to be invalidated,
 		// then both of those should be invalidated!
-		// printf("::::    A\n");
+		int n = 0;
+		for (r=0; r<DYNTRANS_MAX_VPH_TLB_ENTRIES; r++)
+			if (cpu->cd.DYNTRANS_ARCH.vph_tlb_entry[r].valid &&
+			    (cpu->cd.DYNTRANS_ARCH.vph_tlb_entry[r].vaddr_page
+			    & cpu->vaddr_mask) == (addr_page & cpu->vaddr_mask)) {
+				n ++;
+			}
+
+		if (n > 1)
+			printf(":::: CACHE COLLISION!\n");
+
 		for (r=0; r<DYNTRANS_MAX_VPH_TLB_ENTRIES; r++)
 			if (cpu->cd.DYNTRANS_ARCH.vph_tlb_entry[r].valid &&
 			    (cpu->cd.DYNTRANS_ARCH.vph_tlb_entry[r].vaddr_page
 			    & cpu->vaddr_mask) == (addr_page & cpu->vaddr_mask)) {
 				DYNTRANS_INVALIDATE_TLB_ENTRY(cpu, cpu->cd.DYNTRANS_ARCH.vph_tlb_entry[r].vaddr_page, flags);
-				// printf("::::    B 0x%016llx\n", (long long)cpu->cd.DYNTRANS_ARCH.vph_tlb_entry[r].vaddr_page);
+				if (n > 1) {
+					printf("::::    B 0x%016llx\n", (long
+						long)cpu->cd.DYNTRANS_ARCH.vph_tlb_entry[r].vaddr_page);
+				}
 			}
 #endif
 		return;
@@ -1546,6 +1559,19 @@ void DYNTRANS_UPDATE_TRANSLATION_TABLE(struct cpu *cpu, uint64_t vaddr_page,
 #endif
 
 	if (found < 0) {
+#ifdef DYNTRANS_MIPS
+		if ((vaddr_page >> 62) != 2) {
+			uint64_t signbitmask = ((~cpu->vaddr_mask) ^ ((~cpu->vaddr_mask) >> 1)) & 0x1fffffffffffffffULL;
+			uint64_t unusedbits = vaddr_page & ~cpu->vaddr_mask;
+
+			// DEBUGGING UNUSED BITS STUFF
+			if (((vaddr_page & signbitmask) && !(vaddr_page & unusedbits)) ||
+			    (!(vaddr_page & signbitmask) && (vaddr_page & unusedbits))) {
+				printf("HUH? signbitmask is 0x%016llx but unusedbits = 0x%016llx for vaddr 0x%016llx\n",
+					(long long)signbitmask, (long long)unusedbits, (long long)vaddr_page);
+			}
+		}
+#endif		
 		/*  Create the new TLB entry, overwriting a "random" entry:  */
 		static unsigned int x = 0;
 		r = (x++) % DYNTRANS_MAX_VPH_TLB_ENTRIES;
