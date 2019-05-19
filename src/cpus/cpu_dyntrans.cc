@@ -1204,17 +1204,13 @@ void DYNTRANS_INVALIDATE_TC(struct cpu *cpu, uint64_t addr, int flags)
 
 	/*  Quick case for _one_ virtual addresses: see note above.  */
 	if (flags & INVALIDATE_VADDR) {
-#ifdef MODE32
-		// All implemented 32-bit CPUs have address spaces where
-		// all 32 bits are used in virtual addresses. So we do not
-		// need to "scan" for hits.
 		/*  fatal("vaddr 0x%08x\n", (int)addr_page);  */
 		DYNTRANS_INVALIDATE_TLB_ENTRY(cpu, addr_page, flags);
-#else
-		// Unfortunately, for 64-bit address spaces, there can be
-		// multiple entries, and they must be invalidated based
-		// on the bits that matter. For example, on MIPS, using
-		// vaddr 0x00A0000012345678 and 0x00B000001234567c
+
+#if 0
+		// In principle, there can be multiple entries, and they must
+		// be invalidated based on the bits that matter. For example,
+		// using vaddr 0x00A0000012345678 and 0x00B000001234567c
 		// actually point to the same physical page, and if then
 		// the virtual address 0x0000000012345000 is to be invalidated,
 		// then both of those should be invalidated!
@@ -1240,6 +1236,7 @@ void DYNTRANS_INVALIDATE_TC(struct cpu *cpu, uint64_t addr, int flags)
 				}
 			}
 #endif
+
 		return;
 	}
 
@@ -1559,19 +1556,6 @@ void DYNTRANS_UPDATE_TRANSLATION_TABLE(struct cpu *cpu, uint64_t vaddr_page,
 #endif
 
 	if (found < 0) {
-#ifdef DYNTRANS_MIPS
-		if ((vaddr_page >> 62) != 2) {
-			uint64_t signbitmask = ((~cpu->vaddr_mask) ^ ((~cpu->vaddr_mask) >> 1)) & 0x1fffffffffffffffULL;
-			uint64_t unusedbits = vaddr_page & ~cpu->vaddr_mask;
-
-			// DEBUGGING UNUSED BITS STUFF
-			if (((vaddr_page & signbitmask) && !(vaddr_page & unusedbits)) ||
-			    (!(vaddr_page & signbitmask) && (vaddr_page & unusedbits))) {
-				printf("HUH? signbitmask is 0x%016llx but unusedbits = 0x%016llx for vaddr 0x%016llx\n",
-					(long long)signbitmask, (long long)unusedbits, (long long)vaddr_page);
-			}
-		}
-#endif		
 		/*  Create the new TLB entry, overwriting a "random" entry:  */
 		static unsigned int x = 0;
 		r = (x++) % DYNTRANS_MAX_VPH_TLB_ENTRIES;

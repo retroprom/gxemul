@@ -4855,3 +4855,5 @@ Changelog for GXemul:
 		the dyntrans cache, take into account that not all CPUs can
 		use all 64 bits for virtual addresses. This fixes a very old
 		bug which affected Glatt MU/MK.
+20190519	Better fix for the issue found four days ago, taking 32-bit
+		addressing (UX=0) on 64-bit MIPS CPUs into account.
