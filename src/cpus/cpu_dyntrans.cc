@@ -1205,9 +1205,10 @@ void DYNTRANS_INVALIDATE_TC(struct cpu *cpu, uint64_t addr, int flags)
 	/*  Quick case for _one_ virtual addresses: see note above.  */
 	if (flags & INVALIDATE_VADDR) {
 		/*  fatal("vaddr 0x%08x\n", (int)addr_page);  */
-		DYNTRANS_INVALIDATE_TLB_ENTRY(cpu, addr_page, flags);
 
-#if 0
+#ifdef MODE32
+		DYNTRANS_INVALIDATE_TLB_ENTRY(cpu, addr_page, flags);
+#else
 		// In principle, there can be multiple entries, and they must
 		// be invalidated based on the bits that matter. For example,
 		// using vaddr 0x00A0000012345678 and 0x00B000001234567c
@@ -1219,22 +1220,13 @@ void DYNTRANS_INVALIDATE_TC(struct cpu *cpu, uint64_t addr, int flags)
 			if (cpu->cd.DYNTRANS_ARCH.vph_tlb_entry[r].valid &&
 			    (cpu->cd.DYNTRANS_ARCH.vph_tlb_entry[r].vaddr_page
 			    & cpu->vaddr_mask) == (addr_page & cpu->vaddr_mask)) {
+				DYNTRANS_INVALIDATE_TLB_ENTRY(cpu, cpu->cd.DYNTRANS_ARCH.vph_tlb_entry[r].vaddr_page, flags);
 				n ++;
 			}
 
 		if (n > 1)
-			printf(":::: CACHE COLLISION!\n");
-
-		for (r=0; r<DYNTRANS_MAX_VPH_TLB_ENTRIES; r++)
-			if (cpu->cd.DYNTRANS_ARCH.vph_tlb_entry[r].valid &&
-			    (cpu->cd.DYNTRANS_ARCH.vph_tlb_entry[r].vaddr_page
-			    & cpu->vaddr_mask) == (addr_page & cpu->vaddr_mask)) {
-				DYNTRANS_INVALIDATE_TLB_ENTRY(cpu, cpu->cd.DYNTRANS_ARCH.vph_tlb_entry[r].vaddr_page, flags);
-				if (n > 1) {
-					printf("::::    B 0x%016llx\n", (long
-						long)cpu->cd.DYNTRANS_ARCH.vph_tlb_entry[r].vaddr_page);
-				}
-			}
+			debug("[ DYNTRANS_INVALIDATE_TC: CACHE COLLISION vaddr 0x%016llx! ]\n",
+				(long long)addr_page);
 #endif
 
 		return;

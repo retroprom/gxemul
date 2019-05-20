@@ -4860,3 +4860,6 @@ Changelog for GXemul:
 20190519	Better fix for the issue found four days ago, taking 32-bit
 		addressing (UX=0) on 64-bit MIPS CPUs into account. The cache
 		invalidation code is now O(1) again. :-)
+20190520	Unfortunately, to make everything work with all guest OSes
+		with many different kinds of CPUs (R3000, R4000, R10000),
+		the invalidation is now O(n) again, but it works.
