@@ -19,56 +19,52 @@
 Here are some things, in no specific order, that I'd like to fix or
 implement in GXemul. Some items in this list are perhaps already fixed.
 
-<p>This list is split between the new unfinished framework, currently
-under development, and the older framework which was written in C.
 
-<p>
+
+<p><br>
+<b>Mini-shortlist:</b>
+
 <ul>
-	<li><a href="#new">New framework</a>
-	<li><a href="#legacy">Legacy framework</a>
-	<p>
-	<li><a href="#release">Release checklist</a>
+	<li>Update script for web man page function. Right now, it looks like
+		(C) source code, but I know that in the past it has looked
+		like a real man page.
+
+	<li>Web update script has some head tail bugs at the end. Fix these.
+
+	<li>Write new documentation intro from scratch.
+
+	<li>One documentation page per machine type!
+		<ul>
+			<li>Dreamcast is already its own page.
+			<li>move machines/sgio2 to a regular separate page, with NetBSD and OpenBSD installation instructions.
+		</ul>
+
+	<li>Split out debugging tips and tricks from experiments.html, rename to Debugging.html?
+
+	<li>man page: move down new framework
+
+	<li>documentation: make new framework less important, mention that it is only useful right now for disassembling i960CA code. remove "goal is to move everything to new framework" if it is still there.
+
+	<li>remove the new MIPS mode, After checking whether there are any interesting unique things there. perhaps keep M88K, i960, and RISCV.
+
+	<li>OpenBSD/sgi:
+		<ul>
+			<li>clock goes a bit too fast. Try to fix.
+			<li>OpenBSD/sgi with startx => some kind of keyboard problem.
+		</ul>
+
+	<li>New debugger commands: find (scan for string or value in emulated memory), and put string. In both frameworks!
+
+	<li>Compact mode trace in the new framework: a column to the right with delta EXCEPT program counter deltas.
+
+	<li>Continue on i960 execution, HP 700/RX emulation, etc (in the new framework)
+
+	<li>Perhaps: OpenBSD/luna88k. SCSI? Networking?
+
+	<li>Perhaps: IRIX. Networking? SCSI? Currently panics due to root vfs not available.
+
+	<li>Perhaps: Windows NT for MIPS. Currently panics in different ways (timing dependent); perhaps video related.
 </ul>
-
-
-
-<p>
-Mini-shortlist:
-<pre>
-update script for web man page function
-
-make documentation or web update script has some head tail bugs at the end
-
-write new documentation intro from scratch?
-
-one documentation page per machine type. Dreamcast is already its own page.
-
-move machines/sgio2 to a regular separate page, with NetBSD and OpenBSD installation instructions.
-rename experiments to Debugging.html?
-
-man page: move down new framework
-
-documentation: make new framework less important, mention that it is only useful right now for disassembling i960CA code.
-
-remove the new MIPS mode, After checking whether there are any interesting unique things there. perhaps keep M88K, i960, and RISCV.
-
-Try OpenBSD 6.5 for all supported machine types.
-
-OpenBSD/sgi's clock goes a bit too fast. Try to fix.
-
-OpenBSD/sgi with startx => some kind of keyboard problem.
-
-documentation: remove "goal is to move everything to new framework" if it is still there.
-
-New commands: find (scan for string or value in emulated memory), and put string. In both frameworks!
-
-Compact mode trace in the new framework: a column to the right with delta EXCEPT program counter deltas.
-
-Movie of O2 PROM booting, detailing what works (mouse pointer, RAM amount) and what doesn't work (audio, scsi, 
-networking).
-
-Continue on i960.
-</pre>
 
 
 
