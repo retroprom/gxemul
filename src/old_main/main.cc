@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -229,39 +229,15 @@ static void usage(int longusage)
 {
 
 	printf("GXemul " VERSION"    " COPYRIGHT_MSG"\n" SECONDARY_MSG);
-	printf("Read the source code and/or documentation for "
-	    "other Copyright messages.\n");
+	printf("Read the source code and/or documentation for other Copyright messages.\n");
 
-	printf("\nUsage: %s [options] -e name [additional components and files [...]]\n", progname);
-	printf("   or  %s [options] configfile\n", progname);
-	printf("   or  %s -H\n", progname);
-	printf("   or  %s -V\n", progname);
-
-	if (longusage) {
-		printf("\nOptions:\n");
-		printf("  -B           Enable snapshotting (reverse stepping support).\n");
-		printf("  -H           Display a list of available machine templates.\n");
-		printf("  -e name      Start with a machine based on template 'name'.\n");
-		printf("  -q           Quiet mode (suppress debug messages).\n");
-		printf("  -V           Start up in interactive debugging mode, paused.\n");
-		printf("\n");
-	}
+	printf("\nUsage: %s [machine, other, and general options] [file [...]]\n", progname);
+	printf("   or  %s [general options] @configfile\n", progname);
 
 	if (!longusage) {
-		printf("\nLegacy usage: %s [machine, other, and general options] [file "
-		    "[...]]\n", progname);
-		printf("          or  %s [general options] @configfile\n", progname);
-
-		printf("\nRun  %s -h  for help on command line options.\n",
-		    progname);
+		printf("\nRun  %s -h  for help on command line options.\n", progname);
 		return;
 	}
-
-	printf("\nThe following are options for the Old framework:\n");
-
-	printf("\nLegacy usage: %s [machine, other, and general options] [file "
-	    "[...]]\n", progname);
-	printf("          or  %s [general options] @configfile\n", progname);
 
 	printf("\nMachine selection options:\n");
 	printf("  -E t      try to emulate machine type t. (Use -H to get "
@@ -379,6 +355,19 @@ static void usage(int longusage)
 	    "0x100 bytes header\n"
 	    "    0xbfc00000:0x100:0xbfc00884:rom.bin   "
 	    "start with pc=0xbfc00884\n\n");
+
+	printf("\n\"New framework\" options (experimental):\n");
+	printf("\nUsage: %s [options] -e name [additional components and files [...]]\n", progname);
+	printf("   or  %s [options] configfile\n", progname);
+	printf("   or  %s -H\n", progname);
+	printf("   or  %s -V\n", progname);
+	printf("\n");
+	printf("  -B           Enable snapshotting (reverse stepping support).\n");
+	printf("  -H           Display a list of available machine templates.\n");
+	printf("  -e name      Start with a machine based on template 'name'.\n");
+	printf("  -q           Quiet mode (suppress debug messages).\n");
+	printf("  -V           Start up in interactive debugging mode, paused.\n");
+	printf("\n");
 }
 
 
