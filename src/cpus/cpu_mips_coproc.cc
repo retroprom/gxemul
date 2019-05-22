@@ -694,7 +694,8 @@ void coproc_register_write(struct cpu *cpu,
 				case 2:	// Uncached
 				case 3:	// Cached
 					break;
-				default:debug("[ MIPS coproc_register_write: unimplemented c = %i ]\n", c);
+				default:if (tmp & ENTRYLO_V)
+						debug("[ MIPS coproc_register_write: unimplemented c = %i ]\n", c);
 				}
 			}
 			break;
@@ -704,7 +705,8 @@ void coproc_register_write(struct cpu *cpu,
 			break;
 		case COP0_ENTRYLO1:
 			unimpl = 0;
-			if (cpu->cd.mips.cpu_type.mmu_model == MMU4K) {
+			// Both MIPS III (such as R4000) and MIPS32/MIPS64 (?)
+			if (cpu->cd.mips.cpu_type.mmu_model != MMU3K) {
 				tmp &= (ENTRYLO_PFN_MASK | ENTRYLO_C_MASK |
 				    ENTRYLO_D | ENTRYLO_V | ENTRYLO_G);
 			}
