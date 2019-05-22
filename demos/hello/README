@@ -46,6 +46,13 @@ file hello_ppc
 ../../gxemul -E testppc -C PPC750 hello_ppc
 
 
+RISCV (64-bit)
+--------------
+riscv64-unknown-elf-gcc -I../../src/include/testmachine -g hello.c -c -o hello_riscv.o
+riscv64-unknown-elf-ld -e f hello_riscv.o -o hello_riscv   
+file hello_riscv
+
+
 SH (32-bit)
 -----------
 
