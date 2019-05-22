@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2008-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2008-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -187,17 +187,23 @@ static void Test_FileLoader_DetectFileFormat_bout_i960()
 }
 
 static refcount_ptr<Component> SetupTestMachineAndLoad(
-	string machineName, string fileName)
+	string machineName, string fileName, bool ramAtZero)
 {
 	FileLoader fileLoader(fileName);
 	refcount_ptr<Component> machine =
 	    ComponentFactory::CreateComponent(machineName);
+	UnitTest::Assert("could not add machine type?", !machine.IsNULL());
 
 	machine->SetVariableValue("name", "\"machine\"");
 	refcount_ptr<Component> component =
 	    machine->LookupPath("machine.mainbus0.cpu0");
 	UnitTest::Assert("could not look up CPU to load into?",
 	    !component.IsNULL());
+
+	refcount_ptr<Component> ram = machine->LookupPath("machine.mainbus0.ram0");
+	UnitTest::Assert("could not look up RAM?", !ram.IsNULL());
+	if (ramAtZero)
+		ram->SetVariableValue("memoryMappedBase", "0");
 
 	stringstream messages;
 	UnitTest::Assert("could not load the file " + fileName + " for"
@@ -206,16 +212,18 @@ static refcount_ptr<Component> SetupTestMachineAndLoad(
 	return machine;
 }
 
+#if 0
 static void Test_FileLoader_Load_ELF32()
 {
+	// Yes, it is odd to load a MIPS binary into a RISC-V machine, but still...
 	refcount_ptr<Component> machine =
-	    SetupTestMachineAndLoad("testmips", "test/FileLoader_ELF_MIPS");
+	    SetupTestMachineAndLoad("riscv-virt", "test/FileLoader_ELF_MIPS", false);
 
 	// Read from CPU, to make sure the file was loaded:
 	refcount_ptr<Component> cpu =
 	    machine->LookupPath("machine.mainbus0.cpu0");
 	AddressDataBus * bus = cpu->AsAddressDataBus();
-	bus->AddressSelect((int32_t)0x80010000);
+	bus->AddressSelect((int32_t)0x00010000);
 	uint32_t word = 0x12345678;
 	bus->ReadData(word, BigEndian);
 	UnitTest::Assert("memory (CPU) wasn't filled with data from the file?",
@@ -231,11 +239,38 @@ static void Test_FileLoader_Load_ELF32()
 	UnitTest::Assert("memory (RAM) wasn't filled with data from the file?",
 	    word2, 0x006b7021);
 }
+#endif
+
+static void Test_FileLoader_Load_ELF64()
+{
+	refcount_ptr<Component> machine =
+	    SetupTestMachineAndLoad("riscv-virt", "test/FileLoader_ELF_RISCV64", true);
+
+	// Read from CPU, to make sure the file was loaded:
+	refcount_ptr<Component> cpu =
+	    machine->LookupPath("machine.mainbus0.cpu0");
+	AddressDataBus * bus = cpu->AsAddressDataBus();
+	bus->AddressSelect((int32_t)0x00010078);
+	uint32_t word = 0x12345678;
+	bus->ReadData(word, BigEndian);
+	UnitTest::Assert("memory (CPU) wasn't filled with data from the file?",
+	    word, 0x011122ec);
+
+	// Read directly from RAM too, to make sure the file was loaded:
+	refcount_ptr<Component> ram =
+	    machine->LookupPath("machine.mainbus0.ram0");
+	AddressDataBus * ramBus = ram->AsAddressDataBus();
+	ramBus->AddressSelect(0x1007c);
+	uint32_t word2 = 0x12345678;
+	ramBus->ReadData(word2, BigEndian);
+	UnitTest::Assert("memory (RAM) wasn't filled with data from the file?",
+	    word2, 0x0010aa87);
+}
 
 static void Test_FileLoader_Load_aout()
 {
 	refcount_ptr<Component> machine =
-	    SetupTestMachineAndLoad("testm88k", "test/FileLoader_A.OUT_M88K");
+	    SetupTestMachineAndLoad("testm88k", "test/FileLoader_A.OUT_M88K", true);
 
 	// Read from CPU, to make sure the file was loaded:
 	refcount_ptr<Component> cpu =
@@ -270,7 +305,8 @@ UNITTESTS(FileLoader)
 	UNITTEST(Test_FileLoader_DetectFileFormat_aout_88K);
 	UNITTEST(Test_FileLoader_DetectFileFormat_bout_i960);
 
-	UNITTEST(Test_FileLoader_Load_ELF32);
+	// UNITTEST(Test_FileLoader_Load_ELF32);
+	UNITTEST(Test_FileLoader_Load_ELF64);
 	UNITTEST(Test_FileLoader_Load_aout);
 }
 

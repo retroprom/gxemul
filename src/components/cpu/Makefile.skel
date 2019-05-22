@@ -8,7 +8,6 @@ LIBS=$(OTHERLIBS)
 OBJS=CPUComponent.o CPUDyntransComponent.o \
 	I960_CPUComponent.o \
 	M88K_CPUComponent.o \
-	MIPS_CPUComponent.o \
 	RISCV_CPUComponent.o
 
 all: $(OBJS)

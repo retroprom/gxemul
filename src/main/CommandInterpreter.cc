@@ -566,7 +566,8 @@ bool CommandInterpreter::AddKey(stringchar key)
 
 		if (!m_currentCommandString.empty()) {
 			AddLineToCommandHistory(m_currentCommandString);
-			RunCommand(m_currentCommandString);
+			bool ignoredResult;
+			RunCommand(m_currentCommandString, &ignoredResult);
 			ClearCurrentCommandBuffer();
 		} else if (m_mayBeReexecuted != "") {
 			RunCommand(m_mayBeReexecuted);
@@ -1000,8 +1001,13 @@ bool CommandInterpreter::RunCommand(const string& command, bool* pSuccess)
 
 	// ... and execute it:
 	bool success = (it->second)->Execute(*m_GXemul, arguments);
-	if (pSuccess != NULL)
+	if (pSuccess != NULL) {
 		*pSuccess = success;
+	} else {
+		if (!success) {
+			throw UnitTestFailedException("apa");
+		}
+	}
 
 	if ((it->second)->MayBeReexecutedWithoutArgs())
 		m_mayBeReexecuted = it->first;
@@ -1545,7 +1551,7 @@ static void Test_CommandInterpreter_TabCompletion_ComponentName()
 	GXemul gxemul;
 	CommandInterpreter& ci = gxemul.GetCommandInterpreter();
 
-	ci.RunCommand("add testmips");
+	ci.RunCommand("add testm88k");
 	UnitTest::Assert("initial buffer should be empty",
 	    ci.GetCurrentCommandBuffer(), "");
 
@@ -1564,7 +1570,7 @@ static void Test_CommandInterpreter_TabCompletion_ComponentNameAlreadyComplete()
 	GXemul gxemul;
 	CommandInterpreter& ci = gxemul.GetCommandInterpreter();
 
-	ci.RunCommand("add testmips");
+	ci.RunCommand("add testm88k");
 	UnitTest::Assert("initial buffer should be empty",
 	    ci.GetCurrentCommandBuffer(), "");
 
@@ -1584,8 +1590,8 @@ static void Test_CommandInterpreter_TabCompletion_ComponentNameMultiple()
 	GXemul gxemul;
 	CommandInterpreter& ci = gxemul.GetCommandInterpreter();
 
-	ci.RunCommand("add testmips");
-	ci.RunCommand("add mips_cpu mainbus0");
+	ci.RunCommand("add testm88k");
+	ci.RunCommand("add m88k_cpu mainbus0");
 	UnitTest::Assert("initial buffer should be empty",
 	    ci.GetCurrentCommandBuffer(), "");
 
@@ -1603,8 +1609,8 @@ static void Test_CommandInterpreter_TabCompletion_ComponentNameMultipleParents()
 	GXemul gxemul;
 	CommandInterpreter& ci = gxemul.GetCommandInterpreter();
 
-	ci.RunCommand("add testmips");	// root.machine0
-	ci.RunCommand("add testmips");	// root.machine1
+	ci.RunCommand("add testm88k");	// root.machine0
+	ci.RunCommand("add testm88k");	// root.machine1
 	UnitTest::Assert("initial buffer should be empty",
 	    ci.GetCurrentCommandBuffer(), "");
 
@@ -1674,7 +1680,7 @@ static void Test_CommandInterpreter_TabCompletion_CWithComponents()
 	GXemul gxemul;
 	CommandInterpreter& ci = gxemul.GetCommandInterpreter();
 
-	ci.RunCommand("add testmips");
+	ci.RunCommand("add testm88k");
 
 	ci.AddKey('c');
 	UnitTest::Assert("initial buffer contents mismatch",
@@ -1693,7 +1699,7 @@ static void Test_CommandInterpreter_TabCompletion_roWithComponents()
 	GXemul gxemul;
 	CommandInterpreter& ci = gxemul.GetCommandInterpreter();
 
-	ci.RunCommand("add testmips");
+	ci.RunCommand("add testm88k");
 
 	ci.AddKey('r');
 	ci.AddKey('o');
@@ -1713,7 +1719,7 @@ static void Test_CommandInterpreter_TabCompletion_ComponentMethods_Empty()
 	GXemul gxemul;
 	CommandInterpreter& ci = gxemul.GetCommandInterpreter();
 
-	ci.RunCommand("add testmips");
+	ci.RunCommand("add testm88k");
 
 	ci.AddKey('c');
 	ci.AddKey('p');
@@ -1729,7 +1735,7 @@ static void Test_CommandInterpreter_TabCompletion_ComponentMethods()
 	GXemul gxemul;
 	CommandInterpreter& ci = gxemul.GetCommandInterpreter();
 
-	ci.RunCommand("add testmips");
+	ci.RunCommand("add testm88k");
 
 	ci.AddKey('c');
 	ci.AddKey('p');
@@ -1746,7 +1752,7 @@ static void Test_CommandInterpreter_TabCompletion_ComponentMethods_Middle()
 	GXemul gxemul;
 	CommandInterpreter& ci = gxemul.GetCommandInterpreter();
 
-	ci.RunCommand("add testmips");
+	ci.RunCommand("add testm88k");
 
 	ci.AddKey('c');
 	ci.AddKey('p');
@@ -1771,7 +1777,7 @@ static void Test_CommandInterpreter_TabCompletion_ComponentMethods_Arg()
 	GXemul gxemul;
 	CommandInterpreter& ci = gxemul.GetCommandInterpreter();
 
-	ci.RunCommand("add testmips");
+	ci.RunCommand("add testm88k");
 
 	ci.AddKey('c');
 	ci.AddKey('p');
@@ -1798,16 +1804,17 @@ static void Test_CommandInterpreter_TabCompletion_ComponentVariables()
 	GXemul gxemul;
 	CommandInterpreter& ci = gxemul.GetCommandInterpreter();
 
-	ci.RunCommand("add testmips");
+	ci.RunCommand("add testm88k");
 
 	ci.AddKey('c');
 	ci.AddKey('p');
 	ci.AddKey('u');
 	ci.AddKey('.');
-	ci.AddKey('g');
+	ci.AddKey('s');
+	ci.AddKey('h');
 	ci.AddKey('\t');
 	UnitTest::Assert("tab completion should have caused expansion cpu -> cpu0",
-	    ci.GetCurrentCommandBuffer(), "cpu0.gp");
+	    ci.GetCurrentCommandBuffer(), "cpu0.showFunctionTrace");
 }
 
 static void Test_CommandInterpreter_TabCompletion_ComponentVariables_Max()
@@ -1897,8 +1904,8 @@ static void Test_CommandInterpreter_ComponentMethods()
 	GXemul gxemul;
 	CommandInterpreter& ci = gxemul.GetCommandInterpreter();
 
-	UnitTest::Assert("Huh? Could not add testmips.",
-	    ci.RunCommand("add testmips") == true);
+	UnitTest::Assert("Huh? Could not add testm88k.",
+	    ci.RunCommand("add testm88k") == true);
 
 	UnitTest::Assert("component method 1",
 	    ci.RunCommand("cpu") == true);
@@ -1923,15 +1930,15 @@ static void Test_CommandInterpreter_ComponentVariables_NoArgs()
 	GXemul gxemul;
 	CommandInterpreter& ci = gxemul.GetCommandInterpreter();
 
-	UnitTest::Assert("Huh? Could not add testmips.",
-	    ci.RunCommand("add testmips") == true);
+	UnitTest::Assert("Huh? Could not add testm88k.",
+	    ci.RunCommand("add testm88k") == true);
 
 	UnitTest::Assert("component variable 1",
 	    ci.RunCommand("cpu.nonexistant") == false);
 	UnitTest::Assert("component variable 2",
-	    ci.RunCommand("cpu.gp") == true);
+	    ci.RunCommand("cpu.pau") == true);
 	UnitTest::Assert("component variable 3",
-	    ci.RunCommand("root.machine0.mainbus0.cpu0.g") == true);
+	    ci.RunCommand("root.machine0.mainbus0.cpu0.pau") == true);
 }
 
 static void Test_CommandInterpreter_ComponentVariables_Ambiguous()
@@ -1940,10 +1947,10 @@ static void Test_CommandInterpreter_ComponentVariables_Ambiguous()
 	CommandInterpreter& ci = gxemul.GetCommandInterpreter();
 
 	UnitTest::Assert("Huh? Could not add testmips.",
-	    ci.RunCommand("add testmipsk") == true);
+	    ci.RunCommand("add testm88k") == true);
 
-	UnitTest::Assert("cpu.t should not work, there should be multiple matches",
-	    ci.RunCommand("cpu.t") == false);
+	UnitTest::Assert("cpu.f should not work, there should be multiple matches",
+	    ci.RunCommand("cpu.f") == false);
 }
 
 static void Test_CommandInterpreter_ComponentVariables_PartialIsOk()

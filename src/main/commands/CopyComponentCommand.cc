@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2009-2010  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2009-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -157,7 +157,7 @@ static void Test_CopyComponentCommand_Copy()
 {
 	GXemul gxemul;
 
-	gxemul.GetCommandInterpreter().RunCommand("add testmips");
+	gxemul.GetCommandInterpreter().RunCommand("add testm88k");
 
 	refcount_ptr<Component> root = gxemul.GetRootComponent();
 	UnitTest::Assert("there should initially be 1 entry under root",
@@ -165,18 +165,18 @@ static void Test_CopyComponentCommand_Copy()
 
 	gxemul.GetCommandInterpreter().RunCommand("copy machine0 root");
 
-	// The tree should now look like:
+	// The tree should now look SOMETHING like:
 	//   root
-	//   |-- machine0  [testmips]
+	//   |-- machine0  [testm88k]
 	//   |   \-- mainbus0
 	//   |       |-- ram0  (32 MB at offset 0)
-	//   |       |-- rom0  (16 MB at offset 0x1fc00000)
-	//   |       \-- cpu0  (MIPS, 100 MHz)
-	//   \-- machine1  [testmips]
+	//   |       |-- rom0  (4 MB at offset 0xff800000)
+	//   |       \-- cpu0  (88100, 50 MHz)
+	//   \-- machine1  [testm88k]
 	//       \-- mainbus0
 	//           |-- ram0  (32 MB at offset 0)
-	//           |-- rom0  (16 MB at offset 0x1fc00000)
-	//           \-- cpu0  (MIPS, 100 MHz)
+	//           |-- rom0  (4 MB at offset 0xff800000)
+	//           \-- cpu0  (88100, 50 MHz)
 
 	UnitTest::Assert("there should now be 2 entries (machine0 and machine1) under root",
 	    root->GetChildren().size(), 2);

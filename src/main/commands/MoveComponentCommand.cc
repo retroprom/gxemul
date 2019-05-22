@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2009-2010  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2009-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -161,7 +161,7 @@ static void Test_MoveComponentCommand_Move()
 {
 	GXemul gxemul;
 
-	gxemul.GetCommandInterpreter().RunCommand("add testmips");
+	gxemul.GetCommandInterpreter().RunCommand("add testm88k");
 	gxemul.GetCommandInterpreter().RunCommand("add ram");
 
 	refcount_ptr<Component> root = gxemul.GetRootComponent();
@@ -172,12 +172,10 @@ static void Test_MoveComponentCommand_Move()
 
 	// The tree should now look like:
 	//   root
-	//   \-- machine0  [testmips]
+	//   \-- machine0  [testm88k]
 	//       \-- mainbus0
+	//           |-- cpu0  (88100, 50 MHz)
 	//           |-- ram0  (32 MB at offset 0)
-	//           |-- rom0  (16 MB at offset 0x1fc00000)
-	//           |-- fb_videoram0  (15 MB at offset 0x12000000)
-	//           |-- cpu0  (MIPS, 100 MHz)
 	//           \-- ram1  (0 bytes at offset 0)
 
 	UnitTest::Assert("there should now be 1 entry (machine0) under root",

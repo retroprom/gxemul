@@ -4863,3 +4863,9 @@ Changelog for GXemul:
 20190520	Unfortunately, to make everything work with all guest OSes
 		with many different kinds of CPUs (R3000, R4000, R10000),
 		the invalidation is now O(n) again, but it works.
+20190521	De-emphasizing the new framework in the man page and in the
+		help/usage message produced when running gxemul with no
+		arguments, focusing on the old/legacy framework.
+		Removing the MIPS CPU emulation and testmips machines from
+		the new framework completely. Any MIPS enhancements and bug
+		fixes will go into the old framework only.

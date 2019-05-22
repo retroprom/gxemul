@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2008-2010  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2008-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -651,7 +651,7 @@ static void Test_CPUComponent_PreRunCheck()
 	GXemul gxemul;
 
 	// Attempting to run a cpu with nothing connected to it should FAIL!
-	gxemul.GetCommandInterpreter().RunCommand("add mips_cpu");
+	gxemul.GetCommandInterpreter().RunCommand("add m88k_cpu");
 	UnitTest::Assert("preruncheck should fail",
 	    gxemul.GetRootComponent()->PreRunCheck(&gxemul) == false);
 
@@ -664,7 +664,7 @@ static void Test_CPUComponent_PreRunCheck()
 static void Test_CPUComponent_Methods_Reexecutableness()
 {
 	refcount_ptr<Component> cpu =
-	    ComponentFactory::CreateComponent("mips_cpu");
+	    ComponentFactory::CreateComponent("m88k_cpu");
 
 	UnitTest::Assert("dump method SHOULD be re-executable"
 	    " without args", cpu->MethodMayBeReexecutedWithoutArgs("dump") == true);

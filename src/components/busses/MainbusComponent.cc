@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2008-2010  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2008-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -522,9 +522,9 @@ static void Test_MainbusComponent_PreRunCheck()
 {
 	GXemul gxemul;
 
-	gxemul.GetCommandInterpreter().RunCommand("add testmips");
+	gxemul.GetCommandInterpreter().RunCommand("add testm88k");
 
-	UnitTest::Assert("preruncheck should initially succeed for testmips",
+	UnitTest::Assert("preruncheck should initially succeed for testm88k",
 	    gxemul.GetRootComponent()->PreRunCheck(&gxemul) == true);
 
 	// Adding a second RAM component should succeed, since the initial size

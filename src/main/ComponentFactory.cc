@@ -276,7 +276,7 @@ static void Test_ComponentFactory_SimpleDummy()
 static void Test_ComponentFactory_FromTemplate()
 {
 	refcount_ptr<Component> component =
-	    ComponentFactory::CreateComponent("testmips");
+	    ComponentFactory::CreateComponent("testm88k");
 	UnitTest::Assert("component should be possible to create from template",
 	    component.IsNULL() == false);
 
