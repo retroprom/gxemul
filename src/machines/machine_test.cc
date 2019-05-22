@@ -257,7 +257,7 @@ MACHINE_SETUP(baremips)
 }
 
 
-MACHINE_SETUP(oldtestmips)
+MACHINE_SETUP(testmips)
 {
 	/*
 	 *  A MIPS test machine. Originally, this was created as a way for
@@ -314,7 +314,7 @@ MACHINE_DEFAULT_CPU(baremips)
 }
 
 
-MACHINE_DEFAULT_CPU(oldtestmips)
+MACHINE_DEFAULT_CPU(testmips)
 {
 	machine->cpu_name = strdup("5KE");
 }
@@ -329,12 +329,12 @@ MACHINE_REGISTER(baremips)
 }
 
 
-MACHINE_REGISTER(oldtestmips)
+MACHINE_REGISTER(testmips)
 {
-	MR_DEFAULT(oldtestmips, "Test-machine for MIPS",
+	MR_DEFAULT(testmips, "Test-machine for MIPS",
 	    ARCH_MIPS, MACHINE_TESTMIPS);
 
-	machine_entry_add_alias(me, "oldtestmips");
+	machine_entry_add_alias(me, "testmips");
 }
 
 
