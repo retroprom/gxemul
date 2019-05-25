@@ -164,7 +164,7 @@ FLOPPY.
 Override the default geometry; use H heads and S sectors-per-track.
 (The number of cylinders is calculated automatically.)
 .It i
-IDE. (This is the default for most machine types.)
+IDE.
 .It oOFS;
 Set the base offset for an ISO9660 filesystem on a disk image. The default 
 is 0. A suitable offset when booting from Dreamcast ISO9660 filesystem 
@@ -533,14 +533,6 @@ then this will not work; the specific cpu0 name must be supplied instead, like
 this:
 .Pp
 .Dl "machine3.mainbus0.cpu0:netbsd-GENERIC"
-.Pp
-Another example, using an SDL display component to show the contents of an
-emulated video framebuffer:
-.Pp
-.Dl "fb_videoram0:sdl()"
-.Pp
-Here, the existing component name (the framebuffer) and the component to add
-(the SDL display component) are included, but no arguments.
 .Sh BUGS
 There are many bugs. Some of the known bugs are mentioned in the TODO 
 file in the
@@ -558,6 +550,11 @@ is in general not timing-accurate. Many emulation modes try to make the
 guest operating system's clock run at the same speed as the host clock.
 However, the number of instructions executed per clock tick can
 obviously vary, depending on the current CPU load on the host.
+.Pp
+.Nm
+is in general not secure; when used as a "virtual machine" to run
+untrusted code in a guest OS, the untrusted code may be able to crash
+the emulator, or due to bugs, take over the host.
 .Sh AUTHOR
 GXemul is Copyright (C) 2003-2019  Anders Gavare <gavare@gmail.com>
 .Pp
