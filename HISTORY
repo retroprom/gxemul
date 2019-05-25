@@ -4870,3 +4870,6 @@ Changelog for GXemul:
 		the new framework completely. Any MIPS enhancements and bug
 		fixes will go into the old framework only.
 		Renaming oldtestmips back to testmips.
+20190523	Starting to move guest OS installation instructions into
+		individual machine pages, rather than having all of them
+		randomly in the general guest OS page.

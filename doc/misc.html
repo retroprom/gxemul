@@ -45,6 +45,7 @@ SUCH DAMAGE.
 
 <p><br>
 <ul>
+  <li><a href="#accuracy">Emulation accuracy</a>
   <li><a href="#devel">Writing operating system code, or
 	developing firmware, using GXemul</a>
   <li><a href="#compilercontruct">Using GXemul in compiler contruction courses</a>
@@ -63,12 +64,39 @@ SUCH DAMAGE.
 
 
 
+<p><br>
+<a name="accuracy"></a>
+<h3>Emulation accuracy:</h3>
+
+<p>GXemul is an instruction-level emulator; things that would happen in
+several steps within a real CPU are not taken into account (e.g. pipe-line
+stalls or out-of-order execution). Still, instruction-level accuracy seems
+to be enough to be able to run complete guest operating systems inside the
+emulator.
+
+<p>The existance of instruction and data caches is "faked" to let
+operating systems think that they are there, but for all practical
+purposes, these caches are non-working.
+
+<p>The emulator is in general <i>not</i> timing-accurate, neither at the
+instruction level nor on any higher level. An attempt is made to let
+emulated clocks run at the same speed as the host (i.e. an emulated timer
+running at 100 Hz will interrupt around 100 times per real second), but
+since the host speed may vary, e.g. because of other running processes,
+there is no guarantee as to how many instructions will be executed in
+each of these 100 Hz cycles.
+
+<p>If the host is very slow, the emulated clocks might even lag behind
+the real-world clock.
+
+
+
 
 <p><br>
 <a name="devel"></a>
 <h3>Writing operating system code, or developing firmware, using GXemul:</h3>
 
-Is this a good idea?  The answer is yes and no, depending on the level of
+<p>Is this a good idea?  The answer is yes and no, depending on the level of
 detail you need in your simulations. If you are developing an operating
 system or operating system kernel of your own, then the emulator can be a 
 complement to testing on real hardware.
@@ -126,7 +154,7 @@ your code during development, but it should not be fully relied on.
 <a name="compilercontruct"></a>
 <h3>Using GXemul in compiler contruction courses:</h3>
 
-If you are learning how to write a compiler, and wish to target a 
+<p>If you are learning how to write a compiler, and wish to target a 
 realistic target platform, then MIPS or ARM (as emulated by GXemul)
 might be suitable choices.
 
@@ -154,12 +182,11 @@ might be suitable choices.
 <a name="disk"></a>
 <h3>How to start the emulator with a disk image:</h3>
 
-Add <i>-d [prefixes:]diskimagefilename</i> to the command line, where prefixes
+<p>Add <i>-d [prefixes:]diskimagefilename</i> to the command line, where prefixes
 are one or more single-character options. Run <b>gxemul -h</b>
 to get a list of possible options.
 
-<p>
-Here are some examples. If you want to run a <a href="http://www.netbsd.org/ports/pmax/">NetBSD/pmax</a>
+<p>Here are some examples. If you want to run a <a href="http://www.netbsd.org/ports/pmax/">NetBSD/pmax</a>
 kernel on an emulated <a href="http://en.wikipedia.org/wiki/DECstation">DECstation</a>
 machine, you would use a command line such as this:
 <pre>
@@ -207,7 +234,7 @@ recommend it.
 <a name="tape_images"></a>
 <h3>How to start the emulator with tape images:</h3>
 
-Using emulated tape drives is a bit more complicated than disks, because a
+<p>Using emulated tape drives is a bit more complicated than disks, because a
 tape can be made up of several "files" with space in between. The solution
 I have choosen is to have one file in the host's file system space for each
 tape file. The prefix for using tapes is 't', and the filename given is
@@ -270,7 +297,7 @@ from bit-rot by now.</font>
 <a name="disk_overlays"></a>
 <h3>How to use disk image overlays:</h3>
 
-This is most likely best understood by an example:
+<p>This is most likely best understood by an example:
 
 <p><ul>
   <li>Install e.g. <a href="guestoses.html#netbsdcatsinstall">NetBSD/cats</a>.
@@ -330,7 +357,7 @@ overlay file that are in use.
 <a name="filexfer"></a>
 <h3>Transfering files to/from the guest OS:</h3>
 
-If the emulated machine supports networking (see <a 
+<p>If the emulated machine supports networking (see <a 
 href="networking.html#intro">this section</a> for more info), then the easiest
 way to transfer files is probably to use FTP or similar methods.
 
@@ -374,7 +401,7 @@ where filenames are the files or directories to transfer.
 <a name="largeimages"></a>
 <h3>How to extract large gzipped disk images:</h3>
 
-Unix filesystems usually support large files with "holes". Holes are 
+<p>Unix filesystems usually support large files with "holes". Holes are 
 zero-filled blocks that don't actually exist on disk. This is very 
 practical for emulated disk images, as it is possible to create a very 
 large disk image without using up much space at all.
@@ -417,7 +444,7 @@ count.)
 <a name="promdump"></a>
 <h3>Using a PROM dump from a real machine:</h3>
 
-In GXemul, a simple PROM/BIOS implementation is usually faked, so that
+<p>In GXemul, a simple PROM/BIOS implementation is usually faked, so that
 guest operating systems can start up. For example, if the PROM has services
 which the guest OS can call, which tell how much memory there is in a
 machine, or to print simple characters to a terminal, those can be
@@ -468,7 +495,7 @@ Useful command line options:
 
 <h4>Preparation:</h4>
 
-The ROM image first needs to be extracted from your real machine. There are
+<p>The ROM image first needs to be extracted from your real machine. There are
 several ways to do this, and it depends on your available hardware, the
 specifics of the machine in question, and how much time you have.
 
@@ -492,113 +519,6 @@ specifics of the machine in question, and how much time you have.
 
 
 
-
-<p>
-<h4>Dumping the PROM on a DECstation 5000/125:</h4>
-
-The easiest way is to hook up a serial console. The terminal must be
-able to capture output to a file.
-
-<p>These are approximately the commands that I used:
-<pre>
-        >><b>cnfg</b>                             <i>Show machine configuration</i>
-
-        >><b>printenv</b>                         <i>Show environment variables</i>
-
-        >><b>setenv more 0</b>                    <i>This turns off the More messages</i>
-
-        >><b>e -x 0xbfc00000:0xbfffffff</b>       <i>Dump the PROM data</i>
-</pre>
-
-<p>Remember that DECstations are little endian, so if the dump data
-looks like this:
-<pre>
-        bfc00000:  0x0bf0007e
-</pre>
-then the bytes in memory are actually 0x7e, 0x00, 0xf0, and 0x0b.
-
-<p>At 9600 bps, about 10KB can be dumped per minute, so it takes a while.
-Once enough of the PROM has been dumped, you can press CTRL-C to break out.
-Then, restore the more environment variable:
-<pre>
-        >><b>setenv more 24</b>
-</pre>
-
-<p>Now, convert the data you just saved (little-endian words -> bytes),
-and store in a file. Let's call this file DECstation5000_125_promdump.bin.
-<pre>
-        $ <b>decprom_dump_txt_to_bin DECstation5000_125_promdump.txt DECstation5000_125_promdump.bin</b>
-</pre>
-
-This binary image can now be used in the emulator:
-<pre>
-	$ <b>gxemul -e 3min -Qx -M128 0xbfc00000:DECstation5000_125_promdump.bin</b>
-
-	KN02-BA V5.7e   
-	?TFL:  3/scc/access (1:Ln1 reg-12: actual=0x00 xpctd=0x01) [KN02-BA]
-	?TFL:  3/scc/io (1:Ln0 tx bfr not empty. status=0X 0) [KN02-BA]
-	...
-	--More--?TFL: 3/scsi/cntl (CUX, cause= 1000002C)
-	>><b>?</b>
-	 ? [cmd]
-	 boot [[-z #] [-n] #/path [ARG...]]
-	 cat SCRPT
-	 cnfg [#]
-	 d [-bhw] [-S #] RNG VAL
-	 e [-bhwcdoux] [-S #] RNG
-	 erl [-c]
-	 go [ADR]
-	 init [#] [-m] [ARG...]
-	 ls [#]
-	 passwd [-c] [-s]
-	 printenv [EVN]
-	 restart
-	 script SCRPT
-	 setenv EVN STR
-	 sh [-belvS] [SCRPT] [ARG..]
-	 t [-l] #/STR [ARG..]
-	 unsetenv EVN
-	>><b>cnfg</b>
-	 3: KN02-BA  DEC      V5.7e    TCF0  (128 MB)
-	                                     (enet: 00-00-00-00-00-00)
-	                                     (SCSI = 7)
-	 0: PMAG-BA  DEC      V5.3a    TCF0
-	>><b>printenv</b>
-	 boot=
-	 testaction=q
-	 haltaction=h
-	 more=24
-	 #=3
-	 console=*
-	 osconsole=3
-	>>
-</pre>
-
-<p><font color="#ff0000">(The goal is to get rid of the test failures
-indicated by the PROM's tests, but it will take quite some time as there
-are other things to work on in the emulator as well. Also, making the
-PROM accept the graphics card and keyboard so that it boots with console
-on framebuffer would be nice.)</font>
-
-<p>The command line options used are: <tt>-e 3min</tt> for
-"DECstation 3min" (5000/1xx), <tt>-Q</tt> to supress the emulator's own PROM
-call emulation, <tt>-M128</tt> for 128MB RAM (because GXemul doesn't correctly
-emulate memory detection well enough for the PROM to accept, so it will
-always believe there is 128MB ram anyway), and <tt>-x</tt> is used to launch
-one xterm per serial port.
-The <tt>0xbfc00000</tt> in front of the filename tells GXemul that it is a raw
-binary file which should be loaded at a specific virtual address.
-
-
-<p><br>
-<a name="promdump_o2"><h4>Dumping the PROM on a SGI O2:</h4></a>
-
-<a href="machines/machine_sgi_ip32.html">Moved here</a>.
-
-
-
-
-</p>
 
 </body>
 </html>

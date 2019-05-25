@@ -1,0 +1,392 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <title>GXemul: Debugging code using GXemul</title>
+  <meta name="robots" content="noarchive,nofollow,noindex">
+</head>
+<body style="font-family : sans-serif;">
+
+<!-- 10 lines header.  -->
+
+<h1>GXemul: Debugging code using GXemul</h1>
+<p>
+
+<a href="./">Back to the index.</a>
+
+<!--
+
+Copyright (C) 2003-2019  Anders Gavare.  All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+3. The name of the author may not be used to endorse or promote products
+   derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+SUCH DAMAGE.
+
+-->
+
+<p><br>
+<ul>
+	<li><a href="#intro">Introduction to debugging code using GXemul</a>
+	<li><a href="#launching">Launching the emulator</a>
+	<li><a href="#unassemble">Unassembling machine code</a>
+	<li><a href="#reg">Dumping CPU registers</a>
+	<li><a href="#dump">Dumping memory contents</a>
+	<li><a href="#step">Continuing execution or Single-stepping</a>
+	<li><a href="#breakpoints">Breakpoints</a>
+	<li><a href="#trace">Function call tracing</a>
+</ul>
+
+
+
+<p><br>
+<a name="intro"></a>
+<h4>Introduction to debugging code using GXemul:</h4>
+
+<p>Apart from running entire guest operating systems,
+the emulator can also be used as a kind of debugger.
+
+<p>These sections will quickly go through some of the basic concepts and commands
+in GXemul.
+
+<p>If you want to follow along with the exact commands as specified below,
+you should start by downloading the program used in the examples. It is an 
+OpenBSD kernel for LUNA 88K:
+
+<p><a href="https://ftp.eu.openbsd.org/pub/OpenBSD/6.2/luna88k/bsd.rd">https://ftp.eu.openbsd.org/pub/OpenBSD/6.2/luna88k/bsd.rd</a>.
+
+<p>You can run <tt>file bsd.rd</tt> to check that it is of a reasonable executable file format.
+
+<pre>
+$ <b>file bsd.rd</b>
+bsd.rd: ELF 32-bit MSB executable, Motorola m88k, version 1 (SYSV), statically linked, not stripped
+</pre>
+
+
+
+
+<a name="launching"></a><h4>Launching the emulator</h4>
+
+
+<p>When starting GXemul, we need to supplying the name of the machine we want to emulate (using <tt>-e</tt>) and the 
+kernel we want to run/debug.
+
+<pre>
+$ <b>gxemul -e luna-88k bsd.rd</b>
+</pre>
+
+<p>This will start the emulator, start running the kernel, and, for this particular OpenBSD kernel (at least
+at the time of writing this text), exit at the end, because the
+emulator does not fully support running that kernel on that emulated machine type. But it is
+enough to demonstrate the various commands that you can use.
+
+<p>You really need to know what machine type you want to emulate. The emulator cannot simply load a binary
+without having a machine to load it into. There are some machine types called "testXXXX" or "bareXXXX"
+which are minimal machines with just a CPU (bareXXXX) or just a CPU plus some test devices (testXXXX),
+but these do not correspond to any real world machine.
+
+<p>The next very useful command line switch, when using the emulator as a debugger, is <tt>-V</tt>. This causes
+the emulator to start in a <i>paused state</i>, showing a <tt>GXemul&gt;</tt> prompt where commands can be entered.
+
+<pre>
+$ <b>gxemul -V -e luna-88k bsd.rd</b>
+GXemul (unknown version)    Copyright (C) 2003-2019  Anders Gavare
+Read the source code and/or documentation for other Copyright messages.
+
+Simple setup...
+    net:
+        simulated network: 10.0.0.0/8 (max outgoing: TCP=100, UDP=100)
+        simulated gateway+nameserver: 10.0.0.254 (60:50:40:30:20:10)
+        simulated nameserver uses real nameserver 192.168.8.1
+    machine:
+        memory: 112 MB
+        cpu0: 88100
+        machine: LUNA 88K
+        loading bsd.rd
+        cpu0: starting at 0x00081004
+-------------------------------------------------------------------------------
+
+GXemul> 
+</pre>
+
+
+
+<a name="unassemble"></a><h4>Unassembling machine code</h4>
+
+Next, we want to look at the code in the program that we are about to run.
+
+<pre>
+GXemul> <b>unassemble</b>
+&lt;__start>
+s00081004: c0000004	br	0x00081014	; &lt;main_start>
+s00081008: c0000003	br	0x00081014	; &lt;main_start>
+s0008100c: c0000002	br	0x00081014	; &lt;main_start>
+s00081010: c0000001	br	0x00081014	; &lt;main_start>
+&lt;main_start>
+s00081014: c80340a7	bsr	0x001512b0	; &lt;setup_psr>
+s00081018: 800080e0	stcr	r0,VBR
+s0008101c: f000d800	tb1	0,r0,0x0
+s00081020: 5d600041	or.u	r11,r0,0x41
+s00081024: 596b162c	or	r11,r11,0x162c	; &lt;cpu_hatch_mutex>
+s00081028: f000d800	tb1	0,r0,0x0
+s0008102c: 5ac00001	or	r22,r0,0x1
+s00081030: f6cb0400	xmem	r22,r11,r0
+s00081034: e8560007	bcnd	eq0,r22,0x00081050
+s00081038: f6cb1400	ld	r22,r11,r0
+s0008103c: e9b6ffff	bcnd	ne0,r22,0x00081038
+s00081040: 584003e8	or	r2,r0,0x3e8
+s00081044: 64420001	subu	r2,r2,1
+s00081048: e842ffff	bcnd	eq0,r2,0x00081044
+s0008104c: c3fffff7	br	0x00081028
+s00081050: f000d800	tb1	0,r0,0x0
+GXemul> 
+</pre>
+
+<p>In the example above, the <tt>unassemble</tt> command has been used to unassemble
+the code which is about to be executed. You don't have to write out <tt>unassemble</tt>
+all the time, you can just type <tt>u</tt>. If you type <tt>u</tt> followed by an
+address, it will try to disassemble from that address. Typing just <tt>u</tt> will
+continue unassembling from where it last unassembled, or, in the case of the first
+invocation of that command, from the program's entry point.
+
+<p>As you can see, there are annotations about <tt>&lt;main_start&gt;</tt>,
+<tt>&lt;setup_psr&gt;</tt>, and so on. Those are symbols read from the file.
+Usually, when an address is taken as an argument to a command such as <tt>unassemble</tt>,
+you can type either a numeric address (usually hexadecimal with the 0x prefix)
+or a symbol. Some simple arithmetic is allowed, typically useful to disassemble
+some distance before a symbol or similar:
+
+<pre>
+GXemul> <b>u setup_psr-0x20</b>
+s00151290: 20020028	st.d	r0,r2,0x28
+s00151294: 20020030	st.d	r0,r2,0x30
+s00151298: 20020038	st.d	r0,r2,0x38
+s0015129c: 60420040	addu	r2,r2,64
+s001512a0: f4827c0c	cmp	r4,r2,r12
+s001512a4: d864fff6	bb1	3,r4,0x0015127c
+s001512a8: f400c003	jmp	(r3)
+s001512ac: f4005800	nop
+&lt;setup_psr>
+s001512b0: 80404000	ldcr	r2,PID
+s001512b4: f0629908	extu	r3,r2,8<8>
+s001512b8: 7c830001	cmp	r4,r3,1
+s001512bc: d8440002	bb1	2,r4,0x001512c4
+s001512c0: 80008060	stcr	r0,SSBR
+s001512c4: 80008240	stcr	r0,SR1
+s001512c8: 5c408000	or.u	r2,r0,0x8000
+s001512cc: 584203f2	or	r2,r2,0x3f2	; 0x800003f2
+s001512d0: 80028022	stcr	r2,PSR
+s001512d4: f000d800	tb1	0,r0,0x0
+s001512d8: f400c001	jmp	(r1)
+&lt;set_vbr>
+s001512dc: 80604020	ldcr	r3,PSR
+GXemul> 
+</pre>
+
+
+
+<a name="reg"></a><h4>Dumping CPU registers</h4>
+
+
+<p>To dump the register contents, use the <tt>reg</tt> command:
+
+<pre>
+GXemul> <b>reg</b>
+cpu0:  pc  = 0x00081004  &lt;__start>
+cpu0:                    r1  = 0x00000000  r2  = 0x00000000  r3  = 0x00000000
+cpu0:  r4  = 0x00000000  r5  = 0x00000000  r6  = 0x00000000  r7  = 0x00000000
+cpu0:  r8  = 0x00000000  r9  = 0x00000000  r10 = 0x00000000  r11 = 0x00000000
+cpu0:  r12 = 0x00000000  r13 = 0x00000000  r14 = 0x00000000  r15 = 0x00000000
+cpu0:  r16 = 0x00000000  r17 = 0x00000000  r18 = 0x00000000  r19 = 0x00000000
+cpu0:  r20 = 0x00000000  r21 = 0x00000000  r22 = 0x00000000  r23 = 0x00000000
+cpu0:  r24 = 0x00000000  r25 = 0x00000000  r26 = 0x00000000  r27 = 0x00000000
+cpu0:  r28 = 0x00000000  r29 = 0x00000000  r30 = 0x00000000  r31 = 0x06fffc00
+</pre>
+
+<p>You can modify registers by typing commands such as <tt>r8 = r31 + 0x1234</tt>.
+
+
+
+
+
+<a name="dump"></a><h4>Dumping memory contents</h4>
+
+
+<p>Similar to <tt>unassemble</tt>, there is a <tt>dump</tt> command.
+Note that you can use register names too, not just symbol names, in the
+address expressions:
+
+<pre>
+GXemul> <b>dump pc+64</b>
+0x00081040           64420001 e842ffff c3fffff7      dB...B......
+0x00081050  f000d800 5d600020 596b7004 5ac00001  ....]`. Ykp.Z...
+0x00081060  f6cb0400 e9b60037 5c400041 58423ef8  .......7\@.AXB>.
+0x00081070  5c800047 588452c0 cc032402 f4646402  \..GX.R...$..dd.
+0x00081080  5c800047 588452c0 5ca00047 24854c1c  \..GX.R.\..G$.L.
+0x00081090  5d600040 596bc1b8 800b822b 5fe00020  ]`.@Yk.....+_.. 
+0x000810a0  5bff5000 5c600040 5863c9e4 cc03f661  [.P.\`.@Xc.....a
+0x000810b0  804040e0 594000b6 5d604900 2d4b000c  .@@.Y@..]`I.-K..
+0x000810c0  0d4b0000 f14aa008 0d8b0004 f54a580c  .K...J.......JX.
+0x000810d0  5d600041 294b1654 d9ca0004 f5405800  ]`.A)K.T.....@X.
+0x000810e0  5d600041 254b1650 15401114 5d600047  ]`.A%K.P.@..]`.G
+0x000810f0  254b4b98 59400084 5d604d00 2d4b000c  %KK.Y@..]`M.-K..
+0x00081100  59400009 2d4b000c 5d40e100 1d6a0010  Y@..-K..]@...j..
+0x00081110  2d6a0010 5c404100 24020000 c803f65d  -j..\@A.$......]
+0x00081120  81404220 17ea0008 63ff2000 c8002de1  .@B ....c. ...-.
+0x00081130  5c400020 cc00d1db 58420000 f4005800  \@. ....XB....X.
+0x00081140  c0000000                             ....            
+GXemul>
+</pre>
+
+
+
+<a name="step"></a><h4>Continuing execution or Single-stepping</h4>
+
+
+<p>Now, if you want to start running the emulation (just as if the <tt>-V</tt> command line
+option had not been used), type <tt>continue</tt> at the <tt>GXemul&gt;</tt> prompt,
+or simply <tt>c</tt>, and press enter.
+
+If not, you may want to just run a few instructions at a time in order to see where the
+program is going. By typing <tt>step</tt> (or just <tt>s</tt>) followed by a number,
+the emulator will single-step that number of instructions. If the number is omitted,
+it will execute 1.
+
+<pre>
+GXemul> <b>step 7</b>
+&lt;__start>
+s00081004: c0000004	br	0x00081014	; &lt;main_start>
+&lt;main_start>
+s00081014: c80340a7	bsr	0x001512b0	; &lt;setup_psr>
+&lt;setup_psr(0,0,0,0,0,0,0,0,..)>
+&lt;setup_psr>
+s001512b0: 80404000	ldcr	r2,PID		; PID = 0x00000007
+s001512b4: f0629908	extu	r3,r2,8&lt;8>
+s001512b8: 7c830001	cmp	r4,r3,1
+s001512bc: d8440002	bb1	2,r4,0x001512c4
+s001512c0: 80008060	stcr	r0,SSBR		; r0 = 0x00000000
+GXemul> 
+s001512c4: 80008240	stcr	r0,SR1		; r0 = 0x00000000
+GXemul>
+</pre>
+
+<p>Note that when single-stepping, as opposed to just unassembling, there may be some
+additional info as "comments" regarding register contents or other things.
+
+<p>As a convenience, when single-stepping, you can just press enter (entering a blank line), which
+will do the same thing as <tt>s 1</tt>.
+
+
+
+
+<a name="breakpoints"></a><h4>Breakpoints</h4>
+
+<p>There are two ways to set breakpoints. If you only need to set one or more breakpoints and run
+until the first breakpoint is hit, you can start the emulator with one or more <tt>-p</tt> flags.
+Here is an example:
+
+<pre>
+$ <b>gxemul -p bcopy -e luna-88k bsd.rd</b>
+</pre>
+
+<p>That will run the program until the program counter reaches the symbol (or address) <tt>bcopy</tt>.
+
+<p>Alternatively, breakpoints can be added interactively from the <tt>GXemul&gt;</tt> prompt using
+<tt>breakpoint add</tt>:
+
+<pre>
+$ <b>gxemul -V -e luna-88k bsd.rd</b>
+GXemul (unknown version)    Copyright (C) 2003-2019  Anders Gavare
+...
+
+GXemul> <b>breakpoint add bcopy</b>
+  0: 0x0014a170 (bcopy)
+GXemul> <b>c</b>
+CPU0 is associated to 2 MC88200 CMMUs
+CPU1 is associated to 2 MC88200 CMMUs
+CPU2 is associated to 2 MC88200 CMMUs
+CPU3 is associated to 2 MC88200 CMMUs
+Copyright (c) 1982, 1986, 1989, 1991, 1993
+	The Regents of the University of California.  All rights reserved.
+Copyright (c) 1995-2018 OpenBSD. All rights reserved.  https://www.OpenBSD.org
+
+OpenBSD 6.4 (RAMDISK) #0: Sat Oct 20 07:14:59 JST 2018
+    aoyama@rhea.in.nk-home.net:/w1/o/6.4/src/sys/arch/luna88k/compile/RAMDISK
+real mem = 117440512 (112MB)
+avail mem = 110448640 (105MB)
+mainbus0 at root: OMRON LUNA-88K, 25MHz
+cpu0: M88100 rev 0x3, 2 CMMU
+cpu0: M88200 (16K) rev 0x9, full Icache
+cpu0: M88200 (16K) rev 0x9, full Dcache
+clock0 at mainbus0: MK48T02
+le0 at mainbus0: address 00:00:00:00:00:00
+le0: 32 receive buffers, 8 transmit buffers
+&lt;bcopy>
+s0014a170: e84400a6	bcnd	eq0,r4,0x0014a408	; &lt;bcopy_out>
+BREAKPOINT: pc = 0x14a170
+(The instruction has not yet executed.)
+GXemul> 
+</pre>
+
+
+
+<a name="trace"></a><h4>Function call tracing</h4>
+
+<p>Function call trace is toggled using the <tt>trace</tt> command from the
+<tt>GXemul&gt;</tt> prompt, or using the <tt>-t</tt> command line option. This will attempt
+to show subroutine calls with arguments, although it does not really know the function
+signatures so it will just make a crude guess as to what an argument is.
+Each call to a subroutine should increment the indentation, and each return
+should decrement it. Sometimes it works, sometimes it doesn't. The number of
+arguments is also not known, so it just prints a bunch of them.
+
+<pre>
+$ <b>gxemul -t -p badaddr -e luna-88k bsd.rd</b>
+...
+-------------------------------------------------------------------------------
+
+&lt;__start(0,0,0,0,0,0,0,0,..)>
+  &lt;setup_psr(0,0,0,0,0,0,0,0,..)>
+  &lt;bzero(&amp;edata,0x613c8)>
+  &lt;luna88k_vector_init(0,&amp;vector_list,&amp;end,0x470000,"$",0,0,0,..)>
+    &lt;vector_init(0,&amp;vector_list,1,0x470000,"$",0,0,0,..)>
+    &lt;vector_init(&amp;kernelstart,&amp;vector_list,0,0x470000,0xc005f0fc,0xc005f09a,0xc005f0fc,0x17c3f0,..)>
+  &lt;luna88k_bootstrap(0x41000000,&amp;vector_list,0,0x470000,0xc003f0fc,0xc003f09a,0xc003f0fc,0x17c3f0,..)>
+    &lt;uvm_setpagesize(0x41000000,&amp;vector_list,0,0x470000,0xc003f0fc,0xc003f09a,0xc003f0fc,0x17c3f0,..)>
+    &lt;size_memory(0x41000000,&amp;vector_list,0,0x470000,0xc003f0fc,0xc003f09a,0xc003f0fc,0x470000,..)>
+      &lt;badaddr(0x476000,4,0,0x470000,0xc003f0fc,0xc003f09a,0xc003f0fc,0x470000,..)>
+&lt;badaddr>
+s0017d574: 81004020	ldcr	r8,PSR		; PSR = 0x800003f2
+BREAKPOINT: pc = 0x17d574
+(The instruction has not yet executed.)
+GXemul>
+</pre>
+
+<p>In this example, some of the arguments are guessed to be small integers (e.g. 0 or 4),
+large integers or general pointer values (prefixed with 0x), or addresses of known
+symbols (&amp;vector_list). Strings are also sometimes shown, if an argument looks like
+readable memory which points to a string.
+
+
+</p>
+
+</body>
+</html>

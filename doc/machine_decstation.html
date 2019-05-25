@@ -1,0 +1,840 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <title>GXemul: DECstation emulation</title>
+  <meta name="robots" content="noarchive,nofollow,noindex">
+</head>
+<body style="font-family : sans-serif;">
+
+<!-- 10 lines header.  -->
+
+<h1>GXemul: DECstation emulation</h1>
+<p>
+
+<a href="./">Back to the index.</a>
+
+<!--
+
+Copyright (C) 2006-2019  Anders Gavare.  All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+3. The name of the author may not be used to endorse or promote products
+   derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+SUCH DAMAGE.
+
+-->
+
+
+
+<p>The DECstation emulation mode is the oldest full machine mode in
+GXemul, and probably still the most complete one.
+The specific model being emulated best is the 5000/200. When emulating
+that model, the following guest operating systems can be installed and
+run:
+
+<p>
+<ul>
+	<li><a href="#netbsdpmaxinstall">NetBSD/pmax</a>
+	<li><a href="#openbsdpmaxinstall">OpenBSD/pmax</a>
+	<li><a href="#ultrixinstall">Ultrix/RISC</a>
+	<li><a href="#sprite">Sprite</a>
+	<li><a href="#declinux">Debian GNU/Linux</a>
+</ul>
+
+<p>In addition to the working operating systems above, you may also
+want to read half-finished notes on how to run
+<a href="#declinuxredhat">RedHat Linux/DECstation</a> and <a href="#mach">Mach/PMAX</a>.
+
+<p>The default processor in the emulated DECstation 5000/200 is a
+32-bit MIPS R3000, but many of the guest operating systems are also capable of
+running with a 64-bit MIPS R4000, by adding <tt><b>-C R4000</b></tt> to the
+command line.
+
+<p>Most of the <i>other</i> models in the DECstation/DECsystem family are not
+emulated well enough to run anything meaningful. One exception is the
+5000/1xx, aka 3MIN. If you are able to make a backup
+copy of the PROM from your own machine, then you can try to
+<a href="#PROM">run that in the emulator</a>.
+
+
+
+
+
+
+
+
+<p><br>
+<a name="netbsdpmaxinstall"></a>
+<h3>NetBSD/pmax:</h3>
+
+<p><a href="http://www.netbsd.org/ports/pmax/">NetBSD/pmax</a> was the
+first guest OS that could be
+<a href="http://mail-index.netbsd.org/port-pmax/2004/04/18/0000.html">installed</a>
+onto a disk image in GXemul.
+
+<p><a href="20050317-example.png"><img src="20050317-example_small.png"></a>
+
+<p>To install NetBSD/pmax onto a harddisk image in the emulator,
+follow these instructions:
+
+<p><ol>
+  <li>Create an empty harddisk image, which will be the root disk
+	that NetBSD installs itself onto:<pre>
+	<b>dd if=/dev/zero of=nbsd_pmax.img bs=1024 count=1 seek=7800000</b>
+
+</pre>
+  <li>Download a NetBSD CD-ROM iso image:<pre>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/iso/7.1.2/NetBSD-7.1.2-pmax.iso">ftp://ftp.netbsd.org/pub/NetBSD/iso/7.1.2/NetBSD-7.1.2-pmax.iso</a>
+
+</pre>
+  <li>Start the emulator like this:<pre>
+	<b>gxemul -X -e 3max -d nbsd_pmax.img -d b:NetBSD-7.1.2-pmax.iso</b>
+</pre>
+</ol>
+
+<p>NetBSD 8.0 can also be installed, but for some reason, the Xorg server
+is missing after installation, so 7.1.2 is preferred if you want to use X.
+
+<p>If you do not want to use the graphical framebuffer during the 
+install, you can skip the <b><tt>-X</tt></b> command line option.
+Remember to enter <tt>xterm</tt> instead of <tt>vt100</tt> when asked 
+about your terminal type, if you do this.
+Or you can add <b><tt>-Y 2</tt></b> to the command line options, if 
+you feel that the default framebuffer window is too large.
+
+<p>When the installation has finished, the following command should start
+NetBSD from the harddisk image:<pre>
+	<b>gxemul -X -e 3max -d nbsd_pmax.img</b>
+</pre>
+
+and log in as <tt>root</tt>. Type <tt>startx</tt> to start X windows.
+
+<p>Remove <b><tt>-X</tt></b> if you only want a serial console.
+
+<p>If you selected to install xdm, you may not be able to login as 
+root unless you also set a root password.
+
+
+
+
+
+
+<p><br>
+<a name="openbsdpmaxinstall"><h3>OpenBSD/pmax:</h3></a>
+
+<p>Installing <a href="http://www.openbsd.org/pmax.html">OpenBSD/pmax</a> is
+a bit harder than installing NetBSD/pmax. You should first read the <a
+href="#netbsdpmaxinstall">section above</a> on how to install NetBSD/pmax,
+before continuing here. If you have never installed OpenBSD on any
+architecture, then you need a great deal of patience to do this. If, on
+the other hand you are used to installing older versions of OpenBSD, then
+this should be no problem for you.
+
+<p><a href="20040710-openbsd-pmax.png"><img src="20040710-openbsd-pmax_small.png"></a>
+ <a href="openbsd-pmax-20040710.png"><img src="openbsd-pmax-20040710_small.png"></a>
+
+<p>OpenBSD/pmax died at release 2.8 of OpenBSD, so you should be
+aware of the fact that this will not give you an up-to-date OpenBSD
+system.
+
+<p>Following these instructions <i>might</i> work. If not, then use
+common sense and imagination to modify them as you see fit.
+
+<p>
+<ol>
+  <li>Create an empty harddisk image, which will be the root disk
+	that OpenBSD installs itself onto:<pre>
+	<b>dd if=/dev/zero of=obsd_pmax.img bs=1 count=512 seek=900000000</b>
+
+</pre>
+  <li>Download the entire pmax directory from the ftp server: (approx. 99 MB)<pre>
+	<b>wget -r <a href="ftp://ftp.se.openbsd.org/pub/OpenBSD/2.8/pmax/">ftp://ftp.se.openbsd.org/pub/OpenBSD/2.8/pmax/</a></b>
+
+</pre>
+
+  <li>Execute the following commands:
+<p><table border="0"><tr><td><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td><pre>
+<b>mv ftp.se.openbsd.org/pub/OpenBSD/2.8/pmax/simpleroot28.fs.gz .
+gunzip simpleroot28.fs.gz
+chmod +w simpleroot28.fs</b>		&lt;--- make sure
+</pre></td></tr></table>
+  <li>You now need to make an ISO image of the entire directory you downloaded.
+	(I recommend using <tt>mkisofs</tt> for that purpose. If you don't
+	already have <tt>mkisofs</tt> installed on your system, you need
+	to install it in order to do this.)<pre>
+	<b>mkisofs -o openbsd_pmax_2.8.iso ftp.se.openbsd.org/pub/OpenBSD/2.8/pmax</b>
+	<b>rm -rf ftp.se.openbsd.org</b>      <i>(this directory is not needed anymore)</i>
+
+</pre>
+  <li>Start the emulator with all three (!) disk images:<pre>
+	<b>gxemul -e 3max -d obsd_pmax.img -d b:simpleroot28.fs -j bsd -d c:openbsd_pmax_2.8.iso</b>
+
+</pre>
+	(If you add <tt>-X</tt>, you will run with the graphical
+	framebuffer. This is <i>REALLY</i> slow because the console has to
+	scroll a lot during the install. I don't recommend it.)
+  <p>
+  <li>Go on with the installation as you would do if you were installing on a real machine.
+	If you are not used to the OpenBSD installer, then this will most likely
+	be a very uncomfortable experience. Some important things to keep in mind are:
+	<ul>
+	  <li>rz0 is the rootdisk you wish to install onto.
+	  <li>rz1 is the simpleroot image.
+	  <li>rz2 is the CDROM containing the "install sets".
+	  <li>When asked for the "<b>root device?</b>", enter <b>rz1</b>.
+	  <li>At "<b>Enter pathname of shell or RETURN for sh:</b>", press enter.
+	  <li>At the # prompt, do the following:<pre>
+	<b>fsck /dev/rz1a</b>        (and mark the filesystem as clean)
+	<b>mount /dev/rz1a /</b>
+	<b>mkdir /kern</b>
+	<b>mkdir /mnt2</b>
+	<b>mount -t kernfs kern kern</b>
+	<b>./install</b>
+
+</pre>
+		and proceed with the install. Good luck. :-)
+	  <li>Answer "<b>y</b>" when asked if you wish to configure the network.
+		(See the section about installing NetBSD/pmax for suitable
+		network settings.)
+	  <li>Install from "<b>c</b>" (cdrom), choose "<b>rz2</b>" as the cdrom device, and "<b>/</b>" as
+		the directory containing the install sets.
+	</ul>
+  <p>
+  <li>For some unknown reason, the install script does not set the root
+	password! The first time you boot up OpenBSD after the install, you
+	need to go into single user mode and run <b>passwd root</b> to set
+	the root password, or you will not be able to log in at all!<pre>
+	<b>gxemul -e 3max -d obsd_pmax.img -d 2c:openbsd_pmax_2.8.iso -j bsd -o '-s'</b>
+</pre>
+While you are at it, you might want to extract the X11 install sets
+as well, as the installer seems to ignore them too. (Perhaps due to a bug
+in the installer, perhaps because of the way I used mkisofs.)
+<p>
+Execute the following commands in the emulator:
+<p><table border="0"><tr><td><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td><pre>
+<b>fsck /dev/rz0a
+mount /
+passwd root
+
+cd /; mount -t cd9660 /dev/rz2c /mnt; sh
+for a in /mnt/[xX]*; do tar zxvf $a; done
+ln -s /usr/X11R6/bin/Xcfbpmax /usr/X11R6/bin/X
+ln -s /dev/fb0 /dev/mouse
+echo /usr/X11R6/lib &gt;&gt; /etc/ld.so.conf
+ldconfig
+
+sync
+halt</b>
+</pre></td></tr></table>
+</ol>
+
+<p>
+NOTE: It is also possible to install via ftp instead of using a CDROM image. 
+This is not much less awkward, you still need the simpleroot filesystem 
+image, and you still have to manually add the X11 install sets and set the 
+root password, and so on.
+
+<p>
+Once you have completed the installation procedure, the following command
+will let you boot from the new rootdisk image:
+<pre>
+	<b>gxemul -e 3max -X -o '-aN' -d obsd_pmax.img -j bsd</b>
+</pre>
+
+<p>
+(Normally, you would be asked about which root device to use (<tt>rz0</tt>),
+but using <b><tt>-o '-aN'</tt></b> supresses that.)
+
+<p>
+When asked for which terminal type to use, when logging in as root,
+enter <b><tt>rcons</tt></b> if you are using the graphical framebuffer,
+<b><tt>vt100</tt></b> for text-mode.
+<br>Use <b><tt>startx</tt></b> to start X windows.
+
+
+
+
+
+
+
+
+<p><br>
+<a name="ultrixinstall"><h3>Ultrix/RISC:</h3></a>
+
+<p>Ultrix/RISC 4.x can run in GXemul on the emulated DECstation 5000/200
+machine model. Ultrix was the native OS for these machines.
+
+<p>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<a href="20040504-ultrix45-boot1.png"><img src="20040504-ultrix45-boot1_small.png"></a>
+&nbsp;&nbsp;&nbsp;
+<a href="ultrix4.5-20040706.png"><img src="ultrix4.5-20040706_small.png"></a>
+
+<p>
+The following instructions should let you install Ultrix onto a disk image:
+
+<ol>
+  <li>Create an empty harddisk image, which will be the root disk
+        that Ultrix installs itself onto:<pre>
+        <b>dd if=/dev/zero of=rootdisk.img bs=1024 count=1 seek=800000</b>
+
+</pre>
+  <li>Place your Ultrix installation media in your CDROM drive.
+	(On FreeBSD and similar systems, it is called <tt>/dev/cd0c</tt>.
+	Replace that with the name of your CDROM drive, or the name of a
+	.iso image file.) Then, start the emulator like this:<pre>
+        <b>gxemul -X -e 3max -d rootdisk.img -d bc:/dev/cd0c -j vmunix</b>
+
+</pre>
+  <li>Once the first stage of the installation is done (restoring the root
+	filesystem), you need to restart the emulator, booting from the 
+	new rootdisk, to continue the installation process.
+	This is done by removing the bootflag ('<tt>b</tt>') from the second
+	diskimage argument:<pre>
+        <b>gxemul -X -e 3max -d rootdisk.img -d c:/dev/cd0c -j vmunix</b>
+
+</pre>
+</ol>
+
+<p>
+When the installation is completed, the following command should start  
+Ultrix from the harddisk image:<pre>
+        <b>gxemul -X -e 3max -j vmunix -d rootdisk.img</b>
+</pre>
+
+<p>If you have a very fast host machine, you might experience a weird
+timer related bug, which makes it impossible to logon to the system. It is
+triggered when the emulation goes faster than any real DECstation machine
+was capable of running.
+The first thing to try is to re-attempt the login a couple of times.
+If that doesn't work, a workaround is to add
+<b><tt>-I33000000</tt></b> to fix the emulated clock speed to 33 million
+instructions per emulated second.
+If the workaround above doesn't work, you can also start up other 
+processes on the host, apart from the emulator, so that the emulator runs 
+more slowly. This is an ugly workaround, but seems to work. Once you have 
+logged in into Ultrix, you can kill the extra processes.
+
+<p>You can experiment with adding <b><tt>-Z2</tt></b> (for emulating a 
+dual-headed workstation) or even <b><tt>-Z3</tt></b> (tripple-headed), and 
+also the <b><tt>-Y2</tt></b> option for scaling down the framebuffer 
+windows by a factor 2x2.
+There is also a <b><tt>-z</tt></b> option for supplying names of X11 
+displays to use. The following example starts Ultrix on an emulated
+tripple-headed workstation, on three different displays (<tt>remote1:0.0</tt>,
+<tt>localhost:0.0</tt>, and <tt>remote2:0.0</tt>), using no scaledown:<pre>
+        <b>gxemul -N -e 3max -jgenvmunix -d rootdisk.img \
+            -XZ3 -z remote1:0.0 -z localhost:0.0 -z remote2:0.0</b>
+</pre>
+
+<p>The photo below shows a single Ultrix session running tripple-headed in
+GXemul on an Alpha 21164PC, with displays on a Sun Ultra1 (to the left),
+on the Alpha itself (in the middle), and on an HP700/RX X-terminal (8-bit
+color depth, running off the Alpha) to the right.
+
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<a href="20041209-ultrix-tripplehead.jpg"><img src="20041209-ultrix-tripplehead_small.jpg"></a>
+
+<p>The X11 displays may differ in bit depth and endianness. Unfortunately, 
+there is no way yet to set the scaledown factor on a per-window basis, so 
+the scaledown factor affects all windows.
+
+<p>(If you didn't use <tt><b>-Z<i>n</i></b></tt> during the installation, and 
+compiled your own <tt>/vmunix</tt>, then it will not contain support for 
+multiple graphics cards. To overcome this problem, use the generic kernel,
+<tt><b>-j genvmunix</b></tt>, whenever you are running the emulator with a 
+different setup than the one you used when Ultrix was installed.)
+
+<p>A note for the historically interested: OSF/1 for MIPS was quite similar
+to Ultrix, so that is possible to run as well.  If you are unsuccessful
+in installing Ultrix or OSF/1 directly in the emulator, you can always
+install it on your real machine onto a real SCSI disk, and then copy the
+contents of that SCSI disk into a file (using <b><tt>dd(1)</tt></b>), and use
+that file as a disk image file in the emulator.
+
+
+
+
+
+
+
+<p><br>
+<a name="sprite"><h3>Sprite for DECstation:</h3></a>
+
+<p>Sprite was a research operating system at the University of Berkeley.
+A copy of a Sprite harddisk image for a DECstation 5000/200 is still
+available. If you want to find out more about Sprite in general, read
+<a href="https://web.stanford.edu/~ouster/cgi-bin/spriteRetrospective.php">
+https://web.stanford.edu/~ouster/cgi-bin/spriteRetrospective.php</a>.
+
+<p>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<a href="20040711-sprite-1.png"><img src="20040711-sprite-1_small.png"></a>
+&nbsp;&nbsp;&nbsp;
+<a href="sprite-20040711.png"><img src="sprite-20040711_small.png"></a>
+
+<p>
+The following instructions should let you run Sprite in the emulator:
+
+<p>
+<ol>
+  <li>Download the Sprite harddisk image:<pre>
+<a href="https://github.com/OSPreservProject/sprite/raw/master/ds5000.bt">https://github.com/OSPreservProject/sprite/raw/master/ds5000.bt</a>
+
+(83973120 bytes, MD5 = ec84eeeb20fe77b758370d5e312e4a5e)
+</pre>
+
+  <li>Start the emulator with the following command line:<pre>
+	<b>gxemul -X -e 3max -M128 -d ds5000.bt -j vmsprite -o ''</b>
+
+</pre>
+</ol>
+
+<p>The first time you boot up with the disk image, you will be asked a number 
+of questions regarding network settings. If you feel like entering correct 
+values, then you should use the following:
+
+<p><pre>
+    Your machine's Ethernet address:    10:20:30:00:00:10
+    Your machine's IP:                  10.0.0.1
+    Subnet mask:                        0xff000000
+    Gateway's Ethernet address:         60:50:40:30:20:10
+    Gateway's IP:                       10.0.0.254
+</pre>
+
+<p>
+Unfortunately, at the end of <a href="https://raw.githubusercontent.com/OSPreservProject/sprite/master/boot.txt">https://raw.githubusercontent.com/OSPreservProject/sprite/master/boot.txt</a>, the following sad statement can be found:
+<pre>
+    The bootable Sprite image is meant to be a demonstration of Sprite, not
+    a robust Sprite system.  There are several missing things, such as 
+    floating point and network support.
+</pre>
+
+<p>Once you are logged in as root, running <b><tt>xinit</tt></b> will
+start the X11 environment.
+
+
+
+
+
+
+
+
+<p><br>
+<a name="declinux"><h3>Debian GNU/Linux for DECstation:</h3></a>
+
+<p>It is possible to run Debian GNU/Linux for DECstation in the emulator,
+on an emulated 5000/200 ("3max"). However, just choosing any 
+Linux/DECstation kernel at random for the installation will not work.
+
+<p><ul>
+  <li>Linux 2.4/DECstation DZ serial console output doesn't work too well in
+	GXemul. Linux oopses randomly, which may be due to bugs in GXemul,
+	but may also be due to bugs in the serial controller code in Linux.
+	(The speed at which serial interrupts are generated can be
+	lowered with the <tt>-U</tt> command line option, but it only
+	reduces the risk, it doesn't take away the oopses completely.)
+  <li>The Linux 2.6/DECstation DZ serial console driver doesn't work at 
+	all in the emulator, and I'm not really sure it would work on a
+	real 5000/200 either. Hopefully this will be fixed in Linux in
+	the future.
+  <li>To get around the serial console problem, the obvious solution is to
+	use a graphical framebuffer instead. Old Debian install kernels
+	supported the graphical framebuffer on the 3max, but not the
+	keyboard. (This has been fixed now, it seems.)
+  <li>For quite some time, the MIPS linux cvs tree has had support for the
+	framebuffer and keyboard, but it did not include Debian's
+	patches for networking, which made it unusable for network
+	installs. (Possibly fixed now.)
+  <li>The kernel has to be for 5000/200. This rules out using
+	the default kernel on netinst ISO images provided by Debian.
+	These ISO images boot directly into a kernel which is meant
+	for a different DECstation model.
+  <li>The kernel has to have an initrd which more or less matches the
+	version of Debian that will be installed.
+</ul>
+
+<p>Luckily, a precompiled install kernel has been made available by David 
+Muse, for Debian for R3000 DECstations, which has support for framebuffer, 
+keyboard, and networking, which works pretty well. Thanks David. :-)
+
+<p>The following steps should let you install Debian GNU/Linux for 
+DECstation onto a harddisk image in the emulator:
+
+<p>
+<ol>
+  <li>Create an empty harddisk image, which will be the root disk
+	that Debian installs itself onto:<pre>
+	<b>dd if=/dev/zero of=debian_pmax.img bs=1024 count=1 seek=6000000</b>
+
+</pre>
+  <li>Download David Muse' install kernel, and a Debian Netinstall CD-ROM:<pre>
+	<a href="http://www.firstworks.com/mips-linux-2.4.31/vmlinux-2.4.31">http://www.firstworks.com/mips-linux-2.4.31/vmlinux-2.4.31</a>
+	<a href="http://cdimage.debian.org/cdimage/archive/3.1_r6a/mipsel/iso-cd/">http://cdimage.debian.org/cdimage/archive/3.1_r6a/mipsel/iso-cd</a>/<a href="http://cdimage.debian.org/cdimage/archive/3.1_r6a/mipsel/iso-cd/debian-31r6a-mipsel-netinst.iso">debian-31r6a-mipsel-netinst.iso</a>
+
+	MD5 (vmlinux-2.4.31) = c88dc0a26b91e3646698179c18e8169b
+	MD5 (debian-31r6a-mipsel-netinst.iso) = db1bf2f8e5b24f820f37034ec1d20bdc
+</pre>
+  <p>
+  <li>Start the installation like this:<pre>
+	<b>gxemul -X -e3max -d debian_pmax.img -d debian-31r6a-mipsel-netinst.iso vmlinux-2.4.31</b>
+</pre>
+
+	<p>If everything goes well, you will see Linux' boot messages, and then
+	arrive at the language chooser.
+
+<p>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="debian-1.png"><img src="debian-1-small.png"></a>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="debian-2.png"><img src="debian-2-small.png"></a>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="debian-3.png"><img src="debian-3-small.png"></a>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="debian-4.png"><img src="debian-4-small.png"></a>
+
+	<p>There will be a warning about the keyboard
+	layout. Don't mind this. Continue, and then select <b>Detect
+	and mount CD-ROM</b> in the next menu.
+
+<p>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="debian-5.png"><img src="debian-5-small.png"></a>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="debian-6.png"><img src="debian-6-small.png"></a>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="debian-7.png"><img src="debian-7-small.png"></a>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="debian-8.png"><img src="debian-8-small.png"></a>
+
+	<p>
+	There will also be a warning about lack of loadable modules. Don't
+	mind this either, continue anyway by choosing <b>Yes</b>.
+	<p>
+	When you reach the network configuration part of the install, choose
+	<b>Configure network manually</b> and enter the following values:<pre>
+	IP address:                 <b>10.0.0.1</b>
+	Netmask:                    <b>255.0.0.0</b>
+	Gateway:                    <b>10.0.0.254</b>
+	Name server addresses:      <b>10.0.0.254</b>
+
+</pre>
+	<p>Choose <b>Erase entire disk</b> in the partitioner.
+
+	<p>Wait for the base system to be installed. This takes almost forever,
+	so you can go fetch several <a href="http://en.wikipedia.org/wiki/Jolt_Cola">Jolts</a>
+	or cups of coffee in the meanwhile.
+
+<p>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="debian-9.png"><img src="debian-9-small.png"></a>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="debian-10.png"><img src="debian-10-small.png"></a>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="debian-11.png"><img src="debian-11-small.png"></a>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="debian-12.png"><img src="debian-12-small.png"></a>
+
+	<p>Congratulations! The first phase of the installation is now completed.
+	Reboot using the following command line:<pre>
+	<b>gxemul -X -e3max -o 'root=/dev/sda1' -d debian_pmax.img vmlinux-2.4.31</b>
+
+</pre>
+	<p>The post-install step takes quite some time as well. A perfect opportunity
+	for more coffee.
+
+	<p>When asked about whether the hardware clock is set to GMT or
+	not, answer Yes.
+
+	<p>When asked about "Apt configuration", choose <b>http</b> as the method
+	to use for accessing the Debian archive.
+
+<p>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="debian-13.png"><img src="debian-13-small.png"></a>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="debian-14.png"><img src="debian-14-small.png"></a>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="debian-15.png"><img src="debian-15-small.png"></a>
+
+	<p>Downloading the packages takes almost forever. Be patient.
+
+	<p>Congratulations (again)! You are now fully done with the installation.
+
+</ol>
+
+<p><br>Debian GNU/Linux for DECstation is now installed and ready to be used.
+Use this command to boot from the installed disk image:<pre>
+	<b>gxemul -X -e3max -o 'root=/dev/sda1' -d debian_pmax.img vmlinux-2.4.31</b>
+
+</pre>
+
+
+
+
+
+
+
+
+<p><br>
+<a name="declinuxredhat"></a>
+<h3>Redhat Linux for DECstation:</h3>
+
+
+<p><a href="20041129-redhat_mips.png"><img src="20041129-redhat_mips_small.png"></a>
+
+<p>The following steps should let you run Redhat Linux for DECstation in GXemul:
+
+<p>
+<ol>
+  <li>Download a kernel. David Muse' Debian-install kernel works fine:<pre>
+	<a href="http://www.firstworks.com/mips-linux-2.4.31/vmlinux-2.4.31">http://www.firstworks.com/mips-linux-2.4.31/vmlinux-2.4.31</a>
+
+</pre>
+  <li>Download a root filesystem tree:<pre>
+	<a href="ftp://ftp.linux-mips.org/pub/linux/mips/mipsel-linux/root/mipsel-root-20011216.tgz">ftp://ftp.linux-mips.org/pub/linux/mips/mipsel-linux/root/mipsel-root-20011216.tgz</a>
+	19486676 bytes, md5 = 5bcb725c90209479cd7ead8ad0c4a414
+
+</pre>
+  <li>Create a disk image which will contain the Redhat filesystem:<pre>
+	<b>dd if=/dev/zero of=redhat_mips.img bs=1024 count=1 seek=2000000</b>
+
+</pre>
+<!--
+dd if=/dev/zero of=/dev/stdout bs=1024 count=200 >> mipsel-root-20011216.tgz
+gxemul -XY2 -e3max -d redhat_mips.img -d mipsel-root-20011216.tgz vmlinux-2.4.31
+In the three dialogs, choose English, United States, and Continue.
+Then choose Execute a shell.
+tar xfvz /dev/scsi/host0/bus0/target1/lun0/disc sbin/mke2fs sbin/fdisk
+fdisk
+-->
+  <li>This is the tricky part: on redhat_mips.img, you need to create an MS-DOS
+	(!) partition table, and then an ext2 partition. This is what Linux
+	will then see as /dev/sda1.
+	<p>I recommend you run fdisk and mke2fs and untar the archive from within
+	Debian/DECstation or <a href="#debiancats">Debian/CATS</a> running
+	inside the emulator. (Alternatively, if you are on a Linux host,
+	you could use a loopback mount, or similar. This might require
+	root access. See e.g.
+	<a href="http://www.mega-tokyo.com/osfaq2/index.php/Disk%20Images%20Under%20Linux">http://www.mega-tokyo.com/osfaq2/index.php/Disk%20Images%20Under%20Linux</a>.)
+	<p>
+	In order to actually boot the system you need to modify /etc/fstab.
+	Change<pre>
+	/dev/root               /               nfs     defaults        1 1
+	#/dev/sdc1              /               ext2    defaults        1 1
+	none                    /proc           proc    defaults        0 0
+	none                    /dev/pts        devpts  mode=0622       0 0
+
+</pre>to<pre>
+	#/dev/root              /               nfs     defaults        1 1
+	/dev/sda1               /               ext2    defaults        1 1
+	none                    /proc           proc    defaults        0 0
+	none                    /dev/pts        devpts  mode=0622       0 0
+
+</pre>(Note sda1 instead of sdc1.)
+</ol>
+
+<p>To boot Redhat linux from the disk image, use the following command line:<pre>
+	<b>gxemul -X -e3max -o "root=/dev/sda1 ro" -d redhat_mips.img vmlinux-2.4.31</b>
+
+</pre>
+If you need to boot into single user mode, change options to
+<tt><b>-o "root=/dev/sda1 rw init=/bin/sh"</b></tt>.
+
+
+
+
+
+
+
+<p><br>
+<a name="mach"><h3>Mach/PMAX:</h3></a>
+
+<p>Read the following link if you want to know more about Mach in general:
+<a href="http://www-2.cs.cmu.edu/afs/cs/project/mach/public/www/mach.html">
+http://www-2.cs.cmu.edu/afs/cs/project/mach/public/www/mach.html</a>
+
+<p>
+<font color="#ff0000">NOTE: Mach for DECstation requires some files
+(called 'startup' and 'emulator') which I haven't been able to find
+on the web. Without these, Mach will not get very far. These
+installation instructions are preliminary.
+</font>
+
+<p>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<a href="20041018-mach_pmax.png"><img src="20041018-mach_pmax_small.png"></a>
+
+<p>
+The following steps should let you experiment with running Mach
+for DECstation in the emulator:
+
+<p>
+<ol>
+  <li>Download the pmax binary distribution for Mach 3.0:<pre>
+	<a href="http://lost-contact.mit.edu/afs/athena/user/d/a/daveg/Info/Links/Mach/src/release/pmax.tar.Z">http://lost-contact.mit.edu/afs/athena/user/d/a/</a>
+	    <a href="http://lost-contact.mit.edu/afs/athena/user/d/a/daveg/Info/Links/Mach/src/release/pmax.tar.Z">daveg/Info/Links/Mach/src/release/pmax.tar.Z</a>
+	7263343 bytes, md5 = f9d76c240a6e169921a1df99ad560cc0
+
+</pre>
+  <li>Extract the Mach kernel:<pre>
+        <b>tar xfvz pmax.tar.Z pmax_mach/special/mach.boot.MK83.STD+ANY</b>
+
+</pre>
+  <li>Create an empty disk image:<pre>
+	<b>dd if=/dev/zero of=disk.img bs=1 count=512 seek=400000000</b>
+
+</pre>
+  <li>Load the contents of pmax.tar.Z onto the disk image. This is
+	complicated, and should be described in more detail some time.
+	For now, use your imagination, for example using
+	<a href="#openbsdpmaxinstall">OpenBSD/pmax</a>:
+	<pre>	disklabel -E rz1; newfs -O /dev/rz1a;
+	mount /dev/rz1a /mnt; cd /mnt; download pmax.tar.Z using ftp;
+	tar xzvf pmax.tar.Z; mv pmax_mach/* .; rmdir pmax_mach;
+	mkdir mach_servers;
+	cd mach_servers;
+	cp ../etc/mach_init .;
+	cp ../tests/test_service startup;
+	dd if=/dev/zero of=paging_file bs=65536 count=400;
+	cd /; sync; umount /mnt</pre>
+	<p>
+  <li>Start the emulator with the following command:<pre>
+	<b>gxemul -c 'put w 0x800990e0, 0' -c 'put w 0x80099144, 0' \
+	    -c 'put w 0x8004aae8, 0' -e 3max -X -d disk.img \
+	    pmax_mach/special/mach.boot.MK83.STD+ANY</b>
+
+</pre>
+</ol>
+
+<p>Earlier versions of GXemul had a configure option to enable better 
+R3000 cache emulation, but since Mach was more or less the only thing that 
+used it, I removed it. Today's version of GXemul can thus not boot 
+mach.boot.MK83.STD+ANY straight off, it has to be patched to skip the 
+cache detection.
+
+<p>The -c commands above patch the kernel to get past the cache detection.
+Thanks to Artur Bujdoso for these values.
+
+<p>TODO: Better instructions on how to create the old-style UFS disk 
+image.
+
+
+
+
+
+
+
+<p><br>
+<a name="PROM"><h3>DECstation 5000/1xx with raw PROM image:</h4></a>
+
+<p>First, make a dump of the PROM from your own 5000/1xx.
+The easiest way is to hook up a serial console. The terminal must be
+able to capture output to a file.
+
+<p>These are approximately the commands that I used:
+<pre>
+        >><b>cnfg</b>                             <i>Show machine configuration</i>
+
+        >><b>printenv</b>                         <i>Show environment variables</i>
+
+        >><b>setenv more 0</b>                    <i>This turns off the More messages</i>
+
+        >><b>e -x 0xbfc00000:0xbfffffff</b>       <i>Dump the PROM data</i>
+</pre>
+
+<p>Remember that DECstations are little endian, so if the dump data
+looks like this:
+<pre>
+        bfc00000:  0x0bf0007e
+</pre>
+then the bytes in memory are actually 0x7e, 0x00, 0xf0, and 0x0b.
+
+<p>At 9600 bps, about 10KB can be dumped per minute, so it takes a while.
+Once enough of the PROM has been dumped, you can press CTRL-C to break out.
+Then, restore the more environment variable:
+<pre>
+        >><b>setenv more 24</b>
+</pre>
+
+<p>Now, convert the data you just saved (little-endian words -> bytes),
+and store in a file. Let's call this file DECstation5000_125_promdump.bin.
+<pre>
+        $ <b>decprom_dump_txt_to_bin DECstation5000_125_promdump.txt DECstation5000_125_promdump.bin</b>
+</pre>
+
+This binary image can now be used in the emulator:
+<pre>
+	$ <b>gxemul -e 3min -Qx -M128 0xbfc00000:DECstation5000_125_promdump.bin</b>
+
+	KN02-BA V5.7e   
+	?TFL:  3/scc/access (1:Ln1 reg-12: actual=0x00 xpctd=0x01) [KN02-BA]
+	?TFL:  3/scc/io (1:Ln0 tx bfr not empty. status=0X 0) [KN02-BA]
+	...
+	--More--?TFL: 3/scsi/cntl (CUX, cause= 1000002C)
+	>><b>?</b>
+	 ? [cmd]
+	 boot [[-z #] [-n] #/path [ARG...]]
+	 cat SCRPT
+	 cnfg [#]
+	 d [-bhw] [-S #] RNG VAL
+	 e [-bhwcdoux] [-S #] RNG
+	 erl [-c]
+	 go [ADR]
+	 init [#] [-m] [ARG...]
+	 ls [#]
+	 passwd [-c] [-s]
+	 printenv [EVN]
+	 restart
+	 script SCRPT
+	 setenv EVN STR
+	 sh [-belvS] [SCRPT] [ARG..]
+	 t [-l] #/STR [ARG..]
+	 unsetenv EVN
+	>><b>cnfg</b>
+	 3: KN02-BA  DEC      V5.7e    TCF0  (128 MB)
+	                                     (enet: 00-00-00-00-00-00)
+	                                     (SCSI = 7)
+	 0: PMAG-BA  DEC      V5.3a    TCF0
+	>><b>printenv</b>
+	 boot=
+	 testaction=q
+	 haltaction=h
+	 more=24
+	 #=3
+	 console=*
+	 osconsole=3
+	>>
+</pre>
+
+<p><font color="#ff0000">(The goal is to get rid of the test failures
+indicated by the PROM's tests, but it will take quite some time as there
+are other things to work on in the emulator as well. Also, making the
+PROM accept the graphics card and keyboard so that it boots with console
+on framebuffer would be nice.)</font>
+
+<p>The command line options used are: <tt>-e 3min</tt> for
+"DECstation 3min" (5000/1xx), <tt>-Q</tt> to supress the emulator's own PROM
+call emulation, <tt>-M128</tt> for 128MB RAM (because GXemul doesn't correctly
+emulate memory detection well enough for the PROM to accept, so it will
+always believe there is 128MB ram anyway), and <tt>-x</tt> is used to launch
+one xterm per serial port.
+The <tt>0xbfc00000</tt> in front of the filename tells GXemul that it is a raw
+binary file which should be loaded at a specific virtual address.
+
+
+
+
+</p>
+
+<p><br>
+
+
+
+</body>
+</html>
+
