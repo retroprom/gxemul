@@ -38,7 +38,28 @@ still one of the guest OSes that works best.
 <p><br>The most important changes between release 0.6.1 and 0.6.2 are:
 
 <ul>
-	<li>TODO...
+	<li>When writing to mirrored RAM ranges, any dyntrans translations
+		made in either the mirror or the mirrored ranges are
+		now invalidated. This means that an emulated SGI O2 can 
+		now be used with up to 1 GB of RAM when
+		running OpenBSD/sgi as a guest OS. Previously, 256 MB
+		was the maximum amount of emulated RAM possible for
+		the SGI O2.
+
+	<p>
+	<li>Cleanup: The MIPS processor emulation implemented in the
+		"new framework", and the corresponding MIPS machine 
+		modes in the new framework, have been removed. (All
+		meaningful MIPS emulation is in the old framework anyway.)
+
+	<p>
+	<li>Various minor updates to the documentation to make it
+		easier to read and more up to date; less focus on
+		the "new framework"; more focus on <a href="intro.html#emulmodes">individual
+		emulated machine types</a> rather than just having a
+		long unsorted list of guest OS installation instructions;
+		and an introduction to <a href="debugging.html">using
+		GXemul as a debugger</a>.
 </ul>
 
 

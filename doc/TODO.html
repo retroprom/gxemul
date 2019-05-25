@@ -25,6 +25,10 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 <b>Mini-shortlist:</b>
 
 <ul>
+	<li>Try to make the vaddr fix O(1) again instead of O(n), if it
+		is possible to see if a non-canonical address has been
+		inserted into the caches.
+
 	<li>MacOS X11 headers and libraries autodetection in the configure script: /opt/X11/{include,lib}
 
 	<li>Continue on the One documentation page per machine type endeavour!
@@ -48,11 +52,16 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 
 	<li>Continue on i960 execution, HP 700/RX emulation, etc (in the new framework)
 
-	<li>Perhaps: OpenBSD/luna88k. SCSI? Networking?
+	<li>Perhaps: OpenBSD/luna88k. SCSI? Networking? Other software for Luna 88K?
 
 	<li>Perhaps: IRIX. Networking? SCSI? Currently panics due to root vfs not available.
 
 	<li>Perhaps: Windows NT for MIPS. Currently panics in different ways (timing dependent); perhaps video related.
+
+	<li>Make sure that the new framework passes all tests on i386, and in particular
+		make sure that no floating point is used in the steps counting mechanism!
+
+	<li>More floating point tests?
 </ul>
 
 
