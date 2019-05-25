@@ -16,7 +16,7 @@
 
 <!--
 
-Copyright (C) 2003-2011  Anders Gavare.  All rights reserved.
+Copyright (C) 2003-2019  Anders Gavare.  All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -203,7 +203,8 @@ unless you specify explicitly which ID number the devices should have.
 <pre>
 	$ <b>gxemul -e 3max -d disk0.raw -d disk1.raw -d 5:disk2.raw netbsd-pmax-INSTALL</b>
 </pre>
-Note: In the example above, disk2.raw will get scsi id 5.
+
+<p>Note: In the example above, disk2.raw will get scsi id 5.
 
 <p>If a filename has a 'c' prefix, or ends with ".iso", then it is assumed to be
 a CDROM device (this can be overridden with a 'd' prefix, to force a read/write disk).
@@ -212,17 +213,20 @@ CDROM images, and one harddisk image:
 <pre>
 	$ <b>gxemul -e 3max -d image.iso -d disk0.img -d c:second_cdrom.img netbsd-pmax-INSTALL</b>
 </pre>
-Usually, the device with the lowest id becomes the boot device. To override
+
+<p>Usually, the device with the lowest id becomes the boot device. To override
 this, add a 'b' prefix to one of the devices:
 <pre>
 	$ <b>gxemul -e 3max -d rootdisk.img -d bc:install-cd.iso name_of_kernel</b>
 </pre>
-If you have a physical CD-ROM drive on the host machine, say /dev/cd0c, you can
+
+<p>If you have a physical CD-ROM drive on the host machine, say /dev/cd0c, you can
 use it as a CD-ROM directly accessible from within the emulator:
 <pre>
 	$ <b>gxemul -e 3max -d rootdisk.img -d bc:/dev/cd0c name_of_kernel</b>
 </pre>
-It is probably possible to use harddisks as well this way, but I would not
+
+<p>It is probably possible to use harddisks as well this way, but I would not
 recommend it.
 
 
@@ -246,7 +250,7 @@ As an example, starting the emulator with
 <pre>
 	<b>-d t4:mytape.img</b>
 </pre>
-will cause SCSI id 4 to be a tape device, using the following file number
+<p>will cause SCSI id 4 to be a tape device, using the following file number
 to name translation scheme:
 <p>
 <center>
@@ -366,14 +370,14 @@ emulated machine which supports disks (either SCSI or IDE). Any file can
 be supplied as a disk image. For example, consider the following:<pre>
 	$ <b>gxemul -XEcats -d nbsd_cats.img -d archive.tar.gz netbsd-GENERIC</b>
 </pre>
-This will start NetBSD/cats with <tt>nbsd_cats.img</tt> as IDE master on
+<p>This will start NetBSD/cats with <tt>nbsd_cats.img</tt> as IDE master on
 controller 0 (wd0), and <tt>archive.tar.gz</tt> as IDE slave on controller
 0 (wd1). From inside NetBSD, it is now possible to extract the files using 
 the following command:<pre>
 	(inside emulated NetBSD/cats)
 	# <b>tar zxvf /dev/wd1c</b>
 </pre>
-Don't worry if NetBSD complains about lack of disklabel; it doesn't
+<p>Don't worry if NetBSD complains about lack of disklabel; it doesn't
 matter. On some machines, NetBSD uses <tt>wd1d</tt> instead of 
 <tt>wd1c</tt> for the entire disk.
 There is also a minor problem: reading the end of the disk image. If you 
@@ -383,15 +387,16 @@ first with some zeroes.
 <p>Transfering files <i>out</i> from the emulated operating system to the 
 host can be done the same way. First, prepare an empty archive file:<pre>
 	$ <b>dd if=/dev/zero of=newarchive.tar bs=1024 count=1 seek=10000</b>
-</pre>This example created a 10 MB empty file. Then, start the emulator
+</pre>
+<p>This example created a 10 MB empty file. Then, start the emulator
 like this:<pre>
 	$ <b>gxemul -XEcats -d nbsd_cats.img -d archive.tar netbsd-GENERIC</b>
 </pre>
-and transfer files by creating an archive directly onto the disk image:<pre>
+<p>and transfer files by creating an archive directly onto the disk image:<pre>
 	(inside emulated NetBSD/cats)
 	# <b>tar cvf /dev/wd1c filenames</b>
 </pre>
-where filenames are the files or directories to transfer.
+<p>where filenames are the files or directories to transfer.
 
 
 

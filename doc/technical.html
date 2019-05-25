@@ -16,7 +16,7 @@
 
 <!--
 
-Copyright (C) 2004-2018  Anders Gavare.  All rights reserved.
+Copyright (C) 2004-2019  Anders Gavare.  All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -62,7 +62,7 @@ This page describes some of the internals of GXemul.
 <a name="speed"></a>
 <h3>Speed and emulation modes</h3>
 
-How fast is GXemul? There is no short answer to this.
+<p>How fast is GXemul? There is no short answer to this.
 Performance depends on several factors, including (but not limited to)  
 host architecture, target architecture, host clock speed, which compiler
 and compiler flags were used to build the emulator, what the workload is,
@@ -99,7 +99,7 @@ with the emulator, e.g.:
 <a name="net"></a>
 <h3>Networking</h3>
 
-<font color="#ff0000">NOTE/TODO: This section is very old.</font>
+<p><font color="#ff0000">NOTE/TODO: This section is very old.</font>
 
 <p>Running an entire operating system under emulation is very interesting
 in itself, but for several reasons, running a modern OS without access to
@@ -214,7 +214,8 @@ as well:
 <pre>
 	# <b>echo nameserver 129.16.1.3 > /etc/resolv.conf</b>
 </pre>
-(But replace <tt>129.16.1.3</tt> with the actual real-world IP address of 
+
+<p>(But replace <tt>129.16.1.3</tt> with the actual real-world IP address of 
 your nearest nameserver.)
 
 <p>
@@ -285,7 +286,7 @@ imagination to modify them.)
 	for example during an NFS install.
 </ul>
 
-The example above uses read-only mounts. That is enough for things like
+<p>The example above uses read-only mounts. That is enough for things like
 letting NetBSD/pmax or OpenBSD/pmax install via NFS, without the need for
 a CDROM ISO image. You can use a read-write mount if you wish to share
 files in both directions, but then you should be aware of the 
@@ -301,9 +302,10 @@ fragmentation issue mentioned above.
 <a name="devices"></a>
 <h3>Emulation of hardware devices</h3>
 
-<font color="#ff0000">NOTE/TODO: This section is very old, and is about
-the legacy framework. New machines and devices should be implemented using the
-new <a href="doxygen/html/classComponent.html">Component</a> framework.</font>
+<p><font color="#ff0000">NOTE/TODO: This section is very old. If you are
+looking for information about how to implement new machines and devices
+using the <i>new framework</i>, then look at new
+<a href="doxygen/html/classComponent.html">Component</a> framework instead.</font>
 
 <p>Each file called <tt>dev_*.c</tt> in the 
 <a href="../src/devices/"><tt>src/devices/</tt></a> directory is

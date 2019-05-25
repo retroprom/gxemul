@@ -16,7 +16,7 @@
 
 <!--
 
-Copyright (C) 2003-2010  Anders Gavare.  All rights reserved.
+Copyright (C) 2003-2019  Anders Gavare.  All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -57,7 +57,7 @@ SUCH DAMAGE.
 <a name="intro"></a>
 <h3>Introduction:</h3>
 
-GXemul can be started by entering machine settings directly on the command 
+<p>GXemul can be started by entering machine settings directly on the command 
 line, or by reading a configuration file (a "configuration script").
 
 <p><font color="#ff0000">NOTE/TODO: This section is about the legacy configuration
@@ -85,7 +85,7 @@ file format. It should be rewritten some day.</font>
 <a name="config"></a>
 <h3>Configuration file syntax:</h3>
 
-Configuration files are simple text files.  I don't have time to write
+<p>Configuration files are simple text files.  I don't have time to write
 down a formal syntax right now, so I hope that conveying the syntax
 through an example is good enough:
 
@@ -204,7 +204,7 @@ Starting the emulator with a configuration file is as simple as
 	$ <b>gxemul @myconfig</b>
 </pre>
 
-if <b>myconfig</b> is the name of the configuration file.
+<p>if <b>myconfig</b> is the name of the configuration file.
 
 
 
@@ -217,7 +217,7 @@ if <b>myconfig</b> is the name of the configuration file.
 <a name="minimal"></a>
 <h3>A minimal example:</h3>
 
-Here is an example of what a minimal configuration file might look like:
+<p>Here is an example of what a minimal configuration file might look like:
 
 <p><table border="0"><tr><td width="40">&nbsp;</td><td><pre>
 <b>machine(</b>
@@ -232,12 +232,6 @@ Here is an example of what a minimal configuration file might look like:
 one major type which has such a subtype), then the <tt>type</tt> can be
 omitted. Also, adding a <tt>net</tt> is quite useful, especially for
 netbooting kernels.
-
-
-
-
-
-
 
 
 
