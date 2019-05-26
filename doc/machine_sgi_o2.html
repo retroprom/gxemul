@@ -48,32 +48,33 @@ SUCH DAMAGE.
 
 <p>The SGI O2 emulation mode tries to emulate enough of the main MIPS
 processor and other peripherals of a real
-<a href="http://en.wikipedia.org/wiki/SGI_O2">SGI O2</a> machine,
-to run
-<a href="http://www.netbsd.org/ports/sgimips/">NetBSD/sgimips</a>,
-<a href="http://openbsd.org/sgi.html">OpenBSD/sgi</a>, and
-possibly
-<a href="http://ftp.debian.org/debian/dists/Debian8.11/main/installer-mips/current/images/r5k-ip32/">Linux for O2</a>
-or maybe even IRIX in the future.
+<a href="http://en.wikipedia.org/wiki/SGI_O2">SGI O2</a> machine, to be
+able to boot guest OSes.
 
 <p>
 Emulated hardware:
 <ul>
 	<li>MIPS R10000 main CPU.
-	<li>RAM: Up to 256 MB by default, up to 1 GB (max of what a real O2 can handle) works with OpenBSD/sgi
+	<li>RAM: Up to 256 MB works well, up to 1 GB (max of what a real O2 can handle) works with OpenBSD/sgi (and possibly the raw PROM)
 	<li>Interrupt controllers, etc.
 	<li>Serial port
 	<li>On-board O2 graphics; works well enough to run NetBSD/sgimips with X11.
+	<li>PS/2 Keyboard and mouse
 	<li>Ethernet, enough to (barely) run OpenBSD and NetBSD with root-on-nfs.
 </ul>
 
 <p>Things not yet emulated include: SCSI, audio.
 
-<p>This page contains instructions for how to install and run
-<a href="#netbsdsgimips">NetBSD/sgimips</a> and <a href="#openbsdsgiinstall">OpenBSD/sgi</a>
-in the emulator,
-and also some hints on how to make a <a href="#prom">backup copy of the PROM</a> from your own O2 and run it in the
-emulator.
+<p>This page contains instructions for how to install and run:
+
+<ul>
+	<li><a href="#netbsdsgimips">NetBSD/sgimips</a>
+	<li><a href="#openbsdsgiinstall">OpenBSD/sgi</a>
+	<li><small><a href="#linuxforo2"><font color="red">Linux for O2</font></a> (not yet)</small>
+	<li><small><a href="#IRIX"><font color="red">IRIX</font></a> (not yet)</small>
+</ul>
+
+<p>and also some hints on how to make a <a href="#prom">backup copy of the PROM</a> from your own O2 and run it in the emulator.
 
 
 
@@ -418,6 +419,71 @@ to run <tt>swapctl -a /swap</tt> as root.
 
 
 
+
+
+<p><br>
+<a name="linuxforo2"></a>
+<h3>Linux for O2</h3>
+
+<p><font color="red">NOTE: This does not work yet. The latest Linux r5k-ip32
+kernels die with a NULL reference during bootup. Older versions may work
+better, but I have not had the time to set up NFS netbooting so I don't know
+whether that would really work, or trigger other bugs.</font>
+
+<p><a href="http://ftp.debian.org/debian/dists/Debian8.11/main/installer-mips/current/images/r5k-ip32/">Linux for O2</a>
+
+
+
+
+
+<p><br>
+<a name="IRIX"></a>
+<h3>Experimenting with booting IRIX from a real SGI O2</h3>
+
+<p><font color="red">NOTE: This does not work yet. These instructions
+are here mostly for me to know where to continue debugging, when
+there is time.</font>
+
+<p>Preliminary instruction for how to boot the kernel from your real O2:
+<pre>
+$ <b>gxemul -X -e o2 unix</b>
+</pre>
+
+<p>where <tt>unix</tt> is the IP32 kernel. If you do not want to use
+the graphical framebuffer (<tt>-X</tt>), you can use lower-case <tt>-x</tt>
+to just use an xterm instead.
+
+<p>
+<a href="20190526-irix-not-really-working-yet.png"><img src="20190526-irix-not-really-working-yet_small.png"></a>
+
+<pre>
+IRIX Release 6.5 IP32 Version 10151453 System V
+Copyright 1987-2002 Silicon Graphics, Inc.
+All Rights Reserved.
+
+Total real memory  = 131072 kbytes
+CPU Frequency = 134Mhz
+1 CPU(s)
+
+Free small K0 = 0x411 pages (adding 0xa4 pages)
+
+QLFC: running as interrupt thread.
+QLFC: using spinlocks.
+
+PCI Configuration Report
+
+keyboard on port 0, mouse on port 1
+ec0: hardware ethernet address 08:20:30:00:00:10
+919 buffers
+PANIC: vfs_mountroot: no root found
+[Press reset to restart the machine.]
+</pre>
+
+<p><font color="red">Right now, it does not work. There are several problems,
+most importantly there is no way to get IRIX to find the root file system
+from which to run; SCSI is not emulated, and the network emulation in
+GXemul is not good enough for IRIX to accept it for root-on-nfs. Also,
+attempting to use more than 256 MB of RAM fails.</font>
 
 
 
