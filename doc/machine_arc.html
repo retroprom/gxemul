@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <title>GXemul: ARC (MIPS) emulation</title>
+  <meta name="robots" content="noarchive,nofollow,noindex">
+</head>
+<body style="font-family : sans-serif;">
+
+<!-- 10 lines header.  -->
+
+<h1>GXemul: ARC (MIPS) emulation</h1>
+<p>
+
+<a href="./">Back to the index.</a>
+
+<!--
+
+Copyright (C) 2006-2019  Anders Gavare.  All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+3. The name of the author may not be used to endorse or promote products
+   derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+SUCH DAMAGE.
+
+-->
+
+
+
+<p>ARC was an attempt to make a standard for RISC-based machines.
+It is not very meaningful today, but it is of historical interest.
+SGI machines used a variant of ARC firmware, called ARCS, and Windows NT
+used ARC-based paths for hardware devices during bootup.
+
+<p>The ARC machine best emulated in GXemul is a PICA-61. It is not very
+stable, but at least it is possible to run NetBSD in it.
+
+<p>
+<ul>
+	<li><a href="#netbsdarcinstall">NetBSD/arc</a>
+</ul>
+
+<p>There are also some installation notes for operating systems that
+do not really work yet:
+
+<p>
+<ul>
+	<li><a href="#openbsdarcinstall"><font color="red"><small>OpenBSD/arc</small></font></a>
+	<li><a href="#windows_nt_mips"><font color="red"><small>Windows NT for MIPS</small></font></a>
+</ul>
+
+
+
+
+
+<p><br>
+<a name="netbsdarcinstall"></a>
+<h3>NetBSD/arc:</h3>
+
+<p>It is possible to install and run <a href="http://www.netbsd.org/ports/arc/">NetBSD/arc</a>
+on an emulated Acer PICA-61 in the emulator.
+
+<p>
+<a href="20041024-netbsd-arc-installed.gif"><img src="20041024-netbsd-arc-installed_small.gif"></a>
+
+<p>
+To install NetBSD/arc from a CDROM image onto an emulated
+harddisk image, follow these instructions:
+
+<p>
+<ol start="1">
+  <li>Create an empty harddisk image, which will be the root disk
+	that NetBSD installs itself onto:<pre>
+	<b>dd if=/dev/zero of=nbsd_arc.img bs=1024 count=1 seek=2000000</b>
+
+</pre>
+  <li>Download a NetBSD/arc CDROM image, and the generic + ramdisk NetBSD/arc kernels:<pre>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/iso/NetBSD-7.1.2-arc.iso">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/iso/NetBSD-7.1.2-arc.iso</a>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/arc/binary/kernel/netbsd-GENERIC.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/arc/binary/kernel/netbsd-GENERIC.gz</a>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/arc/binary/kernel/netbsd-RAMDISK.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/arc/binary/kernel/netbsd-RAMDISK.gz</a>
+
+</pre>
+  <li>Start the emulator using this command line:<pre>
+	<b>gxemul -x -e pica -d nbsd_arc.img -d b:NetBSD-7.1.2-arc.iso netbsd-RAMDISK.gz</b>
+
+</pre>
+	and proceed like you would do if you were installing NetBSD on a real
+	PICA-61. (Choose "Use entire disk" when doing the MBR partitioning,
+	and choose to install from CD-ROM.)
+	<p>
+	(Use <tt>-X</tt> if you feel more comfortable with a "graphical" text
+	display.)
+    <p>
+</ol>
+
+<p>You can now use the generic NetBSD/arc kernel to boot from the harddisk 
+image, using the following command:<pre>
+	<b>gxemul -x -e pica -d nbsd_arc.img netbsd-GENERIC.gz</b>
+
+</pre>
+
+<p>Known issue: The clock may be running too fast inside the emulated machine.
+
+
+
+
+
+
+<p><br>
+<a name="openbsdarcinstall"></a>
+<h3>OpenBSD/arc:</h3>
+
+<p>It is <i>almost</i> possible to install and run OpenBSD/arc on an emulated Acer 
+PICA-61 in the emulator.
+
+<p><font color="#e00000">Earlier, I had this guest OS listed as
+officially working in the emulator, but for several reasons, it has 
+been moved down here to the "informative-but-not-really-working" 
+section.</font>
+
+<p>
+<ul>
+  <li>The last OpenBSD/arc release was 2.3. This means that it is very
+	old, it would not give a fair picture of what OpenBSD is (if you
+	are just looking to find out what it is like), and it is not
+	worth experimenting with it. See
+	<a href="http://www.openbsd.org/arc.html">http://www.openbsd.org/arc.html</a>
+	for more information.
+  <li>OpenBSD/arc was (if I understood things correctly) never really 
+	stable, even on real hardare. Problems with too small an interrupt
+	stack. Bugs are triggered in the emulator that have to do with
+	issues such as this.
+</ul>
+
+<p>
+<a href="20041024-openbsd-arc-installed.gif"><img src="20041024-openbsd-arc-installed_small.gif"></a>
+
+<p>
+<font color="#e00000">Currently, I don't test for every release whether
+or not OpenBSD/arc can be installed. Releases prior to 0.3.7
+(but probably <i>not</i> 0.3.7) should work. Anyway, here are the 
+old installation instructions:</font>
+
+<p>To install OpenBSD/arc onto an emulated harddisk image, follow these
+instructions:
+
+<p>
+<ol>
+  <li>Create an empty harddisk image, which will be the root disk
+	that OpenBSD installs itself onto:<pre>
+	<b>dd if=/dev/zero of=obsd_arc.img bs=1024 count=1 seek=700000</b>
+
+</pre>
+  <li>Download the entire arc directory from the ftp server: (approx. 75 MB)<pre>
+	<b>wget -np -l 0 -r <a href="ftp://ftp.se.openbsd.org/pub/OpenBSD/2.3/arc/">ftp://ftp.se.openbsd.org/pub/OpenBSD/2.3/arc/</a></b>
+
+</pre>
+
+  <li>You now need to make an ISO image of the entire directory you downloaded.
+	(I recommend using <tt>mkisofs</tt> for that purpose. If you don't
+	already have <tt>mkisofs</tt> installed on your system, you need
+	to install it in order to do this.)<pre>
+	<b>mkisofs -o openbsd_arc_2.3.iso ftp.se.openbsd.org/pub/OpenBSD/</b>
+
+</pre>
+  <li>Start the emulator using this command line:<pre>
+	<b>gxemul -e pica -X -d obsd_arc.img -d b:openbsd_arc_2.3.iso -j 2.3/arc/bsd.rd</b>
+
+</pre>
+	<p>and proceed like you would do if you were installing OpenBSD
+	on a real Acer PICA-61. (Answer 'no' when asked if you want to
+	configure networking, and then install from CD-ROM.)
+</ol>
+
+<p>Once the install has finished, the following command should let you 
+boot from the harddisk image:
+
+<p>
+<pre>
+	<b>gxemul -X -e pica -d obsd_arc.img ftp.se.openbsd.org/pub/OpenBSD/2.3/arc/bsd</b>
+
+</pre>
+
+<p>The system is very sensitive to (I think) kernel stack overflow, so it 
+crashes easily. If I remember correctly from mailing lists, this also 
+happened on real hardware.
+
+
+
+
+
+
+
+
+
+
+
+<p><br>
+<a name="windows_nt_mips"></a>
+<h3>Windows NT for MIPS:</h3>
+
+<p>Old versions of Windows NT could run on ARC MIPS hardware, such as
+the PICA 61. It is theoretically possible that the emulation provided by
+GXemul some day could be stable/complete enough to emulate
+such hardware well enough to fool Windows NT into thinking
+that it is running on a real machine.
+<font color="#ff0000">IT DOES <b>NOT</b> WORK YET!</font>
+
+<p>
+<a href="20190528-winnt-arc-mips-video-fail.png"><img src="20190528-winnt-arc-mips-video-fail_small.png"></a>
+
+<p>Installation steps similar to these would be required to install
+Windows NT onto a disk image:
+
+<ol>
+	<li>Put a "Windows NT 4.0 for MIPS" CDROM (or similar) into
+		your CDROM drive. (On FreeBSD systems, it is
+		usually called <tt>/dev/cd0c</tt> or similar. Change
+		that to whatever the CDROM is called on your system,
+		or the name of a raw .iso image. I have tried this
+		with the Swedish version, but it might work with
+		other versions too.)
+	<p>
+	<li>Create an empty harddisk image, which will be the disk image
+		that you will install Windows NT onto:<pre>
+	<b><tt>dd if=/dev/zero of=winnt_test.img bs=1024 count=1 seek=999000</tt></b>
+
+</pre>
+	<li>Run the ARC installer, to partition the disk image:<pre>
+	<b><tt>gxemul -X -e pica -d winnt_test.img -d bc6:/dev/cd0c -j MIPS\\ARCINST</tt></b>
+</pre>
+	Note that <tt>ARCINST</tt> <i>almost</i> works, but not quite.
+	<p>
+	<li>Run the SETUP program:<pre>
+	<b><tt>gxemul -X -e pica -d winnt_test.img -d bc6:/dev/cd0c -j MIPS\\SETUPLDR</tt></b>
+</pre>
+</ol>
+
+<p><font color="red"><tt>SETUPLDR</tt> manages to load some drivers from the cdrom,
+but then it crashes randomly. First of all, it seems to be timing dependent.
+Normal runs crash with some blue screen, and running with extreme slowdown
+(such as when using the <tt>-i</tt> option for full instruction trace) results
+in an error about not being able to initialize video.</font>
+
+
+
+
+</p>
+
+<p><br>
+
+
+
+</body>
+</html>
+

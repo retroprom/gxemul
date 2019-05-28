@@ -194,6 +194,11 @@ their original meaning in those xterm windows.
 <a name="emulmodes"></a>
 <h3>Which CPUs and machines does GXemul emulate?</h3>
 
+<p>This list contains some of the emulation modes in GXemul, and the guest operating systems
+that have been verified to work in those modes. Some operating systems or
+other pieces of software or firmware that are not really working yet are also
+included, listed with a <small><font color="red">small RED</font></small> font.
+
 <p>
 <ul>
   <li><b><u>ARM</u></b>
@@ -201,12 +206,18 @@ their original meaning in those xterm windows.
     <li><b>CATS</b> (<a href="guestoses.html#netbsdcatsinstall">NetBSD/cats</a>,
 	<a href="guestoses.html#openbsdcatsinstall">OpenBSD/cats</a>)
     <li><b>IQ80321</b> (<a href="guestoses.html#netbsdevbarminstall">NetBSD/evbarm</a>)
-    <li><b>NetWinder</b> (<a href="guestoses.html#netbsdnetwinderinstall">NetBSD/netwinder</a>)
+    <li><b><a href="machine_netwinder.html">NetWinder</a></b> (<a href="machine_netwinder.html#netbsdnetwinderinstall">NetBSD/netwinder</a>)
     <li><b>testarm</b> (<a href="experiments.html#expdevices">experimental</a>, <a href="guestoses.html#helenos">HelenOS/arm</a>)
   </ul>
   <p>
   <li><b><u>MIPS</u></b>
   <ul>
+    <li><b><a href="machine_arc.html">Acer Pica-61</a></b>
+	(<a href="machine_arc.html#netbsdarcinstall">NetBSD/arc</a>,
+	<a href="machine_arc.html#openbsdarcinstall"><small><font color="red">OpenBSD/arc</font></small></a>,
+	<a href="machine_arc.html#windows_nt_mips"><small><font color="red">Windows NT</font></small></a>)
+    <li><b>Algorithmics P5064</b> (<a href="guestoses.html#netbsdalgorinstall">NetBSD/algor</a>)
+    <li><b>Cobalt</b> (<a href="guestoses.html#netbsdcobaltinstall">NetBSD/cobalt</a>)
     <li><b><a href="machine_decstation.html">DECstation 5000/200</a></b>
 	(<a href="machine_decstation.html#netbsdpmaxinstall">NetBSD/pmax</a>,
 	<a href="machine_decstation.html#openbsdpmaxinstall">OpenBSD/pmax</a>,
@@ -215,11 +226,9 @@ their original meaning in those xterm windows.
 	<a href="machine_decstation.html#sprite">Sprite</a>,
 	<small><a href="machine_decstation.html#mach"><font color="red">Mach</font></a></small>),
 	DECstation 5000/1xx <small>(<a href="machine_decstation.html#PROM"><font color="red">raw PROM</font></a>)</small>
-    <li><b>Acer Pica-61</b> (<a href="guestoses.html#netbsdarcinstall">NetBSD/arc</a>)
-    <li><b>NEC MobilePro 770, 780, 800, 880</b> (<a href="guestoses.html#netbsdhpcmipsinstall">NetBSD/hpcmips</a>)
-    <li><b>Cobalt</b> (<a href="guestoses.html#netbsdcobaltinstall">NetBSD/cobalt</a>)
     <li><b>Malta</b> (<a href="guestoses.html#netbsdevbmipsinstall">NetBSD/evbmips</a>, <a href="unsupported.html#linux_malta2">Linux/Malta</a>)
-    <li><b>Algorithmics P5064</b> (<a href="guestoses.html#netbsdalgorinstall">NetBSD/algor</a>)
+    <li><b>NEC MobilePro 770, 780, 800, 880</b> (<a href="guestoses.html#netbsdhpcmipsinstall">NetBSD/hpcmips</a>)
+    <li><b><a href="machine_ps2.html">PlayStation 2</a></b> (<a href="machine_ps2.html#netbsdplaystation2"><font color="red"><small>NetBSD/playstation2</small></font></a>)
     <li><b><a href="machine_sgi_o2.html">SGI O2</a></b> (<a href="machine_sgi_o2.html#netbsdsgimips">NetBSD/sgimips</a>,
 		<a href="machine_sgi_o2.html#openbsdsgiinstall">OpenBSD/sgi</a>,
 		<a href="machine_sgi_o2.html#linuxforo2"><small><font color="red">Linux</font></small></a>,
@@ -230,33 +239,34 @@ their original meaning in those xterm windows.
   <p>
   <li><b><u>Motorola 88K</u></b>
   <ul>
-    <li><b>Motorola MVME187</b> (<a href="guestoses.html#openbsdmvme88kinstall">OpenBSD/mvme88k</a>)
     <li><b>Luna 88K</b> (<a href="unsupported.html#openbsdluna88k">OpenBSD/luna88k</a>)
+    <li><b>Motorola MVME187</b> (<a href="guestoses.html#openbsdmvme88kinstall">OpenBSD/mvme88k</a>)
     <li><b>oldtestm88k</b> (<a href="experiments.html#expdevices">experimental</a>)
   </ul>
   <p>
   <li><b><u>PowerPC</u></b>
   <ul>
+    <li><b>Artesyn PM/PPC</b> (<a href="guestoses.html#netbsdpmppc">NetBSD/pmppc</a>)
     <li><b>IBM 6050/6070 (PReP, PowerPC Reference Platform)</b> (<a href="guestoses.html#netbsdprepinstall">NetBSD/prep</a>)
     <li><b>MacPPC (generic "G4" Macintosh)</b> (<a href="guestoses.html#netbsdmacppcinstall">NetBSD/macppc</a>)
-    <li><b>Artesyn PM/PPC</b> (<a href="guestoses.html#netbsdpmppc">NetBSD/pmppc</a>)
     <li><b>testppc</b> (<a href="experiments.html#expdevices">experimental</a>)
   </ul>
   <p>
   <li><b><u>SuperH</u></b>
   <ul>
+    <li><b><a href="machine_landisk.html">Landisk I-O DATA USL-5P</a></b>
+	(<a href="machine_landisk.html#netbsdlandiskinstall">NetBSD/landisk</a>,
+	<a href="machine_landisk.html#openbsdlandiskinstall">OpenBSD/landisk</a>)
     <li><b><a href="machine_dreamcast.html">Sega Dreamcast</a></b>
 	(<a href="machine_dreamcast.html#netbsd_generic_md">NetBSD/dreamcast</a>,
 	<a href="machine_dreamcast.html#linux_live_cd">Linux/dreamcast</a>)
-    <li><b>Landisk I-O DATA USL-5P</b> (<a href="guestoses.html#openbsdlandiskinstall">OpenBSD/landisk</a>)
     <li><b>testsh</b> (<a href="experiments.html#expdevices">experimental</a>)
   </ul>
 </ul>
 
-<p>There is code in GXemul for emulation of some other machine types too; the
-degree to which these work range from almost being able to run a complete
-OS, to almost completely unsupported, perhaps just enough support to
-output a few boot messages via serial console.
+<p>There is code in GXemul for emulation of some other machine types too, but
+most of those are just dummy skeletons that do not really do anything, apart from
+being a starting point for testing and development.
 
 
 

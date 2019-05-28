@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <title>GXemul: Landisk emulation</title>
+  <meta name="robots" content="noarchive,nofollow,noindex">
+</head>
+<body style="font-family : sans-serif;">
+
+<!-- 10 lines header.  -->
+
+<h1>GXemul: Landisk emulation</h1>
+<p>
+
+<a href="./">Back to the index.</a>
+
+<!--
+
+Copyright (C) 2006-2019  Anders Gavare.  All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+3. The name of the author may not be used to endorse or promote products
+   derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+SUCH DAMAGE.
+
+-->
+
+
+
+<p>The Landisk I-O DATA USL-5P emulation mode is working well enough to run
+<a href="#netbsdlandiskinstall">NetBSD/landisk</a> and
+<a href="#openbsdlandiskinstall">OpenBSD/landisk</a>.</p>
+
+<p>Ethernet is not emulated yet for this machine type.
+If you want to transfer files to/from the emulated landisk machine, see 
+<a href="misc.html#filexfer">this chapter</a> in the documentation.
+
+
+
+
+
+
+
+
+<p><br>
+<a name="netbsdlandiskinstall"></a>
+<h3>NetBSD/landisk:</h3>
+
+
+<p><a href="http://www.netbsd.org/ports/landisk/">NetBSD/landisk</a> can
+run in GXemul.
+
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<a href="20070224-netbsd-landisk.png"><img src="20070224-netbsd-landisk_small.png"></a>
+
+<p>The NetBSD/landisk distribution does not include any INSTALL kernel, 
+so it must be installed using another (emulated) machine.
+
+<p>The following instructions will let you install NetBSD/landisk onto a disk 
+image, using an emulated CATS machine:
+
+<p>
+<ol>
+  <li>Download a NetBSD/cats install kernel:<pre>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-4.0.1/cats/binary/kernel/netbsd.aout-INSTALL.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-4.0.1/cats/binary/kernel/netbsd.aout-INSTALL.gz</a>
+</pre>
+  <p>
+  <li>Create an empty harddisk image, which will be the disk image
+	that you will install NetBSD/landisk onto:<pre>
+	<b>dd if=/dev/zero of=nbsd_landisk.img bs=1024 count=1 seek=900000</b>
+
+</pre>
+  <p>
+  <li>Download NetBSD/landisk and make an iso image of it:<pre>
+	<b>wget -np -l 0 -r <a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.1/landisk">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.1/landisk</a>
+	cp ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.1/landisk/binary/kernel/netbsd-GENERIC.gz .
+	mkisofs -U -o landisk.iso ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.1</b>
+</pre>
+
+  <p>
+  <li>Start the emulated CATS machine like this:<pre>
+	<b>gxemul -XEcats -d nbsd_landisk.img -d landisk.iso netbsd.aout-INSTALL.gz</b>
+
+</pre>
+  <li>Exit the installer, then execute the following commands:
+<p><table border="0"><tr><td><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td><pre>
+<b>disklabel -i -I wd0</b>    (for example 'a', '4.2BSD', '1c',
+    '700M', 'b', 'swap', '701M', '$', 'P', 'W', 'y', and 'Q')
+<b>newfs /dev/wd0a
+mount /dev/cd0c /mnt
+mkdir /mnt2; mount /dev/wd0a /mnt2
+cd /mnt2; sh
+ls -R /mnt
+for a in /mnt/*/binary/sets/[bcekmt]*.tgz; do ls -R /mnt > /dev/null; echo $a; tar zxfp $a; done
+exit
+cd dev; sh ./MAKEDEV all; cd ../etc
+echo rc_configured=YES >> rc.conf
+echo "/dev/wd0a / ffs rw 1 1" > fstab
+echo "/dev/wd0b none swap sw 0 0" >> fstab
+cd /; umount /mnt; umount /mnt2; halt</b>
+</pre></td></tr></table>
+</ol>
+
+<p>NOTE: For some reason, reading the iso image created by mkisofs does
+not work as expected. The "ls -R /mnt" commands included above seem
+to make it work. (Yes, this is a serious bug, but I am not sure how
+to diagnose it.)
+
+<p>You should now be able to boot NetBSD/landisk using this command:<pre>
+	<b>gxemul -x -E landisk -d nbsd_landisk.img netbsd-GENERIC.gz</b>
+</pre>
+
+
+
+
+
+
+
+
+
+
+<p><br>
+<a name="openbsdlandiskinstall"></a>
+<h3>OpenBSD/landisk:</h3>
+
+<p>It is possible to install and run
+<a href="http://www.openbsd.org/landisk.html">OpenBSD/landisk</a> 6.3
+in GXemul.
+
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<a href="20081103-openbsd-landisk.png"><img src="20081103-openbsd-landisk-small.png"></a>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<a href="20131109-openbsd_landisk.png"><img src="20131109-openbsd_landisk-small.jpg"></a>
+
+<p>To install OpenBSD/landisk onto an emulated harddisk image,
+follow these instructions:
+
+<p>
+<ol>
+  <li>Create an empty harddisk image, which will be the root disk
+	that OpenBSD installs itself onto:<pre>
+	<b>dd if=/dev/zero of=obsd_landisk.img bs=1024 count=1 seek=3500000</b>
+
+</pre>
+  <li>Download the Landisk RAMDISK kernel, the regular kernel, and the files
+  	needed to produce a working .iso from the ftp server, and create the .iso
+  	using the <tt>mkisofs</tt> tool (may be part of the cdrtools package):<pre>
+	<b>wget http://ftp.openbsd.org/pub/OpenBSD/6.3/landisk/base63.tgz http://ftp.openbsd.org/pub/OpenBSD/6.3/landisk/comp63.tgz http://ftp.openbsd.org/pub/OpenBSD/6.3/landisk/man63.tgz http://ftp.openbsd.org/pub/OpenBSD/6.3/landisk/bsd http://ftp.openbsd.org/pub/OpenBSD/6.3/landisk/bsd.rd
+	mkisofs -J -o openbsd_landisk.iso base63.tgz comp63.tgz man63.tgz</b>
+</pre>
+	<p>(The installer will complain about missing INSTALL.landisk and SHA256.sig
+		files, but it seems to work anyway.)
+
+  <li>Start the emulator using this command line (<b>note the <tt>d:</tt> prefix</b>):<pre>
+	<b>gxemul -E landisk -d obsd_landisk.img -d d:openbsd_landisk.iso bsd.rd</b>
+
+</pre>
+	and proceed like you would do if you were installing OpenBSD
+	on a real landisk. The following hints are useful to get you
+	through the installation:
+	<p>
+	<ul>
+	  <li>Terminal type = <b>xterm</b>
+	  <li>Do <b>not</b> configure the network. (The Realtek NIC
+		found in the Landisk machine is not implemented yet
+		in the emulator.)
+	  <li>root disk = <b>wd0</b> (the disk to install onto),
+		use the <b>whole</b> disk for OpenBSD
+	  <li>Accept the auto-layout (one big root partition (a) and a
+	  	small swap partition (b). c is the entire disk).
+	  <li>Location of sets = <b>disk</b>,
+		is the disk partition already mounted = <b>no</b>,
+		disk containing the install media = <b>wd1</b>
+	  <li>Pathname to the sets = <b>/</b>
+	</ul>
+	
+	<p>Ignore the warning about missing 'bsd' file by the installer, we
+	are supplying the bsd kernel file directly on the GXemul command line.
+</ol>
+
+<p>Once the install has finished, the following command should let you 
+boot from the disk image:
+
+<p><pre>
+	<b>gxemul -E landisk -d obsd_landisk.img bsd</b>
+
+</pre>
+
+<p>Note: Generating ssh keys on the first bootup is extremely time consuming.
+
+
+
+
+
+
+
+<p><br>
+
+
+
+</body>
+</html>
+

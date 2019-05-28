@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <title>GXemul: NetWinder emulation</title>
+  <meta name="robots" content="noarchive,nofollow,noindex">
+</head>
+<body style="font-family : sans-serif;">
+
+<!-- 10 lines header.  -->
+
+<h1>GXemul: NetWinder emulation</h1>
+<p>
+
+<a href="./">Back to the index.</a>
+
+<!--
+
+Copyright (C) 2006-2019  Anders Gavare.  All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+3. The name of the author may not be used to endorse or promote products
+   derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+SUCH DAMAGE.
+
+-->
+
+
+
+<p>The NetWinder emulation mode is working well enough to run
+<a href="#netbsdnetwinderinstall">NetBSD/netwinder</a>.</p>
+
+
+
+
+
+
+
+
+<p><br>
+<a name="netbsdnetwinderinstall"></a>
+<h3>NetBSD/netwinder:</h3>
+
+<p>It is possible to run <a 
+href="http://www.netbsd.org/ports/netwinder/">NetBSD/netwinder</a>
+in GXemul.
+
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<a href="20060724-netbsd-netwinder-1.png"><img src="20060724-netbsd-netwinder-1_small.png"></a>
+&nbsp;&nbsp;&nbsp;<a href="20060724-netbsd-netwinder-2.png"><img src="20060724-netbsd-netwinder-2_small.png"></a>
+
+<p>There is no INSTALL ramdisk kernel, so one way to install the 
+NetBSD/netwinder distribution onto a disk image is to install the files 
+using another (emulated) machine. The following instructions will let you 
+install the NetBSD/netwinder distribution onto a disk image, from an 
+emulated DECstation 3MAX machine:
+
+<p>
+<ol>
+  <li>Download a NetBSD/pmax (DECstation) install RAMDISK kernel:<pre>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-3.1/pmax/binary/kernel/netbsd-INSTALL.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-3.1/pmax/binary/kernel/netbsd-INSTALL.gz</a>
+</pre>
+  <p>
+  <li>Create an empty harddisk image, which will be the disk image
+	that you will install NetBSD onto:<pre>
+	<b>dd if=/dev/zero of=nbsd_netwinder.img bs=1024 count=1 seek=999000</b>
+
+</pre>
+  <li>Download the generic kernel and the 3.1 ISO image:<pre>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-3.1/netwinder/binary/kernel/netbsd-GENERIC.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-3.1/netwinder/binary/kernel/netbsd-GENERIC.gz</a>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/iso/3.1/netwindercd-3.1.iso">ftp://ftp.netbsd.org/pub/NetBSD/iso/3.1/netwindercd-3.1.iso</a>
+
+</pre>
+  <p>
+  <li>Start the emulated DECstation machine like this:<pre>
+	<b>gxemul -e 3max -d nbsd_netwinder.img -d netwindercd-3.1.iso netbsd-INSTALL.gz</b>
+
+</pre>
+  <li>At the <tt>Terminal type? [rcons]</tt> prompt, type <b>CTRL-B</b>
+to simulate a CTRL-C sent to NetBSD/pmax. Then execute the following commands:
+<p><table border="0"><tr><td><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td><pre>
+<b>newfs /dev/sd0c
+mount /dev/cd0c /mnt
+mkdir /mnt2; mount /dev/sd0c /mnt2
+cd /mnt2; sh
+for a in /mnt/*/binary/sets/*.tgz; do echo $a; tar zxfp $a; done
+exit
+cd dev; sh ./MAKEDEV all; cd ../etc
+echo rc_configured=YES >> rc.conf
+echo "/dev/wd0c / ffs rw 1 1" > fstab
+cd /; umount /mnt; umount /mnt2; halt</b>
+</pre></td></tr></table>
+</ol>
+
+<p>NetBSD/netwinder is now installed on the disk image. The following command
+line can be used to start NetBSD/netwinder:<pre>
+	<b>gxemul -X -E netwinder -d nbsd_netwinder.img netbsd-GENERIC.gz</b>
+</pre>
+
+<p>This will result in a 1024x768 framebuffer. Add <tt>-Y2</tt> to the 
+command line if you want to scale it down to 512x384.
+
+<p>Note: The installation instructions above create a filesystem
+<i>without</i> a disklabel, so there is only one ffs partition and no
+swap. You will need to enter the following things when booting with the
+generic kernel:<pre>
+	root device (default wd0a): <b>wd0c</b>
+	dump device (default wd0b): <i>(just press enter)</i>
+	file system (default generic):    <i>(just press enter)</i>
+	init path (default /sbin/init):   <i>(just press enter)</i>
+</pre>
+
+<p>Known bugs/problems:
+
+<ul>
+	<li>There is a long delay when starting up NetBSD/netwinder
+		(several seconds even on a very fast host machine),
+		so you need to be patient.
+	<li>There is a minor bug in the keyboard device, so you need to
+		press a key (any key) before typing wd0c.
+	<li>When halting/rebooting NetBSD/netwinder, the emulator
+		prints a message saying something about an internal
+		error. This doesn't matter; ignore the message.
+</ul>
+
+
+
+
+
+
+
+
+
+<p><br>
+
+
+
+</body>
+</html>
+
