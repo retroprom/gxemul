@@ -47,7 +47,6 @@ SUCH DAMAGE.
 <ul>
   <li><a href="#helenosmalta">HelenOS/malta 0.7.2</a>
   <li><a href="#helenosrpi">HelenOS/rpi 0.7.2</a>
-  <li><a href="#helenosppc">HelenOS/ppc 0.7.1</a>
   <li><a href="#linux_malta">Linux/Malta</a> (variant 1)
   <li><a href="#linux_malta2">Linux/Malta</a> (variant 2)
   <li><a href="#linux_qemu_mips">Linux/QEMU_MIPS</a>
@@ -116,28 +115,6 @@ to experiment with the HelenOS kernel:
   	<b>gxemul -VE rpi -tv 0x8000:0x40:0x8000:HelenOS-0.7.2-arm32-raspberrypi.bin</b>
   </pre>
 </ol>
-
-
-
-
-<p><br>
-<a name="helenosppc"></a>
-<h3>HelenOS/ppc:</h3>
-
-<p>This does not work yet.
-
-<p>
-<ol>
-  <li>Download the HelenOS PPC ISO image:<pre>
-	<a href="http://www.helenos.org/releases/HelenOS-0.7.1-ppc32.iso">http://www.helenos.org/releases/HelenOS-0.7.1-ppc32.iso</a>
-  </pre>
-  <li>Start GXemul using the following command line:<pre>
-  	<b>gxemul -M 256 -v -x -e g4 -d HelenOS-0.7.1-ppc32.iso  -j BOOT/image.boot</b>
-  </pre>
-</ol>
-
-
-
 
 
 
