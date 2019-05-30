@@ -31,8 +31,6 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 
 	<li>MacOS X11 headers and libraries autodetection in the configure script: /opt/X11/{include,lib}
 
-	<li>Continue on the One documentation page per machine type endeavour!
-
 	<li>Get rid of the "unstable"/"stable" distinction for the new framework;
 		it is all unstable anyway.
 
@@ -60,6 +58,39 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 		make sure that no floating point is used in the steps counting mechanism!
 
 	<li>More floating point tests?
+
+	<li>Put the old HelenOS modes somewhere in the documentation?
+	
+	
+
+<p><br>
+<a name="helenos"></a>
+<h3>HelenOS/testmips and testarm:</h3>
+
+<p>Old versions of <a href="http://www.helenos.org/">HelenOS</a> can run in GXemul's
+<tt>testarm</tt> and <tt>testmips</tt> machine modes.
+
+<p>To run HelenOS for testarm in GXemul:
+<ol>
+  <li>Download the HelenOS kernel:<pre>
+	<a href="http://www.helenos.org/releases/HelenOS-0.5.0-arm32-GXemul.boot">http://www.helenos.org/releases/HelenOS-0.5.0-arm32-GXemul.boot</a>
+  </pre>
+  <li>Start GXemul using the following command line:<pre>
+  	<b>gxemul -X -E testarm HelenOS-0.5.0-arm32-GXemul.boot</b>
+  </pre>
+</ol>
+
+<p>To run HelenOS for testmips in GXemul:
+<ol>
+  <li>Download the HelenOS kernel:<pre>
+	<a href="http://www.helenos.org/releases/HelenOS-0.5.0-mips32-GXemul.boot">http://www.helenos.org/releases/HelenOS-0.5.0-mips32-GXemul.boot</a>
+  </pre>
+  <li>Start GXemul using the following command line:<pre>
+  	<b>gxemul -X -E testmips HelenOS-0.5.0-mips32-GXemul.boot</b>
+  </pre>
+</ol>
+
+
 
 	<li>-R (uppercase): don't allow writes to the disk image file, but let the guest OS think that the device is writable, by using a temporary overlay (created automatically in /tmp) which is removed when the emulator exits. If this is implemented, update the misc documentation, and the man page.
 
