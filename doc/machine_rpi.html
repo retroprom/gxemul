@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <title>GXemul: Raspberry Pi emulation</title>
+  <meta name="robots" content="noarchive,nofollow,noindex">
+</head>
+<body style="font-family : sans-serif;">
+
+<!-- 10 lines header.  -->
+
+<h1>GXemul: Raspberry Pi emulation</h1>
+<p>
+
+<a href="./">Back to the index.</a>
+
+<!--
+
+Copyright (C) 2006-2019  Anders Gavare.  All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+3. The name of the author may not be used to endorse or promote products
+   derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+SUCH DAMAGE.
+
+-->
+
+
+
+<p>The Raspberry Pi emulation is not working yet. This page
+contains preliminary instructions for how to start debugging NetBSD.</p>
+
+
+
+
+
+
+
+
+<p><br>
+<a name="netbsdrpi"></a>
+<h3>NetBSD/raspberrypi:</h3>
+
+<p>This doesn't work yet. Starting point for development:
+
+<p>See <a href="http://wiki.netbsd.org/ports/evbarm/raspberry_pi/">http://wiki.netbsd.org/ports/evbarm/raspberry_pi/</a> for more info on NetBSD.
+
+<p>To start debugging/development:
+<ol>
+	<li>Download something similar to:<pre>
+	http://nyftp.netbsd.org/pub/NetBSD-daily/HEAD/201310032210Z/evbarm/binary/kernel/netbsd-RPI.gz
+</pre>
+	<li><tt><b>gxemul -tviK -E rpi netbsd-RPI.gz</b></tt>
+</pre>
+</ol>
+
+<p>TODO: Everything.
+
+<pre>
+GXemul> u
+&lt;kernel_text&gt;
+c00081e0:  e10f1000	mrs	r1,CPSR
+c00081e4:  e166f001	msr	SPSR_sx,r1
+c00081e8:  e28f1048	add	r1,pc,#0x48
+c00081ec:  e8912106	ldmia	r1,{r1,r2,r8,sp}
+c00081f0:  ee0d8f90	mcr	15,0,r8,cr13,cr0,4
+
+It starts up in kernel_text, which is in NetBSD usr/src/sys/arch/arm/arm32/locore.S:
+
+ENTRY_NP(kernel_text)
+
+ASENTRY_NP(start)
+        mrs     r1, cpsr                /* fetch CPSR value */
+        msr     spsr_sx, r1             /* set SPSR[23:8] to known value */
+
+        adr     r1, .Lstart
+        ldmia   r1, {r1, r2, r8, sp}    /* Set initial stack and */
+
+#if defined(TPIDRPRW_IS_CURCPU) || defined(TPIDRPRW_IS_CURLWP)
+        mcr     p15, 0, r8, c13, c0, 4
+#endif
+#if defined(TPIDRPRW_IS_CURLWP)
+        ldr     r8, [r8, #L_CPU]        /* r8 needs curcpu in it */
+#endif
+
+        mov     r4, #0
+#ifdef _ARM_ARCH_DWORD_OK
+        mov     r5, #0
+#endif
+
+</pre>
+
+<p>
+Also useful for testing:
+<pre>https://github.com/raspberrypi/firmware/blob/master/boot/kernel.img
+<b>gxemul -tvK -E rpi 0x00000000:kernel.img</b>
+</pre>
+
+FreeBSD sd card image:
+<pre>
+http://www.db.net/downloads/bsd-pi-250580M.img.xz
+# Extract the kernel from the second (2) slice' first partition (a):
+mdconfig -a -t vnode -f bsd-pi-250580M.img
+mount /dev/md0s2a /mnt/
+cp /mnt/boot/kernel/kernel* .
+umount /mnt
+mdconfig -d -u 0
+<b>gxemul -tK -E rpi kernel</b>
+</pre>
+
+
+</p>
+
+
+
+
+
+<p><br>
+
+
+
+</body>
+</html>
+

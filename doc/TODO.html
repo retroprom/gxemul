@@ -36,7 +36,7 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 	<li>Get rid of the "unstable"/"stable" distinction for the new framework;
 		it is all unstable anyway.
 
-	<li>Remove the SGI O2 mode from the new framework (code, documentation).
+	<li>Remove the SGI IP30 and IP32 (O2) modes from the new framework (code, documentation).
 
 	<li>Web update script has some head tail bugs at the end. Fix these.
 
@@ -62,6 +62,16 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 		make sure that no floating point is used in the steps counting mechanism!
 
 	<li>More floating point tests?
+
+	<li>-R (uppercase): don't allow writes to the disk image file, but let the guest OS think that the device is writable, by using a temporary overlay (created automatically in /tmp) which is removed when the emulator exits. If this is implemented, update the misc documentation, and the man page.
+
+	<li>-y n: Command line option for taking framebuffer screen shots n times per second? Look for "ppm image dumps" in dev_fb.cc.html. if implemented, add to man page.
+
+	<li>src/README should be rewritten, less emphasis on the new framework.
+
+	<li>Add the Android arm machine modes to the documentation, machine_androidarm, color red.
+
+	<li>Add the alpha mode too. Also red. Try to include instructions for NetBSD, OpenBSD and FreeBSD although the later has been discontinued.
 </ul>
 
 

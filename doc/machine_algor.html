@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <title>GXemul: Algorithmics P5064 emulation</title>
+  <meta name="robots" content="noarchive,nofollow,noindex">
+</head>
+<body style="font-family : sans-serif;">
+
+<!-- 10 lines header.  -->
+
+<h1>GXemul: Algorithmics P5064 emulation</h1>
+<p>
+
+<a href="./">Back to the index.</a>
+
+<!--
+
+Copyright (C) 2006-2019  Anders Gavare.  All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+3. The name of the author may not be used to endorse or promote products
+   derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+SUCH DAMAGE.
+
+-->
+
+
+
+<p>This emulation mode attempts to emulate an Algorithmics P5064 evaluation
+board. An older <a href="#netbsdalgorinstall">NetBSD/algor</a> can be manually installed
+and run in the emulator.
+
+
+
+
+<p><br>
+<a name="netbsdalgorinstall"></a>
+<h3>NetBSD/algor:</h3>
+
+<p><a href="20060814-netbsd-algor-3.0.1.png"><img src="20060814-netbsd-algor-3.0.1_small.png"></a>
+
+<p>One way to install the NetBSD/algor distribution onto a disk
+image is to install the files using another (emulated) machine.
+
+<p>The following instructions will let you install NetBSD/algor onto a disk 
+image, from an emulated DECstation 3MAX machine:
+
+<p>
+<ol>
+  <li>Download a NetBSD/pmax (DECstation) install RAMDISK kernel (NOTE: not 5.0.2!):<pre>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-4.0.1/pmax/binary/kernel/netbsd-INSTALL.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-4.0.1/pmax/binary/kernel/netbsd-INSTALL.gz</a>
+</pre>
+  <p>
+  <li>Create an empty harddisk image, which will be the disk image
+	that you will install NetBSD/algor onto:<pre>
+	<b>dd if=/dev/zero of=nbsd_algor.img bs=1024 count=1 seek=700000</b>
+
+</pre>
+  <li>Download the P5064 Algor kernel and the install sets:<pre>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/algor/binary/kernel/netbsd-P5064.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/algor/binary/kernel/netbsd-P5064.gz</a>
+
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/algor/binary/sets/base.tgz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/algor/binary/sets/base.tgz</a>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/algor/binary/sets/comp.tgz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/algor/binary/sets/comp.tgz</a>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/algor/binary/sets/etc.tgz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/algor/binary/sets/etc.tgz</a>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/algor/binary/sets/man.tgz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/algor/binary/sets/man.tgz</a>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/algor/binary/sets/misc.tgz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/algor/binary/sets/misc.tgz</a>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/algor/binary/sets/text.tgz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/algor/binary/sets/text.tgz</a>
+
+</pre>
+  <li>Prepare an ISO image of the install sets:<pre>
+	mkisofs -U -o algor_files.iso base.tgz comp.tgz etc.tgz man.tgz misc.tgz text.tgz
+
+</pre>
+  <p>
+  <li>Start the emulated DECstation machine like this:<pre>
+	<b>gxemul -e 3max -d nbsd_algor.img -d algor_files.iso netbsd-INSTALL.gz</b>
+
+</pre>
+  <li>At the <tt>Terminal type? [rcons]</tt> prompt, type <b>CTRL-B</b>
+to simulate a CTRL-C sent to NetBSD/pmax. Then execute the following commands:
+<p><table border="0"><tr><td><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td><pre>
+<b>newfs /dev/sd0c
+mount /dev/cd0c /mnt
+mkdir /mnt2; mount /dev/sd0c /mnt2
+cd /mnt2; sh
+for a in /mnt/*.tgz; do echo $a; tar zxfp $a; done
+exit
+cd dev; sh ./MAKEDEV all; cd ../etc
+echo rc_configured=YES >> rc.conf
+echo "/dev/wd0c / ffs rw 1 1" > fstab
+cd /; umount /mnt; umount /mnt2; halt</b>
+</pre></td></tr></table>
+</ol>
+
+<p>You should now be able to boot NetBSD/algor using this command:<pre>
+	<b>gxemul -x -e p5064 -d nbsd_algor.img netbsd-P5064.gz</b>
+</pre>
+
+<p>The installation instructions above create a filesystem
+<i>without</i> a disklabel, so there is only one ffs partition and no
+swap. You will need to enter the following things when booting with the
+generic kernel:<pre>
+	root device (default wd0a): <b>wd0c</b>
+	dump device (default wd0b):		<i>(just press enter)</i>
+	file system (default generic):		<i>(just press enter)</i>
+	init path (default /sbin/init):		<i>(just press enter)</i>
+</pre>
+
+
+
+
+
+
+<p><br>
+
+
+
+</body>
+</html>
+

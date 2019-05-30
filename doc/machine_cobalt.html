@@ -2,14 +2,14 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
 <head>
-  <title>GXemul: PlayStation 2 emulation</title>
+  <title>GXemul: Cobalt Cube emulation</title>
   <meta name="robots" content="noarchive,nofollow,noindex">
 </head>
 <body style="font-family : sans-serif;">
 
 <!-- 10 lines header.  -->
 
-<h1>GXemul: PlayStation 2 emulation</h1>
+<h1>GXemul: Cobalt Cube emulation</h1>
 <p>
 
 <a href="./">Back to the index.</a>
@@ -45,33 +45,49 @@ SUCH DAMAGE.
 
 
 
-<p>The PlayStation 2 emulation is not really working yet. This page
-contains preliminary instructions for how to start NetBSD.</p>
-
-
+<p>This emulation mode attempts to emulate a Cobalt Cube.
+It is possible to install <a href="#netbsdcobaltinstall">NetBSD/cobalt</a> and run that
+in the emulator.
 
 
 
 
 <p><br>
-<a name="netbsdplaystation2"></a>
-<h3>NetBSD/playstation2:</h3>
+<a name="netbsdcobaltinstall"></a>
+<h3>NetBSD/cobalt:</h3>
 
-<p><font color="red">NOTE: This doesn't work, and the <a href="http://www.netbsd.org/ports/playstation2/">playstation2 port of NetBSD</a> is dead at the time of writing this.</font>
+<p><a href="20060812-netbsd-cobalt-3.0.1.png"><img src="20060812-netbsd-cobalt-3.0.1_small.png"></a>
+
+<p>The following instructions will let you install <a href="http://www.netbsd.org/ports/cobalt/">NetBSD/cobalt</a> onto a disk 
+image:
 
 <p>
-<a href="20100205-netbsd-playstation2.png"><img src="20100205-netbsd-playstation2-small.png"></a>
-
-<p>To attempt to run the latest snapshot (from 2002):
 <ol>
-	<li>Download <a href="ftp://ftp.netbsd.org/pub/NetBSD/arch/playstation2/snapshot/20020327/binary/kernel/netbsd-GENERIC.gz">ftp://ftp.netbsd.org/pub/NetBSD/arch/playstation2/snapshot/20020327/binary/kernel/netbsd-GENERIC.gz</a> and run<pre>
-	<b>gxemul -X -E playstation2 netbsd-GENERIC.gz</b>
+  <li>Create an empty harddisk image, which will be the disk image
+	that you will install NetBSD/cobalt onto:<pre>
+	<b>dd if=/dev/zero of=nbsd_cobalt.img bs=1024 count=1 seek=2700000</b>
+
 </pre>
+  <li>Download the generic kernel for Cobalt and the ISO image:<pre>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/cobalt/binary/kernel/netbsd-GENERIC.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/cobalt/binary/kernel/netbsd-GENERIC.gz</a>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/iso/NetBSD-7.1.2-cobalt.iso">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/iso/NetBSD-7.1.2-cobalt.iso</a>
+
+</pre>
+  <li>Start the installation like this:<pre>
+  	<b>gxemul -x -E cobalt -d nbsd_cobalt.img -d bd:NetBSD-7.1.2-cobalt.iso -j cobalt/binary/kernel/netbsd-RAMDISK</b>
+
+</pre>
+	and proceed like you would do if you were installing NetBSD on a real
+	Cobalt. Install onto <tt>wd0</tt>, choose "Use entire disk" when
+	doing the MBR partitioning, and choose to install from CD-ROM device "<tt>wd1d</tt>".
 </ol>
 
-<p>Supplying a disk image with <tt>-d</tt> almost works. Then it hangs, waiting for
-keyboard input from a keyboard which doesn't exist.
+<p>
+You should now be able to boot NetBSD/cobalt like this:<pre>
+	<b>gxemul -x -E cobalt -d nbsd_cobalt.img netbsd-GENERIC.gz</b>
+</pre>
 
+<p>Known issues: The clock may go too fast inside the emulator.
 
 
 

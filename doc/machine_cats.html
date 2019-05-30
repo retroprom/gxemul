@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <title>GXemul: CATS emulation</title>
+  <meta name="robots" content="noarchive,nofollow,noindex">
+</head>
+<body style="font-family : sans-serif;">
+
+<!-- 10 lines header.  -->
+
+<h1>GXemul: CATS emulation</h1>
+<p>
+
+<a href="./">Back to the index.</a>
+
+<!--
+
+Copyright (C) 2006-2019  Anders Gavare.  All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+3. The name of the author may not be used to endorse or promote products
+   derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+SUCH DAMAGE.
+
+-->
+
+
+
+<p>The CATS emulation mode is working well enough to run
+old versions of <a href="#netbsdcatsinstall">NetBSD/cats</a> and
+<a href="#openbsdcatsinstall">OpenBSD/cats</a>.</p>
+
+<p><font color="red"><small><a name="#debiancats">Debian GNU/Linux</a></small></font> could
+perhaps run in the future.
+
+
+
+
+<p><br>
+<a name="netbsdcatsinstall"></a>
+<h3>NetBSD/cats:</h3>
+
+<p>It is possible to install and run
+<a href="http://www.netbsd.org/ports/cats/">NetBSD/cats</a> in GXemul.
+
+<p>
+<a href="20051007-netbsd-cats-installed.png"><img src="20051007-netbsd-cats-installed_small.png"></a>
+
+<p>
+To install NetBSD/cats onto a disk image, follow these instructions:
+
+<p>
+<ol start="1">
+  <li>Create an empty harddisk image, which will be the root disk
+	that you will install NetBSD/cats onto:<pre>
+	<b>dd if=/dev/zero of=nbsd_cats.img bs=1024 count=1 seek=3000000</b>
+
+</pre>
+  <li>Download the NetBSD/cats ISO image and the generic and install kernels:<pre>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/iso/5.0/catscd-5.0.iso">ftp://ftp.netbsd.org/pub/NetBSD/iso/5.0/catscd-5.0.iso</a>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0/cats/binary/kernel/netbsd.aout-GENERIC.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0/cats/binary/kernel/netbsd.aout-GENERIC.gz</a>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0/cats/binary/kernel/netbsd.aout-INSTALL.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0/cats/binary/kernel/netbsd.aout-INSTALL.gz</a>
+
+</pre>
+  <p>
+  <li>Start the installation like this:<pre>
+	<b>gxemul -XEcats -d nbsd_cats.img -d catscd-5.0.iso netbsd.aout-INSTALL.gz</b>
+
+</pre>
+	and proceed like you would do if you were installing NetBSD on a real
+	CATS from CDROM.
+</ol>
+
+<p>Note that there are <i>long</i> delays during bootup.
+
+<p>Alternatively, to install from FTP, you can skip downloading the ISO,
+and start the install without <tt>-d catscd-5.0.iso</tt>. Suitable network 
+settings are IP 10.0.0.1, gateway/default route 10.0.0.254, netmask 
+255.0.0.0, nameserver 10.0.0.254.
+
+<p>If everything worked, NetBSD should now be installed on the disk image.
+Use the following command line to boot the emulated CATS machine:<pre>
+	<b>gxemul -XEcats -d nbsd_cats.img netbsd.aout-GENERIC.gz</b>
+
+</pre>
+
+
+
+
+
+
+
+<p><br>
+<a name="openbsdcatsinstall"></a>
+<h3>OpenBSD/cats:</h3>
+
+<p>It is possible to install and run
+<a href="http://www.openbsd.org/cats.html">OpenBSD/cats</a>
+in GXemul. Unfortunately, <i>"The OpenBSD/cats port was discontinued after the 4.0 release"</i> according to
+<a href="http://www.openbsd.org/cats.html">http://www.openbsd.org/cats.html</a>,
+so from a security perspective it is not up to date, but it is still
+possible to run for experimental purposes.
+
+<p>
+<a href="20051007-openbsd-cats-installed.png"><img src="20051007-openbsd-cats-installed_small.png"></a>
+
+<p>To install OpenBSD/cats onto an emulated harddisk image,
+follow these instructions:
+
+<p>
+<ol>
+  <li>Create an empty harddisk image, which will be the root disk
+	that OpenBSD installs itself onto:<pre>
+	<b>dd if=/dev/zero of=obsd_cats.img bs=1024 count=1 seek=1900000</b>
+
+</pre>
+  <li>Download the entire cats directory from the ftp server:<pre>
+	<b>wget -np -l 0 -r <a href="https://ftp.nluug.nl/OpenBSD/4.0/cats/">https://ftp.nluug.nl/OpenBSD/4.0/cats/</a></b>
+	<b>cp ftp.nluug.nl/OpenBSD/4.0/cats/bsd .</b>
+	<b>cp ftp.nluug.nl/OpenBSD/4.0/cats/bsd.rd .</b>
+
+</pre>
+	(Replace ftp.se.openbsd.org with a server closer to you, for
+	increased download speed.)
+  <p>
+  <li>You now need to make an ISO image of the entire directory you downloaded.
+	(I recommend using <tt>mkisofs</tt> for that purpose. If you don't
+	already have <tt>mkisofs</tt> installed on your system, you need
+	to install it in order to do this.)<pre>
+	<b>mkisofs -allow-lowercase -o openbsd_cats_4.0.iso ftp.nluug.nl/OpenBSD/</b>
+	<b>rm -rf ftp.nluug.nl</b>      <i>(this directory is not needed anymore)</i>
+
+</pre>
+  <li>Start the emulator using this command line:<pre>
+	<b>gxemul -XEcats -d obsd_cats.img -d openbsd_cats_4.0.iso bsd.rd</b>
+
+</pre>
+	and proceed like you would do if you were installing OpenBSD
+	on a real CATS. (Install onto <tt>wd0</tt>, <i>don't</i> configure the
+	network, install from CD.)
+</ol>
+
+<p>(Although it <i>is</i> possible to configure the network, IPv4 address 
+10.0.0.1, netmask 255.0.0.0, gateway/default route 10.0.0.254, and 
+nameserver 10.0.0.254, the userland NAT-like networking layer is not 
+stable enough yet to support a full install via ftp.)
+
+<p><b>NOTE:</b> Make sure that you <tt>sync</tt> and <tt>reboot</tt>
+correctly once the installation is finished, or the <tt>/dev</tt> nodes 
+may not have been written correctly to disk.
+
+<p>Once the install has finished, the following command should let you 
+boot from the harddisk image:
+
+<p><pre>
+	<b>gxemul -XEcats -d obsd_cats.img bsd</b>
+
+</pre>
+
+
+
+
+
+<p><br>
+<a name="debiancats"></a>
+<h3>Debian GNU/Linux for CATS:</h3>
+
+<p>Debian GNU/Linux for CATS (ARM) could potentially run in GXemul, however:
+
+<ul>
+  <li>The DEC 21143 NIC is not emulated well enough for Linux to accept it.
+  <li>Development of Debian for CATS seems to have died? The latest
+	install kernel is quite old.
+</ul>
+
+<p><font color="#ff0000">THIS DOES <b>NOT</b> WORK YET!</font>
+
+<p>The following installation instructions would theoretically work:
+
+<p>
+<ol>
+  <li>Create an empty harddisk image, which will be the root disk
+	that Debian installs itself onto:<pre>
+	<b>dd if=/dev/zero of=debian_cats.img bs=1024 count=1 seek=3300000</b>
+
+</pre>
+  <li>Download the tftpboot install kernel:<pre>
+	<a href="http://ftp.debian.org/debian/dists/oldstable/main/disks-arm/current/cats/tftpboot.img">http://ftp.debian.org/debian/dists/oldstable/main/disks-arm/current/cats/tftpboot.img</a>
+
+</pre>
+  <li>Start the installation using the following command line:<pre>
+	<b>gxemul -XEcats -d debian_cats.img tftpboot.img</b>
+
+</pre>
+</ol>
+
+<p>It doesn't work, though, because the NIC isn't working well enough.
+
+<p>The only use of Debian/CATS in the emulator right now is as a way to
+manipulate Linux disk images, if you are on a non-Linux host. By choosing
+"Execute a shell" in the installer's menu, you can have access to tools such as
+fdisk and mke2fs, which are useful for creating Linux paritions on disk images.
+
+
+
+
+
+
+<p><br>
+
+
+
+</body>
+</html>
+

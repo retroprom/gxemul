@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <title>GXemul: ARM evaluation board emulation modes</title>
+  <meta name="robots" content="noarchive,nofollow,noindex">
+</head>
+<body style="font-family : sans-serif;">
+
+<!-- 10 lines header.  -->
+
+<h1>GXemul: ARM evaluation board emulation modes</h1>
+<p>
+
+<a href="./">Back to the index.</a>
+
+<!--
+
+Copyright (C) 2006-2019  Anders Gavare.  All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+3. The name of the author may not be used to endorse or promote products
+   derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+SUCH DAMAGE.
+
+-->
+
+
+
+<p>NetBSD's port to ARM evaluation boards is called NetBSD/evbarm.
+Right now, the only such machine emulated in GXemul is the IQ80321.
+<a href="#netbsdevbarminstall">NetBSD/evbarm</a> can be manually installed
+and run in that mode.</p>
+
+
+
+
+
+
+
+
+
+<p><br>
+<a name="netbsdevbarminstall"></a>
+<h3>NetBSD/evbarm:</h3>
+
+<p>NetBSD/evbarm is tricky to install, because there is (as far as I know) no INSTALL
+kernel. One way to install the NetBSD/evbarm distribution onto a disk
+image is to install the files using another (emulated) machine.
+
+<p><a href="20060218-netbsd-evbarm.png"><img src="20060218-netbsd-evbarm_small.png"></a>
+
+<p>The following instructions will let you install NetBSD/evbarm onto a disk 
+image, from an emulated CATS machine:
+
+<p>
+<ol>
+  <li>Download a NetBSD/cats 3.1 ramdisk kernel:<pre>
+	<b>wget <a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-3.1/cats/binary/kernel/netbsd.aout-INSTALL.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-3.1/cats/binary/kernel/netbsd.aout-INSTALL.gz</a></b>
+
+</pre>
+  <li>Create an empty harddisk image, which will be the disk image
+	that you will install NetBSD/evbarm onto:<pre>
+	<b>dd if=/dev/zero of=nbsd_iq80321.img bs=1024 count=1 seek=999000</b>
+
+</pre>
+  <li>Download an IQ80321 kernel with wdc support, and the 2.1 ISO image:<pre>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-2.1/evbarm/binary/kernel/">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-2.1/evbarm/binary/kernel</a>/<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-2.1/evbarm/binary/kernel/netbsd-wd0-IQ80321.gz">netbsd-wd0-IQ80321.gz</a>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/iso/2.1/evbarmcd.iso">ftp://ftp.netbsd.org/pub/NetBSD/iso/2.1/evbarmcd.iso</a>
+
+</pre>
+  <p>
+  <li>Now let's extract the files from the CD-ROM image onto the IQ80321's disk image. Start the 
+	CATS machine using the following command line:<pre>
+	<b>gxemul -XEcats -d nbsd_iq80321.img -d evbarmcd.iso netbsd.aout-INSTALL.gz</b>
+
+</pre>Exit from the installer, and execute the following commands as <tt>root</tt>:
+<p><table border="0"><tr><td><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td><pre>
+
+<b>disklabel -I -i wd0</b>
+    (enter suitable commands, e.g. <i>a, 4.2BSD, 1c, 750M, b,
+     swap, a, 200M, P, W, y, Q</i>)
+<b>newfs /dev/wd0a; mount /dev/wd0a /mnt2; cd /mnt2
+mount /dev/cd0a /mnt; sh
+for a in /mnt/*/binary/sets/[bcegmt]*.tgz; do echo $a; tar zxfp $a; done
+exit
+cd dev; sh ./MAKEDEV all; cd ../etc
+echo rc_configured=YES &gt;&gt; rc.conf
+echo "/dev/wd0a / ffs rw 1 1" &gt; fstab
+echo "/dev/wd0b none swap sw 0 0" &gt;&gt; fstab
+cd /; umount /mnt; umount /mnt2; sync; halt</b>
+</pre></td></tr></table>
+</ol>
+
+<p>You should now be able to boot NetBSD/evbarm using this command:<pre>
+	<b>gxemul -x -E iq80321 -d nbsd_iq80321.img netbsd-wd0-IQ80321.gz</b>
+</pre>
+
+
+
+
+
+
+
+
+
+<p><br>
+
+
+
+</body>
+</html>
+

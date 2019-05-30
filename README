@@ -77,7 +77,7 @@ To compile, type './configure' and then 'make'. This should work on most
 Unix-like systems. If it does not, then please mail me a bug report.
 
 If you are impatient, and want to try out running a guest operating system 
-inside GXemul, read this:  doc/guestoses.html#netbsdpmaxinstall
+inside GXemul, read this:  doc/machine_decstation.html#netbsdpmaxinstall
 
 If you want to use GXemul for experimenting with code of your own,
 then I suggest you compile a Hello World program according to the tips

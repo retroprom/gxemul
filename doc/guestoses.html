@@ -45,16 +45,10 @@ SUCH DAMAGE.
 
 <p><br>
 <ul>
-  <li><a href="#netbsdhpcmipsinstall">NetBSD/hpcmips 5.0.2</a>
-  <li><a href="#netbsdcobaltinstall">NetBSD/cobalt 7.1.2</a>
   <li><a href="#netbsdevbmipsinstall">NetBSD/evbmips 7.1.2</a>
-  <li><a href="#netbsdalgorinstall">NetBSD/algor 5.0.2</a>
-  <li><a href="#netbsdcatsinstall">NetBSD/cats 5.0</a>
-  <li><a href="#netbsdevbarminstall">NetBSD/evbarm 2.1</a>
   <li><a href="#netbsdprepinstall">NetBSD/prep 2.1</a>
   <li><a href="#netbsdmacppcinstall">NetBSD/macppc 4.0.1</a>
   <li><a href="#netbsdpmppc">NetBSD/pmppc 3.1</a>
-  <li><a href="#openbsdcatsinstall">OpenBSD/cats 4.0</a>
   <li><a href="#openbsdmvme88kinstall">OpenBSD/mvme88k 4.5</a>
   <li><a href="#helenos">HelenOS/testmips and testarm 0.5.0</a>
 </ul>
@@ -66,116 +60,6 @@ SUCH DAMAGE.
 
 
 
-<p><br>
-<a name="netbsdhpcmipsinstall"></a>
-<h3>NetBSD/hpcmips:</h3>
-
-<p>It is possible to install <a
-href="http://www.netbsd.org/ports/hpcmips/">NetBSD/hpcmips</a> onto a disk
-image, on an an emulated MobilePro 770 or 800. (MobilePro 780 and 880 might
-work too, but I don't test those for every release of the emulator. They 
-have unaligned framebuffers, and run a bit slower.)
-
-<p>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-<a href="20050427-netbsd-hpcmips-1.png"><img src="20050427-netbsd-hpcmips-1_small.png"></a>
-&nbsp;&nbsp;&nbsp;
-<a href="20050427-netbsd-hpcmips-2.png"><img src="20050427-netbsd-hpcmips-2_small.png"></a>
-
-<p>
-These instructions show an example of how to install
-NetBSD/hpcmips on an emulated MobilePro 770:
-
-<p>
-<ol start="1">
-  <li>Create an empty harddisk image, which will be the root disk
-	that you will install NetBSD/hpcmips onto:<pre>
-	<b>dd if=/dev/zero of=nbsd_hpcmips.img bs=1024 count=1 seek=3000000</b>
-
-</pre>
-  <li>Download the NetBSD/hpcmips 5.0.2 ISO image, a generic kernel,
-	and the installer kernel:<pre>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/iso/5.0.2/">ftp://ftp.netbsd.org/pub/NetBSD/iso/5.0.2</a>/<a href="ftp://ftp.netbsd.org/pub/NetBSD/iso/5.0.2/hpcmipscd-5.0.2.iso">hpcmipscd-5.0.2.iso</a>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/hpcmips/binary/kernel/">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/hpcmips/binary/kernel</a>/<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/hpcmips/binary/kernel/netbsd-GENERIC.gz">netbsd-GENERIC.gz</a>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/hpcmips/installation/netbsd.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/hpcmips/installation/netbsd.gz</a>
-
-</pre>
-  <p>
-  <li>Start the installation like this:<pre>
-	<b>gxemul -e mobilepro770 -X -d nbsd_hpcmips.img -d b:hpcmipscd-5.0.2.iso netbsd.gz</b>
-
-</pre>
-	and proceed like you would do if you were installing NetBSD on a real
-	MobilePro 770. (Install onto wd0, choose "Use entire disk" when
-	doing the MBR partitioning, and choose to install from CD-ROM.)
-</ol>
-
-<p>(While it is possible to install and run NetBSD/hpcmips without the <tt>-X</tt>
-command line option (i.e. using serial console), NetBSD 4.0.1's default
-<tt>/etc/ttys</tt> file after a full install did not have
-<tt>/dev/console</tt> enabled, so you needed to edit <tt>/etc/ttys</tt>
-before you reboot after the install, to be able to log in. Whether this has
-changed after 4.0.1, I don't know.)
-
-<p>
-If everything worked, NetBSD should now be installed on the disk image.
-Use the following command line to boot the emulated hpcmips machine:<pre>
-	<b>gxemul -e mobilepro770 -X -d nbsd_hpcmips.img netbsd-GENERIC.gz</b>
-
-</pre>
-
-<p>When you have logged in as <tt>root</tt>, you can use <tt>startx</tt> to
-start X Windows, but there is no mouse support yet so only keyboard input 
-is available. This makes it a bit akward to use X.
-
-
-
-
-
-
-
-
-<p><br>
-<a name="netbsdcobaltinstall"></a>
-<h3>NetBSD/cobalt:</h3>
-
-<p><a href="http://www.netbsd.org/ports/cobalt/">NetBSD/cobalt</a> is possible
-to install on an emulated Cobalt Cube.
-
-<p>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-<a href="20060812-netbsd-cobalt-3.0.1.png"><img src="20060812-netbsd-cobalt-3.0.1_small.png"></a>
-
-<p>The following instructions will let you install NetBSD/cobalt onto a disk 
-image:
-
-<p>
-<ol>
-  <li>Create an empty harddisk image, which will be the disk image
-	that you will install NetBSD/cobalt onto:<pre>
-	<b>dd if=/dev/zero of=nbsd_cobalt.img bs=1024 count=1 seek=2700000</b>
-
-</pre>
-  <li>Download the generic kernel for Cobalt and the ISO image:<pre>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/cobalt/binary/kernel/netbsd-GENERIC.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/cobalt/binary/kernel/netbsd-GENERIC.gz</a>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/iso/NetBSD-7.1.2-cobalt.iso">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/iso/NetBSD-7.1.2-cobalt.iso</a>
-
-</pre>
-  <li>Start the installation like this:<pre>
-  	<b>gxemul -x -E cobalt -d nbsd_cobalt.img -d bd:NetBSD-7.1.2-cobalt.iso -j cobalt/binary/kernel/netbsd-RAMDISK</b>
-
-</pre>
-	and proceed like you would do if you were installing NetBSD on a real
-	Cobalt. (Install onto <tt>wd0</tt>, choose "Use entire disk" when
-	doing the MBR partitioning, and choose to install from CD-ROM device "<tt>wd1d</tt>".)
-</ol>
-
-<p>
-You should now be able to boot NetBSD/cobalt like this:<pre>
-	<b>gxemul -x -E cobalt -d nbsd_cobalt.img netbsd-GENERIC.gz</b>
-</pre>
-
-<p>Known issues: The clock may go too fast inside the emulator.
 
 
 
@@ -189,7 +73,7 @@ You should now be able to boot NetBSD/cobalt like this:<pre>
 in GXemul on an emulated Malta evaluation board, with a 5Kc (MIPS64) or 
 4Kc (MIPS32) processor. 5Kc is the default.
 
-<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<p>
 <a href="20060812-netbsd-malta-3.0.1.png"><img src="20060812-netbsd-malta-3.0.1_small.png"></a>
 
 <p>One way to install the NetBSD/evbmips distribution onto a disk
@@ -275,212 +159,6 @@ window.
 
 
 
-<p><br>
-<a name="netbsdalgorinstall"></a>
-<h3>NetBSD/algor:</h3>
-
-<p><a href="http://www.netbsd.org/ports/algor/">NetBSD/algor</a> can
-run in GXemul on an emulated Algorithmics P5064 evaluation board.
-
-<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-<a href="20060814-netbsd-algor-3.0.1.png"><img src="20060814-netbsd-algor-3.0.1_small.png"></a>
-
-<p>One way to install the NetBSD/algor distribution onto a disk
-image is to install the files using another (emulated) machine.
-
-<p>The following instructions will let you install NetBSD/algor onto a disk 
-image, from an emulated DECstation 3MAX machine:
-
-<p>
-<ol>
-  <li>Download a NetBSD/pmax (DECstation) install RAMDISK kernel (NOTE: not 5.0.2!):<pre>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-4.0.1/pmax/binary/kernel/netbsd-INSTALL.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-4.0.1/pmax/binary/kernel/netbsd-INSTALL.gz</a>
-</pre>
-  <p>
-  <li>Create an empty harddisk image, which will be the disk image
-	that you will install NetBSD/algor onto:<pre>
-	<b>dd if=/dev/zero of=nbsd_algor.img bs=1024 count=1 seek=700000</b>
-
-</pre>
-  <li>Download the P5064 Algor kernel and the install sets:<pre>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/algor/binary/kernel/netbsd-P5064.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/algor/binary/kernel/netbsd-P5064.gz</a>
-
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/algor/binary/sets/base.tgz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/algor/binary/sets/base.tgz</a>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/algor/binary/sets/comp.tgz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/algor/binary/sets/comp.tgz</a>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/algor/binary/sets/etc.tgz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/algor/binary/sets/etc.tgz</a>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/algor/binary/sets/man.tgz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/algor/binary/sets/man.tgz</a>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/algor/binary/sets/misc.tgz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/algor/binary/sets/misc.tgz</a>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/algor/binary/sets/text.tgz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/algor/binary/sets/text.tgz</a>
-
-</pre>
-  <li>Prepare an ISO image of the install sets:<pre>
-	mkisofs -U -o algor_files.iso base.tgz comp.tgz etc.tgz man.tgz misc.tgz text.tgz
-
-</pre>
-  <p>
-  <li>Start the emulated DECstation machine like this:<pre>
-	<b>gxemul -e 3max -d nbsd_algor.img -d algor_files.iso netbsd-INSTALL.gz</b>
-
-</pre>
-  <li>At the <tt>Terminal type? [rcons]</tt> prompt, type <b>CTRL-B</b>
-to simulate a CTRL-C sent to NetBSD/pmax. Then execute the following commands:
-<p><table border="0"><tr><td><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td><pre>
-<b>newfs /dev/sd0c
-mount /dev/cd0c /mnt
-mkdir /mnt2; mount /dev/sd0c /mnt2
-cd /mnt2; sh
-for a in /mnt/*.tgz; do echo $a; tar zxfp $a; done
-exit
-cd dev; sh ./MAKEDEV all; cd ../etc
-echo rc_configured=YES >> rc.conf
-echo "/dev/wd0c / ffs rw 1 1" > fstab
-cd /; umount /mnt; umount /mnt2; halt</b>
-</pre></td></tr></table>
-</ol>
-
-<p>You should now be able to boot NetBSD/algor using this command:<pre>
-	<b>gxemul -x -e p5064 -d nbsd_algor.img netbsd-P5064.gz</b>
-</pre>
-
-<p>The installation instructions above create a filesystem
-<i>without</i> a disklabel, so there is only one ffs partition and no
-swap. You will need to enter the following things when booting with the
-generic kernel:<pre>
-	root device (default wd0a): <b>wd0c</b>
-	dump device (default wd0b):		<i>(just press enter)</i>
-	file system (default generic):		<i>(just press enter)</i>
-	init path (default /sbin/init):		<i>(just press enter)</i>
-</pre>
-
-
-
-
-
-
-<p><br>
-<a name="netbsdcatsinstall"></a>
-<h3>NetBSD/cats:</h3>
-
-<p>It is possible to install and run
-<a href="http://www.netbsd.org/ports/cats/">NetBSD/cats</a> in GXemul.
-
-<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-<a href="20051007-netbsd-cats-installed.png"><img src="20051007-netbsd-cats-installed_small.png"></a>
-
-<p>
-To install NetBSD/cats onto a disk image, follow these instructions:
-
-<p>
-<ol start="1">
-  <li>Create an empty harddisk image, which will be the root disk
-	that you will install NetBSD/cats onto:<pre>
-	<b>dd if=/dev/zero of=nbsd_cats.img bs=1024 count=1 seek=3000000</b>
-
-</pre>
-  <li>Download the NetBSD/cats ISO image and the generic and install kernels:<pre>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/iso/5.0/catscd-5.0.iso">ftp://ftp.netbsd.org/pub/NetBSD/iso/5.0/catscd-5.0.iso</a>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0/cats/binary/kernel/netbsd.aout-GENERIC.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0/cats/binary/kernel/netbsd.aout-GENERIC.gz</a>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0/cats/binary/kernel/netbsd.aout-INSTALL.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0/cats/binary/kernel/netbsd.aout-INSTALL.gz</a>
-
-</pre>
-  <p>
-  <li>Start the installation like this:<pre>
-	<b>gxemul -XEcats -d nbsd_cats.img -d catscd-5.0.iso netbsd.aout-INSTALL.gz</b>
-
-</pre>
-	and proceed like you would do if you were installing NetBSD on a real
-	CATS from CDROM.
-</ol>
-
-<p>Note that there are <i>long</i> delays during bootup.
-
-<p>Alternatively, to install from FTP, you can skip downloading the ISO,
-and start the install without <tt>-d catscd-5.0.iso</tt>. Suitable network 
-settings are IP 10.0.0.1, gateway/default route 10.0.0.254, netmask 
-255.0.0.0, nameserver 10.0.0.254.
-
-<p>If everything worked, NetBSD should now be installed on the disk image.
-Use the following command line to boot the emulated CATS machine:<pre>
-	<b>gxemul -XEcats -d nbsd_cats.img netbsd.aout-GENERIC.gz</b>
-
-</pre>
-
-
-
-
-
-
-
-<p><br>
-<a name="netbsdevbarminstall"></a>
-<h3>NetBSD/evbarm:</h3>
-
-<p><a href="http://www.netbsd.org/ports/evbarm/">NetBSD/evbarm</a> can
-run in GXemul on an emulated IQ80321 evaluation board.
-
-<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-<a href="20060218-netbsd-evbarm.png"><img src="20060218-netbsd-evbarm_small.png"></a>
-
-<p>It is tricky to install, because there is (as far as I know) no INSTALL
-kernel. One way to install the NetBSD/evbarm distribution onto a disk
-image is to install the files using another (emulated) machine.
-
-<p>The following instructions will let you install NetBSD/evbarm onto a disk 
-image, from an emulated CATS machine:
-
-<p>
-<ol>
-  <li>Download a NetBSD/cats 3.1 ramdisk kernel:<pre>
-	<b>wget <a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-3.1/cats/binary/kernel/netbsd.aout-INSTALL.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-3.1/cats/binary/kernel/netbsd.aout-INSTALL.gz</a></b>
-
-</pre>
-  <li>Create an empty harddisk image, which will be the disk image
-	that you will install NetBSD/evbarm onto:<pre>
-	<b>dd if=/dev/zero of=nbsd_iq80321.img bs=1024 count=1 seek=999000</b>
-
-</pre>
-  <li>Download an IQ80321 kernel with wdc support, and the 2.1 ISO image:<pre>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-2.1/evbarm/binary/kernel/">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-2.1/evbarm/binary/kernel</a>/<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-2.1/evbarm/binary/kernel/netbsd-wd0-IQ80321.gz">netbsd-wd0-IQ80321.gz</a>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/iso/2.1/evbarmcd.iso">ftp://ftp.netbsd.org/pub/NetBSD/iso/2.1/evbarmcd.iso</a>
-
-</pre>
-  <p>
-  <li>Now let's extract the files from the CD-ROM image onto the IQ80321's disk image. Start the 
-	CATS machine using the following command line:<pre>
-	<b>gxemul -XEcats -d nbsd_iq80321.img -d evbarmcd.iso netbsd.aout-INSTALL.gz</b>
-
-</pre>Exit from the installer, and execute the following commands as <tt>root</tt>:
-<p><table border="0"><tr><td><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td><pre>
-
-<b>disklabel -I -i wd0</b>
-    (enter suitable commands, e.g. <i>a, 4.2BSD, 1c, 750M, b,
-     swap, a, 200M, P, W, y, Q</i>)
-<b>newfs /dev/wd0a; mount /dev/wd0a /mnt2; cd /mnt2
-mount /dev/cd0a /mnt; sh
-for a in /mnt/*/binary/sets/[bcegmt]*.tgz; do echo $a; tar zxfp $a; done
-exit
-cd dev; sh ./MAKEDEV all; cd ../etc
-echo rc_configured=YES &gt;&gt; rc.conf
-echo "/dev/wd0a / ffs rw 1 1" &gt; fstab
-echo "/dev/wd0b none swap sw 0 0" &gt;&gt; fstab
-cd /; umount /mnt; umount /mnt2; sync; halt</b>
-</pre></td></tr></table>
-</ol>
-
-<p>You should now be able to boot NetBSD/evbarm using this command:<pre>
-	<b>gxemul -x -E iq80321 -d nbsd_iq80321.img netbsd-wd0-IQ80321.gz</b>
-</pre>
-
-
-
-
-
-
-
-
-
-
-
 
 
 <p><br>
@@ -493,7 +171,7 @@ an emulated IBM 6050 (PowerPC) machine. (Newer versions of NetBSD/prep use
 the wdc controller in a way which isn't implemented in GXemul yet, or 
 there are bugs in GXemul's PowerPC CPU emulation.)
 
-<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<p>
 <a href="20051123-netbsd-prep.png"><img src="20051123-netbsd-prep_small.png"></a>
 
 <p>To install NetBSD/prep onto a disk image, follow these instructions:
@@ -593,7 +271,7 @@ href="http://www.netbsd.org/ports/macppc/">NetBSD/macppc</a> in GXemul on
 an emulated generic PowerPC machine. No specific Machintosh model is 
 emulated, but it is enough to for NetBSD to recognize it.
 
-<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<p>
 <a href="20070318-netbsd-macppc.png"><img src="20070318-netbsd-macppc_small.png"></a>
 
 <p>To install NetBSD/macppc onto a disk image, follow these instructions:
@@ -648,7 +326,7 @@ run in GXemul on an emulated Artesyn PM/PPC board. Currently, no SCSI or other
 disk controller is emulated for this machine type, but it is possible to run
 NetBSD with root-on-nfs.
 
-<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<p>
 <a href="20070616-netbsd-pmppc-diskless.png"><img src="20070616-netbsd-pmppc-diskless_small.png"></a>
 
 <p>These setup steps will let you run NetBSD/pmppc with root-on-nfs:
@@ -777,79 +455,6 @@ the following values:<pre>
 
 
 
-
-
-
-
-
-
-
-<p><br>
-<a name="openbsdcatsinstall"></a>
-<h3>OpenBSD/cats:</h3>
-
-<p>It is possible to install and run
-<a href="http://www.openbsd.org/cats.html">OpenBSD/cats</a>
-in GXemul. Unfortunately, <i>"The OpenBSD/cats port was discontinued after the 4.0 release"</i> according to
-<a href="http://www.openbsd.org/cats.html">http://www.openbsd.org/cats.html</a>,
-so from a security perspective it is not up to date, but it is still
-possible to run for experimental purposes.
-
-<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-<a href="20051007-openbsd-cats-installed.png"><img src="20051007-openbsd-cats-installed_small.png"></a>
-
-<p>To install OpenBSD/cats onto an emulated harddisk image,
-follow these instructions:
-
-<p>
-<ol>
-  <li>Create an empty harddisk image, which will be the root disk
-	that OpenBSD installs itself onto:<pre>
-	<b>dd if=/dev/zero of=obsd_cats.img bs=1024 count=1 seek=1900000</b>
-
-</pre>
-  <li>Download the entire cats directory from the ftp server:<pre>
-	<b>wget -np -l 0 -r <a href="https://ftp.nluug.nl/OpenBSD/4.0/cats/">https://ftp.nluug.nl/OpenBSD/4.0/cats/</a></b>
-	<b>cp ftp.nluug.nl/OpenBSD/4.0/cats/bsd .</b>
-	<b>cp ftp.nluug.nl/OpenBSD/4.0/cats/bsd.rd .</b>
-
-</pre>
-	(Replace ftp.se.openbsd.org with a server closer to you, for
-	increased download speed.)
-  <p>
-  <li>You now need to make an ISO image of the entire directory you downloaded.
-	(I recommend using <tt>mkisofs</tt> for that purpose. If you don't
-	already have <tt>mkisofs</tt> installed on your system, you need
-	to install it in order to do this.)<pre>
-	<b>mkisofs -allow-lowercase -o openbsd_cats_4.0.iso ftp.nluug.nl/OpenBSD/</b>
-	<b>rm -rf ftp.nluug.nl</b>      <i>(this directory is not needed anymore)</i>
-
-</pre>
-  <li>Start the emulator using this command line:<pre>
-	<b>gxemul -XEcats -d obsd_cats.img -d openbsd_cats_4.0.iso bsd.rd</b>
-
-</pre>
-	and proceed like you would do if you were installing OpenBSD
-	on a real CATS. (Install onto <tt>wd0</tt>, <i>don't</i> configure the
-	network, install from CD.)
-</ol>
-
-<p>(Although it <i>is</i> possible to configure the network, IPv4 address 
-10.0.0.1, netmask 255.0.0.0, gateway/default route 10.0.0.254, and 
-nameserver 10.0.0.254, the userland NAT-like networking layer is not 
-stable enough yet to support a full install via ftp.)
-
-<p><b>NOTE:</b> Make sure that you <tt>sync</tt> and <tt>reboot</tt>
-correctly once the installation is finished, or the <tt>/dev</tt> nodes 
-may not have been written correctly to disk.
-
-<p>Once the install has finished, the following command should let you 
-boot from the harddisk image:
-
-<p><pre>
-	<b>gxemul -XEcats -d obsd_cats.img bsd</b>
-
-</pre>
 
 
 

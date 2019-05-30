@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <title>GXemul: Luna 88K emulation</title>
+  <meta name="robots" content="noarchive,nofollow,noindex">
+</head>
+<body style="font-family : sans-serif;">
+
+<!-- 10 lines header.  -->
+
+<h1>GXemul: Luna 88K emulation</h1>
+<p>
+
+<a href="./">Back to the index.</a>
+
+<!--
+
+Copyright (C) 2006-2019  Anders Gavare.  All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+3. The name of the author may not be used to endorse or promote products
+   derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+SUCH DAMAGE.
+
+-->
+
+
+
+<p>This emulation mode attempts to emulate a Luna 88K workstation. Note that these
+were based on Motorola 88000 processors, not 68000.
+
+<p><font color="red">NOTE:</font> The Luna 88K emulation mode is not fully working yet.
+An older OpenBSD/luna88k
+ramdisk kernel can reach userland and be interacted with, and some framebuffer
+output can be seen. Newer kernels, however, panic. Most likely, this is due
+to bugs in the emulator.
+
+
+
+
+<p><br>
+<a name="openbsdluna88k"></a>
+<h3>OpenBSD/luna88k:</h3>
+
+<p><font color="#ff0000">IT DOES <b>NOT</b> WORK YET!</font>
+
+<p>These instructions are here mostly for me to remember how to debug/proceed:
+
+<p>
+Download a RAMDISK kernel:
+
+<ul>
+	<li><a href="https://ftp.eu.openbsd.org/pub/OpenBSD/5.4/luna88k/bsd.rd">https://ftp.eu.openbsd.org/pub/OpenBSD/5.4/luna88k/bsd.rd</a>
+	<li><a href="https://ftp.eu.openbsd.org/pub/OpenBSD/5.9/luna88k/bsd.rd">https://ftp.eu.openbsd.org/pub/OpenBSD/5.9/luna88k/bsd.rd</a>
+	<li><a href="https://ftp.eu.openbsd.org/pub/OpenBSD/6.2/luna88k/bsd.rd">https://ftp.eu.openbsd.org/pub/OpenBSD/6.2/luna88k/bsd.rd</a>
+</ul>
+
+<p>For 5.4 and below:
+<pre>
+	<b>gxemul -e luna-88k 0x20000:0x20:bsd.rd</b>
+</pre>
+or for the newer ones:
+<pre>
+	<b>gxemul -e luna-88k bsd.rd</b>
+</pre>
+
+<p>From 6.0 and newer, bugs are triggered (most likely in GXemul):
+<pre>
+	panic: amap_wipeout: corrupt amap
+</pre>
+
+<p>The 5.9 kernel gets further than 6.0 (reaching userland) when run without graphical framebuffer:
+
+<pre>
+CPU0 is associated to 2 MC88200 CMMUs
+CPU1 is associated to 2 MC88200 CMMUs
+CPU2 is associated to 2 MC88200 CMMUs
+CPU3 is associated to 2 MC88200 CMMUs
+Copyright (c) 1982, 1986, 1989, 1991, 1993
+	The Regents of the University of California.  All rights reserved.
+Copyright (c) 1995-2016 OpenBSD. All rights reserved.  http://www.OpenBSD.org
+
+OpenBSD 5.9 (RAMDISK) #0: Fri Mar  4 23:48:03 JST 2016
+    aoyama@rhea.in.nk-home.net:/w1/o/5.9/src/sys/arch/luna88k/compile/RAMDISK
+real mem = 117440512 (112MB)
+avail mem = 110456832 (105MB)
+mainbus0 at root: OMRON LUNA-88K, 25MHz
+cpu0: M88100 rev 0x3, 2 CMMU
+cpu0: M88200 (16K) rev 0x9, full Icache
+cpu0: M88200 (16K) rev 0x9, full Dcache
+clock0 at mainbus0: MK48T02
+le0 at mainbus0: address 00:00:00:00:00:00
+le0: 32 receive buffers, 8 transmit buffers
+sio0 at mainbus0: 7201a
+siotty0 at sio0 channel 0 (console)
+ws0 at sio0 channel 1[ luna88k sio dev1 write data: TODO ]
+
+wskbd0 at ws0
+fb at mainbus0 not configured
+spc0 at mainbus0
+scsibus0 at spc0: 8 targets, initiator 7
+spc0: SCSI bus reset
+spc0: SCSI bus reset
+spc0: SCSI bus reset
+spc0: SCSI bus reset
+spc0: SCSI bus reset
+spc0: SCSI bus reset
+spc0: SCSI bus reset
+spc0: SCSI bus reset
+spc0: SCSI bus reset
+spc0: SCSI bus reset
+spc0: SCSI bus reset
+spc0: SCSI bus reset
+spc0: SCSI bus reset
+spc0: SCSI bus reset
+boot device: &lt;unknown>
+root on rd0a swap on rd0b dump on rd0b
+WARNING: clock lost 281 days -- CHECK AND RESET THE DATE!
+erase ^?, werase ^W, kill ^U, intr ^C, status ^T
+
+Welcome to the OpenBSD/luna88k 5.9 installation program.
+(I)nstall, (U)pgrade, (A)utoinstall or (S)hell? s
+# echo $OBSD
+OpenBSD/luna88k 5.9
+# 
+</pre>
+
+<p>It seems that some versions of OpenBSD had a tiny bug in the framebuffer
+scroll up routine, so it does not contain any loads or stores.
+
+<p>Using a breakpoint
+<tt>-p om1_windowmove</tt> in both OpenBSD 5.9 and 6.2 indicates that 
+5.9 must have been optimized too heavily or had a bug; it loops when trying to copy
+pixels to scroll up the text, but the loop contains "nothing":
+
+<pre>
+s001553b8: 64e70001	subu	r7,r7,1
+s001553bc: 61270001	addu	r9,r7,1
+s001553c0: ec4c0004	bcnd.n	eq0,r12,0x001553d0	; &lt;om1_windowmove+0x3b0>
+s001553c4: 59600000 (d)	or	r11,r0,0x0
+s001553c8: f1a08832	set	r13,r0,1&lt;18>
+s001553cc: f562600d	addu	r11,r2,r13
+s001553d0: 60420004	addu	r2,r2,4
+s001553d4: eda9fff9	bcnd.n	ne0,r9,0x001553b8	; &lt;om1_windowmove+0x398>
+s001553d8: 616b0004 (d)	addu	r11,r11,4
+s001553b8: 64e70001	subu	r7,r7,1
+...
+</pre>
+
+compared to what it looks like in 6.2:
+
+<pre>
+s001547a4: 64e70001	subu	r7,r7,1
+s001547a8: 61270001	addu	r9,r7,1
+s001547ac: 60420004	addu	r2,r2,4
+s001547b0: eda9fffa	bcnd.n	ne0,r9,0x00154798	; &lt;om1_windowmove+0x398>
+s001547b4: 616b0004 (d)	addu	r11,r11,4
+s00154798: edac003e	bcnd.n	ne0,r12,0x00154890	; &lt;om1_windowmove+0x490>
+s0015479c: f1208832 (d)	set	r9,r0,1&lt;18>
+s00154890: f5021409	ld	r8,r2,r9	; [0xb10c958c]
+s00154894: c7ffffc4	br.n	0x001547a4	; &lt;om1_windowmove+0x3a4>
+s00154898: f500240b (d)	st	r8,r0,r11	; [0xb1087f8c]
+s001547a4: 64e70001	subu	r7,r7,1
+</pre>
+
+<p>Note the actual loads and stores to video ram (0xb10.....).
+
+<p>Going back all the way to an old 5.4 kernel allows the framebuffer to 
+be used:
+<pre>
+	<b>gxemul -X -e luna-88k 0x20000:0x20:bsd.rd</b>
+</pre>
+
+<p>
+<a href="20180220-openbsd-luna88k-5.4.png"><img src="20180220-openbsd-luna88k-5.4-small.png"></a>
+
+
+<p>The following is not needed in order to experiment with booting OpenBSD,
+but can be interesting nonetheless: Download 
+<a href="https://ftp.eu.openbsd.org/pub/OpenBSD/6.2/luna88k/boot">https://ftp.eu.openbsd.org/pub/OpenBSD/6.2/luna88k/boot</a> and try
+
+<pre>
+	<b>gxemul -v -e luna-88k 0x00700000:0x20:0x00700000:boot</b>
+</pre>
+
+
+
+
+
+<p><br>
+
+
+
+</body>
+</html>
+
