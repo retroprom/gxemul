@@ -4873,3 +4873,5 @@ Changelog for GXemul:
 20190523	Starting to move guest OS installation instructions into
 		individual machine pages, rather than having all of them
 		randomly in the general guest OS page.
+20190530	Removing the "QEMU_MIPS" machine mode, which was useful back
+		in 2006 to compare performance against QEMU's MIPS emulation.
