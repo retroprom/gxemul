@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <title>GXemul: IBM 6050/6070 PReP emulation</title>
+  <meta name="robots" content="noarchive,nofollow,noindex">
+</head>
+<body style="font-family : sans-serif;">
+
+<!-- 10 lines header.  -->
+
+<h1>GXemul: IBM 6050/6070 PReP emulation</h1>
+<p>
+
+<a href="./">Back to the index.</a>
+
+<!--
+
+Copyright (C) 2006-2019  Anders Gavare.  All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+3. The name of the author may not be used to endorse or promote products
+   derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+SUCH DAMAGE.
+
+-->
+
+
+
+<p>This emulation mode attempts to emulate an IBM 6050/6070, which was a
+<a href="https://en.wikipedia.org/wiki/PowerPC_Reference_Platform">PowerPC
+Reference Platform</a> machine (a.k.a. PReP).
+
+
+
+
+<p><br>
+<a name="netbsdprepinstall"></a>
+<h3>NetBSD/prep:</h3>
+
+<p>It is possible to install and run <a 
+href="http://www.netbsd.org/ports/prep/">NetBSD/prep</a> 2.1 in GXemul on 
+an emulated IBM 6050 (PowerPC) machine. (Newer versions of NetBSD/prep use 
+the wdc controller in a way which isn't implemented in GXemul yet, or 
+there are bugs in GXemul's PowerPC CPU emulation.)
+
+<p>
+<a href="20051123-netbsd-prep.png"><img src="20051123-netbsd-prep_small.png"></a>
+
+<p>To install NetBSD/prep onto a disk image, follow these instructions:
+
+<p>
+<ol start="1">
+  <li>Create an empty harddisk image, which will be the root disk
+	that you will install NetBSD/prep onto:<pre>
+    <b>dd if=/dev/zero of=nbsd_prep.img bs=1024 count=1 seek=1000000</b>
+
+</pre>
+  <li>Download the NetBSD/prep 2.1 ISO image and the generic kernel:<pre>
+    <a href="ftp://ftp.netbsd.org/pub/NetBSD/iso/2.1/prepcd.iso">ftp://ftp.netbsd.org/pub/NetBSD/iso/2.1/prepcd.iso</a>
+    <a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-2.1/prep/binary/kernel/netbsd-GENERIC.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-2.1/prep/binary/kernel/netbsd-GENERIC.gz</a>
+
+</pre>
+  <p>
+  <li>Start the installation like this:<pre>
+    <b>gxemul -X -e ibm6050 -d nbsd_prep.img -d rdb:prepcd.iso -j prep/binary/kernel/netbsd-INSTALL.gz</b>
+
+</pre>
+  <p>
+  <li>Installation is a bit unsmooth, possibly due to bugs in GXemul,
+	possibly due to bugs in NetBSD itself; others have been having
+	problems on real hardware: <a href="http://mail-index.NetBSD.org/port-prep/2005/11/25/0004.html">http://mail-index.NetBSD.org/port-prep/2005/11/25/0004.html</a>.
+	Creating an MBR slice and a disklabel with sysinst bugs out, so
+	some things have to be done manually:<p>
+	At "<tt>(I)nstall, (S)hell, or (H)alt</tt>", choose
+		<tt><b><u>s</u></b></tt>.
+	<br><tt># <b><u>fdisk -u wd0</u></b></tt>
+	<br><tt>Do you want to change our idea of what BIOS thinks? [n]</tt>
+		(just press <b>ENTER</b>)
+	<br><tt>Which partition do you want to change?: [none] <b><u>0</u></b></tt>
+	<br><tt>sysid: ... </tt> (just press <B>ENTER</b>)
+	<br><tt>start: ... <b><u>1cyl</u></b></tt>
+	<br><tt>size: ... </tt> (just press <B>ENTER</b>)
+	<br><tt>Which partition do you want to change?: [none]</tt> (press <b>ENTER</b>)
+	<br><tt>Should we write new partition table? [n] <b><u>y</u></b></tt>
+	<br><tt># <b><u>disklabel -I -i wd0</u></b></tt>
+	<br><tt>partition&gt; <b><u>a</u></b></tt>
+	<br><tt>Filesystem type [?] [unused]: <b><u>4.2BSD</u></b></tt>
+	<br><tt>Start offset ('x' to start after partition 'x') [0c, 0s, 0M]: <b><u>1c</u></b></tt>
+	<br><tt>Partition size ('$' for all remaining) [0c, 0s, 0M]: <b><u>900M</u></b></tt>
+	<br><tt>partition&gt; <b><u>b</u></b></tt>
+	<br><tt>Filesystem type [?] [unused]: <b><u>swap</u></b></tt>
+	<br><tt>Start offset ('x' to start after partition 'x') [0c, 0s, 0M]: <b><u>a</u></b></tt>
+	<br><tt>Partition size ('$' for all remaining) [0c, 0s, 0M]: <b><u>$</u></b></tt>
+	<br><tt>partition&gt; <b><u>W</u></b></tt>
+	<br><tt>Label disk [n]? <b><u>y</u></b></tt>
+	<br><tt>partition&gt; <b><u>Q</u></b></tt>
+	<br><tt># <b><u>newfs wd0a</u></b></tt>
+	<br><tt># <b><u>sysinst</u></b></tt>
+	<br>Choose to install onto <b>wd0</b>. Choose
+		"<tt>a: Edit the MBR partition table</tt>"
+		when presented with that option.
+	<br>Choose the 'a' partition/slice,
+		set the 'e' ("active") and 'f' ("install") fields to <b>Yes</b>,
+		and then choose "<tt>x: Partition table OK</tt>".
+	<br>Choose "<tt>b: Use existing partition sizes</tt>" in the next
+		menu.
+	<br>Select partition 'a' and press ENTER. Set field 'k' (mount point)
+		to '<tt><b>/</b></tt>'.
+	<br>Get out of the partitioner by selecting
+		"<tt>x: Partition sizes ok</tt>" twice.
+	<br>At "<tt>Write outside MBR partition? [n]:</tt>", just press
+		<b>ENTER</b>.
+	<br>Install from CD-ROM, device <b>wd1c</b>.
+</ol>
+
+<p>If everything worked, NetBSD should now be installed on the disk image.
+Use the following command line to boot the emulated machine:<pre>
+	<b>gxemul -X -e ibm6050 -d nbsd_prep.img netbsd-GENERIC.gz</b>
+
+</pre>
+
+<p>When asked which the root device is, type <tt><b>wd0</b></tt> and
+just press ENTER to select the default values for dump device, file
+system type, and init path.
+
+
+
+
+
+
+
+
+
+<p><br>
+
+
+
+</body>
+</html>
+
