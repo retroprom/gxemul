@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <title>GXemul: VoCore emulation</title>
+  <meta name="robots" content="noarchive,nofollow,noindex">
+</head>
+<body style="font-family : sans-serif;">
+
+<!-- 10 lines header.  -->
+
+<h1>GXemul: VoCore emulation</h1>
+<p>
+
+<a href="./">Back to the index.</a>
+
+<!--
+
+Copyright (C) 2006-2019  Anders Gavare.  All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+3. The name of the author may not be used to endorse or promote products
+   derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+SUCH DAMAGE.
+
+-->
+
+
+
+<p>The goal with this emulation mode is to eventually emulate the
+<a href="https://vocore.io/v1d.html">VoCore Dock</a>.
+
+<p><font color="red">It does not work yet.</font>
+
+
+
+
+<p><br>
+<a name="freebsdvocore"></a>
+<h3>FreeBSD/VoCore:</h3>
+
+<p><font color="red">This doesn't work yet. See comments about Linux.</font>
+
+<p>According to <a href="https://lists.freebsd.org/pipermail/freebsd-mips/2016-January/004332.html">https://lists.freebsd.org/pipermail/freebsd-mips/2016-January/004332.html</a>,
+a kernel at <a href="https://www.dropbox.com/s/nkwzx5omtx3ye7t/kernel.uboot.rt5350?dl=0">https://www.dropbox.com/s/nkwzx5omtx3ye7t/kernel.uboot.rt5350?dl=0</a> can be experimented with:
+
+<pre>
+kernel.uboot.rt5350: u-boot legacy uImage, FreeBSD Kernel Image, Linux/MIPS, OS Kernel Image (gzip), 1467294 bytes, Tue Dec 29 17:04:13 2015, Load Address: 0x80001120, Entry Point: 0x80001120, Header CRC: 0x3F6D1694, Data CRC: 0x6AF182B5
+
+dd if=kernel.uboot.rt5350 of=apa3 bs=64 iseek=1 oseek=0
+gunzip &lt; apa3 &gt; apa4
+
+<b>gxemul -VEvocore 0x80001120:0:0x80001120:apa4</b>
+</pre>
+
+<p>TODO: Pretty much Everything.
+
+
+
+<p><br>
+<a name="linuxvocore"></a>
+<h3>Linux/VoCore:</h3>
+
+<p><font color="red">This doesn't work yet. Only serial console output is implemented,
+nothing else.</font>
+
+<p>Starting point for development:
+
+<p>See <a href="http://vocore.io/v1d.html">http://vocore.io/v1d.html</a> for info about the first VoCore model. (There are some newer ones too.)
+
+<p>See <a href="https://openwrt.org/toh/vocore/vocore?datasrt=model">https://openwrt.org/toh/vocore/vocore?datasrt=model</a> for downloadable Linux kernel files etc.
+
+<p>To start debugging/development:
+<ol>
+	<li>Download <a href="http://downloads.lede-project.org/releases/17.01.4/targets/ramips/rt305x/lede-17.01.4-ramips-rt305x-vocore-16M-initramfs-kernel.bin">http://downloads.lede-project.org/releases/17.01.4/targets/ramips/rt305x/lede-17.01.4-ramips-rt305x-vocore-16M-initramfs-kernel.bin</a>
+
+	<li><pre>dd if=lede-17.01.4-ramips-rt305x-vocore-16M-initramfs-kernel.bin of=apa bs=64 iseek=1 oseek=0
+lzma -d &lt; apa &gt; apa2</pre>
+
+	<li><tt><b>gxemul -E vocore 0x80000000:0:0x80000000:apa2</b></tt>
+</pre>
+</ol>
+
+<p>ORIGINAL kernel (from vocore.io):
+<ol>
+	<li>Download <a href="http://vonger.cn/upload/vocore.dock2.bin">http://vonger.cn/upload/vocore.dock2.bin</a> (which may be corrupt? lzma complains...)
+
+	<li><pre>dd if=vocore.dock2.bin of=apa5 bs=64 iseek=1 oseek=0
+lzma -dv &lt; apa5 &gt; apa6</pre>
+
+	<li><tt><b>gxemul -E vocore 0x80000000:0:0x80000000:apa6</b></tt>
+</pre>
+</ol>
+
+
+<p>TODO: Pretty much Everything.
+
+
+
+
+<p><br>
+
+
+
+</body>
+</html>
+

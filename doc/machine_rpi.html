@@ -46,7 +46,8 @@ SUCH DAMAGE.
 
 
 <p>The Raspberry Pi emulation is not working yet. This page
-contains preliminary instructions for how to start debugging NetBSD.</p>
+contains preliminary instructions for how to start debugging NetBSD,
+FreeBSD, or HelenOS.</p>
 
 
 
@@ -59,7 +60,9 @@ contains preliminary instructions for how to start debugging NetBSD.</p>
 <a name="netbsdrpi"></a>
 <h3>NetBSD/raspberrypi:</h3>
 
-<p>This doesn't work yet. Starting point for development:
+<p><font color="red">This doesn't work yet.</font>
+
+<p>Starting point for development:
 
 <p>See <a href="http://wiki.netbsd.org/ports/evbarm/raspberry_pi/">http://wiki.netbsd.org/ports/evbarm/raspberry_pi/</a> for more info on NetBSD.
 
@@ -114,7 +117,17 @@ Also useful for testing:
 <b>gxemul -tvK -E rpi 0x00000000:kernel.img</b>
 </pre>
 
-FreeBSD sd card image:
+
+
+
+<p><br>
+<a name="freebsdrpi"></a>
+<h3>FreeBSD:</h3>
+
+<p><font color="red">Dummy mode so far.</font>
+
+<p>FreeBSD sd card image:
+
 <pre>
 http://www.db.net/downloads/bsd-pi-250580M.img.xz
 # Extract the kernel from the second (2) slice' first partition (a):
@@ -128,6 +141,30 @@ mdconfig -d -u 0
 
 
 </p>
+
+
+
+
+
+<p><br>
+<a name="helenosrpi"></a>
+<h3>HelenOS/rpi:</h3>
+
+<p><font color="red">The Raspberry Pi mode in GXemul is just a dummy so far.</font>
+
+<p>These instructions are used as a reminder for me when I wish
+to experiment with the HelenOS kernel:
+
+<p>
+<ol>
+  <li>Download the HelenOS kernel:<pre>
+	<a href="http://www.helenos.org/releases/HelenOS-0.7.2-arm32-raspberrypi.bin">http://www.helenos.org/releases/HelenOS-0.7.2-arm32-raspberrypi.bin</a>
+  </pre>
+  <li>Start GXemul using the following command line:<pre>
+  	<b>gxemul -VE rpi -tv 0x8000:0x40:0x8000:HelenOS-0.7.2-arm32-raspberrypi.bin</b>
+  </pre>
+</ol>
+
 
 
 
