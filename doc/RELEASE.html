@@ -25,10 +25,9 @@ surrounding hardware components such as framebuffers, busses, interrupt
 controllers, ethernet controllers, disk controllers, and serial port 
 controllers.
 
-<p>The <a href="index.html">documentation</a> lists the machines and
-guest operating systems that 
-can be regarded as "working" in GXemul. The first guest operating 
-system that worked in GXemul was
+<p>The documentation <a href="intro.html#emulmodes">lists the machines and
+guest operating systems</a> that can be regarded as "working" in GXemul.
+The first guest operating system that worked in GXemul was
 <a href="machine_decstation.html#netbsdpmaxinstall">NetBSD/pmax</a> on
 an emulated DECstation 5000/200, and that is
 still one of the guest OSes that works best.
@@ -53,13 +52,19 @@ still one of the guest OSes that works best.
 		meaningful MIPS emulation is in the old framework anyway.)
 
 	<p>
-	<li>Various minor updates to the documentation to make it
-		easier to read and more up to date; less focus on
-		the "new framework"; more focus on <a href="intro.html#emulmodes">individual
-		emulated machine types</a> rather than just having a
-		long unsorted list of guest OS installation instructions;
-		and an introduction to <a href="debugging.html">using
-		GXemul as a debugger</a>.
+	<li>Documentation updates:
+	<ul>
+		<li>Each emulated machine now has a <a href="intro.html#emulmodes">page
+			of its own</a> with the guest OSes or other software
+			that may run in that mode, rather than just having a
+			long unsorted list of guest OS installation instructions.
+		<li>Less focus on the "new framework", more focus on the
+			old framework where things actually work.
+		<li>An introduction to <a href="debugging.html">using
+			GXemul as a debugger</a>.
+		<li>A general overhaul to remove old stuff, fix errors,
+			and make things easier to read.
+	</ul>
 </ul>
 
 
