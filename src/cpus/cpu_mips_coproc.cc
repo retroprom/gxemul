@@ -733,20 +733,26 @@ void coproc_register_write(struct cpu *cpu,
 			return;
 		case COP0_PAGEMASK:
 			tmp2 = tmp >> PAGEMASK_SHIFT;
-			if (tmp2 != 0x000 &&
-			    tmp2 != 0x003 &&
-			    tmp2 != 0x00f &&
-			    tmp2 != 0x03f &&
-			    tmp2 != 0x0ff &&
-			    tmp2 != 0x3ff &&
-			    tmp2 != 0xfff &&
-			    tmp2 != 0x3fff &&
-			    tmp2 != 0xffff)
-				fatal("[ cpu%i: trying to write an invalid"
-				    " pagemask 0x%08lx to COP0_PAGEMASK ]\n",
-				    cpu->cpu_id, (long)tmp);
-			// Actually just 0xfff << shift for R10000. TODO
-			tmp &= 0xffff << PAGEMASK_SHIFT;
+			if (cpu->cd.mips.cpu_type.rev != MIPS_R4100) {
+				if (tmp2 != 0x000 &&
+				    tmp2 != 0x003 &&
+				    tmp2 != 0x00f &&
+				    tmp2 != 0x03f &&
+				    tmp2 != 0x0ff &&
+				    tmp2 != 0x3ff &&
+				    tmp2 != 0xfff &&
+				    tmp2 != 0x3fff &&
+				    tmp2 != 0xffff)
+					fatal("[ cpu%i: trying to write an invalid"
+					    " pagemask 0x%08lx to COP0_PAGEMASK ]\n",
+					    cpu->cpu_id, (long)tmp);
+				// Actually just 0xfff << shift for R10000.
+				if (cpu->cd.mips.cpu_type.mmu_model == MMU10K) {
+					tmp &= 0x0fff << PAGEMASK_SHIFT;
+				} else {
+					tmp &= 0xffff << PAGEMASK_SHIFT;
+				}
+			}
 			unimpl = 0;
 			break;
 		case COP0_WIRED:
