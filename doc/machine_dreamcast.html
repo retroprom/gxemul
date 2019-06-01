@@ -65,7 +65,7 @@ These sometimes work to a certain degree.
 <a name="binaries"></a>
 <h3>Running raw binaries (IP.BIN and 1ST_READ.BIN):</h3>
 
-<i>(<b>Note:</b> This is very experimental, as GXemul's Dreamcast emulation is very incomplete,
+<p><i>(<b>Note:</b> This is very experimental, as GXemul's Dreamcast emulation is very incomplete,
 but in principle it could be used as a help when you are developing your own
 code to run on the Dreamcast. For example, it may be easier to debug things
 in the emulator than on the real Dreamcast.)</i>
@@ -168,7 +168,7 @@ Then launch it in the emulator like this:
 	gxemul -X Edreamcast 0x8c008000:0:0x8c000140:IP.BIN
 </pre>
 
-According to Marcus' page, <tt>?</tt> prints out the version number (V103 in
+<p>According to Marcus' page, <tt>?</tt> prints out the version number (V103 in
 this case), and it handles <tt>S0</tt>, <tt>S3</tt>, and <tt>S7</tt>
 <a href="https://en.wikipedia.org/wiki/SREC_%28file_format%29#mediaviewer/File:Motorola_SREC_Chart.png">SREC
 line entries</a>. <tt>S7</tt> causes it to print <tt>OK</tt> and start the uploaded
@@ -199,7 +199,7 @@ KOS examples, which more or less works:
 <a name="rom"></a>
 <h3>Experimenting with ROM dumps from your own machine:</h3>
 
-As mentioned above under the <a href="#binaries">Running raw binaries</a> section,
+<p>As mentioned above under the <a href="#binaries">Running raw binaries</a> section,
 the emulation of Dreamcast hardware is not correct enough to run things that
 really rely on the hardware functioning properly such as games. Even more
 picky about the hardware is the original ROM itself. Even though running an
@@ -316,7 +316,7 @@ Dreamcast, and in the emulator. Unfortunately without a keyboard...
 	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-8.0/dreamcast/binary/kernel/netbsd-GENERIC_MD.symbols.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-8.0/dreamcast/binary/kernel/netbsd-GENERIC_MD.symbols.gz</a> (optional)
 </pre>
 
-If you downloaded the symbols, gunzip them before proceeding.
+<p>If you downloaded the symbols, gunzip them before proceeding.
 
 <p>Start NetBSD/dreamcast using the following command line:<pre>
 	# Without symbols:
@@ -361,12 +361,12 @@ instructions available at various locations on the Internet.</i>
 	<a href="http://netbsd.student.utwente.nl/rpaulo/livecd.raw.bz2">http://netbsd.student.utwente.nl/rpaulo/livecd.raw.bz2</a>
 </pre>
 
-Uncompress the CD image (using bunzip2), and type the following command 
+<p>Uncompress the CD image (using bunzip2), and type the following command 
 to attempt to boot directly from the image:<pre>
 	<b>gxemul -XEdreamcast -d co23965696:livecd.raw</b>
 </pre>
 
-(The <tt><b>c</b></tt> disk image option is necessary to treat the raw
+<p>(The <tt><b>c</b></tt> disk image option is necessary to treat the raw
 file as a CDROM image, and the <tt><b>o</b></tt> part is needed because
 the ISO9660 filesystem in the image is offset by 11702 sectors, i.e. 2048
 bytes each, and GXemul was unable to guess the offset by looking at

@@ -640,7 +640,8 @@ fdisk
 	<b>gxemul -X -e3max -o "root=/dev/sda1 ro" -d redhat_mips.img vmlinux-2.4.31</b>
 
 </pre>
-If you need to boot into single user mode, change options to
+
+<p>If you need to boot into single user mode, change options to
 <tt><b>-o "root=/dev/sda1 rw init=/bin/sh"</b></tt>.
 
 
@@ -749,7 +750,7 @@ looks like this:
 <pre>
         bfc00000:  0x0bf0007e
 </pre>
-then the bytes in memory are actually 0x7e, 0x00, 0xf0, and 0x0b.
+<p>then the bytes in memory are actually 0x7e, 0x00, 0xf0, and 0x0b.
 
 <p>At 9600 bps, about 10KB can be dumped per minute, so it takes a while.
 Once enough of the PROM has been dumped, you can press CTRL-C to break out.
@@ -764,7 +765,7 @@ and store in a file. Let's call this file DECstation5000_125_promdump.bin.
         $ <b>decprom_dump_txt_to_bin DECstation5000_125_promdump.txt DECstation5000_125_promdump.bin</b>
 </pre>
 
-This binary image can now be used in the emulator:
+<p>This binary image can now be used in the emulator:
 <pre>
 	$ <b>gxemul -e 3min -Qx -M128 0xbfc00000:DECstation5000_125_promdump.bin</b>
 

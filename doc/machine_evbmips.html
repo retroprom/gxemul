@@ -244,7 +244,7 @@ following command:
 <b>	gxemul -e malta -d debian_lenny_mipsel_small.raw -o "root=/dev/hda1 console=ttyS0" vmlinux-2.6.26-1-4kc-malta</b>
 </pre>
 
-NOTE: <font color="#ff0000">IT DOES <b>NOT</b> WORK YET!</font>
+<p>NOTE: <font color="#ff0000">IT DOES <b>NOT</b> WORK YET!</font>
 
 
 
@@ -252,8 +252,8 @@ NOTE: <font color="#ff0000">IT DOES <b>NOT</b> WORK YET!</font>
 <a name="helenosmalta"></a>
 <h3>HelenOS/malta:</h3>
 
-<p>Modern versions of HelenOS <i>almost</i> run in GXemul,
-using the Malta emulation mode, without a graphical framebuffer.
+<p>Modern versions of HelenOS can run in GXemul,
+using the Malta emulation mode, but without a graphical framebuffer.
 
 <p>
 <font color="red">The PCI devices in GXemul do not seem to be correctly emulated yet.</font>
@@ -261,14 +261,14 @@ using the Malta emulation mode, without a graphical framebuffer.
 <p>To run HelenOS for Malta in GXemul:
 <ol>
   <li>Download the HelenOS kernel:<pre>
-	<a href="http://www.helenos.org/releases/HelenOS-0.7.2-mips32-malta-be.boot">http://www.helenos.org/releases/HelenOS-0.7.2-mips32-malta-be.boot</a>
+	<a href="http://www.helenos.org/releases/HelenOS-0.9.1-mips32-malta-be.boot">http://www.helenos.org/releases/HelenOS-0.9.1-mips32-malta-be.boot</a>
     or
-	<a href="http://www.helenos.org/releases/HelenOS-0.7.2-mips32-malta-le.boot">http://www.helenos.org/releases/HelenOS-0.7.2-mips32-malta-le.boot</a>
+	<a href="http://www.helenos.org/releases/HelenOS-0.9.1-mips32-malta-le.boot">http://www.helenos.org/releases/HelenOS-0.9.1-mips32-malta-le.boot</a>
   </pre>
   <li>Start GXemul using the following command line:<pre>
-  	<b>gxemul -e maltabe HelenOS-0.7.2-mips32-malta-be.boot</b>
+  	<b>gxemul -e maltabe HelenOS-0.9.1-mips32-malta-be.boot</b>
     or
-  	<b>gxemul -e malta HelenOS-0.7.2-mips32-malta-le.boot</b>
+  	<b>gxemul -e malta HelenOS-0.9.1-mips32-malta-le.boot</b>
   </pre>
 </ol>
 
