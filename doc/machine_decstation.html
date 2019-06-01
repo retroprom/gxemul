@@ -322,17 +322,24 @@ Ultrix from the harddisk image:<pre>
 </pre>
 
 <p>If you have a very fast host machine, you might experience a weird
-timer related bug, which makes it impossible to logon to the system. It is
+timer related bug, which makes it impossible to logon to the system when
+using the graphical logon. It is
 triggered when the emulation goes faster than any real DECstation machine
 was capable of running.
 The first thing to try is to re-attempt the login a couple of times.
-If that doesn't work, a workaround is to add
-<b><tt>-I33000000</tt></b> to fix the emulated clock speed to 33 million
-instructions per emulated second.
-If the workaround above doesn't work, you can also start up other 
-processes on the host, apart from the emulator, so that the emulator runs 
-more slowly. This is an ugly workaround, but seems to work. Once you have 
-logged in into Ultrix, you can kill the extra processes.
+The second thing I usually try is to break into the GXemul debugger prompt,
+turn on <tt>trace</tt> and <tt>continue</tt> running, login, and then
+break into the debugger again and turn off <tt>trace</tt> and
+finally <tt>continue</tt>.
+
+<p>If you want TCP/IP IPv4 networking, try executing the following inside
+ULTRIX as root:
+<pre>
+ifconfig ln0 10.0.0.1
+route add default 10.0.0.254 1
+</pre>
+
+<p>This will allow you to e.g. telnet to numeric IPv4 addresses.
 
 <p>You can experiment with adding <b><tt>-Z2</tt></b> (for emulating a 
 dual-headed workstation) or even <b><tt>-Z3</tt></b> (tripple-headed), and 
@@ -342,8 +349,7 @@ There is also a <b><tt>-z</tt></b> option for supplying names of X11
 displays to use. The following example starts Ultrix on an emulated
 tripple-headed workstation, on three different displays (<tt>remote1:0.0</tt>,
 <tt>localhost:0.0</tt>, and <tt>remote2:0.0</tt>), using no scaledown:<pre>
-        <b>gxemul -N -e 3max -jgenvmunix -d rootdisk.img \
-            -XZ3 -z remote1:0.0 -z localhost:0.0 -z remote2:0.0</b>
+        <b>gxemul -N -e 3max -jgenvmunix -d rootdisk.img -X -Z3 -z remote1:0.0 -z localhost:0.0 -z remote2:0.0</b>
 </pre>
 
 <p>The photo below shows a single Ultrix session running tripple-headed in
