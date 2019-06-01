@@ -4879,3 +4879,9 @@ Changelog for GXemul:
 		FreeNode for noticing this).
 20190530	Removing the "QEMU_MIPS" machine mode, which was useful back
 		in 2006 to compare performance against QEMU's MIPS emulation.
+20190601	The fix 2018-06-13 for translation invalidation when using
+		larger than 4 KB pages, which made HelenOS/malta run further,
+		caused a regressions which broke NetBSD/hpcmips (on VR4121
+		CPUs, which have 1 KB native page size). A bit of cleanup seems
+		to have fixed this, so that both NetBSD/hpcmips and
+		HelenOS/malta work now.

@@ -44,6 +44,14 @@ still one of the guest OSes that works best.
 		running OpenBSD/sgi as a guest OS. Previously, 256 MB
 		was the maximum amount of emulated RAM possible for
 		the SGI O2.
+		
+	<p>
+	<li>A fix 2018-06-13 for translation invalidation when using larger
+		than 4 KB pages, which made HelenOS/malta run further,
+                caused a regressions which broke NetBSD/hpcmips (on VR4121
+                CPUs, which have 1 KB native page size). A bit of cleanup seems
+                to have fixed this, so that both NetBSD/hpcmips and 
+                HelenOS/malta work now.
 
 	<p>
 	<li>Cleanup: The MIPS processor emulation implemented in the

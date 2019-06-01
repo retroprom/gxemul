@@ -45,9 +45,10 @@ SUCH DAMAGE.
 
 
 
-<p>The HPCmips modes are for emulating "Handheld PCs" based on MIPS processors.
-It is possible to install and <a href="#netbsdhpcmipsinstall">NetBSD/hpcmips</a> as
-a guest OS.
+<p>The HPCmips modes are for emulating "<a href="https://en.wikipedia.org/wiki/Handheld_PC">Handheld
+PCs</a>" based on MIPS processors, such as the MobilePro 770, 780, 800, and 880.
+It is possible to install and run
+<a href="#netbsdhpcmipsinstall">NetBSD/hpcmips</a> as a guest OS.
 
 
 
@@ -56,60 +57,121 @@ a guest OS.
 <a name="netbsdhpcmipsinstall"></a>
 <h3>NetBSD/hpcmips:</h3>
 
-<p>It is possible to install <a
-href="http://www.netbsd.org/ports/hpcmips/">NetBSD/hpcmips</a> onto a disk
-image, on an an emulated MobilePro 770 or 800. MobilePro 780 and 880 might
-work too, but I don't test those for every release of the emulator. They 
-have unaligned framebuffers, and run a bit slower.
+<p><a href="http://www.netbsd.org/ports/hpcmips/">NetBSD/hpcmips</a> can be
+installed onto a disk image, on an emulated MobilePro.
+Not all MobilePro models work with all versions of NetBSD, most likely due
+to bugs in the emulator.
+
+<p>
+<table border="0">
+	<tr>
+		<td><b>Model:</b></td>
+		<td width=20></td>
+		<td><b>Screen resolution:</b></td>
+		<td width=20></td>
+		<td><b>CPU:</b></td>
+		<td width=20></td>
+		<td><b>RAM:</b></td>
+		<td width=20></td>
+		<td><b>Comments:</b></td>
+	</tr>
+
+	<tr>
+		<td>MobilePro 770</td>
+		<td></td>
+		<td>640x240</td>
+		<td></td>
+		<td>VR4121</td>
+		<td></td>
+		<td>32 MB</td>
+		<td></td>
+		<td>Graphical framebuffer (-X) is broken with recent versions of NetBSD.</td>
+	</tr>
+
+	<tr>
+		<td>MobilePro 780</td>
+		<td></td>
+		<td>640x240</td>
+		<td></td>
+		<td>VR4121</td>
+		<td></td>
+		<td>32 MB</td>
+		<td></td>
+		<td>Unaligned framebuffer; may run a bit slower.</td>
+	</tr>
+
+	<tr>
+		<td>MobilePro 800</td>
+		<td></td>
+		<td>800x600</td>
+		<td></td>
+		<td>VR4121</td>
+		<td></td>
+		<td>32 MB</td>
+		<td></td>
+		<td>Graphical framebuffer (-X) is broken with recent versions of NetBSD.</td>
+	</tr>
+
+	<tr>
+		<td>MobilePro 880</td>
+		<td></td>
+		<td>800x600</td>
+		<td></td>
+		<td>VR4121</td>
+		<td></td>
+		<td>32 MB</td>
+		<td></td>
+		<td>Graphical framebuffer (-X) is broken with recent versions of NetBSD. Unaligned framebuffer; may run a bit slower.</td>
+	</tr>
+</table>
 
 <p><a href="20050427-netbsd-hpcmips-1.png"><img src="20050427-netbsd-hpcmips-1_small.png"></a>
  <a href="20050427-netbsd-hpcmips-2.png"><img src="20050427-netbsd-hpcmips-2_small.png"></a>
 
 <p>
-These instructions show an example of how to install
-NetBSD/hpcmips on an emulated MobilePro 770:
+These instructions show an example of how to install NetBSD/hpcmips:
 
 <p>
 <ol start="1">
   <li>Create an empty harddisk image, which will be the root disk
 	that you will install NetBSD/hpcmips onto:<pre>
-	<b>dd if=/dev/zero of=nbsd_hpcmips.img bs=1024 count=1 seek=3000000</b>
+	<b>dd if=/dev/zero of=nbsd_hpcmips.img bs=1024 count=1 seek=5000000</b>
 
 </pre>
-  <li>Download the NetBSD/hpcmips 5.0.2 ISO image, a generic kernel,
-	and the installer kernel:<pre>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/iso/5.0.2/">ftp://ftp.netbsd.org/pub/NetBSD/iso/5.0.2</a>/<a href="ftp://ftp.netbsd.org/pub/NetBSD/iso/5.0.2/hpcmipscd-5.0.2.iso">hpcmipscd-5.0.2.iso</a>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/hpcmips/binary/kernel/">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/hpcmips/binary/kernel</a>/<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/hpcmips/binary/kernel/netbsd-GENERIC.gz">netbsd-GENERIC.gz</a>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/hpcmips/installation/netbsd.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-5.0.2/hpcmips/installation/netbsd.gz</a>
-
+  <li>Download the NetBSD/hpcmips ISO image, a generic kernel,
+	and the installer kernel (and optional symbols):<pre>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/iso/8.0/NetBSD-8.0-hpcmips.iso">ftp://ftp.netbsd.org/pub/NetBSD/iso/8.0/NetBSD-8.0-hpcmips.iso</a>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-8.0/hpcmips/binary/kernel/netbsd-GENERIC.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-8.0/hpcmips/binary/kernel/netbsd-GENERIC.gz</a>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-8.0/hpcmips/installation/netbsd.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-8.0/hpcmips/installation/netbsd.gz</a>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-8.0/hpcmips/installation/netbsd.symbols.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-8.0/hpcmips/installation/netbsd.symbols.gz</a>
 </pre>
   <p>
   <li>Start the installation like this:<pre>
-	<b>gxemul -e mobilepro770 -X -d nbsd_hpcmips.img -d b:hpcmipscd-5.0.2.iso netbsd.gz</b>
+	<b>gxemul -X -e mobilepro780 -d nbsd_hpcmips.img -d b:NetBSD-8.0-hpcmips.iso netbsd.gz netbsd.symbols.gz</b>
 
 </pre>
 	and proceed like you would do if you were installing NetBSD on a real
-	MobilePro 770. (Install onto wd0, choose "Use entire disk" when
-	doing the MBR partitioning, and choose to install from CD-ROM.)
+	MobilePro: Install onto wd0, choose "Use entire disk" when
+	doing the MBR partitioning, and choose to install from CD-ROM. Change
+	the CDROM device name from <tt>cd0a</tt> to <tt>cd0d</tt>.
 </ol>
 
-<p>(While it is possible to install and run NetBSD/hpcmips without the <tt>-X</tt>
-command line option (i.e. using serial console), NetBSD 4.0.1's default
-<tt>/etc/ttys</tt> file after a full install did not have
-<tt>/dev/console</tt> enabled, so you needed to edit <tt>/etc/ttys</tt>
-before you reboot after the install, to be able to log in. Whether this has
-changed after 4.0.1, I don't know.)
+<p>While it is possible to install and run NetBSD/hpcmips without the <tt>-X</tt>
+command line option (i.e. using serial console), the default
+<tt>/etc/ttys</tt> file after a full install may not have
+<tt>/dev/console</tt> enabled. In that case, you needed to edit <tt>/etc/ttys</tt>
+<b>before</b> you reboot after the install is finished, to be able to log in.
 
 <p>
 If everything worked, NetBSD should now be installed on the disk image.
 Use the following command line to boot the emulated hpcmips machine:<pre>
-	<b>gxemul -e mobilepro770 -X -d nbsd_hpcmips.img netbsd-GENERIC.gz</b>
+	<b>gxemul -e mobilepro780 -X -d nbsd_hpcmips.img netbsd-GENERIC.gz</b>
 
 </pre>
 
 <p>When you have logged in as <tt>root</tt>, you can use <tt>startx</tt> to
-start X Windows, but there is no mouse support yet so only keyboard input 
-is available. This makes it a bit akward to use X.
+start X Windows, but there is no mouse or touch support yet so only keyboard input 
+is available. This makes it a bit meaningless to use X.
 
 
 
