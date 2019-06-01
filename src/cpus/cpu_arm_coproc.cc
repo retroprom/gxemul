@@ -237,7 +237,7 @@ void arm_coproc_15(struct cpu *cpu, int opcode1, int opcode2, int l_bit,
 
 	case 13:/*  Process ID Register:  */
 		if (opcode2 != 0)
-			fatal("[ arm_coproc_15: PID access, but opcode2 "
+			debug("[ arm_coproc_15: PID access, but opcode2 "
 			    "= %i? (should be 0) ]\n", opcode2);
 		if (crm != 0)
 			fatal("[ arm_coproc_15: PID access, but crm "

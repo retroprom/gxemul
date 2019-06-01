@@ -122,6 +122,8 @@ int arm_cpu_new(struct cpu *cpu, struct memory *mem,
 	cpu->is_32bit        = 1;
 	cpu->byte_order      = EMUL_LITTLE_ENDIAN;
 
+	cpu->vaddr_mask = 0x00000000ffffffffULL;
+
 	cpu->cd.arm.cpsr = ARM_FLAG_I | ARM_FLAG_F;
 	cpu->cd.arm.control = ARM_CONTROL_PROG32 | ARM_CONTROL_DATA32
 	    | ARM_CONTROL_CACHE | ARM_CONTROL_ICACHE | ARM_CONTROL_ALIGN;
