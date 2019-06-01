@@ -4885,3 +4885,5 @@ Changelog for GXemul:
 		CPUs, which have 1 KB native page size). A bit of cleanup seems
 		to have fixed this, so that both NetBSD/hpcmips and
 		HelenOS/malta work now.
+		Applying a fix for the ARM sbc and rsc instructions from
+		Joergen Nilsson.

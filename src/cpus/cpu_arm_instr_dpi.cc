@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2012  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -171,8 +171,7 @@ void A__NAME(struct cpu *cpu, struct arm_instr_call *ic)
 	c64 = a + b + (cpu->cd.arm.flags & ARM_F_C? 1 : 0);
 #endif
 #if defined(A__SBC) || defined(A__RSC)
-	b += (cpu->cd.arm.flags & ARM_F_C? 0 : 1);
-	c64 = a - b;
+	c64 = a - b - (cpu->cd.arm.flags & ARM_F_C? 0 : 1);
 #endif
 #if defined(A__ORR)
 	c64 = a | b;
