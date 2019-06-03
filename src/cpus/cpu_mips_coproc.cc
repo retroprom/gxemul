@@ -1799,15 +1799,12 @@ void coproc_tlbwri(struct cpu *cpu, int randomflag)
 	if (cpu->cd.mips.cpu_type.mmu_model == MMU3K) {
 		uint32_t vaddr, paddr;
 		int wf = cp->reg[COP0_ENTRYLO0] & R2K3K_ENTRYLO_D? 1 : 0;
-		unsigned char *memblock = NULL;
 
 		cp->tlbs[index].hi = cp->reg[COP0_ENTRYHI];
 		cp->tlbs[index].lo0 = cp->reg[COP0_ENTRYLO0];
 
 		vaddr =  cp->reg[COP0_ENTRYHI] & R2K3K_ENTRYHI_VPN_MASK;
 		paddr = cp->reg[COP0_ENTRYLO0] & R2K3K_ENTRYLO_PFN_MASK;
-
-		memblock = memory_paddr_to_hostaddr(cpu->mem, paddr, 0);
 
 		/*  Invalidate any code translation, if we are writing
 		    a Dirty page to the TLB:  */
@@ -1829,10 +1826,11 @@ void coproc_tlbwri(struct cpu *cpu, int randomflag)
 
 		/*  If we have a memblock (host page) for the physical
 		    page, then add a translation for it immediately:  */
-		if (memblock != NULL &&
-		    cp->reg[COP0_ENTRYLO0] & R2K3K_ENTRYLO_V)
-			cpu->update_translation_table(cpu, vaddr, memblock,
-			    wf, paddr);
+		if (cp->reg[COP0_ENTRYLO0] & R2K3K_ENTRYLO_V) {
+		    	unsigned char *memblock = memory_paddr_to_hostaddr(cpu->mem, paddr, 0);
+			if (memblock != NULL)
+				cpu->update_translation_table(cpu, vaddr, memblock, wf, paddr);
+		}
 	} else {
 		/*  R4000, R10000, VR41xx etc.:  */
 		int wf0, wf1;
