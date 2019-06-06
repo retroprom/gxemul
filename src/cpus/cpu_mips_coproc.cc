@@ -900,6 +900,15 @@ void coproc_register_write(struct cpu *cpu,
 			tmp &= ~(1 << 21);	/*  bit 21 is read-only  */
 
 			/*
+			 *  When switching between 32-bit and 64-bit address
+			 *  spaces, invalidate all translations.
+			 */
+			if (!cpu->is_32bit &&
+			    (oldmode & (STATUS_KX | STATUS_SX | STATUS_UX)) !=
+			    (tmp & (STATUS_KX | STATUS_SX | STATUS_UX)))
+				cpu->invalidate_translation_caches(cpu, 0, INVALIDATE_ALL);
+
+			/*
 			 *  When isolating caches, invalidate all translations.
 			 *  During the isolation, a special hack in memory_rw.c
 			 *  prevents translation tables from being updated, so
