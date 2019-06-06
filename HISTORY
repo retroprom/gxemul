@@ -4887,3 +4887,6 @@ Changelog for GXemul:
 		HelenOS/malta work now.
 		Applying a fix for the ARM sbc and rsc instructions from
 		Joergen Nilsson.
+20190606	Changing PCI device nr from 9 to 10 for the PIIX4 controller
+		in the Malta emulation mode, to match a real dmesg from
+		NetBSD/malta.

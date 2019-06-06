@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -95,9 +95,9 @@ MACHINE_SETUP(evbmips)
 		}
 
 		bus_pci_add(machine, pci_data, machine->memory,
-		    0, 9, 0, "piix4_isa");
+		    0, 10, 0, "piix4_isa");
 		bus_pci_add(machine, pci_data, machine->memory,
-		    0, 9, 1, "piix4_ide");
+		    0, 10, 1, "piix4_ide");
 
 		/*  pcn: Not yet, since it is just a bogus device, so far.  */
 		/*  bus_pci_add(machine, pci_data, machine->memory,
