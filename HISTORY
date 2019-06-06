@@ -4894,3 +4894,5 @@ Changelog for GXemul:
 		and TNEI instructions (NetBSD's pkgsrc patch had it wrong!).
 		Implementing the MIPS TGEI, TGEIU, TLTI, TLTIU, TEQI, and TNEI
 		instructions (but have not really tested them).
+		Updating NetBSD/evbmips (Malta) installation instructions from
+		7.1.2 to 8.0 (which needs the tgeiu instruction to boot).

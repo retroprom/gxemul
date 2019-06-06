@@ -78,26 +78,25 @@ image, from an emulated DECstation 3MAX machine:
 <p>
 <ol>
   <li>Download a NetBSD/pmax (DECstation) install RAMDISK kernel:<pre>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/pmax/binary/kernel/netbsd-INSTALL.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/pmax/binary/kernel/netbsd-INSTALL.gz</a>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-8.0/pmax/binary/kernel/netbsd-INSTALL.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-8.0/pmax/binary/kernel/netbsd-INSTALL.gz</a>
 </pre>
   <p>
   <li>Create an empty harddisk image, which will be the disk image
 	that you will install NetBSD onto:<pre>
-	<b>dd if=/dev/zero of=nbsd_malta.img bs=1024 count=1 seek=700000</b>
+	<b>dd if=/dev/zero of=nbsd_malta.img bs=1024 count=1 seek=4000000</b>
 
 </pre>
   <li>Download the Malta kernel and the ISO image:<pre>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/evbmips-mipsel/binary/kernel/netbsd-MALTA.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/evbmips-mipsel/binary/kernel/netbsd-MALTA.gz</a>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/iso/NetBSD-7.1.2-evbmips-mipsel.iso">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.1.2/iso/NetBSD-7.1.2-evbmips-mipsel.iso</a>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-8.0/evbmips-mipsel/binary/kernel/netbsd-MALTA.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-8.0/evbmips-mipsel/binary/kernel/netbsd-MALTA.gz</a>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-8.0/iso/NetBSD-8.0-evbmips-mipsel.iso">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-8.0/iso/NetBSD-8.0-evbmips-mipsel.iso</a>
 
 </pre>
   <p>
   <li>Start the emulated DECstation machine like this:<pre>
-	<b>gxemul -e 3max -d nbsd_malta.img -d NetBSD-7.1.2-evbmips-mipsel.iso netbsd-INSTALL.gz</b>
+	<b>gxemul -x -e 3max -d nbsd_malta.img -d NetBSD-8.0-evbmips-mipsel.iso netbsd-INSTALL.gz</b>
 
 </pre>
-  <li>At the <tt>Terminal type? [vt100]</tt> prompt, type <b>CTRL-B</b>
-to simulate a CTRL-C sent to NetBSD/pmax. Then execute the following commands:
+  <li>At the <tt>Terminal type? [vt100]</tt> prompt, type <b>CTRL-C</b> and execute the following commands:
 <p><table border="0"><tr><td><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td><pre>
 <b>newfs /dev/sd0c
 mount -t cd9660 /dev/cd0c /mnt
@@ -116,7 +115,10 @@ cd /; umount /mnt; umount /mnt2; halt</b>
 	<b>gxemul -x -e malta -d nbsd_malta.img netbsd-MALTA.gz</b>
 </pre>
 
-<p>NOTE: To select a 4Kc (MIPS32) CPU instead of the default 5Kc 
+<p>NOTE 1: There may be long delays during bootup, such as when NetBSD
+	detects the clock. On my machine, I had to wait almost 3 minutes.
+
+<p>NOTE 2: To select a 4Kc (MIPS32) CPU instead of the default 5Kc 
 (MIPS64) CPU, add <tt><b>-C 4Kc</b></tt> to the command line.
 There are at least two things that differ:<ol>
   <li>The dynamic translation core runs faster when emulating 32-bit
@@ -135,7 +137,11 @@ generic kernel:<pre>
 	init path (default /sbin/init):		<i>(just press enter)</i>
 </pre>
 
-<p>The clock is probably wrong (showing the year 2118 instead of 2018),
+<p>There may be long delays also at this stage, before reaching the login
+prompt. If it sleeps for too long after printing "Updating motd.", try
+typing CTRL-C in the terminal window.
+
+<p>The clock is wrong (showing the year 2119 instead of 2019),
 and it goes too fast inside the emulator. If it hangs during
 boot-up, before the login prompt has appeared, type CTRL-C in the xterm
 window.
