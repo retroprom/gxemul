@@ -398,16 +398,17 @@ the most common instructions can be retrieved from that statistics.
 <a name="native"></a>
 <h3>Native Code Generation Back-ends:</h3>
 
-<p>In theory, it will be possible to implement native code generation,
-similar to what is used in high-performance emulators such as <a
-href="http://www.nongnu.org/qemu/">QEMU</a>, as long as that generated code
-abides to the C or C++ ABI on the host.
+<p>Native code generation was included in GXemul before 0.4.x, but only for
+i386 and Alpha hosts, but that did not feel clean and portable enough to work
+as a long-term solution. Time has proved this right; i386 has been superseded
+by amd64, and the Alpha architecture has unfortunately been killed.
+The current implementation instead focuses on an having an intermediate
+representation that can be executed regardless of what the native architecture
+is.
 
-<p>However, so far, there is no native code generation in GXemul. There was
-native code generation before 0.4.x (for i386 and Alpha hosts), but that was
-not clean enough to work as a long-term solution.
-It is better to spend development resources on porting things from the old
-emulation framework (pre-0.6.x) to the current one.
+<p>In theory, it would be possible to add native code generation again,
+as long as that generated code abides to the C or C++ ABI on the host.
+
 
 
 

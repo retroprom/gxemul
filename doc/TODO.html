@@ -25,18 +25,16 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 <b>Mini-shortlist:</b>
 
 <ul>
-	<li>Memory adress translation borde dokumenteras under avsnittet om dynamisk "overs"attning. 32 bit vs 64 bit, 
-the TLB-like array, etc.
-
-	<li>I slutet pa avsnittet om native code generation, ta bort det om new framework
+	<li><i>Memory adress translation</i> should be documented in the chapter about
+		dynamic translation, not just <i>code translation</i>; 32 bit vs 64 bit, 
+		the internal TLB-like array, etc.
 
 	<li>Remove testmips new framework from the documentation about the new framework.
 
-	<li>Test machine section in the documentation with various guest OS instructions. Glatt, HelenOS, YCX5, ...
-
 	<li>Try to make the vaddr fix O(1) again instead of O(n), if it
 		is possible to see if a non-canonical address has been
-		inserted into the caches.
+		inserted into the caches. In other words, keep track of
+		whether a full O(n) seach is really needed or not.
 
 	<li>Get rid of the "unstable"/"stable" distinction for the new framework;
 		it is all unstable anyway.
@@ -48,6 +46,11 @@ the TLB-like array, etc.
 			<li>clock goes a bit too fast. Try to fix.
 			<li>OpenBSD/sgi with startx => some kind of keyboard problem.
 		</ul>
+
+	<li>NetBSD/evbmips 8.0 (Malta) triggers unimplemented instruction:
+<pre>04890007 	tgeiu	a0,7</pre>
+		<p>wrongly decoded currently as
+<pre>04890007	tgeiu	a0,0x8015aa90</pre>
 
 	<li>New debugger commands: find (scan for string or value in emulated memory), and put string. In both frameworks!
 
