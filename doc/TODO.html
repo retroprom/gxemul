@@ -47,10 +47,7 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 			<li>OpenBSD/sgi with startx => some kind of keyboard problem.
 		</ul>
 
-	<li>NetBSD/evbmips 8.0 (Malta) triggers unimplemented instruction:
-<pre>04890007 	tgeiu	a0,7</pre>
-		<p>wrongly decoded currently as
-<pre>04890007	tgeiu	a0,0x8015aa90</pre>
+	<li>NetBSD/evbmips 8.0 (Malta) triggers unimplemented instruction: <tt>tgeiu a0,7</tt>
 
 	<li>New debugger commands: find (scan for string or value in emulated memory), and put string. In both frameworks!
 

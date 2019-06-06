@@ -4890,3 +4890,5 @@ Changelog for GXemul:
 20190606	Changing PCI device nr from 9 to 10 for the PIIX4 controller
 		in the Malta emulation mode, to match a real dmesg from
 		NetBSD/malta.
+		Fixing disassembly of the MIPS TGEI, TGEIU, TLTI, TLTIU, TEQI,
+		and TNEI instructions (NetBSD's pkgsrc patch had it wrong!).

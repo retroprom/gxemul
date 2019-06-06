@@ -1469,12 +1469,6 @@ int mips_cpu_disassemble_instr(struct cpu *cpu, unsigned char *originstr,
 		case REGIMM_BLTZALL:
 		case REGIMM_BGEZAL:
 		case REGIMM_BGEZALL:
-		case REGIMM_TGEI:
-		case REGIMM_TGEIU:
-		case REGIMM_TLTI:
-		case REGIMM_TLTIU:
-		case REGIMM_TEQI:
-		case REGIMM_TNEI:
 			debug("%s\t%s,", regimm_names[regimm5], regnames[rs]);
 
 			addr = (dumpaddr + 4) + (imm << 2);
@@ -1483,6 +1477,20 @@ int mips_cpu_disassemble_instr(struct cpu *cpu, unsigned char *originstr,
 				debug("0x%08" PRIx32, (uint32_t) addr);
 			else
 				debug("0x%016" PRIx64, (uint64_t) addr);
+			break;
+
+		case REGIMM_TGEI:
+		case REGIMM_TGEIU:
+		case REGIMM_TLTI:
+		case REGIMM_TLTIU:
+		case REGIMM_TEQI:
+		case REGIMM_TNEI:
+			debug("%s\t%s,", regimm_names[regimm5], regnames[rs]);
+
+			if (cpu->is_32bit)
+				debug("0x%" PRIx32, (uint32_t) imm);
+			else
+				debug("0x%" PRIx64, (uint64_t) imm);
 			break;
 
 		case REGIMM_SYNCI:
