@@ -1147,6 +1147,109 @@ X(cache)
 
 
 /*
+ *  tgei:  Trap if Greater-or-Equal Immediate.
+ *  tgeiu:  Trap if Greater-or-Equal Immediate Unsigned.
+ *  tlti:  Trap if Less-Than Immediate.
+ *  tltiu:  Trap if Less-Than Immediate Unsigned.
+ *  teqi:  Trap if Equal Immediate.
+ *  tnei:  Trap if Not-Equal Immediate.
+ *
+ *  arg[0] = pointer to rs
+ *  arg[2] = immediate value, sign-extended to native word size
+ */
+X(tgei)
+{
+	MODE_int_t rs = reg(ic->arg[0]);
+	MODE_int_t imm = ic->arg[2];
+
+	if (rs >= imm) {
+		/*  Synchronize the PC and cause an exception:  */
+		int low_pc = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page)
+		    / sizeof(struct mips_instr_call);
+		cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)
+		    << MIPS_INSTR_ALIGNMENT_SHIFT);
+		cpu->pc += (low_pc << MIPS_INSTR_ALIGNMENT_SHIFT);
+		mips_cpu_exception(cpu, EXCEPTION_TR, 0, 0, ic->arg[0], 0, 0, 0);
+	}
+}
+X(tgeiu)
+{
+	MODE_uint_t rs = reg(ic->arg[0]);
+	MODE_uint_t imm = ic->arg[2];
+
+	if (rs >= imm) {
+		/*  Synchronize the PC and cause an exception:  */
+		int low_pc = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page)
+		    / sizeof(struct mips_instr_call);
+		cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)
+		    << MIPS_INSTR_ALIGNMENT_SHIFT);
+		cpu->pc += (low_pc << MIPS_INSTR_ALIGNMENT_SHIFT);
+		mips_cpu_exception(cpu, EXCEPTION_TR, 0, 0, ic->arg[0], 0, 0, 0);
+	}
+}
+X(tlti)
+{
+	MODE_int_t rs = reg(ic->arg[0]);
+	MODE_int_t imm = ic->arg[2];
+
+	if (rs < imm) {
+		/*  Synchronize the PC and cause an exception:  */
+		int low_pc = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page)
+		    / sizeof(struct mips_instr_call);
+		cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)
+		    << MIPS_INSTR_ALIGNMENT_SHIFT);
+		cpu->pc += (low_pc << MIPS_INSTR_ALIGNMENT_SHIFT);
+		mips_cpu_exception(cpu, EXCEPTION_TR, 0, 0, ic->arg[0], 0, 0, 0);
+	}
+}
+X(tltiu)
+{
+	MODE_uint_t rs = reg(ic->arg[0]);
+	MODE_uint_t imm = ic->arg[2];
+
+	if (rs < imm) {
+		/*  Synchronize the PC and cause an exception:  */
+		int low_pc = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page)
+		    / sizeof(struct mips_instr_call);
+		cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)
+		    << MIPS_INSTR_ALIGNMENT_SHIFT);
+		cpu->pc += (low_pc << MIPS_INSTR_ALIGNMENT_SHIFT);
+		mips_cpu_exception(cpu, EXCEPTION_TR, 0, 0, ic->arg[0], 0, 0, 0);
+	}
+}
+X(teqi)
+{
+	MODE_uint_t rs = reg(ic->arg[0]);
+	MODE_uint_t imm = ic->arg[2];
+
+	if (rs == imm) {
+		/*  Synchronize the PC and cause an exception:  */
+		int low_pc = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page)
+		    / sizeof(struct mips_instr_call);
+		cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)
+		    << MIPS_INSTR_ALIGNMENT_SHIFT);
+		cpu->pc += (low_pc << MIPS_INSTR_ALIGNMENT_SHIFT);
+		mips_cpu_exception(cpu, EXCEPTION_TR, 0, 0, ic->arg[0], 0, 0, 0);
+	}
+}
+X(tnei)
+{
+	MODE_uint_t rs = reg(ic->arg[0]);
+	MODE_uint_t imm = ic->arg[2];
+
+	if (rs != imm) {
+		/*  Synchronize the PC and cause an exception:  */
+		int low_pc = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page)
+		    / sizeof(struct mips_instr_call);
+		cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)
+		    << MIPS_INSTR_ALIGNMENT_SHIFT);
+		cpu->pc += (low_pc << MIPS_INSTR_ALIGNMENT_SHIFT);
+		mips_cpu_exception(cpu, EXCEPTION_TR, 0, 0, ic->arg[0], 0, 0, 0);
+	}
+}
+
+
+/*
  *  ins: Insert bitfield.
  *
  *  arg[0] = pointer to rt
@@ -4475,6 +4578,37 @@ X(to_be_translated)
 				if (!cpu->translation_readahead)
 					fatal("TODO: branch in delay slot:5\n");
 				goto bad;
+			}
+			break;
+
+		case REGIMM_TGEI:
+		case REGIMM_TGEIU:
+		case REGIMM_TLTI:
+		case REGIMM_TLTIU:
+		case REGIMM_TEQI:
+		case REGIMM_TNEI:
+			switch (rt) {
+			case REGIMM_TGEI:	ic->f = instr(tgei); break;
+			case REGIMM_TGEIU:	ic->f = instr(tgeiu); break;
+			case REGIMM_TLTI:	ic->f = instr(tlti); break;
+			case REGIMM_TLTIU:	ic->f = instr(tltiu); break;
+			case REGIMM_TEQI:	ic->f = instr(teqi); break;
+			case REGIMM_TNEI:	ic->f = instr(tnei); break;
+			}
+			ic->arg[0] = (size_t)&cpu->cd.mips.gpr[rs];
+			ic->arg[2] = (int64_t)(int16_t)imm;
+
+			if (cpu->cd.mips.cpu_type.isa_level < 32) {
+				static int warning = 0;
+				if (!warning && !cpu->translation_readahead) {
+					fatal("[ WARNING! Trap opcode used, but"
+					    " the %s processor does not implement "
+					    "such instructions. Only printing this "
+					    "warning once. ]\n",
+					    cpu->cd.mips.cpu_type.name);
+					warning = 1;
+				}
+				ic->f = instr(reserved);
 			}
 			break;
 

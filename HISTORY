@@ -4892,3 +4892,5 @@ Changelog for GXemul:
 		NetBSD/malta.
 		Fixing disassembly of the MIPS TGEI, TGEIU, TLTI, TLTIU, TEQI,
 		and TNEI instructions (NetBSD's pkgsrc patch had it wrong!).
+		Implementing the MIPS TGEI, TGEIU, TLTI, TLTIU, TEQI, and TNEI
+		instructions (but have not really tested them).
