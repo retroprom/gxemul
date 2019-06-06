@@ -56,6 +56,7 @@
 MACHINE_SETUP(pmax)
 {
 	const char *framebuffer_console_name, *serial_console_name;
+	char bootpath[200];
 	char *init_bootpath;
 	int color_fb_flag, i;
 	int boot_scsi_boardnumber = 3, boot_net_boardnumber = 3;
@@ -794,17 +795,14 @@ abort();
 	 *  slot number of the boot device.
 	 *
 	 *  'rz' for disks, 'tz' for tapes.
-	 *
-	 *  TODO:  Make this nicer.
 	 */
 	{
-		char bootpath[200];
 #if 0
 		if (machine->machine_subtype == MACHINE_DEC_PMAX_3100)
 			strlcpy(bootpath, "rz(0,0,0)", sizeof(bootpath));
 		else
 #endif
-			strlcpy(bootpath, "5/rz1/", sizeof(bootpath));
+			strlcpy(bootpath, "X/rzY/", sizeof(bootpath));
 
 		if (machine->bootdev_id < 0 || machine->force_netboot) {
 			/*  tftp boot:  */

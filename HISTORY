@@ -4896,3 +4896,5 @@ Changelog for GXemul:
 		instructions (but have not really tested them).
 		Updating NetBSD/evbmips (Malta) installation instructions from
 		7.1.2 to 8.0 (which needs the tgeiu instruction to boot).
+		Fixing pmax bootpath bug (thanks for Andreas Gustafsson for 
+		figuring out what the problem was).
