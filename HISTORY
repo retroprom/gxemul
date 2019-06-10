@@ -4898,3 +4898,5 @@ Changelog for GXemul:
 		7.1.2 to 8.0 (which needs the tgeiu instruction to boot).
 		Fixing pmax bootpath bug (thanks for Andreas Gustafsson for 
 		figuring out what the problem was).
+20190610	Adding a memory range (ROM) dumping tool for HP 700/RX to the
+		experiments directory.
