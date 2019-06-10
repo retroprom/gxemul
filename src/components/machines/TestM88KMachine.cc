@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2009-2010  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2009-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -120,9 +120,6 @@ string TestM88KMachine::GetAttribute(const string& attributeName)
 		return "yes";
 
 	if (attributeName == "machine")
-		return "yes";
-
-	if (attributeName == "stable")
 		return "yes";
 
 	if (attributeName == "description")

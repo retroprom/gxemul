@@ -2,7 +2,7 @@
 #define	MACHINECOMPONENT_H
 
 /*
- *  Copyright (C) 2008-2010  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2008-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -67,9 +67,6 @@ public:
 
 	/**
 	 * \brief Get attribute information about the MachineComponent class.
-	 *
-	 * Implementation specifics for the MachineComponent class:
-	 * The machine is "stable" and a "machine".
 	 *
 	 * @param attributeName The attribute name.
 	 * @return A string representing the attribute value.

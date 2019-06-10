@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2008-2010  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2008-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -45,9 +45,6 @@ string MachineComponent::GetAttribute(const string& attributeName)
 	if (attributeName == "machine")
 		return "yes";
 
-	if (attributeName == "stable")
-		return "yes";
-
 	if (attributeName == "description")
 		return "A generic machine container.";
 
@@ -68,16 +65,9 @@ static void Test_MachineComponent_IsMachine()
 	    ComponentFactory::HasAttribute("machine", "machine"));
 }
 
-static void Test_MachineComponent_IsStable()
-{
-	UnitTest::Assert("the MachineComponent should be stable",
-	    ComponentFactory::HasAttribute("machine", "stable"));
-}
-
 UNITTESTS(MachineComponent)
 {
 	UNITTEST(Test_MachineComponent_IsMachine);
-	UNITTEST(Test_MachineComponent_IsStable);
 }
 
 #endif

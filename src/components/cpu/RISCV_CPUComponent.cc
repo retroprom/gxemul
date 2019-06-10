@@ -316,9 +316,6 @@ size_t RISCV_CPUComponent::DisassembleInstruction(uint64_t vaddr, vector<string>
 
 string RISCV_CPUComponent::GetAttribute(const string& attributeName)
 {
-	if (attributeName == "stable")
-		return "yes";
-
 	if (attributeName == "description")
 		return "RISC-V processor.";
 

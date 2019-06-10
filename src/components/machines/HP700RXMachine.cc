@@ -107,9 +107,6 @@ string HP700RXMachine::GetAttribute(const string& attributeName)
 	if (attributeName == "machine")
 		return "yes";
 
-	if (attributeName == "stable")
-		return "yes";
-
 	if (attributeName == "description")
 		return "HP 700/RX X-terminal (i960).";
 

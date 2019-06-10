@@ -632,10 +632,10 @@ bool CPUComponent::WriteData(const uint64_t& data, Endianness endianness)
 
 #include "ComponentFactory.h"
 
-static void Test_CPUComponent_IsStable()
+static void Test_CPUComponent_HasAttributes()
 {
 	UnitTest::Assert("the CPUComponent should not have attributes",
-	    !ComponentFactory::HasAttribute("cpu", "stable"));
+	    !ComponentFactory::HasAttribute("cpu", "description"));
 }
 
 static void Test_CPUComponent_Create()
@@ -681,7 +681,7 @@ static void Test_CPUComponent_Methods_Reexecutableness()
 
 UNITTESTS(CPUComponent)
 {
-	UNITTEST(Test_CPUComponent_IsStable);
+	UNITTEST(Test_CPUComponent_HasAttributes);
 	UNITTEST(Test_CPUComponent_Create);
 	UNITTEST(Test_CPUComponent_PreRunCheck);
 	UNITTEST(Test_CPUComponent_Methods_Reexecutableness);

@@ -119,9 +119,6 @@ string RISCVvirtMachine::GetAttribute(const string& attributeName)
 	if (attributeName == "machine")
 		return "yes";
 
-	if (attributeName == "stable")
-		return "yes";
-
 	if (attributeName == "description")
 		return "RISC-V virt machine.";
 

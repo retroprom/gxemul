@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2009-2010  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2009-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -31,6 +31,15 @@
 
 /*
  *  This is for experiments with OpenBSD/mvme88k.
+ *
+ *  NOTE:
+ *  =====
+ *
+ *  MVME88k emulation is already implemented in the old framework. The code
+ *  you are looking at now is a complete rewrite using the new framework.
+ *
+ *
+ *
  *
  *  MVME187 according to http://mcg.motorola.com/us/products/docs/pdf/187igd.pdf
  *  ("MVME187 RISC Single Board Computer Installation Guide"):
@@ -120,9 +129,6 @@ string MVME187Machine::GetAttribute(const string& attributeName)
 
 	if (attributeName == "machine")
 		return "yes";
-
-	// if (attributeName == "stable")
-	//	return "yes";
 
 	if (attributeName == "description")
 		return "MVME187 machine.";

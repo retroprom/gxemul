@@ -289,9 +289,6 @@ void GXemul::GenerateHTMLListOfComponents(bool machines)
 	if (machines)
 		std::cout << " <td><b><u>Screenshot:</u></b>&nbsp;&nbsp;</td>\n";
 	std::cout <<
-#ifdef UNSTABLE_DEVEL
-		" <td><b><u>Status:</u></b>&nbsp;&nbsp;</td>\n"
-#endif
 		" <td><b><u>Description:</u></b>&nbsp;&nbsp;</td>\n"
 		" <td><b><u>Comments:</u></b>&nbsp;&nbsp;</td>\n"
 		" <td><b><u>Contributors:</u></b>&nbsp;&nbsp;</td>\n"
@@ -403,11 +400,6 @@ void GXemul::GenerateHTMLListOfComponents(bool machines)
 		}
 
 		std::cout <<
-#ifdef UNSTABLE_DEVEL
-			" <td valign=top>" << (ComponentFactory::HasAttribute(
-				componentName, "stable")? "stable&nbsp;&nbsp;" :
-				"experimental&nbsp;&nbsp;") << "</td>\n"
-#endif
 			" <td valign=top>" << ComponentFactory::GetAttribute(
 				componentName, "description") <<
 				treeDump << "</td>\n"

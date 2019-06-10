@@ -885,9 +885,6 @@ size_t M88K_CPUComponent::DisassembleInstruction(uint64_t vaddr, vector<string>&
 
 string M88K_CPUComponent::GetAttribute(const string& attributeName)
 {
-	if (attributeName == "stable")
-		return "yes";
-
 	if (attributeName == "description")
 		return "Motorola 88000 processor.";
 
@@ -2481,12 +2478,6 @@ DYNTRANS_INSTR(M88K_CPUComponent,ToBeTranslated)
 
 #include "ComponentFactory.h"
 
-static void Test_M88K_CPUComponent_IsStable()
-{
-	UnitTest::Assert("the M88K_CPUComponent should be stable",
-	    ComponentFactory::HasAttribute("m88k_cpu", "stable"));
-}
-
 static void Test_M88K_CPUComponent_Create()
 {
 	refcount_ptr<Component> cpu =
@@ -2862,7 +2853,6 @@ static void Test_M88K_CPUComponent_Execute_EarlyAbortDuringRuntime_Running()
 
 UNITTESTS(M88K_CPUComponent)
 {
-	UNITTEST(Test_M88K_CPUComponent_IsStable);
 	UNITTEST(Test_M88K_CPUComponent_Create);
 	UNITTEST(Test_M88K_CPUComponent_Create_with_r31);
 	UNITTEST(Test_M88K_CPUComponent_IsCPU);

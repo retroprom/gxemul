@@ -130,22 +130,14 @@ refcount_ptr<Component> ComponentFactory::CreateComponent(
 	// call the corresponding create function, if found:
 	size_t i = 0;
 	while (componentList[i].componentName != NULL) {
-		if (componentName == componentList[i].componentName
-#ifndef UNSTABLE_DEVEL
-		    && !componentList[i].GetAttribute("stable").empty()
-#endif
-		    )
+		if (componentName == componentList[i].componentName)
 			return componentList[i].Create(args);
 
 		++ i;
 	}
 
 	for (i=0; componentListRunTime != NULL && i<componentListRunTime->size(); ++i) {
-		if (componentName == (*componentListRunTime)[i].componentName
-#ifndef UNSTABLE_DEVEL
-		    && !(*componentListRunTime)[i].GetAttribute("stable").empty()
-#endif
-		    )
+		if (componentName == (*componentListRunTime)[i].componentName)
 			return (*componentListRunTime)[i].Create(args);
 	}
 
@@ -224,22 +216,14 @@ vector<string> ComponentFactory::GetAllComponentNames(bool onlyTemplates)
 	size_t i = 0;
 	while (componentList[i].componentName != NULL) {
 		if ((!onlyTemplates ||
-		    componentList[i].GetAttribute("template") == "yes")
-#ifndef UNSTABLE_DEVEL
-		    && !componentList[i].GetAttribute("stable").empty()
-#endif
-		    )
+		    componentList[i].GetAttribute("template") == "yes"))
 			result.push_back(componentList[i].componentName);
 		++ i;
 	}
 
 	for (i=0; componentListRunTime!=NULL && i<componentListRunTime->size(); ++i) {
 		if ((!onlyTemplates ||
-		    (*componentListRunTime)[i].GetAttribute("template") == "yes")
-#ifndef UNSTABLE_DEVEL
-		    && !(*componentListRunTime)[i].GetAttribute("stable").empty()
-#endif
-		    )
+		    (*componentListRunTime)[i].GetAttribute("template") == "yes"))
 			result.push_back((*componentListRunTime)[i].componentName);
 	}
 
@@ -302,9 +286,6 @@ static void Test_ComponentFactory_HasAttribute()
 
 	UnitTest::Assert("testm88k is a machine",
 	    ComponentFactory::HasAttribute("testm88k", "machine"));
-
-	UnitTest::Assert("testm88k is stable",
-	    ComponentFactory::HasAttribute("testm88k", "stable"));
 
 	UnitTest::Assert("testm88k has a description",
 	    ComponentFactory::HasAttribute("testm88k", "description"));

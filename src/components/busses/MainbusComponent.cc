@@ -51,9 +51,6 @@ refcount_ptr<Component> MainbusComponent::Create(const ComponentCreateArgs& args
 
 string MainbusComponent::GetAttribute(const string& attributeName)
 {
-	if (attributeName == "stable")
-		return "yes";
-
 	if (attributeName == "description")
 		return "A generic main bus.";
 
@@ -315,12 +312,6 @@ bool MainbusComponent::WriteData(const uint64_t& data, Endianness endianness)
 
 #include "ComponentFactory.h"
 
-static void Test_MainbusComponent_IsStable()
-{
-	UnitTest::Assert("the MainbusComponent should be stable",
-	    ComponentFactory::HasAttribute("mainbus", "stable"));
-}
-
 static void Test_MainbusComponent_Creatable()
 {
 	refcount_ptr<Component> mainbus =
@@ -543,7 +534,6 @@ static void Test_MainbusComponent_PreRunCheck()
 UNITTESTS(MainbusComponent)
 {
 	// Construction, etc.:
-	UNITTEST(Test_MainbusComponent_IsStable);
 	UNITTEST(Test_MainbusComponent_Creatable);
 	UNITTEST(Test_MainbusComponent_AddressDataBus);
 

@@ -766,9 +766,6 @@ size_t I960_CPUComponent::DisassembleInstruction(uint64_t vaddr, vector<string>&
 
 string I960_CPUComponent::GetAttribute(const string& attributeName)
 {
-	if (attributeName == "stable")
-		return "yes";
-
 	if (attributeName == "description")
 		return "Intel i960 processor.";
 

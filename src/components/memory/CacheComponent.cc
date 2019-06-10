@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2010  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2010-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -58,9 +58,6 @@ refcount_ptr<Component> CacheComponent::Create(const ComponentCreateArgs& args)
 
 string CacheComponent::GetAttribute(const string& attributeName)
 {
-	if (attributeName == "stable")
-		return "yes";
-
 	if (attributeName == "description")
 		return "A generic memory cache component.";
 
@@ -429,12 +426,6 @@ bool CacheComponent::WriteData(const uint64_t& data, Endianness endianness)
 
 #include "ComponentFactory.h"
 
-static void Test_CacheComponent_IsStable()
-{
-	UnitTest::Assert("the CacheComponent should be stable",
-	    ComponentFactory::HasAttribute("cache", "stable"));
-}
-
 static void Test_CacheComponent_AddressDataBus()
 {
 	refcount_ptr<Component> ram = ComponentFactory::CreateComponent("cache");
@@ -446,7 +437,6 @@ static void Test_CacheComponent_AddressDataBus()
 
 UNITTESTS(CacheComponent)
 {
-	UNITTEST(Test_CacheComponent_IsStable);
 	UNITTEST(Test_CacheComponent_AddressDataBus);
 }
 
