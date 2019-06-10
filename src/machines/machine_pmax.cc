@@ -876,7 +876,7 @@ abort();
 	    (unsigned char *)&machine->md.pmax->memmap->pagesize, 4096);
 
 	for (unsigned int j=0; j<sizeof(machine->md.pmax->memmap->bitmap); j++)
-		machine->md.pmax->memmap->bitmap[j] = ((int)j * 4096*8 <
+		machine->md.pmax->memmap->bitmap[j] = (j * 4096*8 <
 		    1048576*machine->physical_ram_in_mb)? 0xff : 0x00;
 
 	store_buf(cpu, DEC_MEMMAP_ADDR,
