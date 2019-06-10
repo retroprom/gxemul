@@ -46,6 +46,7 @@ SUCH DAMAGE.
 <p><br>
 <ul>
   <li><a href="#hello">Hello world</a>
+  <li><a href="#testmachines">Test machines</a>
   <li><a href="#expdevices">Experimental devices</a>
 </ul>
 
@@ -97,15 +98,48 @@ prompt.
 
 
 <p><br>
-<a name="expdevices"></a>
-<h3>Experimental devices:</h3>
+<a name="testmachines"></a>
+<h3>Test machines:</h3>
 
 <p>The emulator has several modes where it doesn't emulate any real machine.
 It can either run in "bare" mode, where no devices are included by default
 (just the CPU), or in a "test" mode where some simple devices are 
-emulated.
+emulated. This can be used when developing e.g. operating systems, as a complement
+to targeting real machines.
 
-<p>The test machines (<tt>testmips</tt>, <tt>testppc</tt>, etc) have the
+<p>The name of the test machine modes are <tt>testmips</tt>, <tt>testarm</tt>, etc.
+Run <tt>gxemul -H</tt> for an up-to-date list.
+
+
+<p>Here are some examples of guest OSes that run in the test machine modes:
+
+<p>
+<ul>
+	<li><p><a name="helenos">HelenOS:</a>
+		<br>Old versions of <a href="http://www.helenos.org/">HelenOS</a> can run in GXemul's
+			<tt>testarm</tt> and <tt>testmips</tt> machine modes.<pre>
+	<b>ftp <a href="http://www.helenos.org/releases/HelenOS-0.5.0-arm32-GXemul.boot">http://www.helenos.org/releases/HelenOS-0.5.0-arm32-GXemul.boot</a></b>
+  	<b>gxemul -X -E testarm HelenOS-0.5.0-arm32-GXemul.boot</b>
+
+	<b>ftp <a href="http://www.helenos.org/releases/HelenOS-0.5.0-mips32-GXemul.boot">http://www.helenos.org/releases/HelenOS-0.5.0-mips32-GXemul.boot</a></b>
+  	<b>gxemul -X -E testmips HelenOS-0.5.0-mips32-GXemul.boot</b></pre>
+
+	<li><p><a name="glattmumk">Glatt MU/MK:</a>
+		<br>One of Glatt MU/MK's targets is <tt>testmips</tt>.
+
+	<li><p><a name="ycx5">YCX5:</a>
+		<br>One of <a href="http://gavare.se/ycx5/">YCX5</a>'s primary development targets is <tt>testmips</tt>.
+</ul>
+
+
+
+
+
+<p><br>
+<a name="expdevices"></a>
+<h3>Experimental devices:</h3>
+
+<p>The test machines (<tt>testmips</tt>, <tt>testarm</tt>, etc) have the
 following experimental devices:
 
 <p>
