@@ -25,58 +25,38 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 <b>Mini-shortlist:</b>
 
 <ul>
-	<li><i>Memory adress translation</i> should be documented in the chapter about
-		dynamic translation, not just <i>code translation</i>; 32 bit vs 64 bit, 
-		the internal TLB-like array, etc.
+	<li>Documentation:
+	<Ul>
+		<li><i>Memory adress translation</i> should be documented in the chapter about
+			dynamic translation, not just <i>code translation</i>; 32 bit vs 64 bit, 
+			the internal TLB-like array, etc.
 
-	<li>Remove testmips new framework from the documentation about the new framework.
+		<li>Remove testmips new framework from the documentation about the new framework.
 
-	<li>Try to make the vaddr fix O(1) again instead of O(n), if it
-		is possible to see if a non-canonical address has been
-		inserted into the caches. In other words, keep track of
-		whether a full O(n) seach is really needed or not.
+		<li>Add the Android arm machine modes to the documentation, machine_androidarm, color red,
+			once the Linux device tree has been at least implemented enough to see some
+			boot messages or so.
 
-	<li>Web update script: src dir index, LATEST_IS etc.
+		<li>Add the Alpha mode too even though probably almost nothing works at all.
+			Also red. Try to include instructions for NetBSD, OpenBSD
+			and FreeBSD although the later has been discontinued.
+	</ul>
 
-	<li>OpenBSD/sgi:
-		<ul>
-			<li>clock goes a bit too fast. Try to fix.
-			<li>OpenBSD/sgi with startx => some kind of keyboard problem.
-		</ul>
+	<li>Web:
+	<ul>
+		<li>Web update script: src dir index, etc.
+	</ul>
 
-	<li>New debugger commands: find (scan for string or value in emulated memory), and put string. In both frameworks!
+	<li>Command line options:
+	<ul>
+		<li>R disk image option (uppercase): don't allow writes to the disk image file, but let the guest OS think that the device is writable, by using a temporary overlay (created automatically in /tmp) which is removed when the emulator exits. If this is implemented, update the misc documentation, and the man page.
 
-	<li>Compact mode trace in the new framework: a column to the right with delta EXCEPT program counter deltas.
-
-	<li>Continue on i960 execution, HP 700/RX emulation, etc (in the new framework)
-
-	<li>Perhaps: OpenBSD/luna88k. SCSI? Networking? Other software for Luna 88K?
-
-	<li>Perhaps: IRIX. Networking? SCSI? Currently panics due to root vfs not available.
-
-	<li>Perhaps: Windows NT for MIPS. Currently panics in different ways (timing dependent); perhaps video related.
-
-	<li>Make sure that the new framework passes all tests on i386, and in particular
-		make sure that no floating point is used in the steps counting mechanism!
-
-	<li>More floating point tests?
-
-	<li>R disk image option (uppercase): don't allow writes to the disk image file, but let the guest OS think that the device is writable, by using a temporary overlay (created automatically in /tmp) which is removed when the emulator exits. If this is implemented, update the misc documentation, and the man page.
-
-	<li>-y n: Command line option for taking framebuffer screen shots n times per second? Look for "ppm image dumps" in dev_fb.cc.html. if implemented, add to man page.
-
-	<li>src/README should be rewritten, less emphasis on the new framework.
+		<li>-y n: Command line option for taking framebuffer screen shots n times per second? Look for "ppm image dumps" in dev_fb.cc.html. if implemented, add to man page.
+	</ul>
 
 	<li>Finally do GXsatellite -- Gavare's eXperimental Stand-Aline Test Environment
 		for Low-Level Interactive Testing of Emulators. Share or reuse
 		code with YCX5?
-
-	<li>Add the Android arm machine modes to the documentation, machine_androidarm, color red,
-		once the Linux device tree has been at least implemented enough to see some
-		boot messages or so.
-
-	<li>Add the Alpha mode too. Also red. Try to include instructions for NetBSD, OpenBSD
-		and FreeBSD although the later has been discontinued.
 </ul>
 
 
@@ -93,7 +73,7 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 ------------------------------------------------------------------------
 </i>
 
-  [ ]   Intel i960 CPU and machine modes.
+  [/]   Intel i960 CPU and machine modes.
 
 	[/]  i960 instruction disassembly.
 		[X]  i960CA
@@ -104,8 +84,7 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 		[ ]  Enough to run uClinux/i960.
 
   	[ ]  HP 700/RX emulation:
-  		[ ]  Figure out memory map by running the ROM and try on
-  		     the real machine.
+  		[ ]  Figure out more of the memory map by running the ROM image in the emulator.
   		[ ]  Interrupt controller(s)?
   		[ ]  Graphics
   		[ ]  Serial port(s)
@@ -328,6 +307,10 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 	[ ] Try to get away from using doubles for scheduling! The scheduling
 	    must be made more stable, even in the precense of rounding errors.
 	    See e.g. http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=570899
+
+	[ ] Compact mode trace in the new framework: a column to the right with
+		delta EXCEPT program counter deltas. This allows for instruction
+		trace with one instruction per line, like in the legacy modes.
 
 	[/] Continuous execution forward.
 		[ ]  "Sloppy" accuracy mode: it could be possible to
@@ -786,6 +769,7 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 	[ ]  Make the save/load of state more efficient. Right now, it's a hex dump! Yuck.
 	[ ]  methods for searching for values (strings, words, etc?)
 	[ ]  methods for bulk fill/copy [from other address/data busses?]
+	[ ]  "put" command.
 
    [ ]	Floating point helper.
 
@@ -817,7 +801,7 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 
 
 <p><br>
-<b><a name="legacy">Legacy framework</a></b>
+<b><a name="original">Original framework</a></b>
 
 <p><pre>Legacy-mode Debugger:
 	Extend the
@@ -837,6 +821,9 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 	put but with a range?
 
 		find [b|h|w|d|q|s|z] startaddr, endaddr, data
+
+Floating point:
+	More tests.
 
 MIPS:
 	o)  Floating point exception correctness. Compare to real hardware!
@@ -1041,6 +1028,8 @@ SGI O2:
 
 	video? probably too complicated.
 
+	IRIX? Networking? SCSI? Currently panics due to root vfs not available.
+
 HPCmips:
 	x)  Mouse/pad support! :)
 	x)  A NIC? (As a PCMCIA device?)
@@ -1077,6 +1066,10 @@ Test machines:
 	o)  More demos/examples.
 
 Dyntrans:
+	x)  Try to make the vaddr fix O(1) again instead of O(n), if it
+		is possible to see if a non-canonical address has been
+		inserted into the caches. In other words, keep track of	
+		whether a full O(n) seach is really needed or not.
 	x)  For 32-bit emulation modes, that have emulated TLBs: tlbindex
 	    arrays of mapped pages? Things to think about:
 		x)  Only 32-bit mode! (64-bit => too much code)
