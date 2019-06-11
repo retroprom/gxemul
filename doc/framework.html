@@ -57,15 +57,16 @@ SUCH DAMAGE.
 <h3>Introduction:</h3>
 
 <p>Starting with GXemul 0.6.x, a completely redesigned framework is being
-worked on, compared to the 0.4.x series.
+worked on, compared to the 0.4.x series. The emulator thus contains two
+completely different frameworks.
 This chapter of the documentation describes the core concepts of the
 new framework. The framework is <i><b>still being designed and
 implemented</b></i>, so
 what you are reading can be considered an early draft, or a work-in-progress.
 
 <p>Almost all of the emulation modes in GXemul are implemented using the
-earlier (pre-0.6) framework, but the intention is that
-new emulation modes should use the new framework, if possible.
+earlier (pre-0.6) framework, but newly implemented emulation modes may
+use the new framework instead.
 
 
 
@@ -74,7 +75,7 @@ new emulation modes should use the new framework, if possible.
 <a name="components"></a>
 <h3>Components:</h3>
 
-<p>The most important concept in the GXemul framework is that of the
+<p>The most important concept in the new framework is that of the
 <a href="components.html"><i>component</i></a>. A component can have sub-components
 (children) and a parent, so the components make up a configuration tree:
 
@@ -96,23 +97,28 @@ instructions using its <i>unassemble</i> method:
 <p><table border=0 width=100%><tr><td width=5%>&nbsp;</td><td><pre>
 GXemul> <b>root</b>
   root
-  \-- machine0  [testmips]
+  \-- machine0  [testm88k]
       \-- mainbus0
+          |-- cpu0  (88100, 50 MHz)
           |-- ram0  (32 MB at offset 0)
-          |-- rom0  (16 MB at offset 0x1fc00000)
-          \-- cpu0  (5KE, 100 MHz)
+          |-- fb_videoram0  (15 MB at offset 0x12000000)
+          \-- rom0  (4 MB at offset 0xff800000)
 
   accuracy = cycle
   step     = 0
 GXemul> <b>cpu0.unassemble</b>
-&lt;f&gt;
-0xffffffff800100f8 &lt;- 27bdffd0   addiu   sp,sp,-48    
-0xffffffff800100fc    3c03cccc   lui     v1,0xcccc    
-0xffffffff80010100    3c028888   lui     v0,0x8888    
-0xffffffff80010104    8f8b8008   lw      t3,-32760(gp)
-0xffffffff80010108    8f8a8004   lw      t2,-32764(gp)
-0xffffffff8001010c    afb60028   sw      s6,40(sp)    
-0xffffffff80010110    afb50024   sw      s5,36(sp)    
+&lt;_f&gt;
+0x12b8 &lt;- 67ff0020   subu    r31,r31,0x20 
+0x12bc    27df0010   st      r30,r31,0x10 
+0x12c0    63df0010   addu    r30,r31,0x10 
+0x12c4    58400320   or      r2,r0,0x320  
+0x12c8    58600258   or      r3,r0,0x258  
+0x12cc    243f0014   st      r1,r31,0x14  
+0x12d0    231f0008   st.d    r24,r31,0x8  
+0x12d4    cfffffe7   bsr.n   0x1270          ; &lt;_change_resolution>
+0x12d8    f6c0201f   st.d    r22,r0,r31   
+0x12dc    cbffff89   bsr     0x1100          ; &lt;_my_random>        
+0x12e0    f6c05802   or      r22,r0,r2    
 ...
 </pre></td></tr></table>
 
@@ -122,14 +128,13 @@ messages.)
 
 <p><table border=0 width=100%><tr><td width=5%>&nbsp;</td><td><pre>
 GXemul&gt; <b>step</b>
-step 0: cpu0: &lt;f&gt;
-              0xffffffff800100f8    27bdffd0   addiu   sp,sp,-48
-        =&gt; cpu0.pc: 0xffffffff800100f8 -&gt; 0xffffffff800100fc
-        =&gt; cpu0.sp: 0xffffffffa0007f00 -&gt; 0xffffffffa0007ed0
+step 0: cpu0: &lt;_f&gt;
+              0x12b8    67ff0020   subu   r31,r31,0x20
+        => cpu0.pc: 0x12b8 -> 0x12bc
+        => cpu0.r31: 0xff0 -> 0xfd0
 GXemul&gt; 
-step 1: cpu0: 0xffffffff800100fc    3c03cccc   lui   v1,0xcccc
-        =&gt; cpu0.pc: 0xffffffff800100fc -&gt; 0xffffffff80010100
-        =&gt; cpu0.v1: 0 -&gt; 0xffffffffcccc0000
+step 1: cpu0: 0x12bc    27df0010   st   r30,r31,0x10
+        => cpu0.pc: 0x12bc -> 0x12c0
 GXemul&gt; 
 </pre></td></tr></table>
 
@@ -194,7 +199,7 @@ components are naturally contained in a <a href="machines.html"><i>machine</i></
 the available machines in the registry by running <tt>gxemul -H</tt> (or by
 reading the documentation built by <tt>make documentation</tt>).
 
-<p>Before GXemul 0.6.0, machines were a special type of entity in the emulator,
+<p>In the older framework, machines were a special type of entity in the emulator,
 which held one or more CPUs of a particular architecture, e.g.
 <a href="http://en.wikipedia.org/wiki/MIPS_architecture">MIPS</a>. In fact,
 the entire machine was of that architecture. The machine also had hardcoded RAM.
@@ -216,41 +221,41 @@ is. Machines are simply <i>templates</i> for how components are configured.
 When adding such a template machine to the configuration tree, the result
 is a complete tree of components:
 <pre>
-	GXemul> <b>add testmips</b>
+	GXemul> <b>add testm88k</b>
 	GXemul> <b>root</b>
 	  root
-	  \-- machine0  [testmips]
+	  \-- machine0  [testm88k]
 	      \-- mainbus0
+	          |-- cpu0  (88100, 50 MHz)
 	          |-- ram0  (32 MB at offset 0)
-	          |-- rom0  (16 MB at offset 0x1fc00000)
 	          |-- fb_videoram0  (15 MB at offset 0x12000000)
-	          \-- cpu0  (5KE, 100 MHz)
+	          \-- rom0  (4 MB at offset 0xff800000)
 </pre>
 
 <p>
-Here, a <tt>testmips</tt> machine template was added to the <tt>root</tt>
-component. Adding something without specifying where to add it always assumes
+Here, a <tt>testm88k</tt> machine template was added (to the <tt>root</tt>
+component). Adding something without specifying where to add it always assumes
 that the <tt>root</tt> component is the target. The name of the machine in the
 component tree is <tt>root.machine0</tt>. The tree dump shows that it was created using the
-<tt>testmips</tt> template.
+<tt>testm88k</tt> template.
 
 <p>To make it easier to start a new emulation from the command line (and to be
 more or less backward compatible with pre-0.6.x command line syntax), the
 <tt>-e</tt> option can be used to start an emulation based on a template machine:
 <pre>
-	$ <b>./gxemul -V -e testmips</b>
-	GXemul (unknown version)      Copyright (C) 2003-2010  Anders Gavare
+	$ <b>./gxemul -V -e testm88k</b>
+	GXemul (unknown version)      Copyright (C) 2003-2019  Anders Gavare
 
 	  mainbus0
+	  |-- cpu0  (88100, 50 MHz)
 	  |-- ram0  (32 MB at offset 0)
-	  |-- rom0  (16 MB at offset 0x1fc00000)
 	  |-- fb_videoram0  (15 MB at offset 0x12000000)
-	  \-- cpu0  (5KE, 100 MHz)
+	  \-- rom0  (4 MB at offset 0xff800000)
 
 	GXemul> 
 </pre>
 
-<p>(When starting a single emulated macine from the command line, only the emulated machine is shown,
+<p>(When starting a single emulated machine from the command line, only the emulated machine is shown,
 not the entire tree from the <tt>root</tt> node.)
 
 <p>The same machine configuration can be set up by hand as well:
@@ -260,13 +265,13 @@ not the entire tree from the <tt>root</tt> node.)
 	GXemul> <b>add mainbus machine0</b>
 	GXemul> <b>add ram mainbus0</b>
 	GXemul> <b>ram0.memoryMappedSize = 0x2000000</b>
-	GXemul> <b>add mips_cpu mainbus0</b>
+	GXemul> <b>add m88k_cpu mainbus0</b>
 	GXemul> <b>root</b>
 	  root
 	  \-- machine0
 	      \-- mainbus0
 	          |-- ram0  (32 MB at offset 0)
-	          \-- cpu0  (5KE, 100 MHz)
+	          \-- cpu0  (88100, 50 MHz)
 </pre>
 
 <p>(Omitting <tt>rom0</tt> and <tt>fb_videoram0</tt> for brevity.)
