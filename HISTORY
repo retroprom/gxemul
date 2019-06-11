@@ -4900,3 +4900,8 @@ Changelog for GXemul:
 		figuring out what the problem was).
 20190610	Adding a memory range (ROM) dumping tool for HP 700/RX to the
 		experiments directory.
+20190611	Expanding the MIPS lw/sw 2-, 3-, and 4-instruction combinations
+		(when loading/storing using the same base register) so that
+		they are used also when emulating 64-bit CPUs such as the
+		R4400. (Note: still lw/sw, i.e. 32-bit loads and stores, NOT
+		ld/sd.)  Also stretching it to 5-instruction-sequences.

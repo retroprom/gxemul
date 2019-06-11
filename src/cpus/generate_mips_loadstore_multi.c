@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2007-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -29,7 +29,7 @@
 #include <string.h>
 
 
-void generate_multi(int store, int endianness, int n)
+void generate_multi(int store, int endianness, int n, int sixtyfourbit)
 {
 	int i, nr;
 
@@ -45,11 +45,26 @@ void generate_multi(int store, int endianness, int n)
 	for (i=0; i<n; i++)
 		printf("\tMODE_uint_t addr%i = rX + (int32_t)ic[%i].arg[2];\n",
 		    i, i);
-	for (i=0; i<n; i++)
-		printf("\tuint32_t index%i = addr%i >> 12;\n", i, i);
 
-	printf("\tpage = (uint32_t *) cpu->cd.mips.host_%s[index0];\n",
-	    store? "store" : "load");
+	if (sixtyfourbit) {
+		printf("\tconst uint32_t mask1 = (1 << DYNTRANS_L1N) - 1;\n");
+		printf("\tconst uint32_t mask2 = (1 << DYNTRANS_L2N) - 1;\n");
+		printf("\tconst uint32_t mask3 = (1 << DYNTRANS_L3N) - 1;\n");
+		printf("\tuint32_t x1, x2, x3;\n");
+		printf("\tstruct DYNTRANS_L2_64_TABLE *l2;\n");
+		printf("\tstruct DYNTRANS_L3_64_TABLE *l3;\n");
+		printf("\tx1 = (addr0 >> (64-DYNTRANS_L1N)) & mask1;\n");
+		printf("\tx2 = (addr0 >> (64-DYNTRANS_L1N-DYNTRANS_L2N)) & mask2;\n");
+		printf("\tx3 = (addr0 >> (64-DYNTRANS_L1N-DYNTRANS_L2N-DYNTRANS_L3N)) & mask3;\n");
+		printf("\tl2 = cpu->cd.DYNTRANS_ARCH.l1_64[x1];\n");
+		printf("\tl3 = l2->l3[x2];\n");
+		printf("\tpage = (uint32_t *) l3->host_%s[x3];\n",
+			store? "store" : "load");
+	} else {
+		printf("\tuint32_t index%i = addr%i >> 12;\n", 0, 0);
+		printf("\tpage = (uint32_t *) cpu->cd.mips.host_%s[index0];\n",
+		    store? "store" : "load");
+	}
 
 	printf("\tif (cpu->delay_slot ||\n"
 	    "\t    page == NULL");
@@ -57,7 +72,7 @@ void generate_multi(int store, int endianness, int n)
 		printf(" || (addr%i & 3)", i);
 	printf("\n\t   ");
 	for (i=1; i<n; i++)
-		printf(" || index%i != index0", i);
+		printf(" || ((addr%i ^ addr0) & ~0xfff)", i);
 	printf(") {\n");
 
 	nr = 2*2;
@@ -67,7 +82,7 @@ void generate_multi(int store, int endianness, int n)
 		nr += 1;
 	if (endianness)
 		nr += 16;
-	printf("\t\tmips32_loadstore[%i](cpu, ic);\n", nr);
+	printf("\t\tmips%s_loadstore[%i](cpu, ic);\n", sixtyfourbit ? "" : "32", nr);
 
 	printf("\t\treturn;\n\t}\n");
 
@@ -89,13 +104,13 @@ void generate_multi(int store, int endianness, int n)
 			printf("\tr%i = %cE32_TO_HOST(r%i);\n", i,
 			    endianness? 'B' : 'L', i);
 		for (i=0; i<n; i++)
-			printf("\treg(ic[%i].arg[0]) = r%i;\n", i, i);
+			printf("\treg(ic[%i].arg[0]) = (MODE_int_t)(int32_t)r%i;\n", i, i);
 	}
 
 	printf("\tcpu->n_translated_instrs += %i;\n", n - 1);
 	printf("\tcpu->cd.mips.next_ic += %i;\n", n - 1);
 
-	printf("}\n\n");
+	printf("}\n");
 }
 
 
@@ -107,8 +122,13 @@ int main(int argc, char *argv[])
 
 	for (endianness=0; endianness<=1; endianness++)
 		for (store=0; store<=1; store++)
-			for (n=2; n<=4; n++)
-				generate_multi(store, endianness, n);
+			for (n=2; n<=5; n++) {
+				printf("#ifdef MODE32\n");
+				generate_multi(store, endianness, n, 0);
+				printf("#else\n");
+				generate_multi(store, endianness, n, 1);
+				printf("#endif\n\n");
+			}
 
 	return 0;
 }

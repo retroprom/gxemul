@@ -2781,10 +2781,8 @@ X(sw_loop)
 }
 
 
-#ifdef MODE32
 /*  multi_{l,s}w_2, _3, etc.  */
 #include "tmp_mips_loadstore_multi.cc"
-#endif
 
 
 /*
@@ -3201,8 +3199,6 @@ void COMBINE(sw_loop)(struct cpu *cpu, struct mips_instr_call *ic, int low_addr)
 }
 
 
-/*  Only for 32-bit virtual address translation so far.  */
-#ifdef MODE32
 /*
  *  Combine:  Multiple SW in a row using the same base register
  *
@@ -3217,8 +3213,18 @@ void COMBINE(multi_sw)(struct cpu *cpu, struct mips_instr_call *ic,
 	int n_back = (low_addr >> MIPS_INSTR_ALIGNMENT_SHIFT)
 	    & (MIPS_IC_ENTRIES_PER_PAGE - 1);
 
-	if (n_back < 3)
+	if (n_back < 4)
 		return;
+
+	/*  Convert a multi_sw_4 to a multi_sw_5:  */
+	if ((ic[-4].f == instr(multi_sw_4_be) ||
+	    ic[-4].f == instr(multi_sw_4_le)) &&
+	    ic[-4].arg[1] == ic[0].arg[1]) {
+		if (cpu->byte_order == EMUL_LITTLE_ENDIAN)
+			ic[-4].f = instr(multi_sw_5_le);
+		else
+			ic[-4].f = instr(multi_sw_5_be);
+	}
 
 	/*  Convert a multi_sw_3 to a multi_sw_4:  */
 	if ((ic[-3].f == instr(multi_sw_3_be) ||
@@ -3247,11 +3253,8 @@ void COMBINE(multi_sw)(struct cpu *cpu, struct mips_instr_call *ic,
 			ic[-1].f = instr(multi_sw_2_be);
 	}
 }
-#endif
 
 
-/*  Only for 32-bit virtual address translation so far.  */
-#ifdef MODE32
 /*
  *  Combine:  Multiple LW in a row using the same base register
  *
@@ -3266,8 +3269,19 @@ void COMBINE(multi_lw)(struct cpu *cpu, struct mips_instr_call *ic,
 	int n_back = (low_addr >> MIPS_INSTR_ALIGNMENT_SHIFT)
 	    & (MIPS_IC_ENTRIES_PER_PAGE - 1);
 
-	if (n_back < 3)
+	if (n_back < 4)
 		return;
+
+	/*  Convert a multi_lw_4 to a multi_lw_5:  */
+	if ((ic[-4].f == instr(multi_lw_4_be) ||
+	    ic[-4].f == instr(multi_lw_4_le)) &&
+	    ic[-4].arg[1] == ic[0].arg[1] &&
+	    ic[-1].arg[0] != ic[0].arg[1]) {
+		if (cpu->byte_order == EMUL_LITTLE_ENDIAN)
+			ic[-4].f = instr(multi_lw_5_le);
+		else
+			ic[-4].f = instr(multi_lw_5_be);
+	}
 
 	/*  Convert a multi_lw_3 to a multi_lw_4:  */
 	if ((ic[-3].f == instr(multi_lw_3_be) ||
@@ -3301,7 +3315,6 @@ void COMBINE(multi_lw)(struct cpu *cpu, struct mips_instr_call *ic,
 			ic[-1].f = instr(multi_lw_2_be);
 	}
 }
-#endif
 
 
 /*
@@ -4663,12 +4676,10 @@ X(to_be_translated)
 
 		/*  Check for multiple loads or stores in a row using the same
 		    base register:  */
-#ifdef MODE32
 		if (main_opcode == HI6_LW)
 			cpu->cd.mips.combination_check = COMBINE(multi_lw);
 		if (main_opcode == HI6_SW)
 			cpu->cd.mips.combination_check = COMBINE(multi_sw);
-#endif
 		break;
 
 	case HI6_LL:
