@@ -50,6 +50,7 @@ system (usually referred to as just "dyntrans").
 <p>
 <ul>
   <li><a href="#staticvsdynamic">Static vs. dynamic</a>
+  <li><a href="#address">Address translation</a>
   <li><a href="#ir">Executable Intermediate Representation</a>
   <li><a href="#performance">Performance</a>
   <li><a href="#instrcomb">Instruction Combinations</a>
@@ -71,6 +72,44 @@ Self-modifying code and Just-in-Time compilers running inside
 the emulator are other things that would not work with a static 
 translator. GXemul is a dynamic translator. However, it does not 
 necessarily translate into <a href="#native">native code</a>, like some other emulators.
+
+
+
+
+<p><br>
+<a name="address"></a>
+<h3>Address translation:</h3>
+
+<p>Before delving into the concepts of translating machine code, it may be good
+to first touch on the subject of address translation. A typical hardware TLB
+in a CPU maps virtual addresses to physical addresses (or causes an exception
+if no translation was found in the TLB). The emulator does not have a TLB
+per se, but instead has two structures for translating addresses:
+
+<p>
+<ul>
+	<li>Page tables, for quickly finding a host page given a virtual address.
+		These are used by load and store instructions in the "happy case" when
+		a page in the host's memory corresponds to an emulated memory
+		page.
+	<li>A reasonably small array of entries, which bind the concepts of
+		virtual address, physical address, and host address together.
+</ul>
+
+<p>Actually, the page tables do not just find the page in the host for a given
+virtual address, they are also used to find physical addresses and the index
+in the small array to where a mapping is.
+
+<p>The goal of these page tables and the arrays are to keep complexity as low
+as possibly, preferably O(1), for most common loads, stores, and other
+memory operations.
+
+<p>When the TLB in the emulated CPU gets instructed to change its mapping,
+for example if virtual address 0x1000 pointed to physical address 0x1234000,
+but is changed to point to 0x2345000, then the virtual-to-physical-to-host
+mappings in the emulator must be updated to reflect this. This is known as
+invalidating the translation/lookup tables.
+
 
 
 <p><br>
