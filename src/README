@@ -1,5 +1,8 @@
-GXemul's source code contains a large portion of legacy code, and some
-new (better structured) code.
+GXemul's source code contains code from two trees;
+the largest portion is the original emulator code written in plain C,
+and the smaller (newer) portion is written in C++. All files have been
+converted to a .cc (C++) extension, however, and C++ features may be
+used by both the older and newer parts of the code.
 
 
 NEW CODE
@@ -17,8 +20,8 @@ SHARED
 	include
 
 
-LEGACY CODE  (Should be removed as soon as it's been reimplemented)
--------------------------------------------------------------------
+ORIGINAL EMULATOR CODE
+----------------------
 
 	console
 	cpus		(new cpus are in components/cpu/)
@@ -31,5 +34,4 @@ LEGACY CODE  (Should be removed as soon as it's been reimplemented)
 	old_main
 	promemul
 	symbol
-
 
