@@ -1,5 +1,3 @@
-$Id: README,v 1.2 2007-02-21 17:05:05 debug Exp $
-
 (P)ROM and BIOS emulation in GXemul:
 ------------------------------------
 
@@ -10,7 +8,6 @@ actually necessary to boot an operating system.
 
 This directory contains software emulation of various PROMs and BIOSes.
 
-(Note: Running actual PROM dumps is also possible, and of course has
-several advantages over software simulated PROM call handling. That
-is what GXemul's -Q command line option is for.)
-
+(Note: Running actual PROM dumps may also be possible in a few cases.
+Using the -Q command line option disables GXemul's software emulation
+of the PROM and allows raw PROM dumps to be used.)

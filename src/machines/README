@@ -1,7 +1,5 @@
-$Id: README,v 1.5 2007-05-20 10:49:11 debug Exp $
-
-How to add new machine types to GXemul:
----------------------------------------
+How to add new machine types to GXemul (old framework)
+------------------------------------------------------
 
 The easiest way is to simply copy an existing machine (e.g. machine_landisk.c)
 into whatever you want the new machine to be called (machine_foo.c), update

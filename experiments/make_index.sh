@@ -1,7 +1,5 @@
 #!/bin/sh
 #
-#  $Id: make_index.sh,v 1.1 2007-06-19 02:11:45 debug Exp $
-#
 #  Updates the .index file.
 #
 
