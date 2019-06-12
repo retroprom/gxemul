@@ -45,8 +45,10 @@ SUCH DAMAGE.
 
 
 
-<p>The PlayStation 2 emulation is not really working yet. This page
-contains preliminary instructions for how to start NetBSD.</p>
+<p>The PlayStation 2 emulation is not really working yet. The focus is
+not on making an emulator for running games (there are other emulators
+for that), but rather on making NetBSD/playstation2 run. This page
+contains <i>preliminary instructions</i> for how to experiment with NetBSD.</p>
 
 
 
@@ -59,13 +61,24 @@ contains preliminary instructions for how to start NetBSD.</p>
 
 <p><font color="red">NOTE: This doesn't work, and the <a href="http://www.netbsd.org/ports/playstation2/">playstation2 port of NetBSD</a> is dead at the time of writing this.</font>
 
+<p>It was removed from NetBSD's tree in 2009, although a <a href="https://blog.netbsd.org/tnf/entry/the_playstation2_port_is_back">blog post from 2014</a> indicates
+that it could possibly be brought back to life.
+
 <p>
 <a href="20100205-netbsd-playstation2.png"><img src="20100205-netbsd-playstation2-small.png"></a>
 
 <p>To attempt to run the latest snapshot (from 2002):
+
+
+<p>
 <ol>
-	<li>Download <a href="ftp://ftp.netbsd.org/pub/NetBSD/arch/playstation2/snapshot/20020327/binary/kernel/netbsd-GENERIC.gz">ftp://ftp.netbsd.org/pub/NetBSD/arch/playstation2/snapshot/20020327/binary/kernel/netbsd-GENERIC.gz</a> and run<pre>
-	<b>gxemul -X -E playstation2 netbsd-GENERIC.gz</b>
+  <li>Create an empty harddisk image, which will be the root disk
+	that the guest OS installs itself onto:<pre>
+	<b>dd if=/dev/zero of=nbsd_playstation2.img bs=1024 count=1 seek=3900000</b>
+
+</pre>
+  <li>Download <a href="ftp://ftp.netbsd.org/pub/NetBSD/arch/playstation2/snapshot/20020327/binary/kernel/netbsd-GENERIC.gz">ftp://ftp.netbsd.org/pub/NetBSD/arch/playstation2/snapshot/20020327/binary/kernel/netbsd-GENERIC.gz</a> and run<pre>
+	<b>gxemul -X -E playstation2 -d nbsd_playstation2.img netbsd-GENERIC.gz</b>
 </pre>
 </ol>
 
