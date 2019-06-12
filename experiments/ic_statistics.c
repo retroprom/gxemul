@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2006  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -25,14 +25,12 @@
  *  SUCH DAMAGE.
  *
  *
- *  $Id: ic_statistics.c,v 1.4 2006-07-15 09:44:13 debug Exp $
- *
- *  This program is not optimized for speed, but it should work.
+ *  This program is NOT optimized for speed, but works more or less.
  *
  *  Run  gxemul -s i:log.txt blahblahblah, and then
  *
  *  for a in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do \
- *	./ic_statistics log.txt $a |sort -n > statistics.$a.txt; done
+ *	ic_statistics log.txt $a |sort -n > statistics.$a.txt; done
  */
 
 #include <stdio.h>
@@ -98,7 +96,15 @@ char *cached_size_t_to_symbol(uint64_t s)
 	if (urk2 != NULL)
 		urk = urk2 + 6;
 
-	cache_symbol[n_cached_symbols - 1] = strdup(urk);
+	{
+		// This is so that e.g. "bne_samepageP3cpuP15mips_instr_call"
+		// becomes just "bne_samepage".
+		char* urk3 = strstr(urk, "P3cpu");
+		if (urk3 != NULL)
+			*urk3 = '\0';
+	}
+
+	return cache_symbol[n_cached_symbols - 1] = strdup(urk);
 }
 
 
@@ -168,7 +174,7 @@ void try_len(FILE *f, int len)
 		yo ++;
 		if ((yo & 0xfffff) == 0) {
 			fprintf(stderr, "[ len=%i, %i%% done ]\n",
-			    len, 100 * yo * sizeof(void *) / off);
+			    len, (int)(100 * yo * sizeof(void *) / off));
 		}
 
 		/*  Make room for next icpointer value:  */
