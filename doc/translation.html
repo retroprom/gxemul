@@ -2,14 +2,14 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
 <head>
-  <title>GXemul: Dynamic Translation</title>
+  <title>GXemul: Dynamic Translation Internals</title>
   <meta name="robots" content="noarchive,nofollow,noindex">
 </head>
 <body style="font-family : sans-serif;">
 
 <!-- 10 lines header.  -->
 
-<h1>GXemul: Dynamic Translation</h1>
+<h1>GXemul: Dynamic Translation Internals</h1>
 <p>
 
 <a href="./">Back to the index.</a>
@@ -50,8 +50,8 @@ system (usually referred to as just "dyntrans").
 <p>
 <ul>
   <li><a href="#staticvsdynamic">Static vs. dynamic</a>
-  <li><a href="#address">Address translation</a>
   <li><a href="#ir">Executable Intermediate Representation</a>
+  <li><a href="#loadsandstores">Emulation of Loads and Stores</a>
   <li><a href="#performance">Performance</a>
   <li><a href="#instrcomb">Instruction Combinations</a>
   <li><a href="#native">Native Code Generation Back-ends</a>
@@ -73,42 +73,6 @@ the emulator are other things that would not work with a static
 translator. GXemul is a dynamic translator. However, it does not 
 necessarily translate into <a href="#native">native code</a>, like some other emulators.
 
-
-
-
-<p><br>
-<a name="address"></a>
-<h3>Address translation:</h3>
-
-<p>Before delving into the concepts of translating machine code, it may be good
-to first touch on the subject of address translation. A typical hardware TLB
-in a CPU maps virtual addresses to physical addresses (or causes an exception
-if no translation was found in the TLB). The emulator does not have a TLB
-per se, but instead has two structures for translating addresses:
-
-<p>
-<ul>
-	<li>Page tables, for quickly finding a host page given a virtual address.
-		These are used by load and store instructions in the "happy case" when
-		a page in the host's memory corresponds to an emulated memory
-		page.
-	<li>A reasonably small array of entries, which bind the concepts of
-		virtual address, physical address, and host address together.
-</ul>
-
-<p>Actually, the page tables do not just find the page in the host for a given
-virtual address, they are also used to find physical addresses and the index
-in the small array to where a mapping is.
-
-<p>The goal of these page tables and the arrays are to keep complexity as low
-as possibly, preferably O(1), for most common loads, stores, and other
-memory operations.
-
-<p>When the TLB in the emulated CPU gets instructed to change its mapping,
-for example if virtual address 0x1000 pointed to physical address 0x1234000,
-but is changed to point to 0x2345000, then the virtual-to-physical-to-host
-mappings in the emulator must be updated to reflect this. This is known as
-invalidating the translation/lookup tables.
 
 
 
@@ -291,6 +255,105 @@ optimize it to a reasonably short sequence:
 	  419328:       48 89 87 38 01 00 00    mov    %rax,0x138(%rdi)		<i>; ... and update nextIC.</i>
 	  41932f:       c3                      retq   
 </pre>
+
+
+
+<p><br>
+<a name="loadsandstores"></a>
+<h3>Emulation of Loads and Stores:</h3>
+
+<p>The emulation of memory access instructions differ slightly between
+the various emulated architectures, but most of the principles in this
+chapter apply.
+The emulation of loads and stores when emulating a MIPS processor consist
+of a "happy case" shorter code path, and a fallback to a more general case if
+the preconditions for the happy case are not met.
+
+<p>Pseudo code for the short path:
+
+<p><table border="1">
+<tr>
+	<td><b>Step:</b></td>
+	<td>Overhead:</td>
+</tr>
+<tr>
+	<td><b>1.</b> Calculate the final virtual address.</td>
+	<td>3 host memory accesses: read the Base and Offset arguments.</td>
+</tr>
+<tr>
+	<td><b>2.</b> Preconditions check: a) find a corresponding host RAM
+		page, if there is one, and b) check address alignment.</td>
+	<td>1 host memory access for 32 bit, 3 for 64 bit.</td>
+</tr>
+<tr>
+	<td><b>3.</b> Perform native load or store.</td>
+	<td>1 host memory access (or multiple if doing byte-order-swap).</td>
+</tr>
+<tr>
+	<td><b>4.</b> "Write-back" to emulated CPU's destination register (for loads).</td>
+	<td>2 host memory accesses.</td>
+</tr>
+</table>
+
+<p><b>Step 1</b> calculates the actual virtual address (usually a base
+register plus an immediate offset).
+
+<p><b>Step 2</b> looks up whether there is a corresponding RAM page in the host.
+If there is, we can potentially load or store directly from that page in the
+host's RAM.
+
+<p>However, before going ahead with the load or store, we need to check the
+alignment of the address as well. Different host architectures have different
+properties, for example when running on (some?) ARM hosts, the lower bits of
+an address may be ignored leading to the wrong address being used if we were
+to use the address as-is; when running on an x86-based host, unaligned loads
+and stores are silently accepted even though they shouldn't be on the hardware
+being emulated (in this case MIPS). Checking the lowest bits of the final
+address is thus important for correct emulation, so that exceptions can be
+generated etc.
+
+<p>For emulation of 32-bit address spaces, the lookup from emulated virtual
+address to host page is a single fetch from an array. For emulation of 64-bit
+address spaces, it is a three-level lookup.
+In either case, there are separate lookups for loads and stores. A page which
+is write-protected has just a mapping for load, no mapping for store. A page
+which is readable and writable has both a mapping for load and one for store.
+
+<p>If the alignment was ok, and there was a direct mapping to host page,
+we can go ahead (<b>step 3</b>) and perform a native load or store, possibly
+followed by byte order swap (which may be implemented by using multiple
+memory accesses) if the emulated CPU is of different endianness than the host.
+
+<p>(This mechanism is currently hardcoded for 4 KB base page size. The 1 KB
+page size of the VR41xx CPUs for example does not work, and neither would e.g.
+VAX' 512 byte pages. As long as the guest OS doesn't make use of smaller page
+sizes than 4 KB, it should work even when emulating such CPUs.)
+
+<p>If any of the checks fail in <b>step 2</b>, the code bails out and calls a
+more general memory access routine, which looks up addresses via the emulated
+MIPS TLB and depending on the outcome, may add host pages to the
+virtual-to-host arrays, or cause exceptions on the emulated cpu, or call out
+to memory mapped device routines.
+
+<p>This implementation is obviously not intended to result in any world speed
+records, but it strikes a reasonable balance between emulation correctness and
+host portability.
+
+<p>The actual code in <tt>src/cpus/cpu_mips_instr_loadstore.cc</tt> looks
+horrible due to being originally written in C with the intention of mimicking
+C++ templates. If it were to be written in C++ templates from scratch, it
+would likely be more readable.
+
+<p>When the TLB in the emulated CPU gets instructed to change its mapping,
+for example if virtual address 0x1000 pointed to physical address 0x1234000,
+but is changed to point to 0x2345000, then the virtual-to-physical-to-host
+mappings in the emulator must be updated to reflect this. This is known as
+invalidating the translation lookup tables.
+
+<p>Also, when performing a store to a page for which there are code
+translations (the IR described above), all such translated instruction slots
+are reset.
+
 
 
 <p><br>

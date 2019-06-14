@@ -48,48 +48,9 @@ This page describes some of the internals of GXemul.
 
 <p>
 <ul>
-  <li><a href="#speed">Speed and emulation modes</a>
   <li><a href="#net">Networking</a>
   <li><a href="#devices">Emulation of hardware devices</a>
 </ul>
-
-
-
-
-
-
-<p><br>
-<a name="speed"></a>
-<h3>Speed and emulation modes</h3>
-
-<p>How fast is GXemul? There is no short answer to this.
-Performance depends on several factors, including (but not limited to)  
-host architecture, target architecture, host clock speed, which compiler
-and compiler flags were used to build the emulator, what the workload is,
-what additional runtime flags are given to the emulator, and so on.
-
-<p>Devices are generally not timing-accurate: for example, if an emulated
-operating system tries to read a block from disk, from its point of view
-the read was instantaneous (no waiting). So 1 MIPS in an emulated OS might
-have taken more than one million instructions on a real machine.
-
-<p>Also, if the emulator says it has executed 1 million instructions, and 
-the CPU family in question was capable of scalar execution (i.e. one cycle 
-per instruction), it might still have taken more than 1 million cycles on 
-a real machine because of cache misses and similar micro-architectural 
-penalties that are not simulated by GXemul.
-
-<p>Because of these issues, it is in my opinion best to measure
-performance as the actual (real-world) time it takes to perform a task
-with the emulator, e.g.:
-
-<ul>
-  <li>"How long does it take to install NetBSD onto a disk image?"
-  <li>"How long does it take to compile XYZ inside NetBSD
-	in the emulator?".
-</ul>
-
-
 
 
 
@@ -302,9 +263,9 @@ fragmentation issue mentioned above.
 <a name="devices"></a>
 <h3>Emulation of hardware devices</h3>
 
-<p><font color="#ff0000">NOTE/TODO: This section is very old. If you are
-looking for information about how to implement new machines and devices
-using the <i>new framework</i>, then look at new
+<p><font color="#ff0000">NOTE: This section concerns the original ("old")
+framwork. If you are looking for information about how to implement new
+machines and devices using the <i>new framework</i>, then look at new
 <a href="doxygen/html/classComponent.html">Component</a> framework instead.</font>
 
 <p>Each file called <tt>dev_*.c</tt> in the 
