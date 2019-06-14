@@ -45,9 +45,9 @@ SUCH DAMAGE.
 
 
 
-<p>The PlayStation 2 emulation is not really working yet. The focus is
-not on making an emulator for running games (there are other emulators
-for that), but rather on making NetBSD/playstation2 run. This page
+<p>The PlayStation 2 emulation is <font color="red">not working yet</font>. The focus is
+not on making an emulator for running games, as there are other emulators
+for that, but rather on making it possible to run NetBSD/playstation2. This page
 contains <i>preliminary instructions</i> for how to experiment with NetBSD.</p>
 
 
@@ -82,9 +82,33 @@ that it could possibly be brought back to life.
 </pre>
 </ol>
 
-<p>Supplying a disk image with <tt>-d</tt> almost works. Then it hangs, waiting for
-keyboard input from a keyboard which doesn't exist.
+<p>Then it hangs, waiting for keyboard input from a keyboard which doesn't exist,
+in order to select the root device.
 
+<p><font color="red">As a horrible hack, which probably doesn't really work,</font>
+one could imagine setting <tt>root_device</tt> and
+<tt>rootdev</tt> manually. For example:
+
+<ul>
+	<li>Run with <tt>-p wdattach</tt> and get the second argument to that
+		function (register a1).
+	<li>Run again with <tt>-p setroot</tt>, and type something like:<pre>
+&lt;setroot&gt;
+ffffffff8002ad98: 27bdff20      addiu   sp,sp,-224
+BREAKPOINT: pc = 0xffffffff8002ad98
+(The instruction has not yet executed.)
+
+GXemul> <b>put w root_device, 0xffffffffc0016800</b>		&lt;-- the a1 value from wdattach
+GXemul> <b>put w rootdev, 0x100</b>				&lt;-- ???
+
+GXemul> <b>pc=ra</b>						&lt;-- to return from setroot without
+GXemul> <b>co</b>						    keyboard interaction
+</pre>
+</ul>
+
+<p>But there are timeouts and lost interrupts, so even if a correct disk image
+was used, and the correct <tt>rootdev</tt> value was used, it is unlikely that
+it would work yet.
 
 
 
