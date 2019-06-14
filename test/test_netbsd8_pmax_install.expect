@@ -1,0 +1,44 @@
+#!/usr/local/bin/expect
+
+set timeout 4000
+spawn ./gxemul -e3max -q -d nbsd8_pmax.img -d bc:../../emul/mips/NetBSD-8.0-pmax.iso
+
+expect "Terminal type"
+send "xterm\r"
+expect " in English"
+send "\r"
+expect "Install NetBSD"
+send "\r"
+expect "b: Yes"
+send "b\r"
+expect "sd0"
+send "\r"
+expect "Set sizes of NetBSD partitions"
+send "\r"
+expect "Add a user defined"
+send "g\r/tftpboot\r4000\rx\r"
+expect "Partition sizes ok"
+send "\r"
+expect "Please enter a name for"
+send "test\r"
+expect "b: Yes"
+send "b\r"
+expect "Hit enter to continue"
+send "\r"
+expect "a: Full installation"
+send "\r"
+expect "a: CD-ROM"
+send "\r"
+expect "x: Continue"
+send "x\r"
+expect "Hit enter to continue"
+send "\r"
+expect "Finished configuring"
+send "\r"
+expect "Hit enter to continue"
+send "\r"
+expect "Exit Install System"
+send "x\rsync\rhalt -p\r"
+
+close
+
