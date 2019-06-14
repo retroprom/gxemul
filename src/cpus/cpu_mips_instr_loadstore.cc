@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2006-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2006-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -146,11 +146,11 @@ void LS_N(struct cpu *cpu, struct mips_instr_call *ic)
 	/*  fatal("  p = %p\n", p);  */
 #endif
 
-	if (p == NULL
+	if (unlikely(p == NULL
 #ifndef LS_1
 	    || addr & (LS_SIZE - 1)
 #endif
-	    ) {
+	    )) {
 		LS_GENERIC_N(cpu, ic);
 		return;
 	}

@@ -4905,3 +4905,5 @@ Changelog for GXemul:
 		they are used also when emulating 64-bit CPUs such as the
 		R4400. (Note: still lw/sw, i.e. 32-bit loads and stores, NOT
 		ld/sd.)  Also stretching it to 5-instruction-sequences.
+20190614	Adding __builtin_expect (likely/unlikely) detection to the
+		configure script.
