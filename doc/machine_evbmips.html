@@ -146,6 +146,12 @@ and it goes too fast inside the emulator. If it hangs during
 boot-up, before the login prompt has appeared, type CTRL-C in the xterm
 window.
 
+<p>NOTE 3: There <i>is</i> actually a kernel for Malta with the installer
+ramdisk (<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-8.0/evbmips-mipsel/installation/netbsd-INSTALL_MALTA.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-8.0/evbmips-mipsel/installation/netbsd-INSTALL_MALTA.gz</a>), but there is a bug which causes
+the second IDE channel to not be detected, so it is currently not possible to boot
+with both the <tt>nbsd_malta.img</tt> disk image and the CD-ROM image at
+the same time.
+
 
 
 
