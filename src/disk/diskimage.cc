@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -44,9 +44,9 @@
 #include "misc.h"
 
 
-/*  #define debug fatal  */
+bool do_fsync = false;
 
-extern int single_step;
+/*  #define debug fatal  */
 
 static const char *diskimage_types[] = DISKIMAGE_TYPES;
 
@@ -373,6 +373,9 @@ static void overlay_set_block_in_use(struct diskimage *d,
 		fprintf(stderr, "Could not write to bitmap file. Aborting.\n");
 		exit(1);
 	}
+	
+	if (do_fsync)
+		fsync(fileno(d->overlays[overlay_nr].f_bitmap));
 }
 
 
@@ -421,7 +424,12 @@ static size_t fwrite_helper(off_t offset, unsigned char *buf,
 			return 0;
 		}
 
-		return fwrite(buf, 1, len, d->f);
+		size_t written = fwrite(buf, 1, len, d->f);
+
+		if (do_fsync)
+			fsync(fileno(d->f));
+
+		return written;
 	}
 
 	if ((len & (OVERLAY_BLOCK_SIZE-1)) != 0) {
@@ -453,6 +461,9 @@ static size_t fwrite_helper(off_t offset, unsigned char *buf,
 		lenwritten = fwrite(buf, 1, OVERLAY_BLOCK_SIZE,
 		    d->overlays[overlay_nr].f_data);
 		buf += OVERLAY_BLOCK_SIZE;
+
+		if (do_fsync)
+			fsync(fileno(d->overlays[overlay_nr].f_data));
 
 		/*  Mark this block in the last overlay as in use:  */
 		overlay_set_block_in_use(d, overlay_nr, curofs);
@@ -574,18 +585,19 @@ int diskimage__internal_access(struct diskimage *d, int writeflag,
 		else
 			lendone = fread_helper(offset, buf, len, d);
 
-		if (lendone < (ssize_t)len)
+		if (lendone >= 0 && lendone < (ssize_t)len)
 			memset(buf + lendone, 0, len - lendone);
 	}
 
-	/*  Incomplete data transfer? Then return failure:  */
-	if (lendone != (ssize_t)len) {
-#ifdef UNSTABLE_DEVEL
-		fatal
-#else
-		debug
-#endif
-		    ("[ diskimage__internal_access(): disk_id %i, offset %lli"
+	/*
+	 *  Incomplete data transfer?
+	 *
+	 *  If we could not read anything at all, then return failure.
+	 *  If we could read a partial block, then return success (with
+	 *  the resulting buffer zero-filled at the end).
+	 */
+	if (lendone <= 0) {
+		fatal("[ diskimage__internal_access(): disk_id %i, offset %lli"
 		    ", transfer not completed. len=%i, len_done=%i ]\n",
 		    d->id, (long long)offset, (int)len, (int)lendone);
 		return 0;

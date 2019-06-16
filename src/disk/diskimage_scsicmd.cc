@@ -215,7 +215,7 @@ int diskimage_scsicommand(struct cpu *cpu, int id, int type,
 	struct scsi_transfer *xferp)
 {
 	char namebuf[16];
-	int retlen, i, q;
+	int retlen, i, q, result;
 	uint64_t size;
 	int64_t ofs;
 	int pagecode;
@@ -668,9 +668,10 @@ xferp->data_in[4] = 0x2c - 4;	/*  Additional length  */
 			xferp->status[0] = 0x02;	/*  CHECK CONDITION  */
 
 			d->filemark = 1;
-		} else
-			diskimage__internal_access(d, 0, ofs,
+		} else {
+			result = diskimage__internal_access(d, 0, ofs,
 			    xferp->data_in, size);
+		}
 
 		if (d->is_a_tape && d->f != NULL)
 			d->tape_offset = ftello(d->f);
@@ -732,13 +733,10 @@ xferp->data_in[4] = 0x2c - 4;	/*  Additional length  */
 		debug("WRITE ofs=%i size=%i offset=%i\n", (int)ofs,
 		    (int)size, (int)xferp->data_out_offset);
 
-		diskimage__internal_access(d, 1, ofs,
+		result = diskimage__internal_access(d, 1, ofs,
 		    xferp->data_out, size);
 
 		/*  TODO: how about return code?  */
-
-		/*  Is this really necessary?  */
-		/*  fsync(fileno(d->f));  */
 
 		diskimage__return_default_status_and_message(xferp);
 		break;
@@ -750,6 +748,9 @@ xferp->data_in[4] = 0x2c - 4;	/*  Additional length  */
 			debug(" (weird len=%i)", xferp->cmd_len);
 
 		/*  TODO: actualy care about cmd[]  */
+		/*  TODO: Move to diskimage.cc and make sure that both
+			d->f is fsynced AND any overlays and overlay bitmap
+			files are fsynced too!  */
 		fsync(fileno(d->f));
 
 		diskimage__return_default_status_and_message(xferp);
