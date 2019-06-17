@@ -96,17 +96,14 @@ the real-world clock.
 <a name="devel"></a>
 <h3>Writing operating system code, or developing firmware, using GXemul:</h3>
 
-<p>Is this a good idea?  The answer is yes and no, depending on the level of
-detail you need in your simulations. If you are developing an operating
-system or operating system kernel of your own, then the emulator can be a 
-complement to testing on real hardware.
-
-<p>Important things to keep in mind:
+<p>Is this a good idea? The answer is yes and no, depending on the level of
+detail you need in your simulations. Important things to keep in mind are:
 
 <ul>
 	<li>Porting code to a specific machine mode, e.g. a Silicon Graphics
 	machine, using GXemul, will not "magically" cause the code to
-	work on a real machine. Sometimes code works in GXemul which doesn't
+	work on a real machine. You still need to test it on real hardware.
+	Sometimes code works in GXemul which doesn't
 	work on real hardware, sometimes it's the other way around.
 
 	<p>
@@ -117,33 +114,36 @@ complement to testing on real hardware.
 	to the degree that NetBSD, OpenBSD, Linux, etc don't complain too much.
 	<p>
 	If you are developing a driver for a device which is emulated by
-	GXemul, and your driver does not seem to be working, then the
-	probability of a bug in GXemul's implementation of the device is
-	very much higher than that of a bug in your driver.
+	GXemul, and your driver does not seem to be working, it could just
+	as well be that the fault is in GXemul's implementation of
+	the device, and not a bug in your driver.
 	<p>
-	The device implementations in GXemul are based on the assumption
+	The device implementations in GXemul are mostly based on the assumption
 	that the emulated OS is already developed and bug-free. They are
 	not primarily intended to be used for development of new device
 	driver code in operating systems, so if you do that, then be
-	prepared for bugs and inconsitencies.
+	prepared for bugs and inconsitencies, and (as mentioned before) make
+	sure to also run your code or real hardware.
 	<p>
-	<li>CPU details in GXemul are usually wrong. If your code depends
-	on, say, R10000 or MIPS64 specifics, chances are that GXemul will
-	not be sufficient. One example is different revisions of ISAs;
-	some instructions which should trigger an exception on a
-	real MIPS processor usually execute anyway in GXemul. Another
-	example is if userland code tries to access kernel memory; in some
-	cases there is protection against this, but not in all cases (to get
-	higher performance).
+	<li>CPU details in GXemul are sometimes wrong. If your code depends
+	on specific details of a particular CPU implementation, chances
+	area that GXemul will not be sufficient. One example is different
+	revisions of ISAs: some instructions which should trigger an exception
+	on a real MIPS processor may execute anyway in GXemul.
 	<p>
 	<li>Caches. There is no cache emulation in GXemul right now. Caches
 	for R2000/R3000 are faked well enough to run NetBSD, Ultrix, etc
 	in the <a href="http://en.wikipedia.org/wiki/DECstation">DECstation</a>
-	emulation mode, but other than that, cache operations are treated as nops.
+	emulation mode, but other than that, cache operations are treated as
+	nops. So for example after you have loaded machine code into RAM in
+	order to execute it, you probably need to flush/clear the instruction
+	cache before branching to the code. A failure to flush the instruction
+	cache would likely result in buggy/random behavior on real hardware
+	whereas the code would still run in GXemul.
 </ul>
 
-<p>The bottom line is that GXemul can be useful as yet another way to test 
-your code during development, but it should not be fully relied on.
+<p>The bottom line is that GXemul can be useful as a <i>complement</i> to testing
+your code on real hardware, but it should not be fully relied on.
 
 
 
@@ -158,21 +158,20 @@ your code during development, but it should not be fully relied on.
 realistic target platform, then MIPS or ARM (as emulated by GXemul)
 might be suitable choices.
 
-<ul>
-  <li><b>(+)</b>&nbsp;&nbsp;Your compiler needs to output real assembly
-	language code, which the assembler (e.g. gas, the GNU assembler) can 
-	then compile into object format, and then you need to link this
-	into an executable image. This is much closer to how things work
-	in real life than running assembly language listings in a simulator
-	(e.g. <a href="http://pages.cs.wisc.edu/~larus/spim.html">SPIM</a>).
-  <p>
-  <li><b>(-)</b>&nbsp;&nbsp;GXemul does not simulate <a href="http://en.wikipedia.org/wiki/Out-of-order_execution">out-of-order
-	execution</a>, penalties related to instruction scheduling, or
-	load-delays, so it cannot be used to create optimizing compilers
-	that take advantage of such processor features. GXemul keeps
-	track of the number of instructions executed, and that's it.
-</ul>
+<p>Your compiler needs to output real assembly
+language code, which the assembler (e.g. gas, the GNU assembler) can 
+then compile into object format, and then you need to link this
+into an executable image. This is much closer to how things work
+in real life than running assembly language listings in a simulator
+(e.g. <a href="http://spimsimulator.sourceforge.net/">SPIM</a>).
 
+<p>
+However, GXemul does not simulate
+<a href="http://en.wikipedia.org/wiki/Out-of-order_execution">out-of-order
+execution</a>, penalties related to instruction scheduling, or
+load-delays, so it cannot be used to evaluate optimizing compilers
+that take advantage of such processor features. GXemul keeps
+track of the number of instructions executed, but that's it.
 
 
 
@@ -485,6 +484,8 @@ the emulator. A few things are worth keeping in mind, though:
 
 <p>
 Useful command line options:
+
+<p>
 <ul>
 	<li><tt>-Q</tt> disables the software/builtin PROM emulation in GXemul.
 	<li><tt>-T</tt> stops the emulation in case the PROM tries to access
@@ -504,22 +505,30 @@ Useful command line options:
 several ways to do this, and it depends on your available hardware, the
 specifics of the machine in question, and how much time you have.
 
+<p>
 <ul>
-  <li>Use hardware to read the PROM chip(s) directly. Probably preferable,
-  	but not easy if you don't have such a hardware reader.
+  <li>Hook up a serial console and dump using the PROM's own dump
+	command. On machines for which you need to use a serial console to
+	access anyway, this is probably the easiest. The syntax for the
+	dump commands vary between machines, and you often need to do some
+	kind of post-processing to convert the dumped data (e.g. in some
+	kind of hex dump text format) to a raw binary. Alternatively, you
+	may be able to run a small program on the machine, which dumps
+	suitable memory ranges to a serial port. There are some examples in
+	the <tt>experiments/</tt> subdirectory which may help with these
+	tasks.
+  <li>Use hardware to read the PROM chip(s) directly.
+	Not easy if you don't have such a hardware reader.
   <li>Copy the PROM memory range into a file, from a running
 	operating system. You need a running OS, and it must
 	have access to the PROM memory range. NetBSD, for example,
 	doesn't allow that from userland, as far as I have understood,
-	but a modified NetBSD kernel would allow this.
+	but a modified NetBSD kernel could probably allow this.
   <li>Dump the ROM contents "visually", by showing the individual bits on
-	a display. Then use e.g. a webcam to record the images, and decode
-	them into plain data. This can be used for example on the Dreamcast,
-	if you do not want to build a serial cable, and do not have a
-	PROM chip reader.
-  <li>Hook up a serial console and dump using the PROM's own dump
-	command. For machines which you need to use serial consoles to
-	access anyway, this is probably the easiest.
+	a display. Then use e.g. a webcam to record the images, and write a
+	program which decodes them into plain data. This can be used for
+	example on the Dreamcast, if you do not want to build a serial cable,
+	and do not have a PROM chip reader.
 </ul>
 
 
