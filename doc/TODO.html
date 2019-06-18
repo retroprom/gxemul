@@ -761,9 +761,9 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 
 
 <p><br>
-<b><a name="original">Original framework</a></b>
+<b><a name="original">Original/old/legacy framework</a></b>
 
-<p><pre>Legacy-mode Debugger:
+<p><pre>Debugger:
 	Extend the
 		put [b|h|w|d|q] addr, data    modify emulated memory contents
 	command with a "s" (string) mode, where data is a string. Also
@@ -782,15 +782,19 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 
 		find [b|h|w|d|q|s|z] startaddr, endaddr, data
 
+Disk image end-of-file bug:
+	Triggered when using e.g. a tar.gz file as a disk image in NetBSD/pmax.
+	NetBSD reads beyond the end of the file. Must be fixed! (Once fixed, documentation
+	can be simplified for some guest OS installations.)
+
 GXsatellite -- Gavare's eXperimental Stand-Aline Test Environment
-	for Low-Level Interactive Testing of Emulators. Share or reuse
-	code with YCX5?
+	for Low-Level Interactive Testing of Emulators. Share or reuse code with YCX5?
 
 Floating point:
 	More tests.
 	
 Documentation:
-	Add the Android arm machine modes to the documentation, machine_androidarm, color red,
+	Add the Android ARM machine modes to the documentation, machine_androidarm, color red,
 	once the Linux device tree has been at least implemented enough to see some
 	boot messages or so.
 
@@ -799,6 +803,7 @@ Documentation:
 	and FreeBSD although the later has been discontinued.
 
 	Add FreeBSD/mips to testmips section? https://wiki.freebsd.org/FreeBSD/MipsEmulation
+	If it works.
 
 Disk image options:
 	'R' (uppercase): don't allow writes to the disk image file, but let
@@ -813,6 +818,13 @@ X11:
 	implemented, add to man page.
 
 MIPS:
+	o)  ALU operations (typically addiu, or, etc) can be hardcoded/inlined for common
+		register pairs or even triples. Classic generate_blahblah and an array.
+		Reduces memory accesses for common ALU instructions.
+	o)  Profile and make newer instruction combinations for up-to-date versions of NetBSD
+	    (full install, building GXemul inside NetBSD, etc). Make sure to go through all
+		common function cores such as memset, memcpy, memmove, strlen, strcmp, memcmp,
+		and idle functions, for both R3000 and R4400 etc.
 	o)  Floating point exception correctness. Compare to real hardware!
 	o)  Nicer MIPS status bits in register dumps.
 	o)  Some more work on opcodes.
@@ -822,6 +834,7 @@ MIPS:
 			o)  DROTR32 and similar MIPS64 rev 2 instructions,
 			    which have a rotation bit which differs from
 			    previous ISAs.
+	o)  NetBSD has a patch for NOFPU flag for certain CPUs. Investigate and apply if correct.
 	o)  Dyntrans: Count register updates are probably not 100% correct yet.
 	o)  Coprocessor 1x (i.e. 3) should cause cp1 exceptions, not 3?
 		(See http://lists.gnu.org/archive/html/qemu-devel/2007-05/msg00005.html)
@@ -1012,29 +1025,29 @@ SGI O2:
 	IRIX? Networking? SCSI? Currently panics due to root vfs not available.
 
 HPCmips:
+	x)  Clock? Is it running at correct speed?
 	x)  Mouse/pad support! :)
 	x)  A NIC? (As a PCMCIA device?)
+	x)  Investigate why not all MobilePro models work any longer with recent NetBSD versions.
 
 ARM:
 	o)  Big endian does not really work: loads and stores are little endian!
-	o)  THUMB disassembly
-	o)  THUMB execution
+	o)  More THUMB disassembly?
+	o)  More THUMB execution.
 	o)  0xf "condition" execution: see http://engold.ui.ac.ir/~nikmehr/Appendix_B2.pdf
+	o)  Android devices.
 	o)  See netwinder_reset() in NetBSD; the current "an internal error
 	    occured" message after reboot/halt is too ugly.
 	o)  Generic ARM "wait"-like instruction?
 	o)  try to get netbsd/evbarm 3.x or 4.x running (iq80321)
 	o)  netbsd/iyonix? the i80321 device currently tells netbsd that
-	    RAM starts at 0xa0000000, but that is perhaps not correct for the
-	    iyonix.
+	    RAM starts at 0xa0000000, but that is perhaps not correct for the iyonix.
 	o)  make the xscale counter registers (ccnt) work
 	o)  make the ata controller usable for FreeBSD!
-	o)  Debian/cats crashes because of unimplemented coproc stuff.
-	    fix this?
+	o)  Debian/cats crashes because of unimplemented coproc stuff. fix this?
 
 Test machines:
-	o)  dev_fb 2D acceleration functions, to make dev_fb useful for
-	    simple graphical OSes:
+	o)  dev_fb 2D acceleration functions, to make dev_fb useful for simple graphical OSes:
 		x) block fill and copy
 		x) draw characters (from the built-in font)?
 	o)  dev_fb input device? mouse pointer coordinates and buttons
@@ -1117,7 +1130,8 @@ Dyntrans:
 	    (containing code)
 	x)  16-bit encodings? (MIPS16, ARM Thumb, etc)
 	x)  Lots of other stuff: see src/cpus/README_DYNTRANS
-	x)  Native code generation backends... think carefully about this.
+	x)  Native code generation backends... think _carefully_ about this.
+	    (Not a priority right now.)
 
 Better CD Image file support:
 	x)  Support CD formats that contain more than 1 track, e.g.
@@ -1128,8 +1142,6 @@ Better CD Image file support:
 	    possibly other live-CD formats.)
 
 Networking:
-[Obsoleted; the new framework will need a much better net implementation. This
-section is kept here, so that the same mistakes may be avoided in the rewrite.]
 	x)  Redesign of the networking subsystem, at least the NAT translation
 		part. The current way of allowing raw ethernet frames to be
 		transfered to/from the emulator via UDP should probably be
@@ -1156,8 +1168,7 @@ section is kept here, so that the same mistakes may be avoided in the rewrite.]
 	    ethernet?
 
 PCI:
-[Obsoleted; the new framework will need a much better bus implementation. This
-section is kept here, so that the same mistakes may be avoided in the rewrite.]
+	o)  Big-endian Malta access?
 	x)  Pretty much everything related to runtime configuration, device
 	    slots, interrupts, etc must be redesigned/cleaned up. The current
 	    code is very hardcoded and ugly.
@@ -1190,8 +1201,6 @@ ASC SCSI controller:
 	    NetBSD 4.x seems to work? :)
 
 Better framebuffer and X-windows functionality:
-[Obsoleted; the new framework will most likely use SDL. This section
-is kept here, so that the same mistakes may be avoided in the rewrite.]
 	o)  Do a complete rewrite of the framebuffer/console stuff, so that:
 		1)  It does not rely on X11 specifically.
 		2)  It is possible to interact with emulated framebuffers
@@ -1233,25 +1242,23 @@ is kept here, so that the same mistakes may be avoided in the rewrite.]
 <b><a name="release">Release checklist</a></b>
 
 <p><ul>
-	<li>Build on as many platforms as possible, including inside guest
-		OSes in GXemul itself.
+	<li>Build on as many platforms as possible, including inside guest OSes in GXemul itself.
 	<li>If there is time: Install as many as possible of the guest OSes in the documentation;
-		the documentation may need to be updated if there are
-		regressions.
-	<li>If there is even more time: see what the status is for the "unsupported"
-		guest OSes as well.
+		the documentation may need to be updated if there are regressions.
+	<li>If there is even more time: see what the status is for the "unsupported" guest OSes as well.
 	<li>Update the <tt>README</tt> and <tt>RELEASE</tt> notes.
 	<li>TODO updates (i.e. set goals for the <i>next</i> release, if possible).
 	<li>HISTORY (mention the release).
 	<li>Tarball creation (make_release.sh)
 	<li>Home page <i>Download page</i> update: version number and date.
 	<li>Home page <i>News page</i> update: new Release.
+	<li>Create subversion tag.
+	<li>Sync subversion to SourceForge mirror.
 	<li>Sync the homepage to the web server.
-	<li>Mention release on #GXemul on FreeNode (IRC), set version number in topic if possible.
 	<li>Sourceforge File Release (upload the tarball).
+	<li>Mention release on #GXemul on FreeNode (IRC), set version number in topic if possible.
 	<li>gxemul-users mail, content similar to the RELEASE notes.
 </ul>
 
 </body>
 </html>
-
