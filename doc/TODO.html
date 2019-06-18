@@ -930,15 +930,7 @@ Algor:
 Malta:
 	o)  Try FreeBSD/malta: https://wiki.freebsd.org/FreeBSD/MipsEmulation
 	o)  Malta can perhaps have up to 2 GB RAM? Try same hack as for the SGI O2.
-	o)  The Linux/Malta kernel at people.debian.org/~ths/qemu/malta/
-	    almost works:
-		./gxemul -x -o 'rd_start=0x80800000 rd_size=10000000 init=/bin/sh' -C 4KEc
-		  -e malta 0x80800000:people.debian.org/~ths/qemu/malta/initrd.gz 
-		  people.debian.org/~ths/qemu/malta/vmlinux
-	    (Remove "init=/bin/sh" to boot into the Debian installer.)
-	    There are at least two things that need to be fixed:
-		1. PCI IDE; make Linux oops.
-		2. Implement the NIC.
+	o)  Reconfigurable PCI memory space would be nice (just like SGI O2).
 
 SGI O2:
 	differences between real hardware and NetBSD's header files?
