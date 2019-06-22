@@ -1242,22 +1242,32 @@ Better framebuffer and X-windows functionality:
 <b><a name="release">Release checklist</a></b>
 
 <p><ul>
-	<li>Build on as many platforms as possible, including inside guest OSes in GXemul itself.
-	<li>If there is time: Install as many as possible of the guest OSes in the documentation;
+	<li>Pre-release regression testing:
+	<ul>
+		<li>Build on as many platforms as possible, including inside guest OSes in GXemul itself.
+		<li>If there is time: Install as many as possible of the guest OSes in the documentation;
 		the documentation may need to be updated if there are regressions.
-	<li>If there is even more time: see what the status is for the "unsupported" guest OSes as well.
-	<li>Update the <tt>README</tt> and <tt>RELEASE</tt> notes.
-	<li>TODO updates (i.e. set goals for the <i>next</i> release, if possible).
-	<li>HISTORY (mention the release).
-	<li>Tarball creation (make_release.sh)
-	<li>Home page <i>Download page</i> update: version number and date.
-	<li>Home page <i>News page</i> update: new Release.
-	<li>Create subversion tag.
-	<li>Sync subversion to SourceForge mirror.
-	<li>Sync the homepage to the web server.
-	<li>Sourceforge File Release (upload the tarball).
-	<li>Mention release on #GXemul on FreeNode (IRC), set version number in topic if possible.
-	<li>gxemul-users mail, content similar to the RELEASE notes.
+		<li>If there is more time: try newer versions of the officially
+			supported guest OSes (sometimes these work, sometimes not).
+		<li>If there is even more time: see what the status is for the
+			"unsupported" guest OSes as well.
+	</ul>
+	<li>Release build, update notes etc:
+	<ul>
+		<li>Update the <tt>README</tt> and <tt>RELEASE</tt> notes.
+		<li>TODO updates (i.e. set goals for the <i>next</i> release, if possible,
+			or strike out things that have been fixed).
+		<li>HISTORY (mention the release).
+		<li>Tarball creation (make_release.sh)
+		<li>Home page <i>Download page</i> update: version number and date.
+		<li>Home page <i>News page</i> update: new Release.
+		<li>Create subversion tag.
+		<li>Sync subversion to SourceForge mirror.
+		<li>Sync the homepage to the web server.
+		<li>Sourceforge File Release (upload the tarball).
+		<li>Mention release on #GXemul on FreeNode (IRC), set version number in topic if possible.
+		<li>gxemul-users mail, content similar to the RELEASE notes.
+	</ul>
 </ul>
 
 </body>
