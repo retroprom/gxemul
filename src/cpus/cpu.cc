@@ -134,7 +134,7 @@ struct cpu *cpu_new(struct memory *mem, struct machine *machine,
 		else
 			cpu->vaddr_mask = (int64_t)-1;
 
-		debug("\n\ncpu_new(): Warning: vaddr_mask should be set in the CPU family's cpu_new()! Assuming 0x%16llx\n\n", (long long)cpu->vaddr_mask);
+		// debug("\n\ncpu_new(): Warning: vaddr_mask should be set in the CPU family's cpu_new()! Assuming 0x%16llx\n\n", (long long)cpu->vaddr_mask);
 	}
 
 	return cpu;
