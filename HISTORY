@@ -4907,3 +4907,6 @@ Changelog for GXemul:
 		ld/sd.)  Also stretching it to 5-instruction-sequences.
 20190614	Adding __builtin_expect (likely/unlikely) detection to the
 		configure script.
+
+==============  RELEASE 0.6.2  ==============
+
