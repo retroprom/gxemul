@@ -20,6 +20,35 @@ Here are some things, in no specific order, that I'd like to fix or
 implement in GXemul. Some items in this list are perhaps already fixed.
 
 
+<p><pre>
+<b>Current "short-list":</b>
+
+o) Update test device section on "fb": set and read resolution
+o) Update test machine section in documentation:
+	o) tiny testarm
+	o) FreeBSD mips emulation Target.
+		o) Try to build FreeBSD/testmips and FreeBSD/malta!
+	o) screenshots for all OSes
+o) testmips: Add support for more than 256 MB ram, e.g. by adding
+	"actual RAM" at the 1 GB offset. A 32 bit machine can thus use
+	3 GB, no limit on 64 bit machines. Low 256 MB can be considered
+	a mirror of first 256 MB of RAM.
+o) Malta: see if 2 GB ram can be used there as well (like the SGI O2 mode).
+o) Disk image end-of-image bug investigation.
+o) Disk overlay short-hand for temporary images.
+o) MIPS ALU instruction variants without register offset loads (may
+	increase performance?)
+o) O(n) -> O(1) 64-bit translation invalidation, _IF_ it is possible to
+	detect non-canonical virtal addresses being entered into the
+	translation arrays. Would be nice.
+o) Update NetBSD from 8.0 to 8.1 (or newer), in the documentation.
+o) Continue on Luna 88k machine with OpenBSD...
+o) Boot args for gxemul -xeg4 -d opendarwin-6.6.2.ppc.cdr ?
+o) Continue on SGI O2: PCI, SCSI (?), ...
+o) Continue on i960 stuff in general, and the New Framework.
+</pre>
+
+
 
 <p><br>
 <b><a name="new">New framework</a></b>
@@ -787,7 +816,7 @@ Disk image end-of-file bug:
 	NetBSD reads beyond the end of the file. Must be fixed! (Once fixed, documentation
 	can be simplified for some guest OS installations.)
 
-GXsatellite -- Gavare's eXperimental Stand-Aline Test Environment
+GXsatellite -- Gavare's eXperimental Stand-Alone Test Environment
 	for Low-Level Interactive Testing of Emulators. Share or reuse code with YCX5?
 
 Floating point:
@@ -1258,7 +1287,7 @@ Better framebuffer and X-windows functionality:
 		<li>TODO updates (i.e. set goals for the <i>next</i> release, if possible,
 			or strike out things that have been fixed).
 		<li>HISTORY (mention the release).
-		<li>Tarball creation (make_release.sh)
+		<li>Tarball creation (make_release.sh and just_update.sh)
 		<li>Home page <i>Download page</i> update: version number and date.
 		<li>Home page <i>News page</i> update: new Release.
 		<li>Create subversion tag.
