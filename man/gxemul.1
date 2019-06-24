@@ -29,7 +29,7 @@
 .\"
 .\"     groff -man -Tascii gxemul.1    or    nroff -man gxemul.1
 .\"
-.Dd MAY 2019
+.Dd JUNE 2019
 .Dt GXEMUL 1
 .Os
 .Sh NAME
@@ -474,7 +474,7 @@ Enables snapshotting (required for reverse execution/stepping).
 Start with a machine based on template 'name'. The name may be followed by
 optional arguments in parentheses, e.g.
 .Pp
-.Dl "gxemul -V -e 'testmips(cpu=R4400)'"
+.Dl "gxemul -V -e 'testm88k(cpu=88110,ram=10485760)'"
 .Pp
 Remember to use quotes if your shell gives special meaning to parentheses.
 .It Fl H
@@ -496,8 +496,7 @@ files to load, or components to add to the emulation setup.
 Including these on the command line is equivalent to using the 'add' command
 (although with a different syntax) in the interactive debugger.
 A simple example is a file name to load
-into the emulated machine, but they can be more complex as well. See the
-Adding Additional Components on the Command Line section below for more details.
+into the emulated machine, but they can be more complex as well.
 .Pp
 When not using the
 .Fl e
@@ -508,8 +507,8 @@ Starting the emulator with the
 .Fl V
 switch will bring you to the interactive debugger environment, without
 starting the emulation.
-.Sh ADDING ADDITIONAL COMPONENTS ON THE COMMAND LINE
-The general syntax is:
+.Pp
+The general syntax for adding components is:
 .Pp
 .Dl "existing_component_path:component(args)"
 .Pp
@@ -552,9 +551,9 @@ However, the number of instructions executed per clock tick can
 obviously vary, depending on the current CPU load on the host.
 .Pp
 .Nm
-is in general not secure; when used as a "virtual machine" to run
-untrusted code in a guest OS, the untrusted code may be able to crash
-the emulator, or due to bugs, take over the host.
+is in general not guaranteed to be secure; when used as a virtual machine
+to run untrusted code in the form of a guest OS, the untrusted code may
+be able to crash the emulator, or due to bugs, take over the host.
 .Sh AUTHOR
 GXemul is Copyright (C) 2003-2019  Anders Gavare <gavare@gmail.com>
 .Pp
