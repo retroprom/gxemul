@@ -85,7 +85,8 @@ to bugs in the emulator.
 		<td></td>
 		<td>32 MB</td>
 		<td></td>
-		<td>Graphical framebuffer (-X) is broken with recent versions of NetBSD.</td>
+		<td>Graphical framebuffer (-X) is broken with NetBSD 8.0 but
+			works with 8.1.</td>
 	</tr>
 
 	<tr>
@@ -109,7 +110,8 @@ to bugs in the emulator.
 		<td></td>
 		<td>32 MB</td>
 		<td></td>
-		<td>Graphical framebuffer (-X) is broken with recent versions of NetBSD.</td>
+		<td>Graphical framebuffer (-X) is broken with NetBSD 8.0 but
+			works with 8.1.</td>
 	</tr>
 
 	<tr>
@@ -121,7 +123,8 @@ to bugs in the emulator.
 		<td></td>
 		<td>32 MB</td>
 		<td></td>
-		<td>Graphical framebuffer (-X) is broken with recent versions of NetBSD. Unaligned framebuffer; may run a bit slower.</td>
+		<td>Graphical framebuffer (-X) is broken with NetBSD 8.0 but
+			works with 8.1. Unaligned framebuffer; may run a bit slower.</td>
 	</tr>
 </table>
 
@@ -140,14 +143,14 @@ These instructions show an example of how to install NetBSD/hpcmips:
 </pre>
   <li>Download the NetBSD/hpcmips ISO image, a generic kernel,
 	and the installer kernel (and optional symbols):<pre>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/iso/8.0/NetBSD-8.0-hpcmips.iso">ftp://ftp.netbsd.org/pub/NetBSD/iso/8.0/NetBSD-8.0-hpcmips.iso</a>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-8.0/hpcmips/binary/kernel/netbsd-GENERIC.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-8.0/hpcmips/binary/kernel/netbsd-GENERIC.gz</a>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-8.0/hpcmips/installation/netbsd.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-8.0/hpcmips/installation/netbsd.gz</a>
-	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-8.0/hpcmips/installation/netbsd.symbols.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-8.0/hpcmips/installation/netbsd.symbols.gz</a>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/iso/8.1/NetBSD-8.1-hpcmips.iso">ftp://ftp.netbsd.org/pub/NetBSD/iso/8.1/NetBSD-8.1-hpcmips.iso</a>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-8.1/hpcmips/binary/kernel/netbsd-GENERIC.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-8.1/hpcmips/binary/kernel/netbsd-GENERIC.gz</a>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-8.1/hpcmips/installation/netbsd.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-8.1/hpcmips/installation/netbsd.gz</a>
+	<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-8.1/hpcmips/installation/netbsd.symbols.gz">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-8.1/hpcmips/installation/netbsd.symbols.gz</a>
 </pre>
   <p>
   <li>Start the installation like this:<pre>
-	<b>gxemul -X -e mobilepro780 -d nbsd_hpcmips.img -d b:NetBSD-8.0-hpcmips.iso netbsd.gz netbsd.symbols.gz</b>
+	<b>gxemul -X -e mobilepro770 -d nbsd_hpcmips.img -d b:NetBSD-8.1-hpcmips.iso netbsd.gz netbsd.symbols.gz</b>
 
 </pre>
 	and proceed like you would do if you were installing NetBSD on a real
@@ -156,24 +159,35 @@ These instructions show an example of how to install NetBSD/hpcmips:
 	the CDROM device name from <tt>cd0a</tt> to <tt>cd0d</tt>.
 </ol>
 
-<p>While it is possible to install and run NetBSD/hpcmips without the <tt>-X</tt>
-command line option (i.e. using serial console), the default
-<tt>/etc/ttys</tt> file after a full install may not have
-<tt>/dev/console</tt> enabled. In that case, you needed to edit <tt>/etc/ttys</tt>
-<b>before</b> you reboot after the install is finished, to be able to log in.
-
 <p>
 If everything worked, NetBSD should now be installed on the disk image.
 Use the following command line to boot the emulated hpcmips machine:<pre>
-	<b>gxemul -e mobilepro780 -X -d nbsd_hpcmips.img netbsd-GENERIC.gz</b>
+	<b>gxemul -e mobilepro770 -X -d nbsd_hpcmips.img netbsd-GENERIC.gz</b>
+</pre>
 
+<p>NOTE: It seems that the NetBSD installer only activates the graphical console.
+You may need to edit <tt>/etc/ttys</tt> at the end of the install,
+and enable <tt>/dev/console</tt> like this if you wish to be able to log in using serial console:
+
+<pre><i>When the installer says "Exit Install System", select that option to get to a # prompt.</i>
+
+# <b>mount /dev/wd0a /mnt</b>
+# <b>echo 'console "/usr/libexec/getty std.9600" vt100 on secure' >> /mnt/etc/ttys</b>
+# <b>umount /mnt</b>
+# <b>sync</b>
+# <b>halt -p</b>
 </pre>
 
 <p>When you have logged in as <tt>root</tt>, you can use <tt>startx</tt> to
-start X Windows, but there is no mouse or touch support yet so only keyboard input 
-is available. This makes it a bit meaningless to use X.
+start X Windows, but there is <font color="red">no mouse or touch support yet</font>,
+so only keyboard input is available. This makes it a bit meaningless to use X.
 
+<p>If you want to supply raw files such as .tar.gz files as disk images using
+the <tt>-d</tt> command line option, those are accessible as the 'd' partition
+in NetBSD/hpcmips, not c. So for example:<pre>
+	tar zxvf /dev/wd1d</pre>
 
+<p>would extract files if the disk image is a .tar.gz archive.
 
 
 <p><br>
