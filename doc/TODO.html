@@ -35,14 +35,14 @@ o) testmips: Add support for more than 256 MB ram, e.g. by adding
 	a mirror of first 256 MB of RAM.
 o) Malta: see if 2 GB ram can be used there as well (like the SGI O2 mode).
 o) Disk overlay short-hand for temporary images.
-o) MIPS ALU instruction variants without register offset loads (may
-	increase performance?)
+o) Command line option for fsync on each disk image write.
+o) MIPS ALU instruction variants without register offset loads (may increase performance?)
 o) O(n) -> O(1) 64-bit translation invalidation, _IF_ it is possible to
 	detect non-canonical virtal addresses being entered into the
 	translation arrays. Would be nice.
 o) Update NetBSD from 8.0 to 8.1 (or newer), in the documentation.
 o) Continue on Luna 88k machine with OpenBSD...
-o) Boot args for gxemul -xeg4 -d opendarwin-6.6.2.ppc.cdr ?
+o) Boot args for gxemul -xeg4 -d opendarwin-6.6.2.ppc.cdr ? http://web.mit.edu/darwin/www/
 o) Continue on SGI O2: PCI, SCSI (?), ...
 o) Continue on i960 stuff in general, and the New Framework.
 </pre>
@@ -1053,10 +1053,10 @@ SGI O2:
 	IRIX? Networking? SCSI? Currently panics due to root vfs not available.
 
 HPCmips:
+	x)  MIPS hibernate instruction => make the exit from the emulator nicer!
 	x)  Clock? Is it running at correct speed?
 	x)  Mouse/pad support! :)
 	x)  A NIC? (As a PCMCIA device?)
-	x)  Investigate why not all MobilePro models work any longer with recent NetBSD versions.
 
 ARM:
 	o)  Big endian does not really work: loads and stores are little endian!
