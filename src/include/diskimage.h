@@ -2,7 +2,7 @@
 #define	DISKIMAGE_H
 
 /*
- *  Copyright (C) 2003-2011  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -37,6 +37,7 @@
 #include "misc.h"
 
 /*  Diskimage types:  */
+#define	DISKIMAGE_UNKNOWN	0
 #define	DISKIMAGE_SCSI		1
 #define	DISKIMAGE_IDE		2
 #define	DISKIMAGE_FLOPPY	3
@@ -71,9 +72,13 @@ struct diskimage {
 	int		heads;
 	int		sectors_per_track;
 
-	off_t		total_size;
-	int64_t		override_base_offset;
-	int		logical_block_size;
+	int		rpms;
+
+	int64_t		total_size;			// in bytes
+	int64_t		override_base_offset;		// in bytes
+	int		logical_block_size;		// in bytes
+
+	int64_t		nr_of_logical_blocks;		// in logical blocks
 
 	int		writable;
 	int		is_a_cdrom;
@@ -83,9 +88,6 @@ struct diskimage {
 	uint64_t	tape_offset;
 	int		tape_filenr;
 	int		filemark;
-
-	int		rpms;
-	int		ncyls;
 };
 
 

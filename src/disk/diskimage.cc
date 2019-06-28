@@ -187,10 +187,47 @@ void diskimage_recalc_size(struct diskimage *d)
 		size = 762048000;
 
 	d->total_size = size;
-	d->ncyls = d->total_size / 1048576;
 
-	/*  TODO: There is a mismatch between d->ncyls and d->cylinders,
-	    SCSI-based stuff usually doesn't care.  TODO: Fix this.  */
+	if ((d->total_size == 720*1024 || d->total_size == 1474560
+	    || d->total_size == 2949120 || d->total_size == 1228800)
+	    && d->type == DISKIMAGE_UNKNOWN)
+		d->type = DISKIMAGE_FLOPPY;
+
+	switch (d->type) {
+	case DISKIMAGE_FLOPPY:
+		if (d->total_size < 737280) {
+			fatal("\nTODO: small (non-80-cylinder) floppies?\n\n");
+			exit(1);
+		}
+
+		if (!d->chs_override) {
+			d->cylinders = 80;
+			d->heads = 2;
+			d->sectors_per_track = d->nr_of_logical_blocks * d->logical_block_size
+				/ (d->cylinders * d->heads * 512);
+		}
+		break;
+
+	default:/*  Non-floppies:  */
+		if (!d->chs_override) {
+			d->heads = 16;
+			d->sectors_per_track = 63;
+
+			int64_t bytespercyl = d->heads * d->sectors_per_track * 512;
+			d->cylinders = size / bytespercyl;
+			if (d->cylinders * bytespercyl < size)
+				d->cylinders ++;
+		}
+	}
+
+	// printf("c=%i h=%i s=%i\n", d->cylinders, d->heads, d->sectors_per_track);
+
+	// Update size to full cylinders.
+	size = d->heads * d->sectors_per_track * d->cylinders * 512;
+
+	d->nr_of_logical_blocks = size / d->logical_block_size;
+	if (size & (d->logical_block_size - 1))
+		d->nr_of_logical_blocks ++;
 }
 
 
@@ -206,7 +243,7 @@ int64_t diskimage_getsize(struct machine *machine, int id, int type)
 
 	while (d != NULL) {
 		if (d->type == type && d->id == id)
-			return d->total_size;
+			return d->nr_of_logical_blocks * d->logical_block_size;
 		d = d->next;
 	}
 	return -1;
@@ -596,13 +633,15 @@ int diskimage__internal_access(struct diskimage *d, int writeflag,
 	 *  If we could read a partial block, then return success (with
 	 *  the resulting buffer zero-filled at the end).
 	 */
+#if 0
+// TODO: check against full cylinder-size instead
 	if (lendone <= 0) {
 		fatal("[ diskimage__internal_access(): disk_id %i, offset %lli"
 		    ", transfer not completed. len=%i, len_done=%i ]\n",
 		    d->id, (long long)offset, (int)len, (int)lendone);
 		return 0;
 	}
-
+#endif
 	return 1;
 }
 
@@ -644,6 +683,18 @@ int diskimage_access(struct machine *machine, int id, int type, int writeflag,
 }
 
 
+int get_default_disk_type_for_machine(struct machine *machine)
+{
+	if (machine->machine_type == MACHINE_PMAX ||
+	    machine->machine_type == MACHINE_ARC ||
+	    machine->machine_type == MACHINE_SGI ||
+	    machine->machine_type == MACHINE_MVME88K)
+		return DISKIMAGE_SCSI;
+
+	return DISKIMAGE_IDE;
+}
+
+
 /*
  *  diskimage_add():
  *
@@ -672,7 +723,7 @@ int diskimage_add(struct machine *machine, char *fname)
 {
 	struct diskimage *d, *d2;
 	int id = 0, override_heads=0, override_spt=0;
-	int64_t bytespercyl, override_base_offset=0;
+	int64_t override_base_offset=0;
 	char *cp;
 	int prefix_b=0, prefix_c=0, prefix_d=0, prefix_f=0, prefix_g=0;
 	int prefix_i=0, prefix_r=0, prefix_s=0, prefix_t=0, prefix_id=-1;
@@ -775,16 +826,6 @@ int diskimage_add(struct machine *machine, char *fname)
 	CHECK_ALLOCATION(d = (struct diskimage *) malloc(sizeof(struct diskimage)));
 	memset(d, 0, sizeof(struct diskimage));
 
-	/*  Default to IDE disks...  */
-	d->type = DISKIMAGE_IDE;
-
-	/*  ... but some machines use SCSI by default:  */
-	if (machine->machine_type == MACHINE_PMAX ||
-	    machine->machine_type == MACHINE_ARC ||
-	    machine->machine_type == MACHINE_SGI ||
-	    machine->machine_type == MACHINE_MVME88K)
-		d->type = DISKIMAGE_SCSI;
-
 	if (prefix_i + prefix_f + prefix_s > 1) {
 		fprintf(stderr, "Invalid disk image prefix(es). You can"
 		    "only use one of i, f, and s\nfor each disk image.\n");
@@ -807,6 +848,9 @@ int diskimage_add(struct machine *machine, char *fname)
 			    " a disk ID to also be supplied.\n");
 			exit(1);
 		}
+
+		if (d->type == DISKIMAGE_UNKNOWN)
+			d->type = get_default_disk_type_for_machine(machine);
 
 		while (dx != NULL) {
 			if (d->type == dx->type && prefix_id == dx->id)
@@ -884,37 +928,16 @@ int diskimage_add(struct machine *machine, char *fname)
 		}
 	}
 
+	if (prefix_g) {
+		d->chs_override = 1;
+		d->heads = override_heads;
+		d->sectors_per_track = override_spt;
+	}
+
 	diskimage_recalc_size(d);
 
-	if ((d->total_size == 720*1024 || d->total_size == 1474560
-	    || d->total_size == 2949120 || d->total_size == 1228800)
-	    && !prefix_i && !prefix_s)
-		d->type = DISKIMAGE_FLOPPY;
-
-	switch (d->type) {
-	case DISKIMAGE_FLOPPY:
-		if (d->total_size < 737280) {
-			fatal("\nTODO: small (non-80-cylinder) floppies?\n\n");
-			exit(1);
-		}
-		d->cylinders = 80;
-		d->heads = 2;
-		d->sectors_per_track = d->total_size / (d->cylinders *
-		    d->heads * 512);
-		break;
-	default:/*  Non-floppies:  */
-		d->heads = 16;
-		d->sectors_per_track = 63;
-		if (prefix_g) {
-			d->chs_override = 1;
-			d->heads = override_heads;
-			d->sectors_per_track = override_spt;
-		}
-		bytespercyl = d->heads * d->sectors_per_track * 512;
-		d->cylinders = d->total_size / bytespercyl;
-		if (d->cylinders * bytespercyl < d->total_size)
-			d->cylinders ++;
-	}
+	if (d->type == DISKIMAGE_UNKNOWN)
+		d->type = get_default_disk_type_for_machine(machine);
 
 	d->rpms = 3600;
 
@@ -1124,17 +1147,18 @@ void diskimage_dump_info(struct machine *machine)
 		debug(" id %i, ", d->id);
 		debug("%s, ", d->writable? "read/write" : "read-only");
 
+		int64_t s = d->nr_of_logical_blocks * d->logical_block_size;
+
 		if (d->type == DISKIMAGE_FLOPPY)
-			debug("%lli KB", (long long) (d->total_size / 1024));
+			debug("%lli KB", (long long) (s / 1024));
 		else
-			debug("%lli MB", (long long) (d->total_size / 1048576));
+			debug("%lli MB", (long long) (s / 1048576));
 
 		if (d->type == DISKIMAGE_FLOPPY || d->chs_override)
 			debug(" (CHS=%i,%i,%i)", d->cylinders, d->heads,
 			    d->sectors_per_track);
 		else
-			debug(" (%lli sectors)", (long long)
-			   (d->total_size / 512));
+			debug(" (%lli %i-byte blocks)", (long long)d->nr_of_logical_blocks, d->logical_block_size);
 
 		if (d->is_boot_device)
 			debug(" (BOOT)");

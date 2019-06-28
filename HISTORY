@@ -4910,3 +4910,6 @@ Changelog for GXemul:
 
 ==============  RELEASE 0.6.2  ==============
 
+20190626	Rounding up disk image sizes to full cylinders; fixes a bug
+		where guest OSes could fail to read the end of e.g. a .tar.gz
+		file supplied as a disk image on the command line.
