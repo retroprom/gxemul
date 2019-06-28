@@ -298,7 +298,7 @@ echo rpcbind=YES &gt;&gt; /etc/rc.conf
 echo nfs_server=YES &gt;&gt; /etc/rc.conf
 echo mountd=YES &gt;&gt; /etc/rc.conf
 echo bootparamd=YES &gt;&gt; /etc/rc.conf
-printf "client root=10.0.0.2:/tftpboot \\\n swap=10.0.0.2:/tftpboot/swap\n" &gt; /etc/bootparams
+printf "client root=10.0.0.2:/tftpboot swap=10.0.0.2:/tftpboot/swap\n" &gt; /etc/bootparams
 echo "08:20:30:00:00:10 client" &gt; /etc/ethers
 echo 10.0.0.1 client &gt; /etc/hosts
 
@@ -318,7 +318,7 @@ dd if=/dev/zero of=swap bs=1024 count=262144
 echo inet 10.0.0.1 > /tftpboot/etc/hostname.mec0
 echo nameserver 10.0.0.254 > /tftpboot/etc/resolv.conf
 echo 10.0.0.2:/tftpboot / nfs rw 0 0 > /tftpboot/etc/fstab
-echo 10.0.0.2:/tftpboot/swap none swap sw >> /tftpboot/etc/fstab
+echo 10.0.0.2:/tftpboot/swap none swap sw 0 0 >> /tftpboot/etc/fstab
 
 halt</b>
 </pre></td></tr></table>
@@ -392,12 +392,13 @@ reboot</b>
   <li>Finally, run the client again:<pre>
 	<b>gxemul @config_client</b>
 
-</pre>If the root device is not auto-detected, enter <tt>mec0</tt>.
-	Note that booting is <i>very</i> slow, so be patient.
+</pre><p>If the root device is not auto-detected, enter <tt>mec0</tt>.
+
 </ol>
 
 
-<p>Many things are not working yet, for example X11 does not start yet due
+<p>Log in as root, with empty password.
+Many things are not working yet, for example X11 does not start yet due
 to some bug in the keyboard emulation.
 It is also very slow, mostly due to having the file system on NFS.
 In order to self-compile GXemul under emulated OpenBSD/sgi, you need
