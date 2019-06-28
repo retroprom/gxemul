@@ -275,29 +275,16 @@ client. Performing this setup is quite time consuming, but necessary:
 	network, but add a 4000 MB <tt>/tftpboot</tt> partition when
 	configuring the disk!
   <p>
-  <li>On the host, download the OpenBSD distribution, and do some fixup to
-  make it possible to treat the tar files as SCSI disk images:
-<p><table border="0"><tr><td><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td><pre>wget http://ftp.openbsd.org/pub/OpenBSD/6.4/sgi/base64.tgz
-wget http://ftp.openbsd.org/pub/OpenBSD/6.4/sgi/comp64.tgz
-wget http://ftp.openbsd.org/pub/OpenBSD/6.4/sgi/xbase64.tgz
-wget http://ftp.openbsd.org/pub/OpenBSD/6.4/sgi/xfont64.tgz
-wget http://ftp.openbsd.org/pub/OpenBSD/6.4/sgi/xserv64.tgz
-wget http://ftp.openbsd.org/pub/OpenBSD/6.4/sgi/xshare64.tgz
-gunzip base64.tgz
-gunzip comp64.tgz
-gunzip xbase64.tgz
-gunzip xfont64.tgz
-gunzip xserv64.tgz
-gunzip xshare64.tgz
-dd if=/dev/zero of=/dev/stdout bs=65536 count=1 >> base64.tar
-dd if=/dev/zero of=/dev/stdout bs=65536 count=1 >> comp64.tar
-dd if=/dev/zero of=/dev/stdout bs=65536 count=1 >> xbase64.tar
-dd if=/dev/zero of=/dev/stdout bs=65536 count=1 >> xfont64.tar
-dd if=/dev/zero of=/dev/stdout bs=65536 count=1 >> xserv64.tar
-dd if=/dev/zero of=/dev/stdout bs=65536 count=1 >> xshare64.tar
+  <li>On the host, download the OpenBSD distribution:
+<p><table border="0"><tr><td><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td><pre>wget http://ftp.eu.openbsd.org/pub/OpenBSD/6.5/sgi/base65.tgz
+wget http://ftp.eu.openbsd.org/pub/OpenBSD/6.5/sgi/comp65.tgz
+wget http://ftp.eu.openbsd.org/pub/OpenBSD/6.5/sgi/xbase65.tgz
+wget http://ftp.eu.openbsd.org/pub/OpenBSD/6.5/sgi/xfont65.tgz
+wget http://ftp.eu.openbsd.org/pub/OpenBSD/6.5/sgi/xserv65.tgz
+wget http://ftp.eu.openbsd.org/pub/OpenBSD/6.5/sgi/xshare65.tgz
 </pre></td></tr></table>
   <li>Start the emulation of the DECstation NFS server using this command line:
-<p><table border="0"><tr><td><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td><pre>gxemul -xe 3max -d nbsd_pmax.img -d base64.tar -d comp64.tar -d xbase64.tar -d xfont64.tar -d xserv64.tar -d xshare64.tar
+<p><table border="0"><tr><td><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td><pre>gxemul -xe 3max -d nbsd_pmax.img -d base65.tar.gz -d comp65.tar.gz -d xbase65.tar.gz -d xfont65.tar.gz -d xserv65.tar.gz -d xshare65.tar.gz
 </pre></td></tr></table>
 and enter the following commands to configure the server for NFS serving and
 extract the OpenBSD distribution:
@@ -316,12 +303,12 @@ echo "08:20:30:00:00:10 client" &gt; /etc/ethers
 echo 10.0.0.1 client &gt; /etc/hosts
 
 cd /tftpboot
-tar xf /dev/sd1c
-tar xf /dev/sd2c
-tar xf /dev/sd3c
-tar xf /dev/sd4c
-tar xf /dev/sd5c
-tar xf /dev/sd6c
+tar xzf /dev/sd1c
+tar xzf /dev/sd2c
+tar xzf /dev/sd3c
+tar xzf /dev/sd4c
+tar xzf /dev/sd5c
+tar xzf /dev/sd6c
 
 tar zxfv var/sysmerge/etc.tgz
 tar zxfv var/sysmerge/xetc.tgz
@@ -336,8 +323,8 @@ echo 10.0.0.2:/tftpboot/swap none swap sw >> /tftpboot/etc/fstab
 halt</b>
 </pre></td></tr></table>
   <li>Download the OpenBSD/sgi GENERIC and RAMDISK kernels:<pre>
-	<a href="http://ftp.openbsd.org/pub/OpenBSD/6.4/sgi/bsd.IP32">http://ftp.openbsd.org/pub/OpenBSD/6.4/sgi/bsd.IP32</a>
-	<a href="http://ftp.openbsd.org/pub/OpenBSD/6.4/sgi/bsd.rd.IP32">http://ftp.openbsd.org/pub/OpenBSD/6.4/sgi/bsd.rd.IP32</a>
+	<a href="http://ftp.eu.openbsd.org/pub/OpenBSD/6.5/sgi/bsd.IP32">http://ftp.eu.openbsd.org/pub/OpenBSD/6.5/sgi/bsd.IP32</a>
+	<a href="http://ftp.eu.openbsd.org/pub/OpenBSD/6.5/sgi/bsd.rd.IP32">http://ftp.eu.openbsd.org/pub/OpenBSD/6.5/sgi/bsd.rd.IP32</a>
 
 </pre>
   <li>Create a configuration file called <tt>config_client</tt>:

@@ -68,9 +68,9 @@ struct diskimage {
 	struct diskimage_overlay *overlays;
 
 	int		chs_override;
-	int		cylinders;
+	int64_t		cylinders;
 	int		heads;
-	int		sectors_per_track;
+	int64_t		sectors_per_track;
 
 	int		rpms;
 

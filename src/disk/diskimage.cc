@@ -166,7 +166,7 @@ void diskimage_recalc_size(struct diskimage *d)
 {
 	struct stat st;
 	int res;
-	off_t size = 0;
+	int64_t size = 0;
 
 	res = stat(d->fname, &st);
 	if (res) {

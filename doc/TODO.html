@@ -23,6 +23,13 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 <p><pre>
 <b>Current "short-list":</b>
 
+o) Building GXemul 0.6.2 inside emulated NetBSD/hpcmips 8.1 says:
+	# date > a; ./configure && make; date > b; cat a; cat b
+	checking which C++ compiler to use... c++ -DNDEBUG 
+	checking for X11 headers and libs
+	Using NetBSD hack for X11 libs...
+	Failed to compile X11 test program. Configuring without X11.
+   Investigate this!
 o) Update test device section on "fb": set and read resolution
 o) Update test machine section in documentation:
 	o) tiny testarm
