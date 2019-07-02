@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2019  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -2732,13 +2732,13 @@ X(ei_r5900)
 
 
 /*
- *  sw_loop:
+ *  memset_addiu_bne_sw:
  *
  *  s:	addiu	rX,rX,4			rX = arg[0] and arg[1]
  *	bne	rY,rX,s  (or rX,rY,s)	rt=arg[1], rs=arg[0]
  *	sw	rZ,-4(rX)		rt=arg[0], rs=arg[1]
  */
-X(sw_loop)
+X(memset_addiu_bne_sw)
 {
 	MODE_uint_t rX = reg(ic->arg[0]), rZ = reg(ic[2].arg[0]);
 	uint64_t *rYp = (uint64_t *) ic[1].arg[0];
@@ -2746,7 +2746,21 @@ X(sw_loop)
 	unsigned char *page;
 	int partial = 0;
 
+#ifdef MODE32
 	page = cpu->cd.mips.host_store[rX >> 12];
+#else
+	{
+		const uint32_t mask1 = (1 << DYNTRANS_L1N) - 1;
+		const uint32_t mask2 = (1 << DYNTRANS_L2N) - 1;
+		const uint32_t mask3 = (1 << DYNTRANS_L3N) - 1;
+		uint32_t x1 = (rX >> (64-DYNTRANS_L1N)) & mask1;
+		uint32_t x2 = (rX >> (64-DYNTRANS_L1N-DYNTRANS_L2N)) & mask2;
+		uint32_t x3 = (rX >> (64-DYNTRANS_L1N-DYNTRANS_L2N-DYNTRANS_L3N)) & mask3;
+		struct DYNTRANS_L2_64_TABLE *l2 = cpu->cd.mips.l1_64[x1];
+		struct DYNTRANS_L3_64_TABLE *l3 = l2->l3[x2];
+		page = l3->host_store[x3];
+	}
+#endif
 
 	/*  Fallback:  */
 	if (cpu->delay_slot || page == NULL || (rX & 3) != 0 || rZ != 0) {
@@ -2902,34 +2916,75 @@ X(linux_pmax_idle)
 
 	instr(idle)(cpu, ic);
 }
+#endif
 
 
 /*
- *  netbsd_strlen():
+ *  strlen_lb_addiu_bne_nop():
  *
- *	lb      rV,0(rX)
- *   s:	addiu   rX,rX,1
+ *  Used by some versions of NetBSD.
+ *
+ *  s:	lb      rV,0(rX)	(lb = signed, lbu = unsigned)
+ *	addiu   rX,rX,1
  *	bne	zr,rV,s
  *	nop
  */
-X(netbsd_strlen)
+X(strlen_lb_addiu_bne_nop)
 {
 	MODE_uint_t rx = reg(ic[0].arg[1]);
 	MODE_int_t rv;
 	signed char *page;
-	uint32_t pageindex = rx >> 12;
 	int i;
 
-	page = (signed char *) cpu->cd.mips.host_load[pageindex];
+#ifdef MODE32
+	page = (signed char *) cpu->cd.mips.host_load[rx >> 12];
+#else
+	{
+		const uint32_t mask1 = (1 << DYNTRANS_L1N) - 1;
+		const uint32_t mask2 = (1 << DYNTRANS_L2N) - 1;
+		const uint32_t mask3 = (1 << DYNTRANS_L3N) - 1;
+		uint32_t x1 = (rx >> (64-DYNTRANS_L1N)) & mask1;
+		uint32_t x2 = (rx >> (64-DYNTRANS_L1N-DYNTRANS_L2N)) & mask2;
+		uint32_t x3 = (rx >> (64-DYNTRANS_L1N-DYNTRANS_L2N-DYNTRANS_L3N)) & mask3;
+		struct DYNTRANS_L2_64_TABLE *l2 = cpu->cd.mips.l1_64[x1];
+		struct DYNTRANS_L3_64_TABLE *l3 = l2->l3[x2];
+		page = (signed char *) l3->host_load[x3];
+	}
+#endif
 
-	/*  Fallback:  */
+	/*
+	 *  Fallback:
+	 *
+	 *  If the first instruction (the lb/lbu) is in the delay slot of a
+	 *  branch instruction, we bail out.
+	 *
+	 *  Also, if the page for the strlen string to measure is not in the
+	 *  fast host_load arrays, we bail out and let the normal lb/lbu
+	 *  implementation handle it (and if the string is long enough, we
+	 *  will get back into this instruction combination code anyway).
+	 *
+	 *  The reason why we can run a fixed load instruction as the fall-
+	 *  back (say, signed lb) rather than checking whether to run lb or
+	 *  lbu, is as follows:
+	 *
+	 *  If the loaded byte is 0x00, we break out of the strlen loop. This
+	 *  value would be the same regardless of whether lb or lbu is used.
+	 *
+	 *  If the loaded byte is not 0x00, say, 0x8a, it does not matter
+	 *  whether the loaded rV value is 0xffffffffffffff8a or
+	 *  0x000000000000008a. The only way to get out of the strlen loop is
+	 *  to read rV as 0x00, _except_ for CPU exceptions (either interrupts
+	 *  or page-fault exceptions). But it is extremely unlikely that any
+	 *  exception handling code in any guest OS would do anything other
+	 *  than preserve rV (whatever its value is) and restore it when the
+	 *  exception handling is done. So this discrepancy should be ok.
+	 */
 	if (cpu->delay_slot || page == NULL) {
-		/*
-		 *  Normal lb:  NOTE: It doesn't matter whether [1] or
-		 *  [16+1] is called here, because endianness for 8-bit
-		 *  loads is irrelevant. :-)
-		 */
+#ifdef MODE32
 		mips32_loadstore[1](cpu, ic);
+#else
+		mips_loadstore[1](cpu, ic);
+#endif
 		return;
 	}
 
@@ -2954,7 +3009,6 @@ X(netbsd_strlen)
 	else
 		cpu->cd.mips.next_ic = ic;
 }
-#endif
 
 
 /*
@@ -3167,48 +3221,16 @@ X(end_of_page2)
 
 
 /*
- *  Combine:  Memory fill loop (addiu, bne, sw)
- *
- *  s:	addiu	rX,rX,4
- *	bne	rY,rX,s
- *	sw	rZ,-4(rX)
- */
-void COMBINE(sw_loop)(struct cpu *cpu, struct mips_instr_call *ic, int low_addr)
-{
-	int n_back = (low_addr >> MIPS_INSTR_ALIGNMENT_SHIFT)
-	    & (MIPS_IC_ENTRIES_PER_PAGE - 1);
-
-	/*  Only for 32-bit virtual address translation so far.  */
-	if (!cpu->is_32bit)
-		return;
-
-	if (n_back < 2)
-		return;
-
-	if (ic[-2].f == instr(addiu) && ic[-2].arg[0] == ic[-2].arg[1] &&
-	    (int32_t)ic[-2].arg[2] == 4 &&
-	    ic[-1].f == instr(bne_samepage) &&
-	    (ic[-1].arg[0] == ic[-2].arg[0] ||
-		ic[-1].arg[1] == ic[-2].arg[0]) &&
-	    ic[-1].arg[0] != ic[-1].arg[1] &&
-	    ic[-1].arg[2] == (size_t) &ic[-2] &&
-	    ic[0].arg[0] != ic[0].arg[1] &&
-	    ic[0].arg[1] == ic[-2].arg[0] && (int32_t)ic[0].arg[2] == -4) {
-		ic[-2].f = instr(sw_loop);
-	}
-}
-
-
-/*
  *  Combine:  Multiple SW in a row using the same base register
  *
  *	sw	r?,???(rX)
  *	sw	r?,???(rX)
  *	sw	r?,???(rX)
  *	...
+ *
+ *  and memset loops, etc.
  */
-void COMBINE(multi_sw)(struct cpu *cpu, struct mips_instr_call *ic,
-	int low_addr)
+void COMBINE(sw)(struct cpu *cpu, struct mips_instr_call *ic, int low_addr)
 {
 	int n_back = (low_addr >> MIPS_INSTR_ALIGNMENT_SHIFT)
 	    & (MIPS_IC_ENTRIES_PER_PAGE - 1);
@@ -3252,6 +3274,18 @@ void COMBINE(multi_sw)(struct cpu *cpu, struct mips_instr_call *ic,
 		else
 			ic[-1].f = instr(multi_sw_2_be);
 	}
+
+	if (ic[-2].f == instr(addiu) && ic[-2].arg[0] == ic[-2].arg[1] &&
+	    (int32_t)ic[-2].arg[2] == 4 &&
+	    ic[-1].f == instr(bne_samepage) &&
+	    (ic[-1].arg[0] == ic[-2].arg[0] ||
+		ic[-1].arg[1] == ic[-2].arg[0]) &&
+	    ic[-1].arg[0] != ic[-1].arg[1] &&
+	    ic[-1].arg[2] == (size_t) &ic[-2] &&
+	    ic[0].arg[0] != ic[0].arg[1] &&
+	    ic[0].arg[1] == ic[-2].arg[0] && (int32_t)ic[0].arg[2] == -4) {
+		ic[-2].f = instr(memset_addiu_bne_sw);
+	}
 }
 
 
@@ -3263,8 +3297,7 @@ void COMBINE(multi_sw)(struct cpu *cpu, struct mips_instr_call *ic,
  *	lw	r?,???(rX)
  *	...
  */
-void COMBINE(multi_lw)(struct cpu *cpu, struct mips_instr_call *ic,
-	int low_addr)
+void COMBINE(lw)(struct cpu *cpu, struct mips_instr_call *ic, int low_addr)
 {
 	int n_back = (low_addr >> MIPS_INSTR_ALIGNMENT_SHIFT)
 	    & (MIPS_IC_ENTRIES_PER_PAGE - 1);
@@ -3403,15 +3436,25 @@ void COMBINE(nop)(struct cpu *cpu, struct mips_instr_call *ic, int low_addr)
 		return;
 	}
 
-	if ((ic[-3].f == mips32_loadstore[1] ||
-	    ic[-3].f == mips32_loadstore[16 + 1]) &&
+	if ((ic[-3].f == mips32_loadstore[1] || ic[-3].f == mips32_loadstore[1+16]) &&
 	    ic[-3].arg[2] == 0 &&
 	    ic[-3].arg[0] == ic[-1].arg[0] && ic[-3].arg[1] == ic[-2].arg[0] &&
 	    ic[-2].arg[0] == ic[-2].arg[1] && ic[-2].arg[2] == 1 &&
 	    ic[-2].f == instr(addiu) && ic[-1].arg[2] == (size_t) &ic[-3] &&
 	    ic[-1].arg[1] == (size_t) &cpu->cd.mips.gpr[MIPS_GPR_ZERO] &&
 	    ic[-1].f == instr(bne_samepage)) {
-		ic[-3].f = instr(netbsd_strlen);
+		ic[-3].f = instr(strlen_lb_addiu_bne_nop);
+		return;
+	}
+#else
+	if ((ic[-3].f == mips_loadstore[1] || ic[-3].f == mips_loadstore[1+16]) &&
+	    ic[-3].arg[2] == 0 &&
+	    ic[-3].arg[0] == ic[-1].arg[0] && ic[-3].arg[1] == ic[-2].arg[0] &&
+	    ic[-2].arg[0] == ic[-2].arg[1] && ic[-2].arg[2] == 1 &&
+	    ic[-2].f == instr(addiu) && ic[-1].arg[2] == (size_t) &ic[-3] &&
+	    ic[-1].arg[1] == (size_t) &cpu->cd.mips.gpr[MIPS_GPR_ZERO] &&
+	    ic[-1].f == instr(bne_samepage)) {
+		ic[-3].f = instr(strlen_lb_addiu_bne_nop);
 		return;
 	}
 #endif
@@ -4674,12 +4717,10 @@ X(to_be_translated)
 		if (!store && rt == MIPS_GPR_ZERO)
 			ic->arg[0] = (size_t)&cpu->cd.mips.scratch;
 
-		/*  Check for multiple loads or stores in a row using the same
-		    base register:  */
 		if (main_opcode == HI6_LW)
-			cpu->cd.mips.combination_check = COMBINE(multi_lw);
+			cpu->cd.mips.combination_check = COMBINE(lw);
 		if (main_opcode == HI6_SW)
-			cpu->cd.mips.combination_check = COMBINE(multi_sw);
+			cpu->cd.mips.combination_check = COMBINE(sw);
 		break;
 
 	case HI6_LL:
