@@ -96,10 +96,14 @@ To install NetBSD/cats onto a disk image, follow these instructions:
 
 <p>Note that there may be some long delays during bootup.
 
-<p>Alternatively, to install from FTP, you can skip downloading the ISO,
-and start the install without <tt>-d xxxxx.iso</tt>. Suitable network 
-settings are IP 10.0.0.1, gateway/default route 10.0.0.254, netmask 
-255.0.0.0, nameserver 10.0.0.254.
+<p>(NOTE: Older versions of NetBSD could install via FTP in older versions
+of GXemul. Right now, that seems to not be possible, resulting in ethernet
+timeouts etc. Whether it is due to bit rot in the emulator, or due to NetBSD
+having changed over time, has not been debugged.
+If you want to try an FTP install anyway, 
+start the install without <tt>-d xxxxx.iso</tt> and use
+IPv4 address 10.0.0.1, gateway/default route 10.0.0.254, netmask 
+255.0.0.0, and nameserver 10.0.0.254, when asked to configure the network.)
 
 <p>If everything worked, NetBSD should now be installed on the disk image.
 Use the following command line to boot the emulated CATS machine:<pre>
