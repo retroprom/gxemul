@@ -53,6 +53,9 @@ old versions of <a href="#netbsdcatsinstall">NetBSD/cats</a> and
 perhaps run in the future.
 
 <p>Known issue: Clocks inside the emulated guest OS run at the wrong pace.
+For example, typing "<tt>date; sleep 10; date</tt>" inside NetBSD/cats takes
+10 seconds to run, but outputs dates that are over 2 minute apart (!) on
+my machine.
 
 
 
@@ -77,14 +80,14 @@ To install NetBSD/cats onto a disk image, follow these instructions:
 
 </pre>
   <li>Download the NetBSD/cats ISO image and the generic and install kernels:<pre>
-	<a href="ftp://ftp.de.netbsd.org/pub/NetBSD/iso/8.0/NetBSD-8.0-cats.iso">ftp://ftp.de.netbsd.org/pub/NetBSD/iso/8.0/NetBSD-8.0-cats.iso</a>
-	<a href="ftp://ftp.de.netbsd.org/pub/NetBSD/NetBSD-8.0/cats/binary/kernel/netbsd-GENERIC.aout.gz">ftp://ftp.de.netbsd.org/pub/NetBSD/NetBSD-8.0/cats/binary/kernel/netbsd-GENERIC.aout.gz</a>
-	<a href="ftp://ftp.de.netbsd.org/pub/NetBSD/NetBSD-8.0/cats/binary/kernel/netbsd-INSTALL.aout.gz">ftp://ftp.de.netbsd.org/pub/NetBSD/NetBSD-8.0/cats/binary/kernel/netbsd-INSTALL.aout.gz</a>
+	<a href="ftp://ftp.de.netbsd.org/pub/NetBSD/iso/8.1/NetBSD-8.1-cats.iso">ftp://ftp.de.netbsd.org/pub/NetBSD/iso/8.1/NetBSD-8.1-cats.iso</a>
+	<a href="ftp://ftp.de.netbsd.org/pub/NetBSD/NetBSD-8.1/cats/binary/kernel/netbsd-GENERIC.aout.gz">ftp://ftp.de.netbsd.org/pub/NetBSD/NetBSD-8.1/cats/binary/kernel/netbsd-GENERIC.aout.gz</a>
+	<a href="ftp://ftp.de.netbsd.org/pub/NetBSD/NetBSD-8.1/cats/binary/kernel/netbsd-INSTALL.aout.gz">ftp://ftp.de.netbsd.org/pub/NetBSD/NetBSD-8.1/cats/binary/kernel/netbsd-INSTALL.aout.gz</a>
 
 </pre>
   <p>
   <li>Start the installation like this:<pre>
-	<b>gxemul -X -E cats -d nbsd_cats.img -d NetBSD-8.0-cats.iso netbsd-INSTALL.aout.gz</b>
+	<b>gxemul -X -E cats -d nbsd_cats.img -d NetBSD-8.1-cats.iso netbsd-INSTALL.aout.gz</b>
 
 </pre>
 	and proceed like you would do if you were installing NetBSD on a real
