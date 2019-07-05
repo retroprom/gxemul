@@ -111,7 +111,7 @@ to targeting real machines.
 Run <tt>gxemul -H</tt> for an up-to-date list.
 
 
-<p>Here are some examples of guest OSes that run in the test machine modes:
+<p>Here are some examples of guest OSes that use or (have used) the test machine modes:
 
 <p>
 <ul>
@@ -124,10 +124,26 @@ Run <tt>gxemul -H</tt> for an up-to-date list.
 	<b>ftp <a href="http://www.helenos.org/releases/HelenOS-0.5.0-mips32-GXemul.boot">http://www.helenos.org/releases/HelenOS-0.5.0-mips32-GXemul.boot</a></b>
   	<b>gxemul -X -E testmips HelenOS-0.5.0-mips32-GXemul.boot</b></pre>
 
-	<li><p><a name="glattmumk">Glatt MU/MK:</a>
+	<p>
+	<li>FreeBSD/MIPS:
+		<br>For a while, testmips was <a href="http://web.archive.org/web/20180218123520/https://wiki.freebsd.org/FreeBSD/MipsEmulation">one of
+		the targets when developing the MIPS port of FreeBSD</a>.
+		See <a href="https://svnweb.freebsd.org/base?view=revision&revision=234920">revision 234920</a>
+		for more details. (The target was removed
+		<a href="https://reviews.freebsd.org/rS342256">in December
+		2018</a>; focus from now on is on the Malta board.)
+
+	<p>
+	<li><a name="glattmumk">Glatt MU/MK:</a>
 		<br>One of <a href="https://github.com/caladri/glatt">Glatt MU/MK</a>'s targets is <tt>testmips</tt>.
 
-	<li><p><a name="ycx5">YCX5:</a>
+	<p>
+	<li>MINIX 3.x:
+		<br><a href="http://yana.jp/20160811/computer/minix.ja.euc.html">http://yana.jp/20160811/computer/minix.ja.euc.html</a> indicates that an attempt was made
+		to port MINIX 3.x to testarm and testmips.
+
+	<p>
+	<li><a name="ycx5">YCX5:</a>
 		<br>One of <a href="http://gavare.se/ycx5/">YCX5</a>'s primary development targets is <tt>testmips</tt>.
 </ul>
 
@@ -147,13 +163,36 @@ following experimental devices:
 
   <tr>
     <td align="left" valign="top" width="200">
+	<a name="expdevices_ram"><b><tt>ram</tt>:</b></a>
+	<p>The first 256 MB of RAM.
+	<br>Physical address:&nbsp&nbsp;<font color="#0000f0">0x00000000</font>
+    </td>
+    <td align="left" valign="top" width="25">&nbsp;</td>
+    <td align="left" valign="top">
+	<table border="0">
+	  <tr>
+	    <td align="left" valign="top"><i><u>Comment:</u></i></td>
+	  </tr>
+	  <tr>
+	    <td align="left" valign="top"></td>
+	  </tr>
+	</table>
+    </td>
+  </tr>
+
+  <tr height="15">
+    <td height="15">&nbsp;</td>
+  </tr>
+
+  <tr>
+    <td align="left" valign="top" width="200">
 	<a name="expdevices_cons"><b><tt>cons</tt>:</b></a>
 	<p>A simple console device, for writing
 	characters to the controlling terminal
 	and receiving keypresses.
 	<p>Source code:&nbsp;&nbsp;<font color="#0000f0"><tt>src/devices/dev_cons.c</tt></font>
 	<p>Include file:&nbsp;&nbsp;<font color="#0000f0"><tt>dev_cons.h</tt></font>
-	<br>Default physical address:&nbsp&nbsp;<font color="#0000f0">0x10000000</font>
+	<br>Physical address:&nbsp&nbsp;<font color="#0000f0">0x10000000</font>
     </td>
     <td align="left" valign="top" width="25">&nbsp;</td>
     <td align="left" valign="top">
@@ -189,7 +228,7 @@ following experimental devices:
 	multi-processor system.
 	<p>Source code:&nbsp;&nbsp;<font color="#0000f0"><tt>src/devices/dev_mp.c</tt></font>
 	<p>Include file:&nbsp;&nbsp;<font color="#0000f0"><tt>dev_mp.h</tt></font>
-	<br>Default physical address:&nbsp&nbsp;<font color="#0000f0">0x11000000</font>
+	<br>Physical address:&nbsp&nbsp;<font color="#0000f0">0x11000000</font>
     </td>
     <td></td>
     <td align="left" valign="top">
@@ -291,10 +330,11 @@ following experimental devices:
     <td align="left" valign="top">
 	<a name="expdevices_fb"><b><tt>fb</tt>:</b></a>
 	<p>A simple linear framebuffer, for graphics output.
-	640 x 480 pixels, 3 bytes per pixel (red, green, blue, 8 bits each).
+	Initial resolution is 640 x 480 pixels, with 3 bytes per pixel
+	(red, green, blue, 8 bits each).
 	<p>Source code:&nbsp;&nbsp;<font color="#0000f0"><tt>src/devices/dev_fb.c</tt></font>
 	<p>Include file:&nbsp;&nbsp;<font color="#0000f0"><tt>dev_fb.h</tt></font>
-	<br>Default physical address:&nbsp&nbsp;<font color="#0000f0">0x12000000</font>
+	<br>Physical address:&nbsp&nbsp;<font color="#0000f0">0x12000000</font>
     </td>
     <td></td>
     <td align="left" valign="top">
@@ -304,9 +344,17 @@ following experimental devices:
 	    <td align="left" valign="top"><i><u>Effect:</u></i></td>
 	  </tr>
 	  <tr>
-	    <td align="left" valign="top"><tt>0x00000-</tt><br><tt>0xe0fff</tt></td>
+	    <td align="left" valign="top"><tt>0x00000000</tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
 	    <td align="left" valign="top">Read: read pixel values.
-		<br>Write: write pixel values.</td>
+		Write: write pixel values.</td>
+	  </tr>
+	  <tr>
+	    <td align="left" valign="top"><tt>0x00f00000</tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	    <td align="left" valign="top">Read/Write: Control ports for changing the
+	    	resolution at runtime, etc. See <tt>dev_fb.h</tt> and
+	    	<tt>dev_fbctrl.cc</tt> for more details.
+	    	<p>If the resolution is read back as X=0 Y=0, then that
+	    	means that graphics is not used, only serial console.</td>
 	  </tr>
 	</table>
     </td>
@@ -324,7 +372,7 @@ following experimental devices:
 	write operations finish instantaneously.
 	<p>Source code:&nbsp;&nbsp;<font color="#0000f0"><tt>src/devices/dev_disk.c</tt></font>
 	<p>Include file:&nbsp;&nbsp;<font color="#0000f0"><tt>dev_disk.h</tt></font>
-	<br>Default physical address:&nbsp&nbsp;<font color="#0000f0">0x13000000</font>
+	<br>Physical address:&nbsp&nbsp;<font color="#0000f0">0x13000000</font>
     </td>
     <td></td>
     <td align="left" valign="top">
@@ -378,7 +426,7 @@ following experimental devices:
 	and receive packets on a simulated network.
 	<p>Source code:&nbsp;&nbsp;<font color="#0000f0"><tt>src/devices/dev_ether.c</tt></font>
 	<p>Include file:&nbsp;&nbsp;<font color="#0000f0"><tt>dev_ether.h</tt></font>
-	<br>Default physical address:&nbsp&nbsp;<font color="#0000f0">0x14000000</font>
+	<br>Physical address:&nbsp&nbsp;<font color="#0000f0">0x14000000</font>
     </td>
     <td></td>
     <td align="left" valign="top">
@@ -432,7 +480,7 @@ following experimental devices:
 	and to cause periodic interrupts.
 	<p>Source code:&nbsp;&nbsp;<font color="#0000f0"><tt>src/devices/dev_rtc.c</tt></font>
 	<p>Include file:&nbsp;&nbsp;<font color="#0000f0"><tt>dev_rtc.h</tt></font>
-	<br>Default physical address:&nbsp&nbsp;<font color="#0000f0">0x15000000</font>
+	<br>Physical address:&nbsp&nbsp;<font color="#0000f0">0x15000000</font>
     </td>
     <td></td>
     <td align="left" valign="top">
@@ -479,7 +527,7 @@ following experimental devices:
 	<p>An Interrupt Controller. (Note: Not used for the MIPS test machine.)
 	<p>Source code:&nbsp;&nbsp;<font color="#0000f0"><tt>src/devices/dev_irqc.c</tt></font>
 	<p>Include file:&nbsp;&nbsp;<font color="#0000f0"><tt>dev_irqc.h</tt></font>
-	<br>Default physical address:&nbsp&nbsp;<font color="#0000f0">0x16000000</font>
+	<br>Physical address:&nbsp&nbsp;<font color="#0000f0">0x16000000</font>
     </td>
     <td></td>
     <td align="left" valign="top">
@@ -522,9 +570,9 @@ some machines actually have simple linear framebuffers like this.)
 
 <p>If the physical address is <tt>0x10000000</tt>, then for MIPS that
 means that it can be accessed at virtual address
-<tt>0xffffffffb0000000</tt>. (Actually it can be accessed at
-<tt>0xffffffff90000000</tt> too, but devices should usually be accessed in
-a non-cached manner.)
+<tt>0xffffffffb0000000</tt>. (Using virtual address
+<tt>0xffffffff90000000</tt> may work in the emulator, but should be
+avoided, since devices should in general be accessed in a non-cached manner.)
 
 <p>When using the ARM or PPC test machines, the addresses are
 <tt>0x10000000</tt>, <tt>0x11000000</tt> etc., so no need to add any

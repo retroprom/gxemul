@@ -16,10 +16,10 @@ have devices that are similar to those found in real machines:
 	ethernet frames on the simulated network.
 
   o)  framebuffer (dev_fb):
-	640 x 480 pixels, 3 bytes per pixel, red-green-blue
+	Defaults to 640 x 480 pixels, 3 bytes per pixel, red-green-blue.
 
   o)  interrupt controller (dev_irqc):
-	A generic interrupt controller. (Not used by the MIPS test machine.)
+	A generic interrupt controller. (Only for non-MIPS test machines.)
 
   o)  mp (dev_mp):
 	A multiprocessor inter-processor communication device.
