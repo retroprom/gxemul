@@ -63,7 +63,7 @@ Emulated hardware:
 	<li>Ethernet, enough to (barely) run OpenBSD and NetBSD with root-on-nfs.
 </ul>
 
-<p>Things not yet emulated include: SCSI, audio.
+<p>Things not yet emulated include: SCSI, audio/video boards, the VICE chipset, ...
 
 <p>This page contains instructions for how to install and run:
 
@@ -412,12 +412,18 @@ to run <tt>swapctl -a /swap</tt> as root.
 <a name="linuxforo2"></a>
 <h3>Linux for O2</h3>
 
-<p><font color="red">NOTE: This does not work yet. The latest Linux r5k-ip32
-kernels die with a NULL reference during bootup. Older versions may work
-better, but I have not had the time to set up NFS netbooting so I don't know
+<p><font color="red">NOTE: This does not work yet. Some old kernels may work,
+but I have not had the time to set up NFS netbooting so I don't know
 whether that would really work, or trigger other bugs.</font>
 
-<p><a href="http://ftp.debian.org/debian/dists/Debian8.11/main/installer-mips/current/images/r5k-ip32/">Linux for O2</a>
+<p>Some kernels (Linux 2.5 and 2.6) from the years 2002 - 2004 can be found here: <a href="https://www.linux-mips.org/~glaurung/">https://www.linux-mips.org/~glaurung/</a>
+<br>Other kernels here: <a href="http://ftp.debian.org/debian/dists/Debian8.11/main/installer-mips/current/images/r5k-ip32/">Debian Linux for O2</a>
+
+<p>Example with <a href="https://www.linux-mips.org/~glaurung/O2/linux-2.5.47/kernel/vmlinux64-r10k">https://www.linux-mips.org/~glaurung/O2/linux-2.5.47/kernel/vmlinux64-r10k</a> (launced using <tt>gxemul -X -e o2 vmlinux64-r10k</tt>):
+
+<p>
+<a href="20190715-sgi-o2-linux.png"><img src="20190715-sgi-o2-linux-small.png"></a>
+
 
 
 
