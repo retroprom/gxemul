@@ -27,6 +27,7 @@
 
 #include <signal.h>
 #include <unistd.h>
+#include <cstdio>
 #include <iostream>
 
 #include "misc.h"
