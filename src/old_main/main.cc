@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2019  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -322,8 +322,9 @@ static void usage(int longusage)
 	printf("  -Z n      set nr of graphics cards, for emulating a "
 	    "dual-head or tripple-head\n"
 	    "            environment (only for DECstation emulation)\n");
-	printf("  -z disp   add disp as an X11 display to use for "
-	    "framebuffers\n");
+#ifdef WITH_X11
+	printf("  -z disp   add disp as an X11 display to use for framebuffers\n");
+#endif /*  WITH_X11  */
 
 	printf("\nGeneral options:\n");
 	printf("  -c cmd    add cmd as a command to run before starting "
