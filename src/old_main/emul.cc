@@ -748,6 +748,7 @@ void emul_simple_init(struct emul *emul)
 
 	/*  Create a simple network:  */
 	emul->net = net_init(emul, NET_INIT_FLAG_GATEWAY,
+	    NULL,
 	    NET_DEFAULT_IPV4_MASK,
 	    NET_DEFAULT_IPV4_LEN,
 	    NULL, 0, 0, NULL);

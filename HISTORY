@@ -4913,3 +4913,7 @@ Changelog for GXemul:
 20190626	Rounding up disk image sizes to full cylinders; fixes a bug
 		where guest OSes could fail to read the end of e.g. a .tar.gz
 		file supplied as a disk image on the command line.
+20201006	Applying a rather large patch from Jason Thorpe for using
+		/dev/tap devices in addition to the existing networking modes.
+		The patch also consists of enhancements to the DEC21143 and
+		Lance ethernet devices to perform packet filtering.

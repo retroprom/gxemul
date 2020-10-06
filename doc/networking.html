@@ -16,7 +16,7 @@
 
 <!--
 
-Copyright (C) 2003-2019  Anders Gavare.  All rights reserved.
+Copyright (C) 2003-2020  Anders Gavare.  All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -46,8 +46,9 @@ SUCH DAMAGE.
 <p><br>
 <ul>
   <li><a href="#intro">Introduction</a>
+  <li><a href="#tap">Virtual Ethernet switch using a tap device</a>
   <li><a href="#multihost">Network across multiple hosts</a>
-  <li><a href="#direct_example_1">Direct-access example 1: udp_snoop</a>
+  <li><a href="#direct_example_1">UDP "Direct-access" example: udp_snoop</a>
 </ul>
 
 
@@ -60,10 +61,12 @@ SUCH DAMAGE.
 <a name="intro"></a>
 <h3>Introduction:</h3>
 
-<p>GXemul's current networking layer supports two modes:
+<p>GXemul's current networking layer supports three modes:
 
 <p><ol>
-  <li>A NAT-like layer, which allows guest OSes to access the outside
+  <li>A virtual Ethernet switch built on top of a <i>tap</i> device.
+  <p>
+  <li>A NAT-like emulation layer, which allows guest OSes to access the outside
 	internet world (IPv4 only, so far). When only one machine is being 
 	emulated, the following default values apply to the guest OS:<pre>
 	IPv4 address:			10.0.0.1
@@ -74,19 +77,24 @@ SUCH DAMAGE.
 	networking, since the emulator is just a normal user process
 	on the host.
   <p>
-  <li>A direct-access layer, allowing external tools to read/write raw
-	ethernet packages from/to the emulator.
+  <li>A UDP mode, allowing external tools to read/write raw
+	ethernet packages from/to the emulator via UDP.
 </ol>
 
-<p><i>NOTE:</i> Both these modes have problems. The NAT-like layer is very 
+<p><i>NOTES:</i>
+
+<p>The tap device support was contributed by Jason Thorpe.
+
+<p>The NAT-like layer is very 
 "hackish" and was only meant as a proof-of-concept, to see if networking 
 like this would work with e.g. NetBSD as a guest OS. (If you are 
 interested in the technical details, and the reasons why NAT networking is 
 implemented this way, you might want to read the <a 
 href="technical.html#net"> networking section in the technical 
-documentation</a>.) Because of the obvious limitations with the NAT 
-approach, I have also included support for direct packet access, but this 
-is not designed for security or anything like that.
+documentation</a>.)
+
+<p>The UDP mode is used to connect multiple instances of GXemul in
+an easy way, but it provides no security of any kind.
 
 <p><font color="#ff0000">Use the networking features at your own risk. 
 </font>
@@ -118,6 +126,85 @@ href="machine_decstation.html#netbsdpmaxinstall">NetBSD/pmax</a>.
 
 
 
+
+
+<p><br>
+<a name="tap"></a>
+<h3>Virtual Ethernet switch using a <i>tap</i> device:</h3>
+
+<p>The simplest way to emulate a real Ethernet network is using a <i>tap</i>
+device.  In this mode, the emulator disables the simulated NAT and
+direct-access machinery and internally treats all emulated NICs as if
+they are on a single Ethernet switch.  In this mode, packets destined for
+the guest's specific MAC address as well as Ethernet multicast and broadcast
+packets are send to the individual guest instances.  Individual NIC
+emulations may also apply their own multicast filtering; multicast filtering
+is implemented for the DEC 21143 and Lance NICs.
+
+<p>The <i>tap</i> interface on the host can be thought of as an upstream
+link on the virtual Ethernet switch.  In addition to providing a "port"
+for the host, the <i>tap</i> interface can be bridged to a physical Ethernet
+port on the host, allowing the guests to access the host's connected LAN.
+
+<p>Networking services such as DHCP and DNS must be provided either by
+the host or by the host's connected LAN.
+
+<p>Support for the <i>tap</i> device was developed on NetBSD, but should
+also work on FreeBSD, OpenBSD, and Linux hosts.
+
+<p>Here is a simple example:
+
+<p><pre>
+<font color="#2020cf">!  Configuration file for
+!  virtual Ethernet switch networking
+!  using a tap device.</font>
+
+<b>net(</b>
+	<b>tapdev(</b><font color="#ff003f">"/dev/tap0"</font><b>)</b>
+<b>)</b>
+<b>machine(</b>
+	<b>name(<font color="#ff003f">"guest machine"</font>)</b>
+
+	<b>type(<font color="#ff003f">"dec"</font>)</b>
+	<b>subtype(<font color="#ff003f">"5000/200"</font>)</b>
+
+	<font color="#2020cf">!  Add a disk, etc.</font>
+<b>)</b>
+</pre>
+
+<p>Before starting the emulator, you will need to create the <i>tap</i>
+interface on the host.  Here is an example for NetBSD:
+
+<p><pre>
+<b>#ifconfig tap0 create up</b>
+</pre>
+
+<p>If you wish to simply network the host and the guests together, then
+simply assign an IP address to the <i>tap</i> interface on the host:
+
+<p><pre>
+<b># ifconfig tap0 10.0.0.254</b>
+</pre>
+
+<p>You can now run a DHCP server on the host for the guests, or you can
+configure the guests manually.
+
+<p>If instead you would like to bridge to the host's connected LAN,
+Here is an example for NetBSD:
+
+<p><pre>
+<b># ifconfig bridge0 create up</b>
+<b># brconfig add tap0 add wm0</b>
+</pre>
+
+<p>Although it <i>is</i> possible to have more than one machine per 
+configuration file, I strongly recommend against it. Please use one 
+configuration file for one emulated machine.  Each configuration file
+must have a unique <i>tap</i> instance, and machines in separate
+configuration files must use bridged <i>tap</i> devices if they wish
+to communicate with each other as if on the same LAN.
+
+<p><small>(The section above is written by Jason Thorpe.)</small>
 
 
 
@@ -198,7 +285,7 @@ this feature at your own risk.</font>
 
 <p><br>
 <a name="direct_example_1"></a>
-<h3>Direct-access example 1: udp_snoop:</h3>
+<h3>UDP "Direct-access" example: udp_snoop:</h3>
 
 <p>The most basic example of how the simple direct-access system works is a small 
 program in the <tt>experiments/</tt> directory, <tt>udp_snoop</tt>, which simply 
