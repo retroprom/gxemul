@@ -16,7 +16,7 @@
 
 <!--
 
-Copyright (C) 2004-2019  Anders Gavare.  All rights reserved.
+Copyright (C) 2004-2020  Anders Gavare.  All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -62,13 +62,13 @@ This page describes some of the internals of GXemul.
 
 <p><font color="#ff0000">NOTE/TODO: This section is very old.</font>
 
-<p>Running an entire operating system under emulation is very interesting
-in itself, but for several reasons, running a modern OS without access to
-TCP/IP networking is a bit akward. Hence, I feel the need to implement
+<p>Running an entire operating system under emulation can be interesting
+in isolation, but running a modern OS without access to
+TCP/IP networking is a bit akward. Hence, there was a need to implement
 TCP/IP (networking) support in the emulator.
 
 <p>
-As far as I have understood it, there seems to be two different ways to go:
+As far as I have understood it, there seems to be two different methods to go:
 
 <ol>
   <li>Forward ethernet packets from the emulated ethernet controller to
@@ -76,24 +76,18 @@ As far as I have understood it, there seems to be two different ways to go:
 	packets on the host's controller, giving them back to the
 	emulated OS. Characteristics are:
 	<ul>
-	  <li>Requires <i>direct</i> access to the host's NIC, which
-		means on most platforms that the emulator cannot be
-		run as a normal user!
+	  <li>Requires access to the host's NIC, e.g. using <tt>/dev/tap</tt>.
 	  <li>Reduced portability, as not every host operating system
 		uses the same programming interface for dealing with
 		hardware ethernet controllers directly.
-	  <li>When run on a switched network, it might be problematic to
-		connect from the emulated OS to the OS running on the
-		host, as packets sent out on the host's NIC are not
-		received by itself. (?)
-	  <li>All specific networking protocols will be handled by the
-		physical network.
+	  <li>Some specific networking protocols will need to be handled by the
+		physical network (or the host).
 	</ul>
   <p>
   or
   <p>
   <li>Whenever the emulated ethernet controller wishes to send a packet,
-	the emulator looks at the packet and creates a response. Packets
+	the emulator looks at the packet and creates an emulated response. Packets
 	that can have an immediate response never go outside the emulator,
 	other packet types have to be converted into suitable other
 	connection types (UDP, TCP, etc). Characteristics:
@@ -122,9 +116,11 @@ second. I think that SIMH and QEMU are examples of emulators using the
 first and second approach, respectively.
 
 <p>
-Since I have choosen the second kind of implementation, I have to write 
-support explicitly for any kind of network protocol that should be
-supported. As of 2004-07-09, the following has been implemented and seems 
+GXemul supports both of the above methods.
+
+<p>
+For the second method mentioned above, as of 2004-07-09, the following
+types of emulated network responses have been implemented and seem 
 to work under at least NetBSD/pmax and OpenBSD/pmax under DECstation 5000/200
 emulation (-E dec -e 3max):
 
