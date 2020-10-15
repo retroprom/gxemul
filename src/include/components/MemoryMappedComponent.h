@@ -2,7 +2,7 @@
 #define	MEMORYMAPPEDCOMPONENT_H
 
 /*
- *  Copyright (C) 2008-2010  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2008-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -48,6 +48,10 @@
  * case when a device has, say, N 8-bit registers, but is accessed using
  * memory-mapped addresses that are seen as N 32-bit registers. In this
  * example, the address multiplicator would be 4.
+ *
+ * The mask is applied to emulate the case when a memory mapped region of, say,
+ * 16 MB has 2 MB that is repeated eight times. In that case, the mask is
+ * 0x001fffff. The default for most cases can be (uint64_t)-1.
  */
 class MemoryMappedComponent
 	: public Component
@@ -64,6 +68,7 @@ private:
 	// Variables common to all memory mapped components:
 	uint64_t	m_memoryMappedBase;
 	uint64_t	m_memoryMappedSize;
+	uint64_t	m_memoryMappedMask;
 	uint64_t	m_memoryMappedAddrMul;
 };
 

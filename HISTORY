@@ -4917,3 +4917,6 @@ Changelog for GXemul:
 		/dev/tap devices in addition to the existing networking modes.
 		The patch also consists of enhancements to the DEC21143 and
 		Lance ethernet devices to perform packet filtering.
+20201015	Adding support for masks for memory mapped components in the
+		new framework. Used so far by the HP 700/RX, which has 2 MB
+		RAM repeated throughout 0x30000000..0x3fffffff.

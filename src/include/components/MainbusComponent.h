@@ -2,7 +2,7 @@
 #define	MAINBUSCOMPONENT_H
 
 /*
- *  Copyright (C) 2008-2010  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2008-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -104,6 +104,7 @@ private:
 	struct MemoryMapEntry {
 		uint64_t		base;
 		uint64_t		size;
+		uint64_t		mask;
 		uint64_t		addrMul;
 		AddressDataBus *	addressDataBus;
 	};

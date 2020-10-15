@@ -13,7 +13,8 @@ GXemul (unknown version)      Copyright (C) 2003-2019  Anders Gavare
 
   mainbus0
   |-- cpu0  (i960CA, 25 MHz)
-  |-- ram0  (2 MB at offset 0x3fe00000)
+  |-- ram0  (2 MB repeated for 256 MB at offset 0x30000000)
+  |-- ram1  (8 MB repeated for 16 MB at offset 0x40000000)
   \-- rom0  (512 KB at offset 0xfff80000)
 
 cpu0: raw:0xfff80000:0:0xfff8b000:hp700rx-rom.bin loaded
@@ -60,7 +61,8 @@ GXemul (unknown version)      Copyright (C) 2003-2019  Anders Gavare
 
   mainbus0
   |-- cpu0  (i960CA, 25 MHz)
-  |-- ram0  (2 MB at offset 0x3fe00000)
+  |-- ram0  (2 MB repeated for 256 MB at offset 0x30000000)
+  |-- ram1  (8 MB repeated for 16 MB at offset 0x40000000)
   \-- rom0  (512 KB at offset 0xfff80000)
 
 cpu0: raw:0x3fe05000:0x2c:0x3fe05094:C2708A loaded

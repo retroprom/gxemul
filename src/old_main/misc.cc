@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -168,4 +168,33 @@ void print_separator_line(void)
                 debug("-");
         debug("\n");
 }
+
+
+/*
+ *  size_to_mask():
+ *
+ *  For e.g. 0x1000, the mask returned is 0xfff.
+ *  For e.g. 0x1400, the mask returned is 0x1fff.
+ *
+ *  In other words, the returned value is the smallest mask that can be applied
+ *  which preserves any address within the range 0..(size-1).
+ */
+uint64_t size_to_mask(uint64_t size)
+{
+	if (size == 0)
+		return 0;
+
+	size --;
+
+	uint64_t mask = 1;
+
+	while (size > 0)
+	{
+		size >>= 1;
+		mask = (mask << 1) | 1;
+	}
+
+	return mask;
+}
+
 

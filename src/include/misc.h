@@ -297,6 +297,7 @@ size_t mystrlcpy(char *dst, const char *src, size_t size);
 size_t mystrlcat(char *dst, const char *src, size_t size);
 #endif
 void print_separator_line(void);
+uint64_t size_to_mask(uint64_t size);
 
 
 /*  mvmeprom.c:  */

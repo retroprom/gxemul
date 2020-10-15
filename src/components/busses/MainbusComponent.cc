@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2008-2019  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2008-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -91,9 +91,8 @@ bool MainbusComponent::MakeSureMemoryMapExists(GXemul* gxemul)
 		return true;
 
 	m_memoryMap.clear();
-
-	m_memoryMapValid = true;
-	m_memoryMapFailed = false;
+	m_memoryMapValid = false;
+	m_memoryMapFailed = true;
 
 	// Build a memory map of all immediate children who implement the
 	// AddressDataBus interface:
@@ -105,26 +104,30 @@ bool MainbusComponent::MakeSureMemoryMapExists(GXemul* gxemul)
 
 		MemoryMapEntry mmEntry;
 		mmEntry.addressDataBus = bus;
-		mmEntry.addrMul = 1;
-		mmEntry.base = 0;
 
 		const StateVariable* varBase =
 		    children[i]->GetVariable("memoryMappedBase");
 		const StateVariable* varSize =
 		    children[i]->GetVariable("memoryMappedSize");
+		const StateVariable* varMask =
+		    children[i]->GetVariable("memoryMappedMask");
 		const StateVariable* varAddrMul =
 		    children[i]->GetVariable("memoryMappedAddrMul");
-
-		if (varBase != NULL)
-			mmEntry.base = varBase->ToInteger();
-		if (varSize != NULL)
-			mmEntry.size = varSize->ToInteger();
-		if (varAddrMul != NULL)
-			mmEntry.addrMul = varAddrMul->ToInteger();
 
 		// No base or size? Then skip this component.
 		if (varSize == NULL || varBase == NULL)
 			continue;
+
+		mmEntry.base = varBase->ToInteger();
+		mmEntry.size = varSize->ToInteger();
+
+		mmEntry.mask = size_to_mask(mmEntry.size);
+		if (varMask != NULL)
+			mmEntry.mask = varMask->ToInteger();
+
+		mmEntry.addrMul = 1;
+		if (varAddrMul != NULL)
+			mmEntry.addrMul = varAddrMul->ToInteger();
 
 		// Treat the non-sensical addrMul value 0 as 1.
 		if (mmEntry.addrMul == 0)
@@ -156,14 +159,15 @@ bool MainbusComponent::MakeSureMemoryMapExists(GXemul* gxemul)
 				    "component on this bus.\n");
 
 			m_memoryMap.clear();
-			m_memoryMapValid = false;
-			m_memoryMapFailed = true;
 			return false;
 		}
 
 		// Finally add the new mapping entry.
 		m_memoryMap.push_back(mmEntry);
 	}
+
+	m_memoryMapValid = true;
+	m_memoryMapFailed = false;
 
 	return true;
 }
@@ -202,10 +206,16 @@ void MainbusComponent::AddressSelect(uint64_t address)
 			// within it we wish to select.
 			m_currentAddressDataBus = mmEntry.addressDataBus;
 			m_currentAddressDataBus->AddressSelect(
-			    (address - mmEntry.base) / mmEntry.addrMul);
-			break;
+			    ((address - mmEntry.base) & mmEntry.mask) / mmEntry.addrMul);
+			return;
 		}
 	}
+
+	stringstream ss;
+	ss << "no entry for addr ";
+	ss.flags(std::ios::hex | std::ios::showbase);
+	ss << address;
+	GetUI()->ShowDebugMessage(this, ss.str());
 }
 
 

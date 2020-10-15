@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2008-2010  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2008-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -33,10 +33,12 @@ MemoryMappedComponent::MemoryMappedComponent(const string& className,
 	: Component(className, visibleClassName)
 	, m_memoryMappedBase(0)
 	, m_memoryMappedSize(0)
+	, m_memoryMappedMask((uint64_t)-1)
 	, m_memoryMappedAddrMul(1)
 {
 	AddVariable("memoryMappedBase", &m_memoryMappedBase);
 	AddVariable("memoryMappedSize", &m_memoryMappedSize);
+	AddVariable("memoryMappedMask", &m_memoryMappedMask);
 	AddVariable("memoryMappedAddrMul", &m_memoryMappedAddrMul);
 }
 
@@ -47,13 +49,35 @@ string MemoryMappedComponent::GenerateDetails() const
 
 	const StateVariable* memoryMappedBase = GetVariable("memoryMappedBase");
 	const StateVariable* memoryMappedSize = GetVariable("memoryMappedSize");
-	const StateVariable* memoryMappedAddrMul =
-	    GetVariable("memoryMappedAddrMul");
+	const StateVariable* memoryMappedMask = GetVariable("memoryMappedMask");
+	const StateVariable* memoryMappedAddrMul = GetVariable("memoryMappedAddrMul");
+
 	if (memoryMappedBase != NULL && memoryMappedSize != NULL) {
 		if (!ss.str().empty())
 			ss << ", ";
 
-		uint64_t nBytes = memoryMappedSize->ToInteger();
+		uint64_t nBytes;
+		uint64_t mask = (uint64_t)-1;
+		if (memoryMappedMask != NULL)
+			mask = memoryMappedMask->ToInteger();
+
+		if (mask+1 != 0) {
+			nBytes = mask + 1;
+			if (nBytes >= (1 << 30))
+				ss << (nBytes >> 30) << " GB";
+			else if (nBytes >= (1 << 20))
+				ss << (nBytes >> 20) << " MB";
+			else if (nBytes >= (1 << 10))
+				ss << (nBytes >> 10) << " KB";
+			else if (nBytes != 1)
+				ss << nBytes << " bytes";
+			else
+				ss << nBytes << " byte";
+			ss << " repeated for ";
+		}
+
+		nBytes = memoryMappedSize->ToInteger();
+
 		if (nBytes >= (1 << 30))
 			ss << (nBytes >> 30) << " GB";
 		else if (nBytes >= (1 << 20))

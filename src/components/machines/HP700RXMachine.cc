@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2019  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2018-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -31,9 +31,9 @@
  *
  *  My machine says:
  *
- *  2048 KB Base RAM
- *  8192 KB Expansion RAM
- *  2048 KB Video RAM
+ *  2048 KB Base RAM       at 0x30000000 .. 0x3fffffff (repeated)
+ *  8192 KB Expansion RAM  at 0x40000000 .. 0x40ffffff (repeated)
+ *  2048 KB Video RAM      at 0x41000000?
  *
  *  The ROM seems to be 512 KB at 0xfff80000.
  */
@@ -48,7 +48,6 @@ refcount_ptr<Component> HP700RXMachine::Create(const ComponentCreateArgs& args)
 	// Defaults:
 	ComponentCreationSettings settings;
 	settings["cpu"] = "i960CA";
-	settings["ram"] = "0x00200000";
 
 	if (!ComponentFactory::GetCreationArgOverrides(settings, args))
 		return NULL;
@@ -77,12 +76,24 @@ refcount_ptr<Component> HP700RXMachine::Create(const ComponentCreateArgs& args)
 	mainbus->AddChild(cpu);
 
 
-	// DRAM (guess)
+	// RAM: 2 MB fixed on the motherboard, repeated throughout all of
+	// 0x30000000 - 0x3fffffff.
+	refcount_ptr<Component> ram2MB = ComponentFactory::CreateComponent("ram");
+	if (ram2MB.IsNULL())
+		return NULL;
+	ram2MB->SetVariableValue("memoryMappedBase", "0x30000000");
+	ram2MB->SetVariableValue("memoryMappedSize", "0x10000000");
+	ram2MB->SetVariableValue("memoryMappedMask", "0x001fffff");
+	mainbus->AddChild(ram2MB);
+
+	// RAM: Extra RAM (8 MB in my machine, but variable), available at
+	// 0x40000000 - 0x40ffffff (repeated).
 	refcount_ptr<Component> ram = ComponentFactory::CreateComponent("ram");
 	if (ram.IsNULL())
 		return NULL;
-	ram->SetVariableValue("memoryMappedBase", "0x3fe00000");
-	ram->SetVariableValue("memoryMappedSize", settings["ram"]);
+	ram->SetVariableValue("memoryMappedBase", "0x40000000");
+	ram->SetVariableValue("memoryMappedSize", "0x01000000");
+	ram->SetVariableValue("memoryMappedMask", "0x007fffff");
 	mainbus->AddChild(ram);
 
 	// ROM
