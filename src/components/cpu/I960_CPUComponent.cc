@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2019  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2018-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -331,8 +331,10 @@ size_t I960_CPUComponent::DisassembleInstruction(uint64_t vaddr, vector<string>&
 	// Read the instruction word:
 	AddressSelect(vaddr);
 	bool readOk = ReadData(instructionWord, m_isBigEndian? BigEndian : LittleEndian);
-	if (!readOk)
+	if (!readOk) {
+		result.push_back("memory could not be read");
 		return 0;
+	}
 
 	const uint32_t iword = instructionWord;
 
