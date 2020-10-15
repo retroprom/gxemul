@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2008-2019  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2008-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -399,9 +399,11 @@ uint64_t CPUComponent::Unassemble(int nRows, bool indicatePC, uint64_t vaddr, os
 			size_t len = rowVector[i].length();
 			output << rowVector[i];
 			
-			int nspaces = columnWidths[i] - len;
-			for (int j=0; j<nspaces; ++j)
-				output << " ";
+			if (rowVector.size() > 1) {
+				int nspaces = columnWidths[i] - len;
+				for (int j=0; j<nspaces; ++j)
+					output << " ";
+			}
 		}
 
 		output << "\n";
