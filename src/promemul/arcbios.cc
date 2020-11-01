@@ -2383,6 +2383,10 @@ static void arc_environment_setup(struct machine *machine, int is64bit,
 
 		/*  TODO IP30: 'xio(0)pci(15)scsi(0)disk(1)rdisk(0)partition(0)'  */
 
+		/*  TODO: Keep these variables in sync with bootblock loading,
+			i.e. OSLoader is the name of the voldir entry to boot
+			with.  */
+
 		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
 		add_environment_string(cpu, "OSLoadFilename=/unix", &addr);
 		store_pointer_and_advance(cpu, &addr2, addr, is64bit);

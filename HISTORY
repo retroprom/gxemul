@@ -4920,3 +4920,6 @@ Changelog for GXemul:
 20201015	Adding support for masks for memory mapped components in the
 		new framework. Used so far by the HP 700/RX, which has 2 MB
 		RAM repeated throughout 0x30000000..0x3fffffff.
+20201101	bootblock.cc now parses SGI disk boot blocks, and tries to
+		load the OSLoader (sash), if booting without an explicitly
+		provided OS kernel.

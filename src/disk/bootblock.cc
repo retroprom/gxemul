@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2011  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -48,6 +48,9 @@
 #include "emul.h"
 #include "machine.h"
 #include "memory.h"
+#include "netinet/in.h"
+#include "thirdparty/bootblock.h"
+#include "unistd.h"
 
 static const char *diskimage_types[] = DISKIMAGE_TYPES;
 
@@ -65,14 +68,17 @@ static const char *diskimage_types[] = DISKIMAGE_TYPES;
 int load_bootblock(struct machine *m, struct cpu *cpu,
 	int *n_loadp, char ***load_namesp)
 {
-	int boot_disk_id, boot_disk_type = 0, n_blocks, res, readofs,
-	    iso_type, retval = 0;
+	int boot_disk_type = 0, n_blocks, res, readofs, iso_type, retval = 0;
 	unsigned char minibuf[0x20];
 	unsigned char *bootblock_buf;
 	uint64_t bootblock_offset, base_offset;
 	uint64_t bootblock_loadaddr, bootblock_pc;
 
-	boot_disk_id = diskimage_bootdev(m, &boot_disk_type);
+	const char *tmpdir = getenv("TMPDIR");
+	if (tmpdir == NULL)
+		tmpdir = DEFAULT_TMP_DIR;
+
+	int boot_disk_id = diskimage_bootdev(m, &boot_disk_type);
 	if (boot_disk_id < 0)
 		return 0;
 
@@ -167,6 +173,9 @@ int load_bootblock(struct machine *m, struct cpu *cpu,
 		 *
 		 *  nr of blocks to read and offset are repeated until nr of
 		 *  blocks to read is zero.
+		 *
+		 *  TODO: Make use of src/include/thirdparty/bootblock.h now
+		 *  that it is in the tree, rather than using hardcoded numbers.
 		 */
 		res = diskimage_access(m, boot_disk_id, boot_disk_type, 0, 0,
 		    minibuf, sizeof(minibuf));
@@ -246,6 +255,162 @@ int load_bootblock(struct machine *m, struct cpu *cpu,
 		}
 
 		debug(readofs == 0x18? ": no blocks?\n" : " blocks\n");
+		return 1;
+
+	case MACHINE_SGI:
+		/*
+		 *  The first few bytes of a disk contains an "SGI boot block".
+		 *  The data in the boot block are all big-endian.
+		 *
+		 *  See src/include/thirdparty/bootblock.h (from NetBSD) for
+		 *  details.
+		 */
+		struct sgi_boot_block sgi_boot_block;
+		uint8_t *sgi_bb_ptr = (uint8_t*)&sgi_bb_ptr;
+
+		res = diskimage_access(m, boot_disk_id, boot_disk_type, 0, 0,
+		    (unsigned char*)&sgi_boot_block, sizeof(sgi_boot_block));
+
+		uint32_t magic = ntohl(sgi_boot_block.magic);
+		if (magic != SGI_BOOT_BLOCK_MAGIC) {
+			fatal("SGI boot block: wrong magic! (Not a SGI bootable disk image?)\n");
+			return 0;
+		}
+
+		uint16_t sgi_root = ntohs(sgi_boot_block.root);
+		uint16_t sgi_swap = ntohs(sgi_boot_block.swap);
+		char sgi_bootfile[sizeof(sgi_boot_block.bootfile) + 1];
+
+		memset(sgi_bootfile, 0, sizeof(sgi_bootfile));
+		{
+			size_t j = 0;
+			for (size_t i = 0; i < sizeof(sgi_boot_block.bootfile); ++i) {
+				char c = sgi_boot_block.bootfile[i];
+				if (c < 32)
+					break;
+				sgi_bootfile[j++] = c;
+			}
+		}
+
+		debug("SGI boot block:\n");
+		debug_indentation(DEBUG_INDENTATION);
+		debug("root partition: %i\n", sgi_root);
+		debug("swap partition: %i\n", sgi_swap);
+		debug("bootfile: %s\n", sgi_bootfile);
+
+		// TODO: this should be in sync with what's in arcbios.cc,
+		// in one direction or the other. Hardcoded for now...
+		const char* osloader = "sash";
+		int32_t found_osloader_block = -1;
+		int32_t found_osloader_bytes = -1;
+
+		debug("voldir:\n");
+		debug_indentation(DEBUG_INDENTATION);
+		for (size_t vi = 0; vi < SGI_BOOT_BLOCK_MAXVOLDIRS; ++vi) {
+			char voldir_name[sizeof(sgi_boot_block.voldir[0].name) + 1];
+			int32_t voldir_block = ntohl(sgi_boot_block.voldir[vi].block);
+			int32_t voldir_bytes = ntohl(sgi_boot_block.voldir[vi].bytes);
+
+			memset(voldir_name, 0, sizeof(voldir_name));
+			size_t j = 0;
+			for (size_t i = 0; i < sizeof(sgi_boot_block.voldir[vi].name); ++i) {
+				char c = sgi_boot_block.voldir[vi].name[i];
+				if (c < 32)
+					break;
+				voldir_name[j++] = c;
+			}
+
+			if (voldir_name[0]) {
+				bool found = strcmp(voldir_name, osloader) == 0;
+				if (found) {
+					found_osloader_block = voldir_block;
+					found_osloader_bytes = voldir_bytes;
+				}
+
+				const char* found_osloader = found? " [FOUND OSLoader]" : "";
+				debug("name: %s (%i bytes, block %i)%s\n",
+					voldir_name, voldir_bytes, voldir_block,
+					found_osloader);
+			}
+		}
+		if (found_osloader_block < 1 || found_osloader_bytes < 512) {
+			debug("OSLoader \"%s\" NOT found in SGI voldir\n", osloader);
+			return 0;
+		}
+		if (found_osloader_bytes & 511) {
+			found_osloader_bytes |= 511;
+			found_osloader_bytes++;
+		}
+		debug_indentation(-DEBUG_INDENTATION);
+
+		debug("partitions:\n");
+		debug_indentation(DEBUG_INDENTATION);
+		for (size_t pi = 0; pi < SGI_BOOT_BLOCK_MAXPARTITIONS; ++pi) {
+			int32_t partitions_blocks = ntohl(sgi_boot_block.partitions[pi].blocks);
+			int32_t partitions_first = ntohl(sgi_boot_block.partitions[pi].first);
+			int32_t partitions_type = ntohl(sgi_boot_block.partitions[pi].type);
+
+			if (partitions_blocks != 0)
+				debug("partition %i: %i blocks at %i (type %i)\n",
+					pi, partitions_blocks, partitions_first, partitions_type);
+		}
+		debug_indentation(-DEBUG_INDENTATION);
+
+		// Read OSLoader binary into emulated RAM. (Typically "sash.")
+		uint64_t diskoffset = found_osloader_block * 512;
+		debug("Loading voldir entry \"%s\", 0x%x bytes from disk offset 0x%x\n",
+			osloader, found_osloader_bytes, diskoffset);
+
+		CHECK_ALLOCATION(bootblock_buf = (unsigned char *) malloc(found_osloader_bytes));
+
+		res = diskimage_access(m, boot_disk_id, boot_disk_type,
+		    0, diskoffset, bootblock_buf, found_osloader_bytes);
+		if (!res) {
+			fatal("WARNING: could not load \"%s\" from disk offset 0x%llx\n",
+			    osloader, (long long)diskoffset);
+		}
+
+		// Put loaded binary into a temp file, and make sure it is
+		// loaded later by the regular file loader.
+		char* tmpfname;
+		CHECK_ALLOCATION(tmpfname = (char *) malloc(300));
+		snprintf(tmpfname, 300, "%s/gxemul.XXXXXXXXXXXX", tmpdir);
+		int tmpfile_handle = mkstemp(tmpfname);
+		if (tmpfile_handle < 0) {
+			fatal("could not create %s\n", tmpfname);
+			exit(1);
+		}
+
+		if (write(tmpfile_handle, bootblock_buf, found_osloader_bytes) != found_osloader_bytes) {
+			fatal("could not write to %s\n", tmpfname);
+			perror("write");
+			exit(1);
+		}
+
+		close(tmpfile_handle);
+		free(bootblock_buf);
+
+		debug("extracted %i bytes into %s\n", found_osloader_bytes, tmpfname);
+
+		/*  Add the temporary filename to the load_namesp array:  */
+		(*n_loadp)++;
+		char **new_array;
+		CHECK_ALLOCATION(new_array = (char **) malloc(sizeof(char *) * (*n_loadp)));
+		memcpy(new_array, *load_namesp, sizeof(char *) * (*n_loadp));
+		*load_namesp = new_array;
+
+		/*  This adds a Backspace char in front of the filename; this
+		    is a special hack which causes the file to be removed once
+		    it has been loaded.  */
+		CHECK_ALLOCATION(tmpfname = (char *) realloc(tmpfname, strlen(tmpfname) + 2));
+		memmove(tmpfname + 1, tmpfname, strlen(tmpfname) + 1);
+		tmpfname[0] = 8;
+
+		(*load_namesp)[*n_loadp - 1] = strdup(tmpfname);
+
+		free(tmpfname);
+
+		debug_indentation(-DEBUG_INDENTATION);
 		return 1;
 	}
 
