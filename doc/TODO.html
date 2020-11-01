@@ -23,6 +23,9 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 <p><pre>
 <b>Current "short-list":</b>
 
+o) Disk image end-of-file bug; has this been fixed? if so, remove that from the TODO file.
+o) std::shared_ptr instead the refcount_ptr hack, for the C++ parts?
+o) Fix other build warnings?
 o) Building GXemul 0.6.2 inside emulated NetBSD/hpcmips 8.1 says:
 	# date > a; ./configure && make; date > b; cat a; cat b
 	checking which C++ compiler to use... c++ -DNDEBUG 
@@ -31,26 +34,24 @@ o) Building GXemul 0.6.2 inside emulated NetBSD/hpcmips 8.1 says:
 	Failed to compile X11 test program. Configuring without X11.
    Investigate this!
 o) Update test device section on "fb": set and read resolution
-o) Update test machine section in documentation:
-	o) tiny testarm
-	o) FreeBSD mips emulation Target.
-		o) Try to build FreeBSD/testmips and FreeBSD/malta!
-	o) screenshots for all OSes
 o) testmips: Add support for more than 256 MB ram, e.g. by adding
 	"actual RAM" at the 1 GB offset. A 32 bit machine can thus use
 	3 GB, no limit on 64 bit machines. Low 256 MB can be considered
 	a mirror of first 256 MB of RAM.
 o) Malta: see if 2 GB ram can be used there as well (like the SGI O2 mode).
-o) Disk overlay short-hand for temporary images.
-o) Command line option for fsync on each disk image write.
+o) Disk overlay short-hand for temporary images. -R?
+o) Command line option for forcing fsync on each disk image write.
 o) O(n) -> O(1) 64-bit translation invalidation, _IF_ it is possible to
 	detect non-canonical virtal addresses being entered into the
 	translation arrays. Would be nice.
 o) Update NetBSD from 8.0 to 8.1 (or newer), in the documentation.
+o) Update OpenBSD/sgi version? Discontinued, or perhaps not...?
 o) Continue on Luna 88k machine with OpenBSD...
 o) Boot args for gxemul -xeg4 -d opendarwin-6.6.2.ppc.cdr ? http://web.mit.edu/darwin/www/
 o) Continue on SGI O2: PCI, SCSI (?), ...
-o) Continue on i960 stuff in general, and the New Framework.
+o) Continue on i960 stuff, the New Framework in general, and in particular HP 700/RX stuff. :-)
+o) GXsatellite -- Gavare's eXperimental Stand-Alone Test Environment
+   for Low-Level Interactive Testing of Emulators. base on YCX5; start with testmips.
 </pre>
 
 
@@ -821,9 +822,6 @@ Disk image end-of-file bug:
 	NetBSD reads beyond the end of the file. Must be fixed! (Once fixed, documentation
 	can be simplified for some guest OS installations.)
 
-GXsatellite -- Gavare's eXperimental Stand-Alone Test Environment
-	for Low-Level Interactive Testing of Emulators. Share or reuse code with YCX5?
-
 Floating point:
 	More tests.
 	
@@ -1306,3 +1304,4 @@ Better framebuffer and X-windows functionality:
 
 </body>
 </html>
+
