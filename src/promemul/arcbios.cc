@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2019  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -2672,7 +2672,11 @@ void arcbios_init(struct machine *machine, int is64bit, uint64_t sgi_ram_offset,
 
 	/*  Add the root node:  */
 	switch (machine->machine_type) {
+
 	case MACHINE_SGI:
+		debug("ARCS:\n");
+		debug_indentation(DEBUG_INDENTATION);
+
 		CHECK_ALLOCATION(name = (char *) malloc(alloclen));
 		snprintf(name, alloclen, "SGI-IP%i",
 		    machine->machine_subtype);
@@ -2682,8 +2686,11 @@ void arcbios_init(struct machine *machine, int is64bit, uint64_t sgi_ram_offset,
 		if (machine->machine_subtype == 24)
 			snprintf(name, alloclen, "SGI-IP22");
 		break;
+
 	case MACHINE_ARC:
-		/*  ARC:  */
+		debug("ARC:\n");
+		debug_indentation(DEBUG_INDENTATION);
+
 		switch (machine->machine_subtype) {
 		case MACHINE_ARC_JAZZ_PICA:
 			name = strdup("PICA-61");
@@ -2697,6 +2704,7 @@ void arcbios_init(struct machine *machine, int is64bit, uint64_t sgi_ram_offset,
 			exit(1);
 		}
 		break;
+
 	default:
 		fatal("ERROR: non-SGI and non-ARC?\n");
 		exit(1);
@@ -2704,7 +2712,7 @@ void arcbios_init(struct machine *machine, int is64bit, uint64_t sgi_ram_offset,
 
 	system = arcbios_addchild_manual(cpu, COMPONENT_CLASS_SystemClass,
 	    COMPONENT_TYPE_ARC, 0,1,2,0, 0xffffffff, name, 0/*ROOT*/, NULL, 0);
-	debug("ARC system @ 0x%" PRIx64" (\"%s\")\n", (uint64_t) system, name);
+	debug("system @ 0x%" PRIx64" (\"%s\")\n", (uint64_t) system, name);
 
 
 	/*
@@ -2815,7 +2823,7 @@ void arcbios_init(struct machine *machine, int is64bit, uint64_t sgi_ram_offset,
 			    0xffffffff, NULL, cpuaddr, NULL, 0);
 		}
 
-		debug("ARC cpu%i @ 0x%" PRIx64, i, (uint64_t) cpuaddr);
+		debug("cpu%i @ 0x%" PRIx64, i, (uint64_t) cpuaddr);
 
 		if (fpu != 0)
 			debug(" (fpu @ 0x%" PRIx64")\n", (uint64_t) fpu);
@@ -2835,7 +2843,7 @@ void arcbios_init(struct machine *machine, int is64bit, uint64_t sgi_ram_offset,
 			    COMPONENT_CLASS_MemoryClass,
 			    COMPONENT_TYPE_MemoryUnit, 0, 1, 2, 0,
 			    0xffffffff, "memory", cpuaddr, NULL, 0);
-			debug("ARC memory @ 0x%" PRIx64"\n", (uint64_t) memory);
+			debug("memory @ 0x%" PRIx64"\n", (uint64_t) memory);
 		}
 	}
 
@@ -2948,5 +2956,7 @@ void arcbios_init(struct machine *machine, int is64bit, uint64_t sgi_ram_offset,
 	 */
 
 	arc_environment_setup(machine, is64bit, primary_ether_addr);
+
+	debug_indentation(-DEBUG_INDENTATION);
 }
 
