@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2004-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -93,7 +93,7 @@
 #define	PX_XSIZE	1280
 #define	PX_YSIZE	1024
 
-/* #define PX_DEBUG  */
+static bool px_debug = false;
 
 
 DEVICE_TICK(px)
@@ -162,77 +162,74 @@ void dev_px_dma(struct cpu *cpu, uint32_t sys_addr, struct px_data *d)
 		cmdword = dma_buf[3] + (dma_buf[2] << 8) +
 		    (dma_buf[1] << 16) + (dma_buf[0] << 24);
 
-#ifdef PX_DEBUG
-	debug("[ px: dma from 0x%08x: ", (int)sys_addr);
+	if (px_debug) {
+		debug("[ px: dma from 0x%08x: ", (int)sys_addr);
 
-	debug("cmd=");
-	switch (cmdword & 0xf) {
-	case STAMP_CMD_POINTS:		debug("points");	break;
-	case STAMP_CMD_LINES:		debug("lines");		break;
-	case STAMP_CMD_TRIANGLES:	debug("triangles");	break;
-	case STAMP_CMD_COPYSPANS:	debug("copyspans");	break;
-	case STAMP_CMD_READSPANS:	debug("readspans");	break;
-	case STAMP_CMD_WRITESPANS:	debug("writespans");	break;
-	case STAMP_CMD_VIDEO:		debug("video");		break;
-	default:
-		debug("0x%x (?)", cmdword & 0xf);
-	}
+		debug("cmd=");
+		switch (cmdword & 0xf) {
+		case STAMP_CMD_POINTS:		debug("points");	break;
+		case STAMP_CMD_LINES:		debug("lines");		break;
+		case STAMP_CMD_TRIANGLES:	debug("triangles");	break;
+		case STAMP_CMD_COPYSPANS:	debug("copyspans");	break;
+		case STAMP_CMD_READSPANS:	debug("readspans");	break;
+		case STAMP_CMD_WRITESPANS:	debug("writespans");	break;
+		case STAMP_CMD_VIDEO:		debug("video");		break;
+		default:
+			debug("0x%x (?)", cmdword & 0xf);
+		}
 
-	debug(",rgb=");
-	switch (cmdword & 0x30) {
-	case STAMP_RGB_NONE:	debug("none");		break;
-	case STAMP_RGB_CONST:	debug("const");		break;
-	case STAMP_RGB_FLAT:	debug("flat");		break;
-	case STAMP_RGB_SMOOTH:	debug("smooth");	break;
-	default:
-		debug("0x%x (?)", cmdword & 0x30);
-	}
+		debug(",rgb=");
+		switch (cmdword & 0x30) {
+		case STAMP_RGB_NONE:	debug("none");		break;
+		case STAMP_RGB_CONST:	debug("const");		break;
+		case STAMP_RGB_FLAT:	debug("flat");		break;
+		case STAMP_RGB_SMOOTH:	debug("smooth");	break;
+		default:
+			debug("0x%x (?)", cmdword & 0x30);
+		}
 
-	debug(",z=");
-	switch (cmdword & 0xc0) {
-	case STAMP_Z_NONE:	debug("none");		break;
-	case STAMP_Z_CONST:	debug("const");		break;
-	case STAMP_Z_FLAT:	debug("flat");		break;
-	case STAMP_Z_SMOOTH:	debug("smooth");	break;
-	default:
-		debug("0x%x (?)", cmdword & 0xc0);
-	}
+		debug(",z=");
+		switch (cmdword & 0xc0) {
+		case STAMP_Z_NONE:	debug("none");		break;
+		case STAMP_Z_CONST:	debug("const");		break;
+		case STAMP_Z_FLAT:	debug("flat");		break;
+		case STAMP_Z_SMOOTH:	debug("smooth");	break;
+		default:
+			debug("0x%x (?)", cmdword & 0xc0);
+		}
 
-	debug(",xy=");
-	switch (cmdword & 0x300) {
-	case STAMP_XY_NONE:		debug("none");		break;
-	case STAMP_XY_PERPACKET:	debug("perpacket");	break;
-	case STAMP_XY_PERPRIMATIVE:	debug("perprimative");	break;
-	default:
-		debug("0x%x (?)", cmdword & 0x300);
-	}
+		debug(",xy=");
+		switch (cmdword & 0x300) {
+		case STAMP_XY_NONE:		debug("none");		break;
+		case STAMP_XY_PERPACKET:	debug("perpacket");	break;
+		case STAMP_XY_PERPRIMATIVE:	debug("perprimative");	break;
+		default:
+			debug("0x%x (?)", cmdword & 0x300);
+		}
 
-	debug(",lw=");
-	switch (cmdword & 0xc00) {
-	case STAMP_LW_NONE:		debug("none");		break;
-	case STAMP_LW_PERPACKET:	debug("perpacket");	break;
-	case STAMP_LW_PERPRIMATIVE:	debug("perprimative");	break;
-	default:
-		debug("0x%x (?)", cmdword & 0xc00);
-	}
+		debug(",lw=");
+		switch (cmdword & 0xc00) {
+		case STAMP_LW_NONE:		debug("none");		break;
+		case STAMP_LW_PERPACKET:	debug("perpacket");	break;
+		case STAMP_LW_PERPRIMATIVE:	debug("perprimative");	break;
+		default:
+			debug("0x%x (?)", cmdword & 0xc00);
+		}
 
-	if (cmdword & STAMP_CLIPRECT)
-		debug(",CLIPRECT");
-	if (cmdword & STAMP_MESH)
-		debug(",MESH");
-	if (cmdword & STAMP_AALINE)
-		debug(",AALINE");
-	if (cmdword & STAMP_HS_EQUALS)
-		debug(",HS_EQUALS");
+		if (cmdword & STAMP_CLIPRECT)
+			debug(",CLIPRECT");
+		if (cmdword & STAMP_MESH)
+			debug(",MESH");
+		if (cmdword & STAMP_AALINE)
+			debug(",AALINE");
+		if (cmdword & STAMP_HS_EQUALS)
+			debug(",HS_EQUALS");
 
-	{
-		size_t i;
-		for (i=0; i<dma_len; i++)
+		for (size_t i=0; i<dma_len; i++)
 			debug(" %02x", dma_buf[i]);
-	}
 
-	debug(" ]\n");
-#endif	/*  PX_DEBUG  */
+		debug(" ]\n");
+	}
 
 	/*  NetBSD and Ultrix copyspans  */
 	if (cmdword == 0x405) {
@@ -258,9 +255,8 @@ void dev_px_dma(struct cpu *cpu, uint32_t sys_addr, struct px_data *d)
 		nspans >>= 24;
 		/*  Why not this?  lw = (lw + 1) >> 2;  */
 
-#ifdef PX_DEBUG
-		debug("[ px: copyspans:  nspans = %i, lw = %i ]\n", nspans, lw);
-#endif
+		if (px_debug)
+			debug("[ px: copyspans:  nspans = %i, lw = %i ]\n", nspans, lw);
 
 		/*  Reread copyspans command if it wasn't completely read:  */
 		if (dma_len < 4*(5 + nspans*3)) {
@@ -393,11 +389,11 @@ void dev_px_dma(struct cpu *cpu, uint32_t sys_addr, struct px_data *d)
 		if (x2 - x > PX_XSIZE)
 			x2 = PX_XSIZE;
 
-#ifdef PX_DEBUG
-		debug("[ px: clear/fill: v1 = 0x%08x  v2 = 0x%08x "
-		    "lw=%i x=%i y=%i x2=%i y2=%i ]\n", (int)v1, (int)v2,
-		    lw, x,y, x2,y2);
-#endif
+		if (px_debug)
+			debug("[ px: clear/fill: v1 = 0x%08x  v2 = 0x%08x "
+			    "lw=%i x=%i y=%i x2=%i y2=%i ]\n", (int)v1, (int)v2,
+			    lw, x,y, x2,y2);
+
 		if (bytesperpixel == 3) {
 			int xi;
 			for (xi=0; xi<x2-x; xi++) {
@@ -474,10 +470,10 @@ void dev_px_dma(struct cpu *cpu, uint32_t sys_addr, struct px_data *d)
 		x2 = (v2 >> 19) & 2047;
 		y2 = ((v2 - 63) >> 3) & 1023;
 
-#ifdef PX_DEBUG
-		debug("[ px putchar: v1 = 0x%08x  v2 = 0x%08x x=%i y=%i ]\n",
-		    (int)v1, (int)v2, x,y, x2,y2);
-#endif
+		if (px_debug)
+			debug("[ px putchar: v1 = 0x%08x  v2 = 0x%08x x=%i y=%i ]\n",
+			    (int)v1, (int)v2, x,y, x2,y2);
+
 		x %= PX_XSIZE;
 		y %= PX_YSIZE;
 		x2 %= PX_XSIZE;

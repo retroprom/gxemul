@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -61,9 +61,9 @@ struct pcic_data {
 DEVICE_ACCESS(pcic_cis)
 {
 	/*  struct pcic_data *d = (struct pcic_data *) extra;  */
-	uint64_t idata = 0, odata = 0;
+	uint64_t odata = 0;
 
-	idata = memory_readmax64(cpu, data, len);
+	// uint64_t idata = memory_readmax64(cpu, data, len);
 
 {
 #if 0

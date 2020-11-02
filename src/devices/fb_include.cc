@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -89,7 +89,6 @@
 void REDRAW(struct vfb_data *d, int addr, int len)
 {
 	int x, y, pixel, npixels;
-	long color_r, color_g, color_b;
 	long color;
 
 #ifndef FB_SCALEDOWN
@@ -106,12 +105,9 @@ void REDRAW(struct vfb_data *d, int addr, int len)
 
 	if (d->bit_depth < 8) {
 		for (pixel=0; pixel<npixels; pixel++) {
-			int fb_addr, c, r, g, b;
-			color_r = color_g = color_b = 0;
-
-			fb_addr = (y * d->xsize + x) * d->bit_depth;
-			/*  fb_addr is now which _bit_ in
-			    the framebuffer  */
+			int c, r, g, b;
+			size_t fb_addr = (y * d->xsize + x) * d->bit_depth;
+			/*  fb_addr is now which _bit_ in the framebuffer  */
 
 			c = d->framebuffer[fb_addr >> 3];
 			fb_addr &= 7;
@@ -132,11 +128,10 @@ void REDRAW(struct vfb_data *d, int addr, int len)
 		}
 	} else if (d->bit_depth == 8) {
 		for (pixel=0; pixel<npixels; pixel++) {
-			int fb_addr, c, r, g, b;
-			color_r = color_g = color_b = 0;
-
-			fb_addr = y * d->xsize + x;
+			int c, r, g, b;
+			size_t fb_addr = y * d->xsize + x;
 			/*  fb_addr is now which byte in framebuffer  */
+
 			c = d->framebuffer[fb_addr];
 			r = d->rgb_palette[c*3 + 0];
 			g = d->rgb_palette[c*3 + 1];
@@ -147,10 +142,8 @@ void REDRAW(struct vfb_data *d, int addr, int len)
 		}
 	} else {	/*  d->bit_depth > 8  */
 		for (pixel=0; pixel<npixels; pixel++) {
-			int fb_addr, r, g, b;
-			color_r = color_g = color_b = 0;
-
-			fb_addr = (y * d->xsize + x) * d->bit_depth;
+			int r, g, b;
+			size_t fb_addr = (y * d->xsize + x) * d->bit_depth;
 			/*  fb_addr is now which byte in framebuffer  */
 
 			/*  > 8 bits color.  */
@@ -232,7 +225,7 @@ void REDRAW(struct vfb_data *d, int addr, int len)
 	if (d->bit_depth < 8) {
 		for (pixel=0; pixel<npixels; pixel++) {
 			int subx, suby, r, g, b;
-			color_r = color_g = color_b = 0;
+			int64_t color_r = 0, color_g = 0, color_b = 0;
 			for (suby=0; suby<scaledown; suby++)
 			    for (subx=0; subx<scaledown; subx++) {
 				int fb_x, fb_y, fb_addr, c;
@@ -272,7 +265,7 @@ void REDRAW(struct vfb_data *d, int addr, int len)
 	} else if (d->bit_depth == 8) {
 		for (pixel=0; pixel<npixels; pixel++) {
 			int subx, suby, r, g, b;
-			color_r = color_g = color_b = 0;
+			int64_t color_r = 0, color_g = 0, color_b = 0;
 			for (suby=0; suby<scaledown; suby++)
 			    for (subx=0; subx<scaledown; subx++) {
 				int fb_x, fb_y, fb_addr, c;
@@ -300,7 +293,7 @@ void REDRAW(struct vfb_data *d, int addr, int len)
 		/*  Generic > 8 bit bit-depth:  */
 		for (pixel=0; pixel<npixels; pixel++) {
 			int subx, suby, r, g, b;
-			color_r = color_g = color_b = 0;
+			int64_t color_r = 0, color_g = 0, color_b = 0;
 			for (suby=0; suby<scaledown; suby++)
 			    for (subx=0; subx<scaledown; subx++) {
 				int fb_x, fb_y, fb_addr;

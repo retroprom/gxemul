@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2004-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -52,12 +52,11 @@ DEVICE_ACCESS(sgi_ip19)
 {
 	struct sgi_ip19_data *d = (struct sgi_ip19_data *) extra;
 	uint64_t idata = 0, odata = 0;
-	int regnr;
 
 	if (writeflag == MEM_WRITE)
 		idata = memory_readmax64(cpu, data, len);
 
-	regnr = relative_addr / sizeof(uint32_t);
+	// int regnr = relative_addr / sizeof(uint32_t);
 
 	switch (relative_addr) {
 

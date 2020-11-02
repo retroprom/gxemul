@@ -49,8 +49,10 @@
 #include "machine.h"
 #include "memory.h"
 #include "netinet/in.h"
-#include "thirdparty/bootblock.h"
 #include "unistd.h"
+
+#include "thirdparty/bootblock.h"
+
 
 static const char *diskimage_types[] = DISKIMAGE_TYPES;
 

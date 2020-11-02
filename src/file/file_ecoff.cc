@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -178,15 +178,16 @@ static void file_load_ecoff(struct machine *m, struct memory *mem,
 		debug("MACH/pmax hack (!), read 0x%x bytes\n", total_len);
 	}
 
-	/*  Go through all the section headers:  */
+	off_t sectionHeadersPos = ftello(f);
+
+	/*  First, dump the section headers:  */
 	for (secn=0; secn<f_nscns; secn++) {
-		off_t s_scnptr, s_relptr, s_lnnoptr, oldpos;
-		int s_nreloc, s_nlnno, s_flags;
-		int s_size;
-		unsigned int i;
+		off_t s_scnptr, s_relptr, s_lnnoptr;
+		int s_nreloc, s_nlnno, s_flags, s_size;
 		uint64_t s_paddr, s_vaddr;
 
 		/*  Read a section header:  */
+		fseek(f, sectionHeadersPos + sizeof(scnhdr) * secn, SEEK_SET);
 		len = fread(&scnhdr, 1, sizeof(scnhdr), f);
 		if (len != sizeof(scnhdr)) {
 			fprintf(stderr, "%s: incomplete section "
@@ -194,9 +195,8 @@ static void file_load_ecoff(struct machine *m, struct memory *mem,
 			exit(1);
 		}
 
-		/*  Show the section name:  */
-		debug("section ");
-		for (i=0; i<sizeof(scnhdr.s_name); i++)
+		debug("section %i: ", secn);
+		for (size_t i=0; i<sizeof(scnhdr.s_name); i++)
 			if (scnhdr.s_name[i] >= 32 && scnhdr.s_name[i] < 127)
 				debug("%c", scnhdr.s_name[i]);
 			else
@@ -217,6 +217,34 @@ static void file_load_ecoff(struct machine *m, struct memory *mem,
 		    (int)s_size, (int)s_vaddr, (long)s_scnptr, (int)s_flags);
 
 		end_addr = s_vaddr + s_size;
+	}
+
+	/*  Then, load the sections that are loadable:  */
+	for (secn=0; secn<f_nscns; secn++) {
+		off_t s_scnptr, s_relptr, s_lnnoptr;
+		int s_nreloc, s_nlnno, s_flags, s_size;
+		uint64_t s_paddr, s_vaddr;
+
+		/*  Read a section header:  */
+		fseek(f, sectionHeadersPos + sizeof(scnhdr) * secn, SEEK_SET);
+		len = fread(&scnhdr, 1, sizeof(scnhdr), f);
+		if (len != sizeof(scnhdr)) {
+			fprintf(stderr, "%s: incomplete section "
+			    "header %i\n", filename, secn);
+			exit(1);
+		}
+
+		unencode(s_paddr,   &scnhdr.s_paddr,   uint32_t);
+		unencode(s_vaddr,   &scnhdr.s_vaddr,   uint32_t);
+		unencode(s_size,    &scnhdr.s_size,    uint32_t);
+		unencode(s_scnptr,  &scnhdr.s_scnptr,  uint32_t);
+		unencode(s_relptr,  &scnhdr.s_relptr,  uint32_t);
+		unencode(s_lnnoptr, &scnhdr.s_lnnoptr, uint32_t);
+		unencode(s_nreloc,  &scnhdr.s_nreloc,  uint16_t);
+		unencode(s_nlnno,   &scnhdr.s_nlnno,   uint16_t);
+		unencode(s_flags,   &scnhdr.s_flags,   uint32_t);
+
+		end_addr = s_vaddr + s_size;
 
 		if (s_relptr != 0) {
 			/*
@@ -224,7 +252,7 @@ static void file_load_ecoff(struct machine *m, struct memory *mem,
 			 *  http://www.iecc.com/linker/linker07.html
 			 */
 			fprintf(stderr, "%s: relocatable code/data in "
-			    "section nr %i: not yet implemented\n",
+			    "section nr %i: not yet implemented (TODO)\n",
 			    filename, secn);
 			exit(1);
 		}
@@ -232,9 +260,6 @@ static void file_load_ecoff(struct machine *m, struct memory *mem,
 		/*  Loadable? Then load the section:  */
 		if (s_scnptr != 0 && s_size != 0 &&
 		    s_vaddr != 0 && !(s_flags & 0x02)) {
-			/*  Remember the current file offset:  */
-			oldpos = ftello(f);
-
 			/*  Load the section into emulated memory:  */
 			fseek(f, s_scnptr, SEEK_SET);
 			total_len = 0;
@@ -259,9 +284,6 @@ static void file_load_ecoff(struct machine *m, struct memory *mem,
 				s_vaddr += len;
 				total_len += len;
 			}
-
-			/*  Return to position inside the section headers:  */
-			fseek(f, oldpos, SEEK_SET);
 		}
 	}
 

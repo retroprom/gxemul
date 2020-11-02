@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2006-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2006-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -70,7 +70,7 @@
 
 /* For debugging: */
 //#define DEBUG_RENDER_AS_WIRE_FRAME	// Renders 3-corner textured polygons as wire-frame
-//#define	TA_DEBUG		// Dumps TA commands
+static bool ta_debug = false;		// Dumps TA commands
 //#define debug fatal			// Dumps debug even without -v.
 
 #define	INTERNAL_FB_ADDR	0x300000000ULL
@@ -673,9 +673,12 @@ static void simpleline(struct pvr_data *d, int y, double x1, double x2,
 				// gi = ((fog_g * a) + (gi * (255 - a))) >> 8;
 				// bi = ((fog_b * a) + (bi * (255 - a))) >> 8;
 
-				if (ri < 0) ri = 0; if (ri > 255) ri = 255;
-				if (gi < 0) gi = 0; if (gi > 255) gi = 255;
-				if (bi < 0) bi = 0; if (bi > 255) bi = 255;
+				if (ri < 0) ri = 0;
+				if (ri > 255) ri = 255;
+				if (gi < 0) gi = 0;
+				if (gi > 255) gi = 255;
+				if (bi < 0) bi = 0;
+				if (bi > 255) bi = 255;
 				int color = ((ri >> 3) << 11) + ((gi >> 2) << 5) + (bi >> 3);
 
 				int fbofs = fb_base + ofs * d->bytes_per_pixel;
@@ -1124,9 +1127,8 @@ void pvr_render(struct cpu *cpu, struct pvr_data *d)
 		{
 		case 0:	// END_OF_LIST
 			// Interrupt event already triggered in pvr_ta_command().
-#ifdef TA_DEBUG
-			fatal("\nTA end_of_list (list type %i)\n", d->current_list_type);
-#endif
+			if (ta_debug)
+				fatal("\nTA end_of_list (list type %i)\n", d->current_list_type);
 			break;
 
 		case 1:	// USER_CLIP
@@ -1151,18 +1153,18 @@ void pvr_render(struct cpu *cpu, struct pvr_data *d)
 			shading = list[0] & 2;
 			uv_format = list[0] & 1;
 
-#ifdef TA_DEBUG
-			fatal("\nTA polygon  listtype %i, ", listtype);
-			fatal("striplength %i, ", striplength);
-			fatal("clipmode %i, ", clipmode);
-			fatal("modifier %i, ", modifier);
-			fatal("modifier_mode %i,\n", modifier_mode);
-			fatal("            color_type %i, ", color_type);
-			fatal("texture %s, ", texture ? "TRUE" : "false");
-			fatal("specular %s, ", specular ? "TRUE" : "false");
-			fatal("shading %s, ", shading ? "TRUE" : "false");
-			fatal("uv_format %s\n", uv_format ? "TRUE" : "false");
-#endif
+			if (ta_debug) {
+				fatal("\nTA polygon  listtype %i, ", listtype);
+				fatal("striplength %i, ", striplength);
+				fatal("clipmode %i, ", clipmode);
+				fatal("modifier %i, ", modifier);
+				fatal("modifier_mode %i,\n", modifier_mode);
+				fatal("            color_type %i, ", color_type);
+				fatal("texture %s, ", texture ? "TRUE" : "false");
+				fatal("specular %s, ", specular ? "TRUE" : "false");
+				fatal("shading %s, ", shading ? "TRUE" : "false");
+				fatal("uv_format %s\n", uv_format ? "TRUE" : "false");
+			}
 
 			// List Word 1:
 			depthmode = (list[1] >> 29) & 7;
@@ -1174,16 +1176,16 @@ void pvr_render(struct cpu *cpu, struct pvr_data *d)
 			uv_format1 = (list[1] >> 22) & 1;
 			dcalcexact = (list[1] >> 20) & 1;
 
-#ifdef TA_DEBUG
-			fatal("            depthmode %i, ", depthmode);
-			fatal("cullingmode %i, ", cullingmode);
-			fatal("zwrite %s, ", zwrite ? "TRUE" : "false");
-			fatal("texture1 %s\n", texture1 ? "TRUE" : "false");
-			fatal("            specular1 %s, ", specular1 ? "TRUE" : "false");
-			fatal("shading1 %s, ", shading1 ? "TRUE" : "false");
-			fatal("uv_format1 %s, ", uv_format1 ? "TRUE" : "false");
-			fatal("dcalcexact %s\n", dcalcexact ? "TRUE" : "false");
-#endif
+			if (ta_debug) {
+				fatal("            depthmode %i, ", depthmode);
+				fatal("cullingmode %i, ", cullingmode);
+				fatal("zwrite %s, ", zwrite ? "TRUE" : "false");
+				fatal("texture1 %s\n", texture1 ? "TRUE" : "false");
+				fatal("            specular1 %s, ", specular1 ? "TRUE" : "false");
+				fatal("shading1 %s, ", shading1 ? "TRUE" : "false");
+				fatal("uv_format1 %s, ", uv_format1 ? "TRUE" : "false");
+				fatal("dcalcexact %s\n", dcalcexact ? "TRUE" : "false");
+			}
 
 			if (!zwrite) {
 				fatal("pvr: no zwrite? not implemented yet.\n");
@@ -1221,14 +1223,14 @@ void pvr_render(struct cpu *cpu, struct pvr_data *d)
 			texture_stride = (list[3] >> 25) & 1;
 			textureAddr = (list[3] << 3) & 0x7fffff;
 
-#ifdef TA_DEBUG
-			fatal("            texture: mipmap %s, ", texture_mipmap ? "TRUE" : "false");
-			fatal("vq_compression %s, ", texture_vq_compression ? "TRUE" : "false");
-			fatal("pixelformat %i, ", texture_pixelformat);
-			fatal("twiddled %s\n", texture_twiddled ? "TRUE" : "false");
-			fatal("            stride %s, ", texture_stride ? "TRUE" : "false");
-			fatal("textureAddr 0x%08x\n", textureAddr);
-#endif
+			if (ta_debug) {
+				fatal("            texture: mipmap %s, ", texture_mipmap ? "TRUE" : "false");
+				fatal("vq_compression %s, ", texture_vq_compression ? "TRUE" : "false");
+				fatal("pixelformat %i, ", texture_pixelformat);
+				fatal("twiddled %s\n", texture_twiddled ? "TRUE" : "false");
+				fatal("            stride %s, ", texture_stride ? "TRUE" : "false");
+				fatal("textureAddr 0x%08x\n", textureAddr);
+			}
 
 			if (fog != 2)
 				fatal("[ pvr: fog type %i not yet implemented ]\n", fog);
@@ -1268,10 +1270,8 @@ void pvr_render(struct cpu *cpu, struct pvr_data *d)
 			wf_y[vertex_index] = fy.f;
 			wf_z[vertex_index] = fz.f;
 
-#ifdef TA_DEBUG
-			fatal("TA vertex   %f %f %f%s\n", fx.f, fy.f, fz.f,
-				eos ? " end_of_strip" : "");
-#endif
+			if (ta_debug)
+				fatal("TA vertex   %f %f %f%s\n", fx.f, fy.f, fz.f, eos ? " end_of_strip" : "");
 
 			if (texture) {
 				ieee_interpret_float_value(list[4], &u, IEEE_FMT_S);
@@ -1455,16 +1455,13 @@ static void pvr_ta_command(struct cpu *cpu, struct pvr_data *d, int list_ofs)
 {
 	uint32_t *ta = &d->ta[list_ofs];
 
-#ifdef TA_DEBUG
 	/*  Dump the Tile Accelerator command for debugging:  */
-	{
-		int i;
+	if (ta_debug) {
 		fatal("TA cmd:");
-		for (i = 0; i < 8; ++i)
+		for (int i = 0; i < 8; ++i)
 			fatal(" %08x", (int) ta[i]);
 		fatal("\n");
 	}
-#endif
 
 	// ob_ofs = REG(PVRREG_TA_OB_POS);
 	// REG(PVRREG_TA_OB_POS) = ob_ofs + sizeof(uint64_t);

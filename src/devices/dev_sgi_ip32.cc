@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -254,7 +254,7 @@ DEVICE_ACCESS(crime)
 	}
 
 	int flag_for_128MB = mb_per_bank == 128 ? 0x100 : 0x000;
-	int total_mb = 0;
+	size_t total_mb = 0;
 	for (int bank = 0; bank < 8; ++bank) {
 		int b = mb_per_bank == 128 ? (bank << 2) : bank;
 		if (total_mb >= cpu->machine->physical_ram_in_mb)

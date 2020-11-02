@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -151,8 +151,8 @@ DEVICE_ACCESS(turbochannel)
 
 		debug(") ]\n");
 	} else {
-		/*  debug("[ turbochannel: write to  0x%08lx: 0x%08x ]\n",
-		    (long)relative_addr, (int)idata);  */
+		debug("[ turbochannel: write to  0x%08lx: 0x%08x ]\n",
+		    (long)relative_addr, (int)idata);
 	}
 
 	if (writeflag == MEM_READ)

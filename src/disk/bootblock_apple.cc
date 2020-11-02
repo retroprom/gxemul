@@ -55,7 +55,6 @@ int apple_load_bootblock(struct machine *m, struct cpu *cpu,
 {
 	unsigned char buf[0x8000];
 	int res, partnr, n_partitions = 0, n_hfs_partitions = 0;
-	uint64_t hfs_start, hfs_length;
 
 	res = diskimage_access(m, disk_id, disk_type, 0, 0x0, buf, sizeof(buf));
 	if (!res) {
@@ -81,8 +80,9 @@ int apple_load_bootblock(struct machine *m, struct cpu *cpu,
 
 		if (strcmp((char *)buf + ofs + 0x30, "Apple_HFS") == 0) {
 			n_hfs_partitions ++;
-			hfs_start = 512 * start;
-			hfs_length = 512 * length;
+			// uint64_t hfs_start = 512 * start;
+			// uint64_t hfs_length = 512 * length;
+			// TODO.
 		}
 
 		/*  Any more partitions?  */

@@ -107,6 +107,7 @@ void ieee_interpret_float_value(uint64_t x, struct ieee_float_value *fvp,
 		break;
 	case IEEE_FMT_S:
 		x &= 0xffffffffULL;
+		// fall through
 	case IEEE_FMT_D:
 		exponent = (x >> n_frac) & ((1 << n_exp) - 1);
 		exponent -= (1 << (n_exp-1)) - 1;

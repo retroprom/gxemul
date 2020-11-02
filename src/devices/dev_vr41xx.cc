@@ -481,13 +481,12 @@ DEVICE_ACCESS(vr41xx)
 {
 	struct vr41xx_data *d = (struct vr41xx_data *) extra;
 	uint64_t idata = 0, odata = 0;
-	int regnr;
 	int revision = 0;
 
 	if (writeflag == MEM_WRITE)
 		idata = memory_readmax64(cpu, data, len);
 
-	regnr = relative_addr / sizeof(uint64_t);
+	// int regnr = relative_addr / sizeof(uint64_t);
 
 	/*  KIU ("Keyboard Interface Unit") is handled separately.  */
 	if (relative_addr >= d->kiu_offset &&

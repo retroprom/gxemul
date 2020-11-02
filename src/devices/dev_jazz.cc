@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2004-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -153,7 +153,7 @@ size_t dev_jazz_dma_controller(void *dma_controller_data,
 	struct jazz_data *d = (struct jazz_data *) dma_controller_data;
 	struct cpu *cpu = d->cpu;
 	int i, enab_writeflag;
-	int res, ncpy;
+	int ncpy;
 	uint32_t dma_addr;
 	unsigned char tr[sizeof(uint32_t)];
 	uint32_t phys_addr;
@@ -186,8 +186,7 @@ size_t dev_jazz_dma_controller(void *dma_controller_data,
 	dma_addr = d->dma0_addr;
 	i = 0;
 	while (dma_addr < d->dma0_addr + d->dma0_count && i < (int32_t)len) {
-
-		res = cpu->memory_rw(cpu, cpu->mem,
+		/* int res = */  cpu->memory_rw(cpu, cpu->mem,
 		    d->dma_translation_table_base + (dma_addr >> 12) * 8,
 		    tr, sizeof(tr), 0, PHYSICAL | NO_EXCEPTIONS);
 
@@ -210,7 +209,7 @@ size_t dev_jazz_dma_controller(void *dma_controller_data,
 		if ((phys_addr & 255) == 0 && i + 255 <= (int32_t)len)
 			ncpy = 255;
 
-		res = cpu->memory_rw(cpu, cpu->mem, phys_addr,
+		/* int res = */  cpu->memory_rw(cpu, cpu->mem, phys_addr,
 		    &data[i], ncpy, writeflag, PHYSICAL | NO_EXCEPTIONS);
 
 		dma_addr += ncpy;
@@ -268,12 +267,11 @@ DEVICE_ACCESS(jazz)
 {
 	struct jazz_data *d = (struct jazz_data *) extra;
 	uint64_t idata = 0, odata = 0;
-	int regnr;
 
 	if (writeflag == MEM_WRITE)
 		idata = memory_readmax64(cpu, data, len);
 
-	regnr = relative_addr / sizeof(uint32_t);
+	// int regnr = relative_addr / sizeof(uint32_t);
 
 	switch (relative_addr) {
 	case R4030_SYS_CONFIG:
@@ -422,12 +420,11 @@ DEVICE_ACCESS(jazz_led)
 {
 	struct jazz_data *d = (struct jazz_data *) extra;
 	uint64_t idata = 0, odata = 0;
-	int regnr;
 
 	if (writeflag == MEM_WRITE)
 		idata = memory_readmax64(cpu, data, len);
 
-	regnr = relative_addr / sizeof(uint32_t);
+	// int regnr = relative_addr / sizeof(uint32_t);
 
 	switch (relative_addr) {
 	case 0:

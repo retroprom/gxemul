@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2019  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -1911,7 +1911,7 @@ void mips_cpu_exception(struct cpu *cpu, int exccode, int tlb, uint64_t vaddr,
 				//  the bits of the virtual address corresponding to the R and VPN2 fields to be
 				//  written into the EntryHi register."
 
-				if ((reg[COP0_ENTRYHI] & ENTRYHI_ASID) != vaddr_asid)
+				if ((reg[COP0_ENTRYHI] & ENTRYHI_ASID) != (uint32_t)vaddr_asid)
 					fatal("[ huh? vaddr_asid 0x%02x not same as in ENTRYHI 0x%02x ]\n",
 						vaddr_asid, reg[COP0_ENTRYHI] & ENTRYHI_ASID);
 

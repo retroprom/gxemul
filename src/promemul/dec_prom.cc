@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -232,8 +232,8 @@ int decstation_prom_emul(struct cpu *cpu)
 	int vector = cpu->pc & 0xfff;
 	int callback = (cpu->pc & 0xf000)? 1 : 0;
 	unsigned char buf[100];
-	unsigned char ch1, ch2, ch3;
-	uint64_t tmpaddr, slot_base = 0x10000000, slot_size = 0;
+	unsigned char ch1, ch2;
+	uint64_t slot_base = 0x10000000, slot_size = 0;
 
 	if (!callback) {
 		vector = dec_jumptable_func(cpu, vector);
@@ -274,37 +274,32 @@ int decstation_prom_emul(struct cpu *cpu)
 		break;
 	case 0x28:		/*  gets()  */
 		/*  debug("[ DEC PROM gets() ]\n");  */
-		tmpaddr = cpu->cd.mips.gpr[MIPS_GPR_A0];
+		// tmpaddr = cpu->cd.mips.gpr[MIPS_GPR_A0];
 		i = 0;
 
-		/*  TODO: Make this not hang (block) the entire emulator  */
-
 		do {
-			while ((ch = console_readchar(
-			    cpu->machine->main_console_handle)) < 1)
+			/*  TODO: Make this not hang (block) the entire emulator  */
+			while ((ch = console_readchar(cpu->machine->main_console_handle)) < 1)
 				;
+
 			if (ch == '\r')
 				ch = '\n';
+
 			ch2 = ch;
 
 			if (ch == '\b') {
 				if (i > 0) {
-					console_putchar(cpu->machine->
-					    main_console_handle, ch2);
-					console_putchar(cpu->machine->
-					    main_console_handle, ' ');
-					console_putchar(cpu->machine->
-					    main_console_handle, ch2);
+					console_putchar(cpu->machine->main_console_handle, ch2);
+					console_putchar(cpu->machine->main_console_handle, ' ');
+					console_putchar(cpu->machine->main_console_handle, ch2);
 				}
 			} else
-				console_putchar(cpu->machine->
-				    main_console_handle, ch2);
+				console_putchar(cpu->machine->main_console_handle, ch2);
 
 			fflush(stdout);
 
 			if (ch == '\n') {
-				/*  It seems that trailing newlines
-				    are not included in the buffer.  */
+				/*  It seems that trailing newlines are not included in the buffer.  */
 			} else if (ch != '\b') {
 				cpu->memory_rw(cpu, cpu->mem, (int32_t)
 				    cpu->cd.mips.gpr[MIPS_GPR_A0] + i,
@@ -381,8 +376,7 @@ int decstation_prom_emul(struct cpu *cpu)
 #endif
 					}
 
-					ch2 = argdata =
-					    cpu->cd.mips.gpr[argreg];
+					ch2 = argdata = cpu->cd.mips.gpr[argreg];
 
 					switch (ch) {
 					case 'c':
@@ -399,21 +393,15 @@ int decstation_prom_emul(struct cpu *cpu)
 						break;
 					case 's':
 						/*  Print a "%s" string.  */
-						j = 0; ch3 = '\n';
+						j = 0;
 						while (ch2) {
-							ch2 = mem_readchar(cpu,
-							    argreg, j++);
+							ch2 = mem_readchar(cpu, argreg, j++);
 							if (ch2) {
 								snprintf(
-								    printfbuf +
-								    strlen(
-								    printfbuf),
-								    sizeof(
-								    printfbuf)-
-								    1-strlen(
-								    printfbuf),
-								    "%c", ch2);
-								ch3 = ch2;
+								    printfbuf + strlen(printfbuf),
+								    sizeof(printfbuf) - 1 - strlen(printfbuf),
+								    "%c",
+								    ch2);
 							}
 						}
 						break;
@@ -421,8 +409,7 @@ int decstation_prom_emul(struct cpu *cpu)
 					argreg ++;
 					break;
 				default:
-					printf("[ unknown printf format char"
-					    " '%c' ]", ch);
+					printf("[ unknown printf format char '%c' ]", ch);
 				}
 				break;
 			case '\0':

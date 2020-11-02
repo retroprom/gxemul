@@ -283,10 +283,11 @@ DEVICE_TICK(bt459)
 DEVICE_ACCESS(bt459_irq)
 {
 	struct bt459_data *d = (struct bt459_data *) extra;
-	uint64_t idata = 0, odata = 0;
+	// uint64_t idata = 0;
+	uint64_t odata = 0;
 
-	if (writeflag == MEM_WRITE)
-		idata = memory_readmax64(cpu, data, len);
+//	if (writeflag == MEM_WRITE)
+//		idata = memory_readmax64(cpu, data, len);
 
 #ifdef BT459_DEBUG
 	fatal("[ bt459: IRQ ack ]\n");

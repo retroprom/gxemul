@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -178,6 +178,7 @@ int TRANSLATE_ADDRESS(struct cpu *cpu, uint64_t vaddr,
 		x_64 = status & STATUS_SX;
 		/*  FALLTHROUGH, since supervisor address spaces are not
 		    really implemented yet.  */
+		// fall through
 	default:fatal("memory_mips_v2p.c: ksu=%i not yet implemented yet\n",
 		    ksu);
 		exit(1);

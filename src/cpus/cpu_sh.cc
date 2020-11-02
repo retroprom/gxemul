@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2011  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -711,6 +711,7 @@ void sh_exception(struct cpu *cpu, int expevt, int intevt, uint32_t vaddr)
 	case EXPEVT_TLB_MISS_LD:
 	case EXPEVT_TLB_MISS_ST:
 		cpu->pc = vbr + 0x400;
+		// fall through
 	case EXPEVT_TLB_PROT_LD:
 	case EXPEVT_TLB_PROT_ST:
 	case EXPEVT_TLB_MOD:

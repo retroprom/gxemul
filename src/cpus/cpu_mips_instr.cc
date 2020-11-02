@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2019  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -1262,7 +1262,7 @@ X(ins)
 	int size = msb + 1 - pos;
 	uint32_t rt = reg(ic->arg[0]);
 	uint32_t rs = reg(ic->arg[1]);
-	uint32_t mask = (-1) << pos;
+	uint32_t mask = (uint32_t)(-1) << pos;
 
 	mask <<= (32 - pos - size);
 	mask >>= (32 - pos - size);

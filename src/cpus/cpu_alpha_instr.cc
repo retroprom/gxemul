@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -1219,6 +1219,7 @@ X(to_be_translated)
 			break;
 		case 0x31:
 			fp = 1;
+			// fall through
 		case 0x39:
 			ic->f = instr(beq);
 			samepage_function = instr(beq_samepage);
@@ -1237,6 +1238,7 @@ X(to_be_translated)
 			break;
 		case 0x35:
 			fp = 1;
+			// fall through
 		case 0x3d:
 			ic->f = instr(bne);
 			samepage_function = instr(bne_samepage);

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2006-2014  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2006-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -408,8 +408,7 @@ void maple_do_dma_xfer(struct cpu *cpu, struct dreamcast_maple_data *d)
 	 */
 	for (;;) {
 		uint32_t receive_addr, response_code, cond;
-		int datalen, port, last_message, cmd, to, from, datalen_cmd;
-		int unit;
+		int port, last_message, cmd, to, datalen_cmd, unit;
 		uint8_t buf[8];
 
 		/*  Read the message' two control words:  */
@@ -417,7 +416,8 @@ void maple_do_dma_xfer(struct cpu *cpu, struct dreamcast_maple_data *d)
 		    NO_EXCEPTIONS | PHYSICAL);
 		addr += 8;
 
-		datalen = buf[0] * sizeof(uint32_t);
+		// int datalen = buf[0] * sizeof(uint32_t);
+
 		if (buf[1] & 2) {
 			fatal("[ dreamcast_maple: TODO: GUN bit. ]\n");
 			/*  TODO: Set some bits in A05F80C4 to indicate
@@ -441,7 +441,7 @@ void maple_do_dma_xfer(struct cpu *cpu, struct dreamcast_maple_data *d)
 
 		cmd = buf[0];
 		to = buf[1];
-		from = buf[2];
+		// int from = buf[2];
 		datalen_cmd = buf[3];
 
 		/*  Decode the unit number:  */

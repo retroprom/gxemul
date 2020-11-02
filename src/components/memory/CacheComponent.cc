@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2010-2019  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2010-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -227,9 +227,9 @@ AddressDataBus* CacheComponent::AsAddressDataBus()
 
 void CacheComponent::AddressSelect(uint64_t address)
 {
-#if 0
 	m_addressSelect = address;
 
+#if 0
 	uint64_t blockNr = address >> m_blockSizeShift;
 
 	if (blockNr+1 > m_memoryBlocks.size())

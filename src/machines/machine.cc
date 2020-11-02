@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -448,16 +448,10 @@ void machine_dumpinfo(struct machine *m)
  */
 void machine_setup(struct machine *machine)
 {
-	struct memory *mem;
 	struct machine_entry *me;
-
-	/*  Abreviation:  :-)  */
 	struct cpu *cpu = machine->cpus[machine->bootstrap_cpu];
 
-	machine->bootdev_id = diskimage_bootdev(machine,
-	    &machine->bootdev_type);
-
-	mem = cpu->mem;
+	machine->bootdev_id = diskimage_bootdev(machine, &machine->bootdev_type);
 	machine->machine_name = NULL;
 
 	/*  TODO: Move this somewhere else?  */

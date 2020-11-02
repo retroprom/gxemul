@@ -778,6 +778,7 @@ static void vga_crtc_reg_write(struct machine *machine, struct vga_data *d,
 		switch (d->crtc_reg[0xff]) {
 		case 0x00:
 			grayscale = 1;
+			// fall through
 		case 0x01:
 			d->cur_mode = MODE_CHARCELL;
 			d->max_x = 40; d->max_y = 25;
@@ -789,6 +790,7 @@ static void vga_crtc_reg_write(struct machine *machine, struct vga_data *d,
 			break;
 		case 0x02:
 			grayscale = 1;
+			// fall through
 		case 0x03:
 			d->cur_mode = MODE_CHARCELL;
 			d->max_x = 80; d->max_y = 25;

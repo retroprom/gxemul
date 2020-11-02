@@ -1911,9 +1911,7 @@ static void arcbios_add_other_components(struct machine *machine,
 	    (machine->machine_subtype == MACHINE_ARC_JAZZ_PICA
 	    || machine->machine_subtype == MACHINE_ARC_JAZZ_MAGNUM)) {
 		uint64_t jazzbus, ali_s3, vxl;
-		uint64_t diskcontroller, floppy, kbdctl, kbd;
-		uint64_t ptrctl, ptr, paral, audio;
-		uint64_t eisa, scsi;
+		uint64_t diskcontroller, kbdctl, ptrctl, scsi;
 		/*  uint64_t serial1, serial2;  */
 
 		jazzbus = arcbios_addchild_manual(cpu,
@@ -2024,7 +2022,7 @@ static void arcbios_add_other_components(struct machine *machine,
 			COMPONENT_FLAG_Input | COMPONENT_FLAG_Output,
 		    1, 2, 0, 0xffffffff, "I82077", jazzbus, NULL, 0);
 
-		floppy = arcbios_addchild_manual(cpu,
+		/* uint64_t floppy = */ arcbios_addchild_manual(cpu,
 		    COMPONENT_CLASS_PeripheralClass,
 		    COMPONENT_TYPE_FloppyDiskPeripheral,
 			COMPONENT_FLAG_Removable |
@@ -2037,7 +2035,7 @@ static void arcbios_add_other_components(struct machine *machine,
 			COMPONENT_FLAG_ConsoleIn | COMPONENT_FLAG_Input,
 		    1, 2, 0, 0xffffffff, "I8742", jazzbus, NULL, 0);
 
-		kbd = arcbios_addchild_manual(cpu,
+		/* uint64_t kbd = */ arcbios_addchild_manual(cpu,
 		    COMPONENT_CLASS_PeripheralClass,
 		    COMPONENT_TYPE_KeyboardPeripheral,
 			COMPONENT_FLAG_ConsoleIn | COMPONENT_FLAG_Input,
@@ -2048,7 +2046,7 @@ static void arcbios_add_other_components(struct machine *machine,
 		    COMPONENT_TYPE_PointerController, COMPONENT_FLAG_Input,
 		    1, 2, 0, 0xffffffff, "I8742", jazzbus, NULL, 0);
 
-		ptr = arcbios_addchild_manual(cpu,
+		/* uint64_t ptr = */ arcbios_addchild_manual(cpu,
 		    COMPONENT_CLASS_PeripheralClass,
 		    COMPONENT_TYPE_PointerPeripheral, COMPONENT_FLAG_Input,
 		    1, 2, 0, 0xffffffff, "PS2 MOUSE", ptrctl, NULL, 0);
@@ -2068,19 +2066,19 @@ static void arcbios_add_other_components(struct machine *machine,
 		    1, 2, 0, 0xffffffff, "COM1", jazzbus, NULL, 0);
 #endif
 
-		paral = arcbios_addchild_manual(cpu,
+		/* uint64_t paral = */ arcbios_addchild_manual(cpu,
 		    COMPONENT_CLASS_ControllerClass,
 		    COMPONENT_TYPE_ParallelController,
 			COMPONENT_FLAG_Input | COMPONENT_FLAG_Output,
 		    1, 2, 0, 0xffffffff, "LPT1", jazzbus, NULL, 0);
 
-		audio = arcbios_addchild_manual(cpu,
+		/* uint64_t audio = */ arcbios_addchild_manual(cpu,
 		    COMPONENT_CLASS_ControllerClass,
 		    COMPONENT_TYPE_AudioController,
 			COMPONENT_FLAG_Input | COMPONENT_FLAG_Output,
 		    1, 2, 0, 0xffffffff, "MAGNUM", jazzbus, NULL, 0);
 
-		eisa = arcbios_addchild_manual(cpu,
+		/* uint64_t eisa = */ arcbios_addchild_manual(cpu,
 		    COMPONENT_CLASS_AdapterClass, COMPONENT_TYPE_EISAAdapter,
 		    0, 1, 2, 0, 0xffffffff, "EISA", system, NULL, 0);
 
@@ -2549,29 +2547,27 @@ void arcbios_init(struct machine *machine, int is64bit, uint64_t sgi_ram_offset,
 	memset(&arcbios_sysid, 0, sizeof(arcbios_sysid));
 	if (machine->machine_type == MACHINE_SGI) {
 		/*  Vendor ID, max 8 chars:  */
-		strncpy(arcbios_sysid.VendorId,  "SGI", 3);
+		memcpy(arcbios_sysid.VendorId, "SGI", 3);
+
 		switch (machine->machine_subtype) {
 		case 22:
-			strncpy(arcbios_sysid.ProductId,
-			    "87654321", 8);	/*  some kind of ID?  */
+			memcpy(arcbios_sysid.ProductId, "87654321", 8);	/*  some kind of ID?  */
 			break;
 		case 32:
-			strncpy(arcbios_sysid.ProductId, "8", 1);
-			    /*  6 or 8 (?)  */
+			memcpy(arcbios_sysid.ProductId, "8", 1);    /*  6 or 8 (?)  */
 			break;
 		default:
-			snprintf(arcbios_sysid.ProductId, 8, "IP%i",
-			    machine->machine_subtype);
+			snprintf(arcbios_sysid.ProductId, 8, "IP%i", machine->machine_subtype);
 		}
 	} else {
 		switch (machine->machine_subtype) {
 		case MACHINE_ARC_JAZZ_PICA:
-			strncpy(arcbios_sysid.VendorId,  "MIPS MAG", 8);
-			strncpy(arcbios_sysid.ProductId, "ijkl", 4);
+			memcpy(arcbios_sysid.VendorId,  "MIPS MAG", 8);
+			memcpy(arcbios_sysid.ProductId, "ijkl", 4);
 			break;
 		case MACHINE_ARC_JAZZ_MAGNUM:
-			strncpy(arcbios_sysid.VendorId,  "MIPS MAG", 8);
-			strncpy(arcbios_sysid.ProductId, "ijkl", 4);
+			memcpy(arcbios_sysid.VendorId,  "MIPS MAG", 8);
+			memcpy(arcbios_sysid.ProductId, "ijkl", 4);
 			break;
 		default:
 			fatal("error in machine.c sysid\n");

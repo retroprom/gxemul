@@ -490,13 +490,19 @@ static size_t fwrite_helper(off_t offset, unsigned char *buf,
 		int res = my_fseek(d->overlays[overlay_nr].f_data,
 		    curofs, SEEK_SET);
 		if (res != 0) {
-			fatal("[ diskimage__internal_access(): fseek()"
-			    " failed on disk id %i \n", d->id);
+			fatal("[ diskimage: fwrite_helper(): fseek()"
+			    " failed on disk id %i ]\n", d->id);
 			return 0;
 		}
 
 		lenwritten = fwrite(buf, 1, OVERLAY_BLOCK_SIZE,
 		    d->overlays[overlay_nr].f_data);
+		if (lenwritten != OVERLAY_BLOCK_SIZE) {
+			fatal("[ diskimage: fwrite_helper(): fwrite to"
+			    " overlay failed on disk id %i ]\n", d->id);
+			exit(1);
+		}
+
 		buf += OVERLAY_BLOCK_SIZE;
 
 		if (do_fsync)

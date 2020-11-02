@@ -35,6 +35,28 @@
 #include "components/RISCV_CPUComponent.h"
 
 
+// See https://riscv.org/wp-content/uploads/2015/01/riscv-calling.pdf for
+// calling convention.
+
+static const char* RISCV_regnames[N_RISCV_XREGS] = {
+	"zero",			// x0 = always zero
+	"ra",			// x1 = return address		Caller save
+	"sp",			// x2 = stack pointer		Callee save
+	"gp",			// x3 = global pointer
+	"tp",			// x4 = thread pointer
+	"t0", "t1", "t2",	// x5..x7 = temporaries		Caller save
+	"fp" /* or s0 */,	// x8 = frame pointer		Callee save
+	"s1",			// x9 = saved register		Callee save
+	"a0", "a1",		// x10..x11 = arguments and return values	Caller save
+	"a2", "a3", "a4", "a5",	// x12..x17 = arguments		Caller save
+	"a6", "a7",
+	"s2", "s3", "s4", "s5",	// x18..x27 = saved registers	Callee save
+	"s6", "s7", "s8", "s9",
+	"s10", "s11",
+	"t3", "t4", "t5", "t6",	// x28..x31 = temporaries	Caller save
+};
+
+
 RISCV_CPUComponent::RISCV_CPUComponent()
 	: CPUDyntransComponent("riscv_cpu", "RISCV")
 {

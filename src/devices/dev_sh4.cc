@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2006-2019  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2006-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -1178,8 +1178,10 @@ DEVICE_ACCESS(sh4)
 
 	case SH4_TCOR2:
 		timer_nr ++;
+		// fall through
 	case SH4_TCOR1:
 		timer_nr ++;
+		// fall through
 	case SH4_TCOR0:
 		/*  Timer Constant Register  */
 		if (writeflag == MEM_READ)
@@ -1190,8 +1192,10 @@ DEVICE_ACCESS(sh4)
 
 	case SH4_TCNT2:
 		timer_nr ++;
+		// fall through
 	case SH4_TCNT1:
 		timer_nr ++;
+		// fall through
 	case SH4_TCNT0:
 		/*  Timer Counter Register  */
 		if (writeflag == MEM_READ)
@@ -1202,8 +1206,10 @@ DEVICE_ACCESS(sh4)
 
 	case SH4_TCR2:
 		timer_nr ++;
+		// fall through
 	case SH4_TCR1:
 		timer_nr ++;
+		// fall through
 	case SH4_TCR0:
 		/*  Timer Control Register  */
 		if (writeflag == MEM_READ) {
@@ -1259,12 +1265,19 @@ DEVICE_ACCESS(sh4)
 	/*  8 channels on SH7760                         */
 
 	case SH4_SAR7:	dma_channel ++;
+			// fall through
 	case SH4_SAR6:	dma_channel ++;
+			// fall through
 	case SH4_SAR5:	dma_channel ++;
+			// fall through
 	case SH4_SAR4:	dma_channel ++;
+			// fall through
 	case SH4_SAR3:	dma_channel ++;
+			// fall through
 	case SH4_SAR2:	dma_channel ++;
+			// fall through
 	case SH4_SAR1:	dma_channel ++;
+			// fall through
 	case SH4_SAR0:
 		if (writeflag == MEM_READ)
 			odata = cpu->cd.sh.dmac_sar[dma_channel];
@@ -1273,12 +1286,19 @@ DEVICE_ACCESS(sh4)
 		break;
 
 	case SH4_DAR7:	dma_channel ++;
+			// fall through
 	case SH4_DAR6:	dma_channel ++;
+			// fall through
 	case SH4_DAR5:	dma_channel ++;
+			// fall through
 	case SH4_DAR4:	dma_channel ++;
+			// fall through
 	case SH4_DAR3:	dma_channel ++;
+			// fall through
 	case SH4_DAR2:	dma_channel ++;
+			// fall through
 	case SH4_DAR1:	dma_channel ++;
+			// fall through
 	case SH4_DAR0:
 		if (writeflag == MEM_READ)
 			odata = cpu->cd.sh.dmac_dar[dma_channel];
@@ -1287,12 +1307,19 @@ DEVICE_ACCESS(sh4)
 		break;
 
 	case SH4_DMATCR7: dma_channel ++;
+			// fall through
 	case SH4_DMATCR6: dma_channel ++;
+			// fall through
 	case SH4_DMATCR5: dma_channel ++;
+			// fall through
 	case SH4_DMATCR4: dma_channel ++;
+			// fall through
 	case SH4_DMATCR3: dma_channel ++;
+			// fall through
 	case SH4_DMATCR2: dma_channel ++;
+			// fall through
 	case SH4_DMATCR1: dma_channel ++;
+			// fall through
 	case SH4_DMATCR0:
 		if (writeflag == MEM_READ)
 			odata = cpu->cd.sh.dmac_tcr[dma_channel] & 0x00ffffff;
@@ -1309,12 +1336,19 @@ DEVICE_ACCESS(sh4)
 		break;
 
 	case SH4_CHCR7:	dma_channel ++;
+			// fall through
 	case SH4_CHCR6:	dma_channel ++;
+			// fall through
 	case SH4_CHCR5:	dma_channel ++;
+			// fall through
 	case SH4_CHCR4:	dma_channel ++;
+			// fall through
 	case SH4_CHCR3:	dma_channel ++;
+			// fall through
 	case SH4_CHCR2:	dma_channel ++;
+			// fall through
 	case SH4_CHCR1:	dma_channel ++;
+			// fall through
 	case SH4_CHCR0:
 		if (writeflag == MEM_READ) {
 			odata = cpu->cd.sh.dmac_chcr[dma_channel];

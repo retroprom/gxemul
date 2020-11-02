@@ -24,8 +24,10 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 <b>Current "short-list":</b>
 
 o) Disk image end-of-file bug; has this been fixed? if so, remove that from the TODO file.
+o) If/when booting from SGI disk images is really meaningful (i.e. not just that it
+   correctly loads the OSLoader, but can boot an entire OS): update the man page
+   and other documentation regarding booting directly from SGI disk images.
 o) std::shared_ptr instead the refcount_ptr hack, for the C++ parts?
-o) Fix other build warnings?
 o) Building GXemul 0.6.2 inside emulated NetBSD/hpcmips 8.1 says:
 	# date > a; ./configure && make; date > b; cat a; cat b
 	checking which C++ compiler to use... c++ -DNDEBUG 

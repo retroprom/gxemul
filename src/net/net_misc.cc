@@ -87,17 +87,13 @@ void net_debugaddr(void *addr, int type)
  */
 void net_generate_unique_mac(struct machine *machine, unsigned char *macbuf)
 {
-	int x, y;
-
 	if (macbuf == NULL || machine == NULL) {
 		fatal("**\n**  net_generate_unique_mac(): NULL ptr\n**\n");
 		return;
 	}
 
-	x = machine->serial_nr;
-	y = machine->nr_of_nics;
-
-	// Special case: SGI machines have 0x08 as their first byte?
+	// Special case: real SGI machines have 0x08 as their first
+	// byte, so let's mimic that.
 	macbuf[0] = machine->machine_type == MACHINE_SGI ? 0x08 : 0x10;
 	macbuf[1] = 0x20;
 	macbuf[2] = 0x30;
@@ -122,8 +118,7 @@ void net_generate_unique_mac(struct machine *machine, unsigned char *macbuf)
  *  Send a simple UDP packet to a real (physical) host. Used for distributed
  *  network simulations.
  */
-void send_udp(struct in_addr *addrp, int portnr, unsigned char *packet,
-	size_t len)
+void send_udp(struct in_addr *addrp, int portnr, unsigned char *packet, size_t len)
 {
 	int s;
 	struct sockaddr_in si;

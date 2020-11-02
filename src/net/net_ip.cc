@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2010  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2004-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -339,15 +339,12 @@ void net_ip_tcp_connectionreply(struct net *net, struct nic_data *nic,
 	net_ip_tcp_checksum(lp->data + 34, 16, tcp_length,
 	    lp->data + 26, lp->data + 30, 0);
 
-#if 0
-	{
-		int i;
+	if (false) {
 		fatal("[ net_ip_tcp_connectionreply(%i): ", connecting);
-		for (i=0; i<ip_len+14; i++)
+		for (int i=0; i<ip_len+14; i++)
 			fatal("%02x", lp->data[i]);
 		fatal(" ]\n");
 	}
-#endif
 
 	if (connecting)
 		net->tcp_connections[con_id].outside_seqnr ++;
@@ -388,12 +385,12 @@ static void net_ip_tcp(struct net *net, struct nic_data *nic,
 	struct timeval tv;
 	int send_ofs;
 
-#if 0
-	fatal("[ net: TCP: ");
-	for (i=0; i<26; i++)
-		fatal("%02x", packet[i]);
-	fatal(" ");
-#endif
+	if (false) {
+		fatal("[ net: TCP: ");
+		for (i=0; i<26; i++)
+			fatal("%02x", packet[i]);
+		fatal(" ");
+	}
 
 	srcport = (packet[34] << 8) + packet[35];
 	dstport = (packet[36] << 8) + packet[37];
@@ -403,12 +400,11 @@ static void net_ip_tcp(struct net *net, struct nic_data *nic,
 	acknr   = (packet[42] << 24) + (packet[43] << 16)
 		+ (packet[44] << 8) + packet[45];
 
-#if 0
-	fatal("%i.%i.%i.%i:%i -> %i.%i.%i.%i:%i, seqnr=%lli acknr=%lli ",
-	    packet[26], packet[27], packet[28], packet[29], srcport,
-	    packet[30], packet[31], packet[32], packet[33], dstport,
-	    (long long)seqnr, (long long)acknr);
-#endif
+	if (false)
+		fatal("%i.%i.%i.%i:%i -> %i.%i.%i.%i:%i, seqnr=%lli acknr=%lli ",
+		    packet[26], packet[27], packet[28], packet[29], srcport,
+		    packet[30], packet[31], packet[32], packet[33], dstport,
+		    (long long)seqnr, (long long)acknr);
 
 	data_offset = (packet[46] >> 4) * 4 + 34;
 	/*  data_offset is now data offset within packet :-)  */
@@ -423,27 +419,26 @@ static void net_ip_tcp(struct net *net, struct nic_data *nic,
 	checksum = (packet[50] << 8) + packet[51];
 	urgptr   = (packet[52] << 8) + packet[53];
 
-#if 0
-	fatal(urg? "URG " : "");
-	fatal(ack? "ACK " : "");
-	fatal(psh? "PSH " : "");
-	fatal(rst? "RST " : "");
-	fatal(syn? "SYN " : "");
-	fatal(fin? "FIN " : "");
+	if (false) {
+		fatal(urg? "URG " : "");
+		fatal(ack? "ACK " : "");
+		fatal(psh? "PSH " : "");
+		fatal(rst? "RST " : "");
+		fatal(syn? "SYN " : "");
+		fatal(fin? "FIN " : "");
 
-	fatal("window=0x%04x checksum=0x%04x urgptr=0x%04x ",
-	    window, checksum, urgptr);
+		fatal("window=0x%04x checksum=0x%04x urgptr=0x%04x ", window, checksum, urgptr);
 
-	fatal("options=");
-	for (i=34+20; i<data_offset; i++)
-		fatal("%02x", packet[i]);
+		fatal("options=");
+		for (i=34+20; i<data_offset; i++)
+			fatal("%02x", packet[i]);
 
-	fatal(" data=");
-	for (i=data_offset; i<len; i++)
-		fatal("%02x", packet[i]);
+		fatal(" data=");
+		for (i=data_offset; i<len; i++)
+			fatal("%02x", packet[i]);
 
-	fatal(" ]\n");
-#endif
+		fatal(" ]\n");
+	}
 
 	net_ip_tcp_checksum(packet + 34, 16, len - 34,
 		packet + 26, packet + 30, 0);
@@ -965,10 +960,11 @@ static void net_ip_broadcast_dhcp(struct net *net, struct nic_data *nic,
 	    packet[26], packet[27], packet[28], packet[29]);
 	fatal("dst=%02x%02x%02x%02x ",
 	    packet[30], packet[31], packet[32], packet[33]);
-#if 0
-	for (i=34; i<len; i++)
-		fatal("%02x", packet[i]);
-#endif
+
+	if (false) {
+		for (i=34; i<len; i++)
+			fatal("%02x", packet[i]);
+	}
 
 	if (len < 34 + 8 + 236) {
 		fatal("[ DHCP packet too short? Len=%i ]\n", len);
@@ -1138,24 +1134,24 @@ void net_ip_broadcast(struct net *net, struct nic_data *nic,
 	uint32_t x, y;
 	int i, xl, warning = 0, match = 0;
 
-#if 0
-	fatal("[ net: IP BROADCAST: ");
-	fatal("ver=%02x ", packet[14]);
-	fatal("tos=%02x ", packet[15]);
-	fatal("len=%02x%02x ", packet[16], packet[17]);
-	fatal("id=%02x%02x ",  packet[18], packet[19]);
-	fatal("ofs=%02x%02x ", packet[20], packet[21]);
-	fatal("ttl=%02x ", packet[22]);
-	fatal("p=%02x ", packet[23]);
-	fatal("sum=%02x%02x ", packet[24], packet[25]);
-	fatal("src=%02x%02x%02x%02x ",
-	    packet[26], packet[27], packet[28], packet[29]);
-	fatal("dst=%02x%02x%02x%02x ",
-	    packet[30], packet[31], packet[32], packet[33]);
-	for (i=34; i<len; i++)
-		fatal("%02x", packet[i]);
-	fatal(" ]\n");
-#endif
+	if (false) {
+		fatal("[ net: IP BROADCAST: ");
+		fatal("ver=%02x ", packet[14]);
+		fatal("tos=%02x ", packet[15]);
+		fatal("len=%02x%02x ", packet[16], packet[17]);
+		fatal("id=%02x%02x ",  packet[18], packet[19]);
+		fatal("ofs=%02x%02x ", packet[20], packet[21]);
+		fatal("ttl=%02x ", packet[22]);
+		fatal("p=%02x ", packet[23]);
+		fatal("sum=%02x%02x ", packet[24], packet[25]);
+		fatal("src=%02x%02x%02x%02x ",
+		    packet[26], packet[27], packet[28], packet[29]);
+		fatal("dst=%02x%02x%02x%02x ",
+		    packet[30], packet[31], packet[32], packet[33]);
+		for (i=34; i<len; i++)
+			fatal("%02x", packet[i]);
+		fatal(" ]\n");
+	}
 
 	/*  Check for 10.0.0.255 first, maybe some guest OSes think that
 	    it's a /24 network, regardless of what it actually is.  */
@@ -1214,7 +1210,7 @@ void net_ip_broadcast(struct net *net, struct nic_data *nic,
 	    packet[30], packet[31], packet[32], packet[33]);
 	for (i=34; i<len; i++)
 		fatal("%02x", packet[i]);
-	fatal(" ]\n");
+	fatal(" (match=%i) ]\n", match);
 }
 
 

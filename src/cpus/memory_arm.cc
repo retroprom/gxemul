@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -205,6 +205,7 @@ int arm_translate_v2p_mmu(struct cpu *cpu, uint64_t vaddr64,
 				break;
 			}
 			/*  NOTE: Fall-through for XScale!  */
+			// fall through
 		case 2:	/*  4KB page:  */
 			ap3 = (d2 >> 10) & 3;
 			ap2 = (d2 >>  8) & 3;

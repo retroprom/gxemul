@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2018-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -103,7 +103,6 @@ DEVICE_ACCESS(palmbus)
 
 DEVINIT(palmbus)
 {
-	char *name2;
 	struct palmbus_data *d;
 
 	CHECK_ALLOCATION(d = (struct palmbus_data *) malloc(sizeof(struct palmbus_data)));
@@ -113,7 +112,7 @@ DEVINIT(palmbus)
 
 	d->console_handle = console_start_slave(devinit->machine, "uartlite", 1);
 
-	memory_device_register(devinit->machine->memory, name2,
+	memory_device_register(devinit->machine->memory, devinit->name,
 	    devinit->addr, DEV_PALMBUS_LENGTH,
 	    dev_palmbus_access, (void *)d, DM_DEFAULT, NULL);
 
