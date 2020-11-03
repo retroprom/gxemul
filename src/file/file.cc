@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -31,7 +31,7 @@
  *	android		Android boot.img format
  *	a.out		traditional old-style Unix binary format
  *	Mach-O		MacOS X format, etc.
- *	ecoff		old format used by Ultrix, Windows NT, etc
+ *	ecoff		old format used by Ultrix, Windows NT, IRIX, etc
  *	srec		Motorola SREC format
  *	raw		raw binaries, "address:[skiplen:[entrypoint:]]filename"
  *	ELF		32-bit and 64-bit ELFs
@@ -154,7 +154,7 @@ void file_load(struct machine *machine, struct memory *mem,
 	debug_indentation(iadd);
 
 	old_quiet_mode = quiet_mode;
-	if (verbose < 2)
+	if (verbose < 1)
 		quiet_mode = 1;
 
 	f = fopen(filename, "r");
