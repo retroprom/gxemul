@@ -32,6 +32,7 @@
 
 
 #include "thirdparty/exec_ecoff.h"
+#include <netinet/in.h>
 
 
 /*  Special symbol format used by Microsoft-ish COFF files:  */
@@ -44,6 +45,11 @@ struct ms_sym {
 	unsigned char	n_aux_syms;   
 };
 
+/*  Relocation format (wild guess) for ECOFFs such as SGI's sash:  */
+struct mips_ecoff_reloc {
+	uint32_t	vaddr;
+	uint32_t	symbolIndexAndType;
+};
 
 /*
  *  file_load_ecoff():
@@ -63,10 +69,15 @@ static void file_load_ecoff(struct machine *m, struct memory *mem,
 	const char *format_name;
 	struct ecoff_scnhdr scnhdr;
 	FILE *f;
-	int len, secn, total_len, chunk_size;
+	int len, secn;
+	unsigned int total_len, chunk_size;
 	int encoding = ELFDATA2LSB;	/*  Assume little-endian. See below  */
 	int program_byte_order = -1;
 	unsigned char buf[8192];
+	struct ecoff_extsym *extsyms = NULL;
+	int nsymbols = 0;
+	bool relocated = false;
+	uint32_t relocationOffset = 0; // TODO: separate for text and data?
 
 	f = fopen(filename, "r");
 	if (f == NULL) {
@@ -180,10 +191,10 @@ static void file_load_ecoff(struct machine *m, struct memory *mem,
 
 	off_t sectionHeadersPos = ftello(f);
 
-	/*  First, dump the section headers:  */
+	/*  First, dump the section headers, see if Relocation is needed:  */
 	for (secn=0; secn<f_nscns; secn++) {
 		off_t s_scnptr, s_relptr, s_lnnoptr;
-		int s_nreloc, s_nlnno, s_flags, s_size;
+		unsigned int s_nreloc, s_nlnno, s_flags, s_size;
 		uint64_t s_paddr, s_vaddr;
 
 		/*  Read a section header:  */
@@ -213,87 +224,55 @@ static void file_load_ecoff(struct machine *m, struct memory *mem,
 		unencode(s_nlnno,   &scnhdr.s_nlnno,   uint16_t);
 		unencode(s_flags,   &scnhdr.s_flags,   uint32_t);
 
-		debug("0x%x @ 0x%08x, offset 0x%lx, flags 0x%x)\n",
-		    (int)s_size, (int)s_vaddr, (long)s_scnptr, (int)s_flags);
+		debug("0x%x bytes @ vaddr 0x%08x, file offset 0x%lx, %i relocations @ 0x%lx, flags 0x%x)\n",
+		    (int)s_size, (int)s_vaddr, (long)s_scnptr,
+		    (int)s_nreloc, (long)s_relptr, (int)s_flags);
 
-		end_addr = s_vaddr + s_size;
-	}
-
-	/*  Then, load the sections that are loadable:  */
-	for (secn=0; secn<f_nscns; secn++) {
-		off_t s_scnptr, s_relptr, s_lnnoptr;
-		int s_nreloc, s_nlnno, s_flags, s_size;
-		uint64_t s_paddr, s_vaddr;
-
-		/*  Read a section header:  */
-		fseek(f, sectionHeadersPos + sizeof(scnhdr) * secn, SEEK_SET);
-		len = fread(&scnhdr, 1, sizeof(scnhdr), f);
-		if (len != sizeof(scnhdr)) {
-			fprintf(stderr, "%s: incomplete section "
-			    "header %i\n", filename, secn);
+		if (s_relptr != 0 && s_nreloc == 0) {
+			fprintf(stderr, "%s: relocation info, but 0 relocations, for section  %i\n", filename, secn);
 			exit(1);
 		}
 
-		unencode(s_paddr,   &scnhdr.s_paddr,   uint32_t);
-		unencode(s_vaddr,   &scnhdr.s_vaddr,   uint32_t);
-		unencode(s_size,    &scnhdr.s_size,    uint32_t);
-		unencode(s_scnptr,  &scnhdr.s_scnptr,  uint32_t);
-		unencode(s_relptr,  &scnhdr.s_relptr,  uint32_t);
-		unencode(s_lnnoptr, &scnhdr.s_lnnoptr, uint32_t);
-		unencode(s_nreloc,  &scnhdr.s_nreloc,  uint16_t);
-		unencode(s_nlnno,   &scnhdr.s_nlnno,   uint16_t);
-		unencode(s_flags,   &scnhdr.s_flags,   uint32_t);
-
-		end_addr = s_vaddr + s_size;
-
-		if (s_relptr != 0) {
-			/*
-			 *  TODO: Read this url, or similar:
-			 *  http://www.iecc.com/linker/linker07.html
-			 */
-			fprintf(stderr, "%s: relocatable code/data in "
-			    "section nr %i: not yet implemented (TODO)\n",
-			    filename, secn);
+		if (s_relptr == 0 && s_nreloc != 0) {
+			fprintf(stderr, "%s: no relocation info, but >0 relocations, for section  %i\n", filename, secn);
 			exit(1);
 		}
 
-		/*  Loadable? Then load the section:  */
-		if (s_scnptr != 0 && s_size != 0 &&
-		    s_vaddr != 0 && !(s_flags & 0x02)) {
-			/*  Load the section into emulated memory:  */
-			fseek(f, s_scnptr, SEEK_SET);
-			total_len = 0;
-			chunk_size = 1;
-			if ((s_vaddr & 0xf) == 0)	chunk_size = 0x10;
-			if ((s_vaddr & 0xff) == 0)	chunk_size = 0x100;
-			if ((s_vaddr & 0xfff) == 0)	chunk_size = 0x1000;
-			while (total_len < s_size) {
-				len = chunk_size;
-				if (total_len + len > s_size)
-					len = s_size - total_len;
-				len = fread(buf, 1, chunk_size, f);
-				if (len == 0) {
-					debug("!!! total_len = %i, "
-					    "chunk_size = %i, len = %i\n",
-					    total_len, chunk_size, len);
-					break;
-				}
+		if (s_relptr != 0 && !relocated) {
+			// TODO: better relocation target. Currently hardcoded to
+			// 1 MB below top of RAM.
+			uint32_t relocationTarget = mem->physical_max < 512 * 1048576
+				? mem->physical_max : 512 * 1048576;
+			relocationTarget -= 1048576;
+			relocationTarget += 0x80000000;	// MIPS kseg0
+			relocationOffset = relocationTarget - a_tstart;
 
-				m->cpus[0]->memory_rw(m->cpus[0], mem, s_vaddr,
-				    &buf[0], len, MEM_WRITE, NO_EXCEPTIONS);
-				s_vaddr += len;
-				total_len += len;
+			if (s_vaddr != s_paddr) {
+				fprintf(stderr, "%s: relocated ECOFF, but vaddr (0x%08x) != paddr (0x%08x): TODO, for section  %i\n", filename, (int)s_vaddr, (int)s_paddr, secn);
+				exit(1);
+			}
+			
+			if (!relocated) {
+				debug("relocating from base 0x%08x to 0x%08x\n",
+					a_tstart, relocationTarget);
+				a_tstart += relocationOffset;
+				a_dstart += relocationOffset;
+				a_bstart += relocationOffset;
+				a_entry += relocationOffset;
+				a_gp += relocationOffset;
+
+				relocated = true;
 			}
 		}
 	}
 
+	// Load symbols, if there are any.
 	if (f_symptr != 0 && f_nsyms != 0) {
 		struct ecoff_symhdr symhdr;
 		int sym_magic, iextMax, issExtMax, issMax, crfd;
 		off_t cbRfdOffset, cbExtOffset, cbSsExtOffset, cbSsOffset;
 		char *symbol_data;
-		struct ecoff_extsym *extsyms;
-		int nsymbols, sym_nr;
+		int sym_nr;
 
 		fseek(f, f_symptr, SEEK_SET);
 
@@ -429,7 +408,7 @@ static void file_load_ecoff(struct machine *m, struct memory *mem,
 			unencode(value, &extsyms[sym_nr].es_value, uint32_t);
 
 			extsyms[sym_nr].es_strindex = strindex;
-			extsyms[sym_nr].es_value    = value;
+			extsyms[sym_nr].es_value    = value + relocationOffset;
 		}
 
 		for (sym_nr=0; sym_nr<nsymbols; sym_nr++) {
@@ -442,14 +421,191 @@ static void file_load_ecoff(struct machine *m, struct memory *mem,
 			    symbol_data + extsyms[sym_nr].es_strindex, 0, -1);
 		}
 
-		free(extsyms);
 		free(symbol_data);
 
 skip_normal_coff_symbols:
 		;
 	}
 
+	/*  Then, load the sections that are loadable:  */
+	for (secn=0; secn<f_nscns; secn++) {
+		off_t s_scnptr, s_relptr, s_lnnoptr;
+		unsigned int s_nreloc, s_nlnno, s_flags, s_size;
+		uint64_t s_paddr, s_vaddr;
+
+		/*  Read a section header:  */
+		fseek(f, sectionHeadersPos + sizeof(scnhdr) * secn, SEEK_SET);
+		len = fread(&scnhdr, 1, sizeof(scnhdr), f);
+		if (len != sizeof(scnhdr)) {
+			fprintf(stderr, "%s: incomplete section "
+			    "header %i\n", filename, secn);
+			exit(1);
+		}
+
+		unencode(s_paddr,   &scnhdr.s_paddr,   uint32_t);
+		unencode(s_vaddr,   &scnhdr.s_vaddr,   uint32_t);
+		unencode(s_size,    &scnhdr.s_size,    uint32_t);
+		unencode(s_scnptr,  &scnhdr.s_scnptr,  uint32_t);
+		unencode(s_relptr,  &scnhdr.s_relptr,  uint32_t);
+		unencode(s_lnnoptr, &scnhdr.s_lnnoptr, uint32_t);
+		unencode(s_nreloc,  &scnhdr.s_nreloc,  uint16_t);
+		unencode(s_nlnno,   &scnhdr.s_nlnno,   uint16_t);
+		unencode(s_flags,   &scnhdr.s_flags,   uint32_t);
+
+		s_vaddr += relocationOffset;
+		end_addr = s_vaddr + s_size;
+
+		/*  Loadable? Then load the section:  */
+		if (s_scnptr != 0 && s_size != 0 &&
+		    s_vaddr != 0 && !(s_flags & 0x02)) {
+			/*  Load the section into emulated memory:  */
+			fseek(f, s_scnptr, SEEK_SET);
+			total_len = 0;
+			chunk_size = 1;
+			if ((s_vaddr & 0xf) == 0)	chunk_size = 0x10;
+			if ((s_vaddr & 0xff) == 0)	chunk_size = 0x100;
+			if ((s_vaddr & 0xfff) == 0)	chunk_size = 0x1000;
+			while (total_len < s_size) {
+				len = chunk_size;
+				if (total_len + len > s_size)
+					len = s_size - total_len;
+				len = fread(buf, 1, chunk_size, f);
+				if (len == 0) {
+					debug("!!! total_len = %i, "
+					    "chunk_size = %i, len = %i\n",
+					    total_len, chunk_size, len);
+					break;
+				}
+
+				m->cpus[0]->memory_rw(m->cpus[0], mem, s_vaddr,
+				    &buf[0], len, MEM_WRITE, NO_EXCEPTIONS);
+				s_vaddr += len;
+				total_len += len;
+			}
+
+			if (relocated && s_relptr != 0) {
+				// Relocate.
+				fseek(f, s_relptr, SEEK_SET);
+				struct mips_ecoff_reloc* relocs;
+				CHECK_ALLOCATION(relocs = (struct mips_ecoff_reloc*)
+				    	malloc(s_nreloc * sizeof(struct mips_ecoff_reloc)));
+				len = fread(relocs, 1, s_nreloc * sizeof(struct mips_ecoff_reloc), f);
+				if ((size_t)len != s_nreloc * sizeof(struct mips_ecoff_reloc)) {
+					fprintf(stderr, "%s: could not read relocation entries for section  %i\n", filename, secn);
+					exit(1);
+				}
+				
+				for (size_t ri = 0; ri < s_nreloc; ++ri) {
+					uint32_t vaddr = ntohl(relocs[ri].vaddr);
+					uint32_t symbolIndexAndType = ntohl(relocs[ri].symbolIndexAndType);
+
+					vaddr += relocationOffset;
+
+					int isExternal = symbolIndexAndType & 1;
+					int relType = (symbolIndexAndType >> 1) & 15;
+					int symbolIndex = symbolIndexAndType >> 8;
+
+					if (symbolIndex < 0 || symbolIndex >= nsymbols) {
+						fprintf(stderr, "%s: relocation for out-of-range symbol %i\n", filename, symbolIndex);
+						exit(1);
+					}
+
+					/*
+					 *  This is a wild guess. If isExternal is false,
+					 *  then perhaps different relocations should be
+					 *  used for text, data, rdata, etc. (TODO.)
+					 */
+					uint32_t r;
+					if (isExternal)
+						r = extsyms[symbolIndex].es_value;
+					else
+						r = relocationOffset;
+
+					// printf("symbolIndex = %i: %08x\n", symbolIndex, r);
+
+					uint16_t relHi = r >> 16;
+					uint16_t relLo = r & 0xffff;
+
+					/*
+					 *  Relocation types for MIPS ECOFF:
+					 *
+					 *  REFHALF	1
+					 *  REFWORD	2
+					 *  JMPADDR	3
+					 *  REFHI	4
+					 *  REFLO	5
+					 *  GPREL	6
+					 *  LITERAL	7
+					 *
+					 *
+					 *  SGI's sash uses relocations like these:
+					 *
+					 *  10 00 00 00  00 00 00 07
+					 *  8ff00000: 08000000	j	0x80000000
+					 *
+					 *  10 02 12 b4  00 01 a8 09
+					 *  8ff212b4: 3c1d0000	lui	sp,0x0
+					 *
+					 *  10 02 12 b8  00 01 a8 0b
+					 *  8ff212b8: 27bd0000	addiu	sp,sp,0
+					 */
+					if (relType == 2) {
+						// "REFWORD" relocation.
+						uint32_t data;
+						m->cpus[0]->memory_rw(m->cpus[0], mem, vaddr,
+						    (uint8_t*)&data, sizeof(data), MEM_READ, NO_EXCEPTIONS);
+						data = ntohl(data);
+						// printf("data=%08x ", data);
+						data += r;
+						// printf("=> %08x (symbolIndex %i, r = %08x, relocationOffset= %08x)\n", data, symbolIndex, r, relocationOffset);
+						data = htonl(data);
+						m->cpus[0]->memory_rw(m->cpus[0], mem, vaddr,
+						    (uint8_t*)&data, sizeof(data), MEM_WRITE, NO_EXCEPTIONS);
+					} else if (relType == 3) {
+						// "JMPADDR" relocation.
+						uint32_t data;
+						m->cpus[0]->memory_rw(m->cpus[0], mem, vaddr,
+						    (uint8_t*)&data, sizeof(data), MEM_READ, NO_EXCEPTIONS);
+						data = ntohl(data);
+						data = (data & 0xfc000000) | ((data + (r >> 2)) & 0x03ffffff);
+						data = htonl(data);
+						m->cpus[0]->memory_rw(m->cpus[0], mem, vaddr,
+						    (uint8_t*)&data, sizeof(data), MEM_WRITE, NO_EXCEPTIONS);
+					} else if (relType == 4) {
+						// "REFHI" relocation.
+						uint32_t data;
+						m->cpus[0]->memory_rw(m->cpus[0], mem, vaddr,
+						    (uint8_t*)&data, sizeof(data), MEM_READ, NO_EXCEPTIONS);
+						data = ntohl(data);
+						data = (data & 0xffff0000) | ((data + relHi) & 0xffff);
+						data = htonl(data);
+						m->cpus[0]->memory_rw(m->cpus[0], mem, vaddr,
+						    (uint8_t*)&data, sizeof(data), MEM_WRITE, NO_EXCEPTIONS);
+					} else if (relType == 5) {
+						// "REFLO" relocation.
+						uint32_t data;
+						m->cpus[0]->memory_rw(m->cpus[0], mem, vaddr,
+						    (uint8_t*)&data, sizeof(data), MEM_READ, NO_EXCEPTIONS);
+						data = ntohl(data);
+						data = (data & 0xffff0000) | ((data + relLo) & 0xffff);
+						data = htonl(data);
+						m->cpus[0]->memory_rw(m->cpus[0], mem, vaddr,
+						    (uint8_t*)&data, sizeof(data), MEM_WRITE, NO_EXCEPTIONS);
+					} else {
+						fprintf(stderr, "%s: unimplemented relType %i\n", filename, relType);
+						exit(1);
+					}
+				}
+				
+				free(relocs);
+			}
+		}
+	}
+
 	fclose(f);
+
+	if (extsyms != NULL)
+		free(extsyms);
 
 	*entrypointp = a_entry;
 	*gpp = a_gp;

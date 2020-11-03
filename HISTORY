@@ -4923,3 +4923,5 @@ Changelog for GXemul:
 20201101	bootblock.cc now parses SGI disk boot blocks, and tries to
 		load the OSLoader (sash), if booting without an explicitly
 		provided OS kernel.
+20201103	The ECOFF file loader can now (barely) load relocated binaries,
+		such as "sash" from an IRIX installation on my real O2.
