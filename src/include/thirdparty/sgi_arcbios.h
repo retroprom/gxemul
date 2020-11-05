@@ -117,6 +117,11 @@ struct arcbios_spb {
 	uint32_t	AdapterType;
 	uint32_t	AdapterVectorLength;
 	uint32_t	AdapterVector;			/*  was void *  */
+
+	/*  GXemul additions, to make the struct the same length as on my real O2:  */
+	uint32_t	unknown0;
+	uint32_t	unknown1;
+	uint32_t	unknown2;
 };
 
 /*

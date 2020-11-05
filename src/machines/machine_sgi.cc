@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -63,7 +63,6 @@ MACHINE_SETUP(sgi)
 	struct memory *mem = machine->memory;
 	char tmpstr[1000];
 	int i, j;
-	char *eaddr_string = strdup("eaddr=10:20:30:40:50:60");		/*  bogus  */
 	unsigned char macaddr[6];
 	char *machineName;
 
@@ -96,6 +95,8 @@ MACHINE_SETUP(sgi)
 	}
 
 	net_generate_unique_mac(machine, macaddr);
+
+	char *eaddr_string;
 	CHECK_ALLOCATION(eaddr_string = (char *) malloc(ETHERNET_STRING_MAXLEN));
 
 	switch (machine->machine_subtype) {
@@ -497,7 +498,7 @@ j = 0;
 		 */
 
 		snprintf(eaddr_string, ETHERNET_STRING_MAXLEN,
-		    "eaddr=%02x:%02x:%02x:%02x:%02x:%02x",
+		    "%02x:%02x:%02x:%02x:%02x:%02x",
 		    macaddr[0], macaddr[1], macaddr[2],
 		    macaddr[3], macaddr[4], macaddr[5]);
 

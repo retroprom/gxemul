@@ -4925,3 +4925,6 @@ Changelog for GXemul:
 		provided OS kernel.
 20201103	The ECOFF file loader can now (barely) load relocated binaries,
 		such as "sash" from an IRIX installation on my real O2.
+20201105	Some minor refactoring of arcbios environment variables etc,
+		to attempt to get emulated O2 boot-from-disk image (or cdrom
+		image) to work better.

@@ -26,6 +26,10 @@
  *
  *
  *  COMMENT: ARCBIOS and ARCS emulation
+ *
+ *  Some good info here:
+ *	https://www.linux-mips.org/wiki/ARC
+ *	
  */
 
 #include <stdio.h>
@@ -1015,10 +1019,8 @@ ugly_goto:
 /*
  *  arcbios_handle_to_disk_id_and_type():
  */
-static int arcbios_handle_to_disk_id_and_type(struct machine *machine,
-	int handle, int *typep)
+static int arcbios_handle_to_disk_id_and_type(struct machine *machine, int handle, int *typep)
 {
-	int id, cdrom;
 	const char *s;
 
 	if (handle < 0 || handle >= ARC_MAX_HANDLES)
@@ -1033,15 +1035,25 @@ static int arcbios_handle_to_disk_id_and_type(struct machine *machine,
 	 *  TODO: This is really ugly and hardcoded.
 	 */
 
-	if (strncmp(s, "scsi(", 5) != 0 || strlen(s) < 13)
+	if (strncmp(s, "pci(0)", 6) == 0)
+		s += 6;
+
+	if (strncmp(s, "scsi(0)", 7) == 0) {
+		*typep = DISKIMAGE_SCSI;
+		s += 7;
+	} else {
 		return -1;
+	}
 
-	*typep = DISKIMAGE_SCSI;
+	if (strncmp(s, "disk(", 5) == 0) {
+		return atoi(s + 5);
+	}
 
-	cdrom = (s[7] == 'c');
-	id = cdrom? atoi(s + 13) : atoi(s + 12);
+	if (strncmp(s, "cdrom(", 6) == 0) {
+		return atoi(s + 6);
+	}
 
-	return id;
+	return -1;
 }
 
 
@@ -1055,8 +1067,7 @@ static void arcbios_handle_to_start_and_size(struct machine *machine,
 	const char *s2;
 	int disk_id, disk_type;
 
-	disk_id = arcbios_handle_to_disk_id_and_type(machine,
-	    handle, &disk_type);
+	disk_id = arcbios_handle_to_disk_id_and_type(machine, handle, &disk_type);
 
 	if (disk_id < 0)
 		return;
@@ -1064,6 +1075,9 @@ static void arcbios_handle_to_start_and_size(struct machine *machine,
 	/*  This works for "partition(0)":  */
 	*start = 0;
 	*size = diskimage_getsize(machine, disk_id, disk_type);
+
+	if (machine->machine_type == MACHINE_SGI)
+		return;
 
 	s2 = strstr(s, "partition(");
 	if (s2 != NULL) {
@@ -1107,25 +1121,71 @@ static int arcbios_getfileinformation(struct cpu *cpu)
 /*
  *  arcbios_private_emul():
  *
- *  TODO:  This is probably SGI specific. (?)
+ *  The "normal" vector entries are probably from the ARC standard, whereas
+ *  the "private" entries are unknown SGI specific entries. In the emulator,
+ *  these are dummy implementations, just enough to fool IRIX to continue
+ *  past these calls.
  *
- *	0x04	get nvram table
+ *  These names are guesses based on symbols on the callstack when "sash"
+ *  calls these entries, perhaps the real function is something completely
+ *  different.
+ *
+ *	0x00	ioctl (?)
+ *	0x04	get nvram table (?)
+ *	0x14	fs_register (?)
+ *	0x1c	Signal (?)
+ *	0x20	initGfxGui (?)
+ *	0x24	sgivers (get version?)
+ *	0x30	cpufreq (?)
  */
-void arcbios_private_emul(struct cpu *cpu)
+void arcbios_sgi_emul(struct cpu *cpu)
 {
 	int vector = cpu->pc & 0xfff;
 
 	switch (vector) {
-	case 0x04:
-		debug("[ ARCBIOS PRIVATE get nvram table(): TODO ]\n");
+
+	case 0x00:
+		debug("[ ARCBIOS SGI: ioctl? TODO ]\n");
 		cpu->cd.mips.gpr[MIPS_GPR_V0] = 0;
 		break;
+/*
+	case 0x04:
+		debug("[ ARCBIOS SGI: get nvram table(): TODO ]\n");
+		cpu->cd.mips.gpr[MIPS_GPR_V0] = 0;
+		break;
+*/
+	case 0x14:
+		debug("[ ARCBIOS SGI: fs_register? TODO ]\n");
+		cpu->cd.mips.gpr[MIPS_GPR_V0] = 0;
+		break;
+
+	case 0x1c:
+		debug("[ ARCBIOS SGI: Signal? TODO ]\n");
+		cpu->cd.mips.gpr[MIPS_GPR_V0] = 0;
+		break;
+
+	case 0x20:
+		debug("[ ARCBIOS SGI: initGfxGui? TODO ]\n");
+		cpu->cd.mips.gpr[MIPS_GPR_V0] = 0;
+		break;
+
+	case 0x24:
+		debug("[ ARCBIOS SGI: sgivers? TODO ]\n");
+		cpu->cd.mips.gpr[MIPS_GPR_V0] = 0;
+		break;
+
+	case 0x30:
+		// This value is displayed by hinv (in sash) as "Processor: xxx MHz"
+		debug("[ ARCBIOS SGI: cpufreq ]\n");
+		cpu->cd.mips.gpr[MIPS_GPR_V0] = 175;
+		break;
+
 	default:
 		cpu_register_dump(cpu->machine, cpu, 1, 0x1);
 		debug("a0 points to: ");
 		dump_mem_string(cpu, cpu->cd.mips.gpr[MIPS_GPR_A0]);
 		debug("\n");
-		fatal("ARCBIOS: unimplemented PRIVATE vector 0x%x\n", vector);
+		fatal("ARCBIOS: unimplemented SGI vector 0x%x\n", vector);
 		cpu->running = 0;
 	}
 }
@@ -1171,7 +1231,13 @@ int arcbios_emul(struct cpu *cpu)
 
 	if (cpu->pc >= ARC_PRIVATE_ENTRIES &&
 	    cpu->pc < ARC_PRIVATE_ENTRIES + 100*sizeof(uint32_t)) {
-		arcbios_private_emul(cpu);
+		if (machine->machine_type == MACHINE_SGI)
+			arcbios_sgi_emul(cpu);
+		else {
+			fatal("[ ARCBIOS private call for non-SGI. ]\n");
+			exit(1);
+		}
+
 		return 1;
 	}
 
@@ -1635,8 +1701,10 @@ int arcbios_emul(struct cpu *cpu)
 				machine->md.arc->current_seek_offset[handleTmp] +=
 				    cpu->cd.mips.gpr[MIPS_GPR_A2];
 				cpu->cd.mips.gpr[MIPS_GPR_V0] = 0;
-			} else
+			} else {
+				debug("[ ... res = %i ]\n", res);
 				cpu->cd.mips.gpr[MIPS_GPR_V0] = ARCBIOS_EIO;
+			}
 			free(tmp_buf);
 		}
 		break;
@@ -2175,16 +2243,34 @@ void arcbios_console_init(struct machine *machine,
 }
 
 
+static string environment_string(struct machine *machine, const map<string,string>& env, const string& variable)
+{
+	string s = variable;
+	
+	if  (machine->machine_type == MACHINE_ARC) {
+		std::locale loc;
+		for (size_t i = 0; i < s.length(); ++i)
+			s[i] = toupper(s[i], loc);
+	}
+
+	s = s + string("=");
+	
+	auto v = env.find(variable);
+	if (v != env.end())
+		s = s + v->second;
+
+	return s;
+}
+
+
 /*
  *  arc_environment_setup():
  *
  *  Initialize the emulated environment variables.
  */
-static void arc_environment_setup(struct machine *machine, int is64bit,
-	const char *primary_ether_addr)
+static void arc_environment_setup(struct machine *machine, int is64bit, const char *primary_ether_addr)
 {
-	size_t bootpath_len = 500;
-	char *init_bootpath;
+	map<string,string> env;
 	uint64_t addr, addr2;
 	struct cpu *cpu = machine->cpus[0];
 
@@ -2194,60 +2280,192 @@ static void arc_environment_setup(struct machine *machine, int is64bit,
 	 *  TODO: How about floppies? multi()disk()fdisk()
 	 *        Is tftp() good for netbooting?
 	 */
-	CHECK_ALLOCATION(init_bootpath = (char *) malloc(bootpath_len));
-	init_bootpath[0] = '\0';
+	string boot_device;
 
 	if (machine->bootdev_id < 0 || machine->force_netboot) {
-		snprintf(init_bootpath, bootpath_len, "tftp()");
+		boot_device = "tftp()";
 	} else {
-		/*  TODO: Make this nicer.  */
+		const char* prefix = "";
+
 		if (machine->machine_type == MACHINE_SGI) {
-			if (machine->machine_subtype == 30)
-				strlcat(init_bootpath, "xio(0)pci(15)",
-				    bootpath_len);
-			if (machine->machine_subtype == 32)
-				strlcat(init_bootpath, "pci(0)",
-				    bootpath_len);
+			switch (machine->machine_subtype) {
+			case 30:
+				prefix = "xio(0)pci(15)";
+				break;
+			case 32:
+				prefix = "pci(0)";
+				break;
+			default:
+				fprintf(stderr, "TODO: prefix for SGI IP%i\n", machine->machine_subtype);
+				exit(1);
+			}
 		}
 
-		if (diskimage_is_a_cdrom(machine, machine->bootdev_id,
-		    machine->bootdev_type))
-			snprintf(init_bootpath + strlen(init_bootpath),
-			    bootpath_len - strlen(init_bootpath),
-			    "scsi(0)cdrom(%i)fdisk(0)", machine->bootdev_id);
-		else
-			snprintf(init_bootpath + strlen(init_bootpath),
-			    bootpath_len - strlen(init_bootpath),
-			    "scsi(0)disk(%i)rdisk(0)partition(1)",
-			    machine->bootdev_id);
+		boot_device = prefix;
+
+		if (diskimage_is_a_cdrom(machine, machine->bootdev_id, machine->bootdev_type)) {
+			stringstream ss;
+			ss << "scsi(0)cdrom(" << machine->bootdev_id << ")";
+			boot_device = boot_device + ss.str();
+		} else {
+			stringstream ss;
+			ss << "scsi(0)disk(" << machine->bootdev_id << ")rdisk(0)";
+			boot_device = boot_device + ss.str();
+		}
+
+		string systempartition = boot_device;
+		if (machine->machine_type == MACHINE_SGI || !diskimage_is_a_cdrom(machine, machine->bootdev_id, machine->bootdev_type)) {
+			int partition = 1;	// default ARC partition?
+			if (machine->machine_type == MACHINE_SGI)
+				partition = 8;
+
+			stringstream ss;
+			ss << "partition(" << partition << ")";
+			systempartition = systempartition + ss.str();
+		} else {
+			systempartition = systempartition + "fdisk(0)";
+		}
+
+		env["SystemPartition"] = systempartition;
+
+		string osloadpartition = boot_device;
+		if (machine->machine_type == MACHINE_SGI || !diskimage_is_a_cdrom(machine, machine->bootdev_id, machine->bootdev_type)) {
+			int partition = 1;	// default ARC partition?
+			if (machine->machine_type == MACHINE_SGI)
+				partition = 0;
+
+			stringstream ss;
+			ss << "partition(" << partition << ")";
+			osloadpartition = osloadpartition + ss.str();
+		} else {
+			osloadpartition = osloadpartition + "fdisk(0)";
+		}
+
+		env["OSLoadPartition"] = osloadpartition;
 	}
 
-	if (machine->machine_type == MACHINE_ARC)
-		strlcat(init_bootpath, "\\", bootpath_len);
-
-	CHECK_ALLOCATION(machine->bootstr = (char *) malloc(ARC_BOOTSTR_BUFLEN));
-
-	strlcpy(machine->bootstr, init_bootpath, ARC_BOOTSTR_BUFLEN);
-	if (strlcat(machine->bootstr, machine->boot_kernel_filename,
-	    ARC_BOOTSTR_BUFLEN) >= ARC_BOOTSTR_BUFLEN) {
-		fprintf(stderr, "boot string too long?\n");
-		exit(1);
+	if (machine->machine_type == MACHINE_ARC) {
+		env["OSLoader"] = "\\os\\nt\\osloader.exe";
+		env["OSLoadFilename"] = "\\todo";
+	} else {
+		env["OSLoader"] = "sash";
+		env["OSLoadFilename"] = "/unix";
 	}
+
+	if (machine->boot_kernel_filename[0] != '\0')
+		env["OSLoadFilename"] = string("/") + machine->boot_kernel_filename;
+
+	if (machine->machine_type == MACHINE_SGI) {
+		/*  g for graphical mode. G for graphical mode with SGI logo visible on Irix?  */
+		if (machine->x11_md.in_use) {
+			env["ConsoleIn"]  = "keyboard()";
+			env["ConsoleOut"] = "video()";
+			env["console"] = "g";
+			env["gfx"] = "alive";
+		} else {
+			/*  'd' or 'd2' in Irix, 'ttyS0' in Linux?  */
+			env["ConsoleIn"]  = "serial(0)";
+			env["ConsoleOut"] = "serial(0)";
+			env["console"] = "d";
+			env["gfx"] = "dead";
+		}
+
+		env["AutoLoad"] = "No";
+		
+		if (machine->bootdev_id < 0 || machine->force_netboot) {
+			/*
+			 *  diskless=1 means boot from network disk? (nfs?)
+			 *  diskless=2 means boot from network tape? TODO
+			 */
+			env["diskless"] = "1";
+
+			// store_pointer_and_advance(cpu, &addr2, addr, is64bit);
+			// add_environment_string(cpu, "tapedevice=bootp()10.0.0.2:/dev/tape", &addr);
+
+			env["root"] = "xyz";	// TODO
+
+			env["bootfile"] = "bootp()10.0.0.2:/var/boot/client/unix";
+			env["SystemPartition"] = "bootp()10.0.0.2:/var/boot/client";
+			env["OSLoadPartition"] = "bootp()10.0.0.2:/var/boot/client";
+		} else {
+			env["diskless"] = "0";
+		}
+
+		/*  TODO: Keep these variables in sync with bootblock loading,
+			i.e. OSLoader is the name of the voldir entry to boot
+			with.  */
+
+		env["kernname"] = "unix";	// TODO: like OSLoadFilename?
+
+		env["volume"] = "80";
+		env["sgilogo"] = "y";
+		env["monitor"] = "h";
+		env["TimeZone"] = "GMT";
+		env["nogfxkbd"] = "1";
+		env["keybd"] = "US";
+		env["cpufreq"] = "123";
+		env["dbaud"] = "9600";
+		env["rbaud"] = "9600";
+		env["rebound"] = "y";
+		env["crt_option"] = "1";
+		env["netaddr"] = "10.0.0.1";
+		env["netmask"] = "255.0.0.0";
+		env["dlserver"] = "10.0.0.2";
+		env["srvaddr"] = "10.0.0.2";
+		env["eaddr"] = primary_ether_addr;
+
+		// showconfig 0 means don't show. 1 means show some.
+		// 2 means show more. TODO: higher values?
+		env["showconfig"] = "255";
+
+		env["verbose"] = "1";
+		env["diagmode"] = "v";
+		env["debug_bigmem"] = "1";
+	} else {
+		//  General ARC:
+		if (machine->x11_md.in_use) {
+			env["ConsoleIn"]  = "multi()key()keyboard()console()";
+			env["ConsoleOut"] = "multi()video()monitor()console()";
+		} else {
+			/*  TODO: serial console for ARC?  */
+			env["ConsoleIn"]  = "multi()serial(0)";
+			env["ConsoleOut"] = "multi()serial(0)";
+		}
+	}
+
+	/*  Boot string is either:
+		SystemPartition + OSLoader	  (e.g. sash)
+	    or
+	    	OSLoadPartition + OSLoadFilename  (e.g. /unix)  */
+	string boot_string;
+	boot_string = env["SystemPartition"] +
+		(machine->machine_type == MACHINE_SGI ? "/" : "\\")
+		+ env["OSLoader"];
+
+	// boot_string = env["OSLoadPartition"] + env["OSLoadFilename"];
 
 	/*  Boot args., eg "-a"  */
 	machine->bootarg = machine->boot_string_argument;
 
-	/*  argc, argv, envp in a0, a1, a2:  */
+	if (machine->machine_type == MACHINE_SGI) {
+		env["OSLoadOptions"] = "auto";
+	} else {
+		env["OSLoadOptions"] = machine->bootarg;
+	}
+
+	/*  a0 = argc:  */
 	cpu->cd.mips.gpr[MIPS_GPR_A0] = 0; /*  note: argc is increased later  */
 
-	/*  TODO:  not needed?  */
+	/*  sp = just below top of RAM. (TODO: not needed?)  */
 	cpu->cd.mips.gpr[MIPS_GPR_SP] = (int64_t)(int32_t)
 	    (machine->physical_ram_in_mb * 1048576 + 0x80000000 - 0x2080);
 
-	/*  Set up argc/argv:  */
+	/*  a1 = argv:  */
 	addr = ARC_ENV_STRINGS;
 	addr2 = ARC_ARGV_START;
 	cpu->cd.mips.gpr[MIPS_GPR_A1] = addr2;
+
+	CHECK_ALLOCATION(machine->bootstr = strdup(boot_string.c_str()));
 
 	/*  bootstr:  */
 	store_pointer_and_advance(cpu, &addr2, addr, is64bit);
@@ -2261,8 +2479,38 @@ static void arc_environment_setup(struct machine *machine, int is64bit,
 		cpu->cd.mips.gpr[MIPS_GPR_A0] ++;
 	}
 
-	store_pointer_and_advance(cpu, &addr2, 0, is64bit);
+	/*  A few of the environment variables are also included as regular
+	    arguments, as per
+	    https://misc.openbsd.narkive.com/6hkw57ju/openbsd-sgi-snapshot-fails-to-boot-from-harddisk#post2  */
+	store_pointer_and_advance(cpu, &addr2, addr, is64bit);
+	add_environment_string(cpu, environment_string(machine, env, "OSLoadOptions").c_str(), &addr);
+	cpu->cd.mips.gpr[MIPS_GPR_A0] ++;
 
+	store_pointer_and_advance(cpu, &addr2, addr, is64bit);
+	add_environment_string(cpu, environment_string(machine, env, "ConsoleIn").c_str(), &addr);
+	cpu->cd.mips.gpr[MIPS_GPR_A0] ++;
+
+	store_pointer_and_advance(cpu, &addr2, addr, is64bit);
+	add_environment_string(cpu, environment_string(machine, env, "ConsoleOut").c_str(), &addr);
+	cpu->cd.mips.gpr[MIPS_GPR_A0] ++;
+
+	store_pointer_and_advance(cpu, &addr2, addr, is64bit);
+	add_environment_string(cpu, environment_string(machine, env, "SystemPartition").c_str(), &addr);
+	cpu->cd.mips.gpr[MIPS_GPR_A0] ++;
+
+	store_pointer_and_advance(cpu, &addr2, addr, is64bit);
+	add_environment_string(cpu, environment_string(machine, env, "OSLoader").c_str(), &addr);
+	cpu->cd.mips.gpr[MIPS_GPR_A0] ++;
+
+	store_pointer_and_advance(cpu, &addr2, addr, is64bit);
+	add_environment_string(cpu, environment_string(machine, env, "OSLoadPartition").c_str(), &addr);
+	cpu->cd.mips.gpr[MIPS_GPR_A0] ++;
+
+	store_pointer_and_advance(cpu, &addr2, addr, is64bit);
+	add_environment_string(cpu, environment_string(machine, env, "OSLoadFilename").c_str(), &addr);
+	cpu->cd.mips.gpr[MIPS_GPR_A0] ++;
+
+	/*  a2 = envp:  */
 	cpu->cd.mips.gpr[MIPS_GPR_A2] = addr2;
 
 	if (machine->machine_type == MACHINE_SGI) {
@@ -2274,7 +2522,7 @@ static void arc_environment_setup(struct machine *machine, int is64bit,
 		 *  00004020  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
 		 *  00004030  00 00 00 00 31 2e 30 00  00 00 00 00 13 18 11 ae  |....1.0.........|
 		 *
-		 *  followed by environment variables at 0x4000. It is not required
+		 *  followed by environment variables at 0x4040. It is not required
 		 *  by NetBSD/OpenBSD/Linux, but Irix seems to hardcodedly look into
 		 *  the PROM address space for this header.
 		 */
@@ -2288,178 +2536,13 @@ static void arc_environment_setup(struct machine *machine, int is64bit,
 	}
 
 	/*
-	 *  Add environment variables.  For each variable, add it
-	 *  as a string using add_environment_string(), and add a
-	 *  pointer to it to the ARC_ENV_POINTERS array.
+	 *  Add environment variables.  For each variable, add it as a string
+	 *  using add_environment_string(), and add a pointer to it to the
+	 *  pointer array.
 	 */
-	if (machine->machine_type == MACHINE_SGI) {
-		if (machine->x11_md.in_use) {
-			store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-			add_environment_string(cpu, "ConsoleIn=keyboard()",
-			    &addr);
-			store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-			add_environment_string(cpu, "ConsoleOut=video()",
-			    &addr);
-
-			/*  g for graphical mode. G for graphical mode
-			    with SGI logo visible on Irix?  */
-			store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-			add_environment_string(cpu, "console=g", &addr);
-
-			store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-			add_environment_string(cpu, "gfx=alive", &addr);
-		} else {
-			store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-			add_environment_string(cpu, "ConsoleIn=serial(0)",
-			    &addr);
-			store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-			add_environment_string(cpu, "ConsoleOut=serial(0)",
-			    &addr);
-
-			/*  'd' or 'd2' in Irix, 'ttyS0' in Linux?  */
-			store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-			add_environment_string(cpu, "console=d", &addr);
-
-			store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-			add_environment_string(cpu, "gfx=dead", &addr);
-		}
-
+	for (const auto& v : env) {
 		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-		add_environment_string(cpu, "AutoLoad=No", &addr);
-		
-		if (machine->bootdev_id < 0 || machine->force_netboot) {
-			/*
-			 *  diskless=1 means boot from network disk? (nfs?)
-			 *  diskless=2 means boot from network tape?
-			 */
-			store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-			add_environment_string(cpu, "diskless=1", &addr);
-
-			// store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-			// add_environment_string(cpu, "tapedevice=bootp()10.0.0.2:/dev/tape", &addr);
-
-			store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-			add_environment_string(cpu, "bootfile=bootp()10.0.0.2:/var/boot/client/unix", &addr);
-
-			store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-			add_environment_string(cpu,
-			    "SystemPartition=bootp()10.0.0.2:/var/boot/client",
-			    &addr);
-			store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-			add_environment_string(cpu,
-			    "root=xyz",
-			    &addr);
-			store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-			add_environment_string(cpu,
-			    "OSLoadPartition=bootp()10.0.0.2:/var/boot/client",
-			    &addr);
-		} else {
-			store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-			add_environment_string(cpu, "diskless=0", &addr);
-
-			store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-			add_environment_string(cpu,
-			    "SystemPartition=pci(0)scsi(0)disk(2)rdisk(0)partition(8)",
-			    &addr);
-			store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-			add_environment_string(cpu,
-			    "OSLoadPartition=pci(0)scsi(0)disk(2)rdisk(0)partition(0)",
-			    &addr);
-		}
-
-		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-		add_environment_string(cpu, "volume=80", &addr);
-		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-		add_environment_string(cpu, "sgilogo=y", &addr);
-
-		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-		add_environment_string(cpu, "monitor=h", &addr);
-		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-		add_environment_string(cpu, "TimeZone=GMT", &addr);
-		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-		add_environment_string(cpu, "nogfxkbd=1", &addr);
-
-		/*  TODO IP30: 'xio(0)pci(15)scsi(0)disk(1)rdisk(0)partition(0)'  */
-
-		/*  TODO: Keep these variables in sync with bootblock loading,
-			i.e. OSLoader is the name of the voldir entry to boot
-			with.  */
-
-		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-		add_environment_string(cpu, "OSLoadFilename=/unix", &addr);
-		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-		add_environment_string(cpu, "OSLoader=sash", &addr);
-		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-		add_environment_string(cpu, "kernname=unix", &addr);
-
-		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-		add_environment_string(cpu, "rbaud=9600", &addr);
-		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-		add_environment_string(cpu, "rebound=y", &addr);
-		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-		add_environment_string(cpu, "crt_option=1", &addr);
-		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-		add_environment_string(cpu, "netaddr=10.0.0.1", &addr);
-		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-		add_environment_string(cpu, "netmask=255.0.0.0", &addr);
-		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-		add_environment_string(cpu, "dlserver=10.0.0.2", &addr);
-		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-		add_environment_string(cpu, "srvaddr=10.0.0.2", &addr);
-
-		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-		add_environment_string(cpu, "keybd=US", &addr);
-
-		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-		add_environment_string(cpu, "cpufreq=3", &addr);
-		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-		add_environment_string(cpu, "dbaud=9600", &addr);
-		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-		add_environment_string(cpu, primary_ether_addr, &addr);
-
-		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-		add_environment_string(cpu, "verbose=1", &addr);
-		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-		// showconfig 0 means don't show. 1 means show some.
-		// 2 means show more. TODO: higher values?
-		add_environment_string(cpu, "showconfig=255", &addr);
-		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-		add_environment_string(cpu, "diagmode=v", &addr);
-		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-		add_environment_string(cpu, "debug_bigmem=1", &addr);
-	} else {
-		char *tmp;
-		size_t mlen = ARC_BOOTSTR_BUFLEN;
-		CHECK_ALLOCATION(tmp = (char *) malloc(mlen));
-		snprintf(tmp, mlen, "OSLOADOPTIONS=%s", machine->bootarg);
-
-		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-		add_environment_string(cpu, tmp, &addr);
-
-		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-		snprintf(tmp, mlen,
-		    "OSLOADPARTITION=scsi(0)disk(%d)rdisk(0)partition(1)",
-		    machine->bootdev_id);
-		add_environment_string(cpu, tmp, &addr);
-		free(tmp);
-
-		if (machine->x11_md.in_use) {
-			store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-			add_environment_string(cpu,
-			    "CONSOLEIN=multi()key()keyboard()console()", &addr);
-			store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-			add_environment_string(cpu,
-			    "CONSOLEOUT=multi()video()monitor()console()",
-			    &addr);
-		} else {
-			/*  TODO: serial console for ARC?  */
-			store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-			add_environment_string(cpu,
-			    "CONSOLEIN=multi()serial(0)", &addr);
-			store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-			add_environment_string(cpu,
-			    "CONSOLEOUT=multi()serial(0)", &addr);
-		}
+		add_environment_string(cpu, environment_string(machine, env, v.first).c_str(), &addr);
 	}
 
 	/*  End the environment strings with an empty zero-terminated
@@ -2487,11 +2570,8 @@ void arcbios_init(struct machine *machine, int is64bit, uint64_t sgi_ram_offset,
 	char *name;
 	uint64_t arc_reserved, mem_base;
 	struct cpu *cpu = machine->cpus[0];
-	struct arcbios_sysid arcbios_sysid;
 	struct arcbios_dsp_stat arcbios_dsp_stat;
 	uint64_t system = 0;
-	struct arcbios_spb arcbios_spb;
-	struct arcbios_spb_64 arcbios_spb_64;
 
 	if (machine->md.arc == NULL) {
 		CHECK_ALLOCATION(machine->md.arc = (struct machine_arcbios *)
@@ -2544,6 +2624,7 @@ void arcbios_init(struct machine *machine, int is64bit, uint64_t sgi_ram_offset,
 
 	arcbios_set_default_exception_handler(cpu);
 
+	struct arcbios_sysid arcbios_sysid;
 	memset(&arcbios_sysid, 0, sizeof(arcbios_sysid));
 	if (machine->machine_type == MACHINE_SGI) {
 		/*  Vendor ID, max 8 chars:  */
@@ -2554,7 +2635,7 @@ void arcbios_init(struct machine *machine, int is64bit, uint64_t sgi_ram_offset,
 			memcpy(arcbios_sysid.ProductId, "87654321", 8);	/*  some kind of ID?  */
 			break;
 		case 32:
-			memcpy(arcbios_sysid.ProductId, "8", 1);    /*  6 or 8 (?)  */
+			memcpy(arcbios_sysid.ProductId, "f", 1);    /*  "6", "8", of "f"? It's "f" on my O2.  */
 			break;
 		default:
 			snprintf(arcbios_sysid.ProductId, 8, "IP%i", machine->machine_subtype);
@@ -2575,12 +2656,10 @@ void arcbios_init(struct machine *machine, int is64bit, uint64_t sgi_ram_offset,
 		}
 	}
 
-	store_buf(cpu, SGI_SYSID_ADDR, (char *)&arcbios_sysid,
-	    sizeof(arcbios_sysid));
+	store_buf(cpu, SGI_SYSID_ADDR, (char *)&arcbios_sysid, sizeof(arcbios_sysid));
 
 	arcbios_get_dsp_stat(cpu, &arcbios_dsp_stat);
-	store_buf(cpu, ARC_DSPSTAT_ADDR, (char *)&arcbios_dsp_stat,
-	    sizeof(arcbios_dsp_stat));
+	store_buf(cpu, ARC_DSPSTAT_ADDR, (char *)&arcbios_dsp_stat, sizeof(arcbios_dsp_stat));
 
 	/*
 	 *  The first 12 MBs of RAM are simply reserved... this simplifies
@@ -2678,8 +2757,7 @@ void arcbios_init(struct machine *machine, int is64bit, uint64_t sgi_ram_offset,
 		debug_indentation(DEBUG_INDENTATION);
 
 		CHECK_ALLOCATION(name = (char *) malloc(alloclen));
-		snprintf(name, alloclen, "SGI-IP%i",
-		    machine->machine_subtype);
+		snprintf(name, alloclen, "SGI-IP%i", machine->machine_subtype);
 
 		/*  A very special case for IP24 (which identifies itself
 		    as an IP22):  */
@@ -2879,32 +2957,23 @@ void arcbios_init(struct machine *machine, int is64bit, uint64_t sgi_ram_offset,
 	/*
 	 *  Set up Firmware Vectors:
 	 */
-	add_symbol_name(&machine->symbol_context,
-	    ARC_FIRMWARE_ENTRIES, 0x10000, "[ARCBIOS entry]", 0, 1);
+	add_symbol_name(&machine->symbol_context, ARC_FIRMWARE_ENTRIES, 0x10000, "[ARCBIOS entry]", 0, 1);
 
 	for (i=0; i<100; i++) {
 		if (is64bit) {
-			store_64bit_word(cpu, ARC_FIRMWARE_VECTORS + i*8,
-			    ARC_FIRMWARE_ENTRIES + i*8);
-			store_64bit_word(cpu, ARC_PRIVATE_VECTORS + i*8,
-			    ARC_PRIVATE_ENTRIES + i*8);
+			store_64bit_word(cpu, ARC_FIRMWARE_VECTORS + i*8, ARC_FIRMWARE_ENTRIES + i*8);
+			store_64bit_word(cpu, ARC_PRIVATE_VECTORS + i*8, ARC_PRIVATE_ENTRIES + i*8);
 
 			/*  "Magic trap" instruction:  */
-			store_32bit_word(cpu, ARC_FIRMWARE_ENTRIES + i*8,
-			    0x00c0de0c);
-			store_32bit_word(cpu, ARC_PRIVATE_ENTRIES + i*8,
-			    0x00c0de0c);
+			store_32bit_word(cpu, ARC_FIRMWARE_ENTRIES + i*8, 0x00c0de0c);
+			store_32bit_word(cpu, ARC_PRIVATE_ENTRIES + i*8, 0x00c0de0c);
 		} else {
-			store_32bit_word(cpu, ARC_FIRMWARE_VECTORS + i*4,
-			    ARC_FIRMWARE_ENTRIES + i*4);
-			store_32bit_word(cpu, ARC_PRIVATE_VECTORS + i*4,
-			    ARC_PRIVATE_ENTRIES + i*4);
+			store_32bit_word(cpu, ARC_FIRMWARE_VECTORS + i*4, ARC_FIRMWARE_ENTRIES + i*4);
+			store_32bit_word(cpu, ARC_PRIVATE_VECTORS + i*4, ARC_PRIVATE_ENTRIES + i*4);
 
 			/*  "Magic trap" instruction:  */
-			store_32bit_word(cpu, ARC_FIRMWARE_ENTRIES + i*4,
-			    0x00c0de0c);
-			store_32bit_word(cpu, ARC_PRIVATE_ENTRIES + i*4,
-			    0x00c0de0c);
+			store_32bit_word(cpu, ARC_FIRMWARE_ENTRIES + i*4, 0x00c0de0c);
+			store_32bit_word(cpu, ARC_PRIVATE_ENTRIES + i*4, 0x00c0de0c);
 		}
 	}
 
@@ -2914,39 +2983,39 @@ void arcbios_init(struct machine *machine, int is64bit, uint64_t sgi_ram_offset,
 	 */
 	if (is64bit) {
 		/*  ARCS64 SPD (TODO: This is just a guess)  */
+		struct arcbios_spb_64 arcbios_spb_64;
 		memset(&arcbios_spb_64, 0, sizeof(arcbios_spb_64));
-		store_64bit_word_in_host(cpu, (unsigned char *)
-		    &arcbios_spb_64.SPBSignature, ARCBIOS_SPB_SIGNATURE);
-		store_16bit_word_in_host(cpu, (unsigned char *)
-		    &arcbios_spb_64.Version, 64);
-		store_16bit_word_in_host(cpu, (unsigned char *)
-		    &arcbios_spb_64.Revision, 0);
-		store_64bit_word_in_host(cpu, (unsigned char *)
-		    &arcbios_spb_64.FirmwareVector, ARC_FIRMWARE_VECTORS);
-		store_buf(cpu, SGI_SPB_ADDR, (char *)&arcbios_spb_64, 
-		    sizeof(arcbios_spb_64));
+		store_64bit_word_in_host(cpu, (unsigned char *) &arcbios_spb_64.SPBSignature, ARCBIOS_SPB_SIGNATURE);
+		store_16bit_word_in_host(cpu, (unsigned char *) &arcbios_spb_64.Version, 64);
+		store_16bit_word_in_host(cpu, (unsigned char *) &arcbios_spb_64.Revision, 0);
+		store_64bit_word_in_host(cpu, (unsigned char *) &arcbios_spb_64.FirmwareVector, ARC_FIRMWARE_VECTORS);
+		store_buf(cpu, SGI_SPB_ADDR, (char *)&arcbios_spb_64, sizeof(arcbios_spb_64));
 	} else {
 		/*  ARCBIOS SPB:  (For ARC and 32-bit SGI modes)  */
+		struct arcbios_spb arcbios_spb;
 		memset(&arcbios_spb, 0, sizeof(arcbios_spb));
-		store_32bit_word_in_host(cpu, (unsigned char *)
-		    &arcbios_spb.SPBSignature, ARCBIOS_SPB_SIGNATURE);
-		store_32bit_word_in_host(cpu, (unsigned char *)   
-		    &arcbios_spb.SPBLength, sizeof(arcbios_spb));     
-		store_16bit_word_in_host(cpu, (unsigned char *)   
-		    &arcbios_spb.Version, 1);
-		store_16bit_word_in_host(cpu, (unsigned char *)
-		    &arcbios_spb.Revision, machine->machine_type ==
-		    MACHINE_SGI? 10 : 2);
-		store_32bit_word_in_host(cpu, (unsigned char *)
-		    &arcbios_spb.FirmwareVector, ARC_FIRMWARE_VECTORS);
-		store_32bit_word_in_host(cpu, (unsigned char *)
-		    &arcbios_spb.FirmwareVectorLength, 100 * 4);    /*  ?  */
-		store_32bit_word_in_host(cpu, (unsigned char *)
-		    &arcbios_spb.PrivateVector, ARC_PRIVATE_VECTORS);
-		store_32bit_word_in_host(cpu, (unsigned char *)  
-		    &arcbios_spb.PrivateVectorLength, 100 * 4);     /*  ?  */
-		store_buf(cpu, SGI_SPB_ADDR, (char *)&arcbios_spb,
-		    sizeof(arcbios_spb));
+		store_32bit_word_in_host(cpu, (unsigned char *) &arcbios_spb.SPBSignature, ARCBIOS_SPB_SIGNATURE);
+		store_32bit_word_in_host(cpu, (unsigned char *) &arcbios_spb.SPBLength, sizeof(arcbios_spb));     
+		store_16bit_word_in_host(cpu, (unsigned char *) &arcbios_spb.Version, 1);
+		store_16bit_word_in_host(cpu, (unsigned char *) &arcbios_spb.Revision, machine->machine_type == MACHINE_SGI? 10 : 2);
+		store_32bit_word_in_host(cpu, (unsigned char *) &arcbios_spb.FirmwareVector, ARC_FIRMWARE_VECTORS);
+		store_32bit_word_in_host(cpu, (unsigned char *) &arcbios_spb.FirmwareVectorLength, 35 * sizeof(uint32_t));
+		store_32bit_word_in_host(cpu, (unsigned char *) &arcbios_spb.PrivateVector, ARC_PRIVATE_VECTORS);
+		store_32bit_word_in_host(cpu, (unsigned char *) &arcbios_spb.PrivateVectorLength, 13 * sizeof(uint32_t));
+
+		if (machine->machine_type == MACHINE_SGI) {
+			// Mimic the "BTSR" Restart block struct on my real O2:
+			// "sash" clears the lowest bit of the word at offset 0x1c, which
+			// is the "Boot Status" word according to the ARC spec.
+			// The lowest bit means "boot started".
+			const uint64_t btsr_addr = SGI_SPB_ADDR + 0x80;
+			store_32bit_word_in_host(cpu, (unsigned char *) &arcbios_spb.RestartBlock, btsr_addr);
+			
+			store_32bit_word(cpu, btsr_addr + 0x00, 0x42545352);
+			store_32bit_word(cpu, btsr_addr + 0x1c, 0x40);	// 0x40 means "Processor Ready"
+		}
+
+		store_buf(cpu, SGI_SPB_ADDR, (char *)&arcbios_spb, sizeof(arcbios_spb));
 	}
 
 

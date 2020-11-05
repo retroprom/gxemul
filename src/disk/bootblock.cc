@@ -302,7 +302,7 @@ int load_bootblock(struct machine *m, struct cpu *cpu,
 
 		// TODO: this should be in sync with what's in arcbios.cc,
 		// in one direction or the other. Hardcoded for now...
-		const char* osloader = "sash";
+		const char* osloader = "sash";	// or sashARCS or sash64?
 		int32_t found_osloader_block = -1;
 		int32_t found_osloader_bytes = -1;
 

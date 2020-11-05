@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2020  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -50,7 +50,7 @@ MACHINE_SETUP(arc)
 	char tmpstr[1000];
 	char tmpstr2[1000];
 	int i, j;
-	const char *eaddr_string = "eaddr=10:20:30:40:50:60";		/*  bogus  */
+	const char *eaddr_string = "10:20:30:40:50:60";		/*  bogus  */
 	unsigned char macaddr[6];
 	char *machineName;
 
