@@ -1072,12 +1072,27 @@ static void arcbios_handle_to_start_and_size(struct machine *machine,
 	if (disk_id < 0)
 		return;
 
-	/*  This works for "partition(0)":  */
+	// Default to "full disk":
 	*start = 0;
 	*size = diskimage_getsize(machine, disk_id, disk_type);
 
-	if (machine->machine_type == MACHINE_SGI)
+	if (machine->machine_type == MACHINE_SGI) {
+		/*
+		 *  TODO:
+		 *
+		 *  Read the SGI volume header / disk label. e.g.:
+		 *
+		 *  partitions:
+		 *	partition 0: 592820 blocks at 4096 (type 4)
+		 *	partition 8: 4096 blocks at 0 (type 0)
+		 *	partition 10: 596916 blocks at 0 (type 6)
+		 *
+		 *  Warn about accessing partitions that are not specified
+		 *  with a size > 0.
+		 */
+		fatal("[ TODO: sgi partition() ]\n");
 		return;
+	}
 
 	s2 = strstr(s, "partition(");
 	if (s2 != NULL) {

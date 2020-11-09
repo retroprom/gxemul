@@ -302,7 +302,11 @@ int load_bootblock(struct machine *m, struct cpu *cpu,
 
 		// TODO: this should be in sync with what's in arcbios.cc,
 		// in one direction or the other. Hardcoded for now...
-		const char* osloader = "sash";	// or sashARCS or sash64?
+		// or sashARCS or sash64? or ip3xboot? take from boot arg on command line?
+		// maybe parse arguments:  "sash path()/unix"  <- first arg means OSLoader,
+		// the rest mean argument passed to the OSLoader? When booting from
+		// disk.
+		const char* osloader = "sash";
 		int32_t found_osloader_block = -1;
 		int32_t found_osloader_bytes = -1;
 
@@ -336,7 +340,7 @@ int load_bootblock(struct machine *m, struct cpu *cpu,
 			}
 		}
 		if (found_osloader_block < 1 || found_osloader_bytes < 512) {
-			debug("OSLoader \"%s\" NOT found in SGI voldir\n", osloader);
+			fatal("OSLoader \"%s\" NOT found in SGI voldir\n", osloader);
 			return 0;
 		}
 		if (found_osloader_bytes & 511) {
