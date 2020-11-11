@@ -302,11 +302,13 @@ int load_bootblock(struct machine *m, struct cpu *cpu,
 
 		// TODO: this should be in sync with what's in arcbios.cc,
 		// in one direction or the other. Hardcoded for now...
-		// or sashARCS or sash64? or ip3xboot? take from boot arg on command line?
+		// or sashARCS or sash64? or ip3xboot (for NetBSD)? take from boot arg on command line?
 		// maybe parse arguments:  "sash path()/unix"  <- first arg means OSLoader,
 		// the rest mean argument passed to the OSLoader? When booting from
 		// disk.
-		const char* osloader = "sash";
+		const char* osloaderA = "sash";
+		const char* osloaderB = "ip3xboot";
+		string found_osloader;
 		int32_t found_osloader_block = -1;
 		int32_t found_osloader_bytes = -1;
 
@@ -327,20 +329,22 @@ int load_bootblock(struct machine *m, struct cpu *cpu,
 			}
 
 			if (voldir_name[0]) {
-				bool found = strcmp(voldir_name, osloader) == 0;
-				if (found) {
+				bool found = false;
+				if (strcmp(voldir_name, osloaderA) == 0 ||
+				    strcmp(voldir_name, osloaderB) == 0) {
+					found = true;
 					found_osloader_block = voldir_block;
 					found_osloader_bytes = voldir_bytes;
+					found_osloader = voldir_name;
 				}
 
-				const char* found_osloader = found? " [FOUND OSLoader]" : "";
+				const char* found_suffix = found? " [FOUND OSLoader]" : "";
 				debug("name: %s (%i bytes, block %i)%s\n",
-					voldir_name, voldir_bytes, voldir_block,
-					found_osloader);
+					voldir_name, voldir_bytes, voldir_block, found_suffix);
 			}
 		}
 		if (found_osloader_block < 1 || found_osloader_bytes < 512) {
-			fatal("OSLoader \"%s\" NOT found in SGI voldir\n", osloader);
+			fatal("OSLoader \"%s\" (or \"%s\") NOT found in SGI voldir\n", osloaderA, osloaderB);
 			return 0;
 		}
 		if (found_osloader_bytes & 511) {
@@ -365,7 +369,7 @@ int load_bootblock(struct machine *m, struct cpu *cpu,
 		// Read OSLoader binary into emulated RAM. (Typically "sash.")
 		uint64_t diskoffset = found_osloader_block * 512;
 		debug("Loading voldir entry \"%s\", 0x%x bytes from disk offset 0x%x\n",
-			osloader, found_osloader_bytes, diskoffset);
+			found_osloader.c_str(), found_osloader_bytes, diskoffset);
 
 		CHECK_ALLOCATION(bootblock_buf = (unsigned char *) malloc(found_osloader_bytes));
 
@@ -373,7 +377,7 @@ int load_bootblock(struct machine *m, struct cpu *cpu,
 		    0, diskoffset, bootblock_buf, found_osloader_bytes);
 		if (!res) {
 			fatal("WARNING: could not load \"%s\" from disk offset 0x%llx\n",
-			    osloader, (long long)diskoffset);
+			    found_osloader.c_str(), (long long)diskoffset);
 		}
 
 		// Put loaded binary into a temp file, and make sure it is
