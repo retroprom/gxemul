@@ -4928,3 +4928,5 @@ Changelog for GXemul:
 20201105	Some minor refactoring of arcbios environment variables etc,
 		to attempt to get emulated O2 boot-from-disk image (or cdrom
 		image) to work better.
+20210116	Include ASID and VPN2 in MIPS load/store misalignment
+		exceptions (patch from Nick Hudson).
