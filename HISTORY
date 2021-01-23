@@ -4930,3 +4930,6 @@ Changelog for GXemul:
 		image) to work better.
 20210116	Include ASID and VPN2 in MIPS load/store misalignment
 		exceptions (patch from Nick Hudson).
+20210123	Adding a patch from Luchezar Georgiev for missing variant of
+		rot for 88100 (immediate argument), and for missing addu_cio
+		and subu_cio instructions.

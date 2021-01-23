@@ -516,6 +516,10 @@ static void m88k_rot(struct cpu *cpu, struct m88k_instr_call *ic, int n)
 
 	reg(ic->arg[0]) = x;
 }
+X(rot_imm)
+{
+	m88k_rot(cpu, ic, ic->arg[2] & 0x1f);
+}
 X(rot)
 {
 	m88k_rot(cpu, ic, reg(ic->arg[2]) & 0x1f);
@@ -650,10 +654,12 @@ X(sub_imm)
  *  addu:   	d = s1 + s2
  *  addu_co:   	d = s1 + s2		carry out
  *  addu_ci:   	d = s1 + s2 + carry	carry in
+ *  addu_cio:   d = s1 + s2 + carry	carry in & carry out
  *  lda_reg_X:	same as addu, but s2 is scaled by 2, 4, or 8
  *  subu:   	d = s1 - s2
  *  subu_co:   	d = s1 - s2		carry/borrow out
  *  subu_ci:   	d = s1 - s2 - (carry? 0 : 1)	carry in
+ *  subu_cio:   d = s1 - s2 - (carry? 0 : 1)	carry in & carry/borrow out
  *  mul:    	d = s1 * s2
  *  divu:   	d = s1 / s2		(unsigned)
  *  div:    	d = s1 / s2		(signed)
@@ -735,12 +741,34 @@ X(addu_co)
 	if ((a >> 32) & 1)
 		cpu->cd.m88k.cr[M88K_CR_PSR] |= M88K_PSR_C;
 }
+X(addu_cio)
+{
+	uint64_t a = reg(ic->arg[1]), b = reg(ic->arg[2]);
+	a += b;
+	if (cpu->cd.m88k.cr[M88K_CR_PSR] & M88K_PSR_C)
+		a ++;
+	reg(ic->arg[0]) = a;
+	cpu->cd.m88k.cr[M88K_CR_PSR] &= ~M88K_PSR_C;
+	if ((a >> 32) & 1)
+		cpu->cd.m88k.cr[M88K_CR_PSR] |= M88K_PSR_C;
+}
 X(addu_ci)
 {
 	uint32_t result = reg(ic->arg[1]) + reg(ic->arg[2]);
 	if (cpu->cd.m88k.cr[M88K_CR_PSR] & M88K_PSR_C)
 		result ++;
 	reg(ic->arg[0]) = result;
+}
+X(subu_cio)
+{
+	uint64_t a = reg(ic->arg[1]), b = reg(ic->arg[2]);
+	a -= b;
+	if (cpu->cd.m88k.cr[M88K_CR_PSR] & M88K_PSR_C)
+		a --;
+	reg(ic->arg[0]) = a;
+	cpu->cd.m88k.cr[M88K_CR_PSR] &= ~M88K_PSR_C;
+	if ((a >> 32) & 1)
+		cpu->cd.m88k.cr[M88K_CR_PSR] |= M88K_PSR_C;
 }
 X(subu_co)
 {
@@ -2418,6 +2446,7 @@ X(to_be_translated)
 		case 0x24:	/*  ext  */
 		case 0x26:	/*  extu  */
 		case 0x28:	/*  mak  */
+		case 0x2a:	/*  rot  */
 			ic->arg[0] = (size_t) &cpu->cd.m88k.r[d];
 			ic->arg[1] = (size_t) &cpu->cd.m88k.r[s1];
 			ic->arg[2] = iword & 0x3ff;
@@ -2446,6 +2475,7 @@ X(to_be_translated)
 			case 0x24: ic->f = instr(ext_imm); break;
 			case 0x26: ic->f = instr(extu_imm); break;
 			case 0x28: ic->f = instr(mak_imm); break;
+			case 0x2a: ic->f = instr(rot_imm); break;
 			}
 
 			if (d == M88K_ZERO_REG)
@@ -2575,9 +2605,11 @@ X(to_be_translated)
 		case 0x60:	/*  addu   */
 		case 0x61:	/*  addu.co  */
 		case 0x62:	/*  addu.ci  */
+		case 0x63:	/*  addu.cio */
 		case 0x64:	/*  subu   */
 		case 0x65:	/*  subu.co  */
 		case 0x66:	/*  subu.ci  */
+		case 0x67:	/*  subu.cio */
 		case 0x68:	/*  divu   */
 		case 0x6c:	/*  mul    */
 		case 0x70:	/*  add    */
@@ -2603,9 +2635,11 @@ X(to_be_translated)
 			case 0x60: ic->f = instr(addu);  break;
 			case 0x61: ic->f = instr(addu_co); break;
 			case 0x62: ic->f = instr(addu_ci); break;
+			case 0x63: ic->f = instr(addu_cio); break;
 			case 0x64: ic->f = instr(subu);  break;
 			case 0x65: ic->f = instr(subu_co); break;
 			case 0x66: ic->f = instr(subu_ci); break;
+			case 0x67: ic->f = instr(subu_cio); break;
 			case 0x68: ic->f = instr(divu);  break;
 			case 0x6c: ic->f = instr(mul);   break;
 			case 0x70: ic->f = instr(add);   break;
