@@ -761,10 +761,10 @@ X(addu_ci)
 }
 X(subu_cio)
 {
-	uint64_t a = reg(ic->arg[1]), b = reg(ic->arg[2]);
-	a -= b;
+	uint64_t a = reg(ic->arg[1]), b = reg(ic->arg[2]) ^ 0xffffffff;
+	a += b;
 	if (cpu->cd.m88k.cr[M88K_CR_PSR] & M88K_PSR_C)
-		a --;
+		a ++;
 	reg(ic->arg[0]) = a;
 	cpu->cd.m88k.cr[M88K_CR_PSR] &= ~M88K_PSR_C;
 	if ((a >> 32) & 1)
@@ -772,8 +772,8 @@ X(subu_cio)
 }
 X(subu_co)
 {
-	uint64_t a = reg(ic->arg[1]), b = reg(ic->arg[2]);
-	a -= b;
+	uint64_t a = reg(ic->arg[1]), b = reg(ic->arg[2]) ^ 0xffffffff;
+	a += b + 1;
 	reg(ic->arg[0]) = a;
 	cpu->cd.m88k.cr[M88K_CR_PSR] &= ~M88K_PSR_C;
 	if ((a >> 32) & 1)
@@ -781,9 +781,9 @@ X(subu_co)
 }
 X(subu_ci)
 {
-	uint32_t result = reg(ic->arg[1]) - reg(ic->arg[2]);
+	uint32_t result = reg(ic->arg[1]) + ~reg(ic->arg[2]);
 	if (cpu->cd.m88k.cr[M88K_CR_PSR] & M88K_PSR_C)
-		result --;
+		result ++;
 	reg(ic->arg[0]) = result;
 }
 

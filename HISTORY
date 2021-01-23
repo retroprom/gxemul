@@ -4933,3 +4933,7 @@ Changelog for GXemul:
 20210123	Adding a patch from Luchezar Georgiev for missing variant of
 		rot for 88100 (immediate argument), and for missing addu_cio
 		and subu_cio instructions.
+		Inspired by Luchezar Georgiev's patch for subu_cio, a closer
+		look at the subu borrow bit resulted in a bug fix which finally
+		allows a OpenBSD/luna88k 6.8 ramdisk to boot all the way to
+		userland.
