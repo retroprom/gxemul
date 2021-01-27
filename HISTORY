@@ -4937,3 +4937,6 @@ Changelog for GXemul:
 		look at the subu borrow bit resulted in a bug fix which finally
 		allows a OpenBSD/luna88k 6.8 ramdisk to boot all the way to
 		userland.
+20210127	Writing some ugly glue code to connect the Lance Ethernet
+		device (dev_le) to the LUNA88K machine. An OpenBSD/luna88k 6.8
+		ramdisk can now (barely) reach the internet using TCP/IPv4.

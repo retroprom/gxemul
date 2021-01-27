@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2018-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -29,7 +29,7 @@
  *
  *  Almost everything in here is just dummy code which returns nonsense,
  *  just enough to fake hardware well enough to get OpenBSD/luna88k to
- *  not stop early during bootup. It does not really work yet.
+ *  not stop early during bootup. It does not work very well yet.
  *
  *  TODO: Separate out these devices to their own files, so that they can
  *  potentially be reused for a luna68k mode if necessary.
@@ -57,7 +57,7 @@
 
 
 #define	LUNA88K_REGISTERS_BASE		0x3ffffff0UL
-#define	LUNA88K_REGISTERS_END		0xff000000UL
+#define	LUNA88K_REGISTERS_END		0xf0800000UL
 #define	LUNA88K_REGISTERS_LENGTH	(LUNA88K_REGISTERS_END - LUNA88K_REGISTERS_BASE)
 
 #define	MAX_CPUS	4
@@ -81,7 +81,7 @@ struct luna88k_data {
 
 	int		console_handle;
 	int		interrupt_delay;
-	struct interrupt irqX;
+	struct interrupt irq5;
 
 	/*  Two channels.  */
 	int		obio_sio_regno[2];
@@ -90,6 +90,7 @@ struct luna88k_data {
 
 	uint32_t	fuse_rom[FUSE_ROM_SPACE / sizeof(uint32_t)];
 	uint8_t		nvram[NVRAM_SPACE];
+	uint8_t		tri_port_ram[TRI_PORT_RAM_SPACE];
 };
 
 
@@ -156,10 +157,10 @@ static void reassert_serial_interrupt(struct luna88k_data* d)
 	}
 
 	if (assertSerial) {
-		INTERRUPT_ASSERT(d->irqX);
-		d->interrupt_delay = 130;
+		INTERRUPT_ASSERT(d->irq5);
+		d->interrupt_delay = 30;
 	} else {
-		INTERRUPT_DEASSERT(d->irqX);
+		INTERRUPT_DEASSERT(d->irq5);
 	}
 }
 
@@ -290,7 +291,14 @@ DEVICE_ACCESS(luna88k)
 	}
 
 	if (addr >= TRI_PORT_RAM && addr < TRI_PORT_RAM + TRI_PORT_RAM_SPACE) {
-		/*  Ignore for now.  */
+		size_t offset = addr - TRI_PORT_RAM;
+
+		cpu->memory_rw(cpu, cpu->mem, LANCE_ADDR - 0x100000 + offset,
+			data, len, writeflag, NO_EXCEPTIONS | PHYSICAL);
+// if(len==2)
+// printf("OFFSET 0x%06x WRITE=%i 0x%02x%02x\n", (int)offset, (int)writeflag, data[0],data[1]);
+// else
+// printf("OFFSET 0x%06x WRITE=%i 0x%02x\n", (int)offset, (int)writeflag, data[0]);
 		return 1;
 	}
 
@@ -357,6 +365,7 @@ DEVICE_ACCESS(luna88k)
 
 	case OBIO_PIO1A:	/*  0x4d000000: PIO-0 port A  */
 	case OBIO_PIO1B:	/*  0x4d000004: PIO-0 port B  */
+	case OBIO_PIO1C:	/*  0x4d000008: PIO-0 port C  */
 	case OBIO_PIO1:		/*  0x4d00000C: PIO-0 control  */
 		/*  Ignore for now. (?)  */
 		break;
@@ -422,7 +431,7 @@ DEVICE_ACCESS(luna88k)
 				}
 			}
 
-			INTERRUPT_DEASSERT(d->irqX);
+			INTERRUPT_DEASSERT(d->irq5);
 		}
 
 		break;
@@ -546,11 +555,6 @@ DEVICE_ACCESS(luna88k)
 		odata = 0xffffffff;
 		break;
 
-	case 0xf1000000:	/*  Lance Ethernet. TODO.  */
-	case 0xf1000004:
-	case 0xf1000008:
-		break;
-
 	default:fatal("[ luna88k: unimplemented %s address 0x%x",
 		    writeflag == MEM_WRITE? "write to" : "read from",
 		    (int) addr);
@@ -640,9 +644,15 @@ DEVINIT(luna88k)
 	machine_add_tickfunction(devinit->machine,
 	    dev_luna88k_tick, d, TICK_STEPS_SHIFT);
 
-	/*  IRQ 5,4,3 (?): "autovec" according to OpenBSD  */
+	/*
+	 *  IRQ 5,4,3 (?): "autovec" according to OpenBSD
+	 *
+	 *  5 = sio0 (serial controller)
+	 *  4 = le0  (lance ethernet)
+	 *  3 = spc0 (SCSI)
+	 */
 	snprintf(n, sizeof(n), "%s.luna88k.5", devinit->interrupt_path);
-	INTERRUPT_CONNECT(n, d->irqX);
+	INTERRUPT_CONNECT(n, d->irq5);
 
 	d->console_handle = console_start_slave(devinit->machine, "SIO", 1);
 
@@ -663,6 +673,22 @@ DEVINIT(luna88k)
 	add_cmmu_for_cpu(devinit, 1, CMMU_I1, CMMU_D1);
 	add_cmmu_for_cpu(devinit, 2, CMMU_I2, CMMU_D2);
 	add_cmmu_for_cpu(devinit, 3, CMMU_I3, CMMU_D3);
+
+	// The address is a hack because dev_le assumes that the data and register ports
+	// are at offset 0x100000 and "ram" (used for packets) is at 0x000000.
+	snprintf(n, sizeof(n), "%s.luna88k.4", devinit->interrupt_path);
+	dev_le_init(devinit->machine, devinit->machine->memory, LANCE_ADDR - 0x100000, 0, 0, n, DEV_LE_LENGTH);
+
+	// TODO: actual address from the le device!
+	// According to OpenBSD's if_le.c, the format for
+	// real Luna machines is 00000Axxxxxx.
+	const char *enaddr = "ENADDR=00000A102030";
+	size_t i = 0;
+	while (enaddr[i]) {
+		d->fuse_rom[i*2+0] = (enaddr[i] & 0xf0) << 24;
+		d->fuse_rom[i*2+1] = (enaddr[i] & 0x0f) << 28;
+		++i;
+	}
 
 	return 1;
 }

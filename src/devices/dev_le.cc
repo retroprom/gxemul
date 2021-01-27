@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -98,6 +98,8 @@ struct le_data {
 	int		reg_select;
 	uint16_t	reg[N_REGISTERS];
 
+	bool		bigendian;
+
 	unsigned char	*sram;
 
 	/*  Initialization block:  */
@@ -133,10 +135,12 @@ struct le_data {
  */
 static uint64_t le_read_16bit(struct le_data *d, int addr)
 {
-	/*  TODO: This is for little endian only  */
-	int x = d->sram[addr & (SRAM_SIZE-1)] +
+	if (d->bigendian)
+		return (d->sram[addr & (SRAM_SIZE-1)] << 8) +
+			(d->sram[(addr+1) & (SRAM_SIZE-1)]);
+
+	return d->sram[addr & (SRAM_SIZE-1)] +
 	       (d->sram[(addr+1) & (SRAM_SIZE-1)] << 8);
-	return x;
 }
 
 
@@ -147,9 +151,17 @@ static uint64_t le_read_16bit(struct le_data *d, int addr)
  */
 static void le_write_16bit(struct le_data *d, int addr, uint16_t x)
 {
-	/*  TODO: This is for little endian only  */
-	d->sram[addr & (SRAM_SIZE-1)] = x & 0xff;
-	d->sram[(addr+1) & (SRAM_SIZE-1)] = (x >> 8) & 0xff;
+	if (d->bigendian)
+	{
+		d->sram[addr & (SRAM_SIZE-1)] = (x >> 8) & 0xff;
+		d->sram[(addr+1) & (SRAM_SIZE-1)] = x & 0xff;
+	}
+	else
+	{
+		d->sram[addr & (SRAM_SIZE-1)] = x & 0xff;
+		d->sram[(addr+1) & (SRAM_SIZE-1)] = (x >> 8) & 0xff;
+	}
+
 }
 
 
@@ -861,6 +873,8 @@ void dev_le_init(struct machine *machine, struct memory *mem, uint64_t baseaddr,
 
 	CHECK_ALLOCATION(d = (struct le_data *) malloc(sizeof(struct le_data)));
 	memset(d, 0, sizeof(struct le_data));
+
+	d->bigendian = machine->cpus[0]->byte_order == EMUL_BIG_ENDIAN;
 
 	INTERRUPT_CONNECT(irq_path, d->irq);
 
