@@ -16,7 +16,7 @@
 
 <!--
 
-Copyright (C) 2003-2019  Anders Gavare.  All rights reserved.
+Copyright (C) 2003-2021  Anders Gavare.  All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -71,7 +71,7 @@ in GXemul.
 you should start by downloading the program used in the examples. It is an 
 OpenBSD kernel for LUNA 88K:
 
-<p><a href="https://ftp.eu.openbsd.org/pub/OpenBSD/6.2/luna88k/bsd.rd">https://ftp.eu.openbsd.org/pub/OpenBSD/6.2/luna88k/bsd.rd</a>.
+<p><a href="https://ftp.eu.openbsd.org/pub/OpenBSD/6.8/luna88k/bsd.rd">https://ftp.eu.openbsd.org/pub/OpenBSD/6.8/luna88k/bsd.rd</a>.
 
 <p>You can run <tt>file bsd.rd</tt> to check that it is of a reasonable executable file format.
 
@@ -93,10 +93,20 @@ kernel we want to run/debug.
 $ <b>gxemul -e luna-88k bsd.rd</b>
 </pre>
 
-<p>This will start the emulator, start running the kernel, and, for this particular OpenBSD kernel (at least
-at the time of writing this text), exit at the end, because the
-emulator does not fully support running that kernel on that emulated machine type. But it is
-enough to demonstrate the various commands that you can use.
+<p>This will start the emulator, start running the kernel, and stop after
+printing
+<pre>
+	Welcome to the OpenBSD/luna88k 6.8 installation program.
+	(I)nstall, (U)pgrade, (A)utoinstall or (S)hell?
+</pre>
+
+<p>Type CTRL-C to break into GXemul's command prompt. Type <tt>quit</tt>
+whenever you wish to quit from GXemul.
+<pre>
+GXemul> <b>quit</b>
+</pre>
+
+<p>(If instead you wish to send a CTRL-C to the emulated system, type CTRL-B.)
 
 <p>You really need to know what machine type you want to emulate. The emulator cannot simply load a binary
 without having a machine to load it into. There are some machine types called "testXXXX" or "bareXXXX"
@@ -104,11 +114,11 @@ which are minimal machines with just a CPU (bareXXXX) or just a CPU plus some te
 but these do not correspond to any real world machine.
 
 <p>The next very useful command line switch, when using the emulator as a debugger, is <tt>-V</tt>. This causes
-the emulator to start in a <i>paused state</i>, showing a <tt>GXemul&gt;</tt> prompt where commands can be entered.
+the emulator to start in a <i>paused state</i>, showing the command prompt.
 
 <pre>
 $ <b>gxemul -V -e luna-88k bsd.rd</b>
-GXemul (unknown version)    Copyright (C) 2003-2019  Anders Gavare
+GXemul (unknown version)    Copyright (C) 2003-2021  Anders Gavare
 Read the source code and/or documentation for other Copyright messages.
 
 Simple setup...
@@ -223,6 +233,28 @@ cpu0:  r28 = 0x00000000  r29 = 0x00000000  r30 = 0x00000000  r31 = 0x06fffc00
 
 <p>You can modify registers by typing commands such as <tt>r8 = r31 + 0x1234</tt>.
 
+<p><tt>reg</tt> takes a CPU id and coprocessor number as optional arguments.
+To view the system registers of the 88K CPU, type:
+
+<pre>
+GXemul> <b>reg ,0</b>
+cpu0:   PID=0x00000007   PSR=0x80000002  EPSR=0x00000000  SSBR=0x00000000
+cpu0:  SXIP=0x00000000  SNIP=0x00000000  SFIP=0x00000000   VBR=0x00000000
+cpu0:  DMT0=0x00000000  DMD0=0x00000000  DMA0=0x00000000  DMT1=0x00000000
+cpu0:  DMD1=0x00000000  DMA1=0x00000000  DMT2=0x00000000  DMD2=0x00000000
+cpu0:  DMA2=0x00000000   SR0=0x00000000   SR1=0x00000000   SR2=0x00000000
+cpu0:   SR3=0x00000000  CR21=0x00000000  CR22=0x00000000  CR23=0x00000000
+cpu0:  CR24=0x00000000  CR25=0x00000000  CR26=0x00000000  CR27=0x00000000
+cpu0:  CR28=0x00000000  CR29=0x00000000  CR30=0x00000000  CR31=0x00000000
+</pre>
+
+<p><tt>reg,</tt> (without any number) is a convenient shorthand for showing
+the system registers (<tt>reg ,0</tt>).
+
+<p><tt>reg ,1</tt> shows the floating point control registers.
+
+<p><tt>tlbdump</tt> dumps the CPUs TLB registers, if there are any.
+
 
 
 
@@ -314,7 +346,7 @@ $ <b>gxemul -p bcopy -e luna-88k bsd.rd</b>
 
 <pre>
 $ <b>gxemul -V -e luna-88k bsd.rd</b>
-GXemul (unknown version)    Copyright (C) 2003-2019  Anders Gavare
+GXemul (unknown version)    Copyright (C) 2003-2021  Anders Gavare
 ...
 
 GXemul> <b>breakpoint add bcopy</b>
