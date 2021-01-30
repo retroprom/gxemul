@@ -158,7 +158,7 @@ static void reassert_serial_interrupt(struct luna88k_data* d)
 
 	if (assertSerial) {
 		INTERRUPT_ASSERT(d->irq5);
-		d->interrupt_delay = 30;
+		d->interrupt_delay = 3;
 	} else {
 		INTERRUPT_DEASSERT(d->irq5);
 	}
@@ -418,7 +418,7 @@ DEVICE_ACCESS(luna88k)
 			/*  data  */
 			if (writeflag == MEM_WRITE) {
 				if (sio_devnr == 0) {
-					console_putchar(cpu->machine->main_console_handle, idata);
+					console_putchar(d->console_handle, idata);
 				} else
 					fatal("[ luna88k sio dev1 write data: TODO ]\n");
 			} else {

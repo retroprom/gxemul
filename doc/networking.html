@@ -16,7 +16,7 @@
 
 <!--
 
-Copyright (C) 2003-2020  Anders Gavare.  All rights reserved.
+Copyright (C) 2003-2021  Anders Gavare.  All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -109,15 +109,14 @@ working:
 	in OpenBSD, or <tt>tlp</tt> in NetBSD)
   <li><tt><b>ether</b></tt>, the "fake" experimental ethernet device
 	(documented <a href="experiments.html#expdevices_ether">here</a>)
-  <li><tt><b>le</b></tt>, <a href="http://en.wikipedia.org/wiki/TURBOchannel">Turbochannel</a>
-	Lance Ethernet, as used in DECstation 5000/200 ("3max")
+  <li><tt><b>le</b></tt>, Lance Ethernet, as used in <a href="machine_decstation.html">DECstation 5000/200</a> ("3max") and the <a href="machine_luna88k.html">LUNA88K</a> machines
   <li><tt><b>mec</b></tt>, the SGI O2's ethernet controller
 </ul>
 
 <p>It is not possible to simply attach any of the supported NICs into any
 of the supported emulated machines. Some machines, for example, have a 
 specific NIC in them, others may have a PCI bus where a PCI NIC can be 
-used. This is very much machine-dependent.
+used. This is very much machine-dependent, and implemented on a case-by-case basis.
 
 <p>If you are impatient, and simply want to try out networking in GXemul,
 I would recommend trying out an ftp install of <a

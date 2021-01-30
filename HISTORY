@@ -4940,3 +4940,6 @@ Changelog for GXemul:
 20210127	Writing some ugly glue code to connect the Lance Ethernet
 		device (dev_le) to the LUNA88K machine. An OpenBSD/luna88k 6.8
 		ramdisk can now (barely) reach the internet using TCP/IPv4.
+20210130	Writing guest OS install instructions for running OpenBSD/
+		luna88k with root-on-nfs, which involves using NetBSD/pmax as
+		an NFS server and OpenBSD/sgi (!) to run MAKEDEV.
