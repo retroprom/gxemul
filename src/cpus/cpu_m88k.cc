@@ -810,6 +810,15 @@ void m88k_exception(struct cpu *cpu, int vector, int is_trap)
 			break;
 #endif
 
+#if 0
+		// TODO: Read up more about SFU1 exceptions and how the
+		// control registers look when they happen.
+		case M88K_EXCEPTION_SFU1_PRECISE:
+			cpu->cd.m88k.cr[M88K_CR_SNIP] -= 4;
+			cpu->cd.m88k.cr[M88K_CR_SFIP] -= 4;
+			break;
+#endif
+
 		default:fatal("m88k_exception(): 0x%x: TODO\n", vector);
 			fflush(stdout);
 			exit(1);
