@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -506,7 +506,7 @@ void m88k_stcr(struct cpu *cpu, uint32_t value, int cr, int rte)
 
 	switch (cr) {
 
-	case M88K_CR_PSR:	/*  Processor Status Regoster  */
+	case M88K_CR_PSR:	/*  Processor Status Register  */
 		if ((cpu->byte_order == EMUL_LITTLE_ENDIAN
 		    && !(value & M88K_PSR_BO)) ||
 		    (cpu->byte_order == EMUL_BIG_ENDIAN
@@ -814,12 +814,17 @@ void m88k_exception(struct cpu *cpu, int vector, int is_trap)
 		// TODO: Read up more about SFU1 exceptions and how the
 		// control registers look when they happen.
 		case M88K_EXCEPTION_SFU1_PRECISE:
-			cpu->cd.m88k.cr[M88K_CR_SNIP] -= 4;
-			cpu->cd.m88k.cr[M88K_CR_SFIP] -= 4;
+			cpu->cd.m88k.cr[M88K_CR_SNIP] = 0; //?
+			cpu->cd.m88k.cr[M88K_CR_SFIP] = 0;
+			//cpu->cd.m88k.cr[M88K_CR_SNIP] -= 4;
+			//cpu->cd.m88k.cr[M88K_CR_SFIP] -= 4;
 			break;
 #endif
 
-		default:fatal("m88k_exception(): 0x%x: TODO\n", vector);
+		default:fatal("m88k_exception(): 0x%x: SXIP=0x%08x pc=0x%08x TODO\n",
+			vector,
+			cpu->cd.m88k.cr[M88K_CR_SXIP],
+			(int)cpu->pc);
 			fflush(stdout);
 			exit(1);
 		}
