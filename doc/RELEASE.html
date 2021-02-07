@@ -37,7 +37,24 @@ still one of the guest OSes that works best.
 <p><br>The most important changes between release 0.6.2 and 0.6.3 are:
 
 <ul>
-	<li>[TODO...]
+	<li><a href="machine_luna88k.html#openbsdluna88k">OpenBSD/luna88k can now run in GXemul</a> with root-on-nfs.
+		The installation instructions are somewhat involved, but
+		it works well enough to self-compile at least an older
+		version of GXemul inside OpenBSD running in the emulator.
+
+	<p>
+	<li><a href="networking.html#tap">/dev/tap devices in the host can now be used for networking</a>.
+		(Patch contributed by Jason Thorpe.)
+
+	<p>
+	<li>A bug which caused reads at the end of files supplied as
+		disk images to fail has been fixed.
+		Usage of tar archives for passing files to and from
+		emulated machines that lack networking capability is thus
+		somewhat less buggy.
+
+	<p>
+	<li>... and various other bugfixes.
 </ul>
 
 

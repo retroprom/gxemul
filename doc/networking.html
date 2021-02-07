@@ -110,7 +110,7 @@ working:
   <li><tt><b>ether</b></tt>, the "fake" experimental ethernet device
 	(documented <a href="experiments.html#expdevices_ether">here</a>)
   <li><tt><b>le</b></tt>, Lance Ethernet, as used in <a href="machine_decstation.html">DECstation 5000/200</a> ("3max") and the <a href="machine_luna88k.html">LUNA88K</a> machines
-  <li><tt><b>mec</b></tt>, the SGI O2's ethernet controller
+  <li><tt><b>mec</b></tt>, the <a href="machine_sgi_o2.html">SGI O2</a>'s ethernet controller
 </ul>
 
 <p>It is not possible to simply attach any of the supported NICs into any
@@ -175,7 +175,7 @@ also work on FreeBSD, OpenBSD, and Linux hosts.
 interface on the host.  Here is an example for NetBSD:
 
 <p><pre>
-<b>#ifconfig tap0 create up</b>
+<b># ifconfig tap0 create up</b>
 </pre>
 
 <p>If you wish to simply network the host and the guests together, then
