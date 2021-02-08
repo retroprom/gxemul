@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2019  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2004-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -47,7 +47,7 @@ struct ram_data {
 	uint64_t	baseaddress;
 	const char*	name;
 
-	bool		trace;
+	int		trace;
 	int		mode;
 	uint64_t	otheraddress;
 
@@ -117,7 +117,7 @@ DEVICE_ACCESS(ram)
 		} else {
 			memcpy(data, &d->data[relative_addr], len);
 
-			if (cpu->running && d->trace && writeflag == MEM_READ) {
+			if (cpu->running && d->trace) {
 				fatal("[ %s: read %i byte%s from 0x%x:",
 				    d->name, (int)len, len==1? "":"s", (int)relative_addr);
 				for (size_t i=0; i<len; i++)
@@ -161,7 +161,7 @@ void dev_ram_init(struct machine *machine, uint64_t baseaddr, uint64_t length,
 
 	if (mode & DEV_RAM_TRACE_ALL_ACCESSES) {
 		mode &= ~DEV_RAM_TRACE_ALL_ACCESSES;
-		d->trace = true;
+		d->trace = 1;
 	}
 
 	d->mode         = mode;
@@ -177,7 +177,13 @@ void dev_ram_init(struct machine *machine, uint64_t baseaddr, uint64_t length,
 		 *  with dyntrans accesses if DM_EMULATED_RAM is set.
 		 */
 		d->offset = baseaddr - otheraddress;
-		d->name = (string(d->name) + " [mirror]").c_str();
+		
+		{
+			size_t mirrorNameAllocLen = strlen(d->name) + 15;
+			char *mirrorName = (char*) malloc(mirrorNameAllocLen);
+			snprintf(mirrorName, mirrorNameAllocLen, "%s [mirror]", d->name);
+			d->name = mirrorName;
+		}
 
 		/*  Aligned RAM? Then it works with dyntrans.  */
 		if (points_to_ram &&
