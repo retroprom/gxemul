@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2008-2019  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2008-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -33,9 +33,9 @@
  *
  *  RAMDISK kernel used for experiments:
  *
- *	https://ftp.eu.openbsd.org/pub/OpenBSD/6.2/luna88k/bsd.rd
+ *	https://ftp.eu.openbsd.org/pub/OpenBSD/6.8/luna88k/bsd.rd
  *
- *  Launch with   gxemul -e luna-88k2 -Ttv bsd.rd
+ *  Launch with   gxemul -e luna-88k bsd.rd
  */
 
 #include <stdio.h>
@@ -111,7 +111,8 @@ MACHINE_DEFAULT_CPU(luna88k)
 
 MACHINE_DEFAULT_RAM(luna88k)
 {
-	// Two OpenBSD dmesgs found on the Internet for a LUNA-88K2 showed 112 MB of real mem.
+	// Two OpenBSD dmesgs found on the Internet for a LUNA-88K2 showed
+	// 112 MB of real mem. (I don't know what the max was for a LUNA-88K.)
 	machine->physical_ram_in_mb = 112;
 }
 

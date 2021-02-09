@@ -4946,3 +4946,4 @@ Changelog for GXemul:
 20210207	Fixing a spelling mistake in the 88K fdiv.sss instruction,
 		making self-compilation of [an older version of] GXemul inside
 		OpenBSD/luna88k get further.
+20210209	Adding keyboard support to dev_luna88k.

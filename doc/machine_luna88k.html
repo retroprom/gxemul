@@ -52,22 +52,23 @@ were based on <a href="https://en.wikipedia.org/wiki/Motorola_88000">Motorola
 <p>Emulated hardware:
 <ul>
 	<li>88100 CPU  (Only a single CPU works. Real LUNA machines could have up to 4.)
-	<li>Interrupt controller and parts of the system board, including serial console
-	<li>Lance Ethernet
+	<li>Interrupt controller and parts of the system board
+	<li>Serial console
+	<li>Keyboard
 	<li>Graphical monochrome framebuffer, 1280 x 1024
+	<li>Lance Ethernet
 </ul>
 
 <p><b>NOT</b> emulated yet:
 <ul>
 	<li>SCSI
-	<li>Keyboard/mouse
+	<li>Mouse
 	<li><i>Color</i> framebuffers
 </ul>
 
 <p>OpenBSD/luna88k running as a guest OS can reach userland and be
-interacted with, using serial console, when using root-on-nfs.
-(Using a graphical framebuffer works but since no keyboard is emulated, it
-is rather useless.)
+interacted with, using either serial console or a graphical framebuffer,
+when using root-on-nfs.
 
 
 
@@ -89,6 +90,7 @@ step of the root-on-nfs installation.
 <p>Performing this setup is quite time consuming, but necessary.
 
 <p><a href="openbsd-luna88k-20210130.png"><img src="openbsd-luna88k-20210130-small.png"></a>
+<a href="openbsd-luna88k-20210209.png"><img src="openbsd-luna88k-20210209-small.png"></a>
 
 <p>Let's get started.
 
@@ -252,6 +254,9 @@ halt -p</b>
 
 </pre>
 	When asked about root device, enter <tt>le0</tt>.
+	<p>
+	If you want to run with the graphical framebuffer, uncomment the
+	<tt>use_x11(1)</tt> line in <tt>config_client</tt> first.
 </ol>
 
 
@@ -274,8 +279,7 @@ Start the emulator like this:
 	gxemul -e luna-88k 0x20000:0x20:bsd.rd</i>
 </pre>
 
-<p>Add <tt>-X</tt> if you want to use the graphical framebuffer. <i>(But as of
-2021-01-30, no keyboard is implemented, so it is of little practical value.)</i>
+<p>Add <tt>-X</tt> if you want to use the graphical framebuffer.
 
 <p>This is what can be expected of the RAMDISK kernel:
 <pre>
