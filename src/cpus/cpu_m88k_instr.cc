@@ -1678,11 +1678,12 @@ X(xmem_slow)
 
 	xmem_store(cpu, &call);
 
-	// If there was an exception in xmem_store(), then the exception has
-	// already been handled, and cpu->pc set to the exception handler;
-	// this isn't needed here, if we are at the end of the function anyway.
-	// 	if ((uint32_t)cpu->pc != pc_before_memory_access)
-	//		return;
+	// If there was an exception in xmem_store(), then return the d register
+	// to what it was before the xmem_load().
+	if ((uint32_t)cpu->pc != pc_before_memory_access) {
+		cpu->cd.m88k.r[d] = tmp;
+		return;
+	}
 }
 
 
