@@ -146,6 +146,7 @@ echo inet 10.0.0.3 > /tftpboot/etc/hostname.le0
 echo 10.0.0.254 > /tftpboot/etc/mygate
 echo nameserver 10.0.0.254 > /tftpboot/etc/resolv.conf
 echo 10.0.0.2:/tftpboot / nfs rw 0 0 > /tftpboot/etc/fstab
+echo 127.0.0.1 client localhost > /tftpboot/etc/hosts
 echo 10.0.0.2:/tftpboot/swap none swap sw 0 0 >> /tftpboot/etc/fstab
 
 halt</b>
