@@ -31,6 +31,20 @@
  *  just enough to fake hardware well enough to get OpenBSD/luna88k to
  *  work to some basic degree.
  *
+ *  Things that are implemented:
+ *	Interrupt controller for CPU #0
+ *	Serial I/O
+ *	Keyboard
+ *	Monochrome framebuffer
+ *	Lance ethernet
+ *
+ *  Things that are NOT implemented yet:
+ *	Actually working multi-CPU interrupt support
+ *	SCSI
+ *	Parallel I/O
+ *	Mouse
+ *	Color framebuffer
+ *
  *  TODO: Separate out these devices to their own files, so that they can
  *  potentially be reused for a luna68k mode if necessary.
  */
@@ -55,6 +69,7 @@
 
 #define	TICK_STEPS_SHIFT	14
 
+// TODO: Actually make this configurable. Currently hardcoded to match OpenBSD/luna88k.
 #define	LUNA88K_PSEUDO_TIMER_HZ	100.0
 
 #define	LUNA88K_REGISTERS_BASE		0x3ffffff0UL
@@ -93,7 +108,7 @@ struct luna88k_data {
 	int		sio_queue_head[2];
 	int		sio_queue_tail[2];
 
-	/*  ROM and RAM  */
+	/*  ROM and RAM (used by the Ethernet interface)  */
 	uint32_t	fuse_rom[FUSE_ROM_SPACE / sizeof(uint32_t)];
 	uint8_t		nvram[NVRAM_SPACE];
 	uint8_t		tri_port_ram[TRI_PORT_RAM_SPACE];
@@ -210,7 +225,7 @@ static void luna88k_timer_tick(struct timer *t, void *extra)
 	
 	if (d->pending_timer_interrupts > 50) {
 		d->pending_timer_interrupts = 0;
-		fatal("[ luna88k_timer_tick: tick lost... restarting timer ticks. ]\n");
+		debug("[ luna88k_timer_tick: tick lost... restarting timer ticks. ]\n");
 	}
 }
 
