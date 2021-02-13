@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2007-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -42,6 +42,7 @@
  *	LS_LOAD or LS_STORE (only one)
  *	LS_INCLUDE_GENERIC (to generate the generic function)
  *	LS_GENERIC_N is defined as the name of the generic function
+ *	LS_NO_PC_SYNC is defined to skip Program Counter sync in the generic function
  *	LS_N is defined as the name of the fast function
  *	LS_1, LS_2, LS_4, or LS_8 (only one)
  *	LS_SIZE is defined to 1, 2, 4, or 8
@@ -73,11 +74,13 @@ void LS_GENERIC_N(struct cpu *cpu, struct m88k_instr_call *ic)
 	uint8_t data[LS_SIZE];
 	uint64_t x;
 
+#ifndef LS_NO_PC_SYNC
 	/*  Synchronize the PC:  */
 	int low_pc = ((size_t)ic - (size_t)cpu->cd.m88k.cur_ic_page)
 	    / sizeof(struct m88k_instr_call);
 	cpu->pc &= ~((M88K_IC_ENTRIES_PER_PAGE-1)<<M88K_INSTR_ALIGNMENT_SHIFT);
 	cpu->pc += (low_pc << M88K_INSTR_ALIGNMENT_SHIFT);
+#endif
 
 	/*
 	 *  Update the memory transaction registers:

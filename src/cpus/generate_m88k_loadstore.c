@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2007-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -35,6 +35,8 @@
  *			  and only when using register offset)
  *	1 bit ".usr" (only when using register offset)
  *	1 bit registeroffset
+ *	1 bit indicating that Program Counter syncronization is skipped
+ *		(for using the load/store routine from another instruction)
  */
 
 #include <stdio.h>
@@ -47,13 +49,15 @@
 #define	M88K_LOADSTORE_SCALEDNESS	32
 #define	M88K_LOADSTORE_USR		64
 #define	M88K_LOADSTORE_REGISTEROFFSET	128
+#define	M88K_LOADSTORE_NO_PC_SYNC	256
 
 
 int generated_functions = 0;
 
 
 void print_function_name(int size, int store, int signedness,
-	int endianness, int scaledness, int usr, int registeroffset)
+	int endianness, int scaledness, int usr, int registeroffset,
+	int no_pc_sync)
 {
 	if (store)
 		printf("st");
@@ -81,11 +85,15 @@ void print_function_name(int size, int store, int signedness,
 
 	if (registeroffset)
 		printf("_regofs");
+
+	if (no_pc_sync)
+		printf("_nopcsync");
 }
 
 
 void loadstore(int size, int store, int signedness,
-	int endianness, int scaledness, int usr, int registeroffset)
+	int endianness, int scaledness, int usr, int registeroffset,
+	int no_pc_sync)
 {
 	if (store && signedness)
 		return;
@@ -109,12 +117,12 @@ void loadstore(int size, int store, int signedness,
 
 	printf("#define LS_N m88k_instr_");
 	print_function_name(size, store, signedness, endianness,
-	    scaledness, usr, registeroffset);
+	    scaledness, usr, registeroffset, no_pc_sync);
 	printf("\n");
 
 	printf("#define LS_GENERIC_N m88k_generic_");
 	print_function_name(size, store, signedness, -1,
-	    scaledness, usr, registeroffset);
+	    scaledness, usr, registeroffset, no_pc_sync);
 	printf("\n");
 
 	printf("#define LS_%i\n", 1 << size);
@@ -140,8 +148,14 @@ void loadstore(int size, int store, int signedness,
 	if (registeroffset)
 		printf("#define LS_REGOFS\n");
 
+	if (no_pc_sync)
+		printf("#define LS_NO_PC_SYNC\n");
+
 	printf("#include \"cpu_m88k_instr_loadstore.cc\"\n");
 	generated_functions ++;
+
+	if (no_pc_sync)
+		printf("#undef LS_NO_PC_SYNC\n");
 
 	if (registeroffset)
 		printf("#undef LS_REGOFS\n");
@@ -179,14 +193,16 @@ void loadstore(int size, int store, int signedness,
 int main(int argc, char *argv[])
 {
 	int size, store, signedness, endianness, scaledness, usr,
-	    registeroffset;
+	    registeroffset, no_pc_sync;
 
 	printf("\n/*  AUTOMATICALLY GENERATED! Do not edit.  */\n\n");
 
-	for (registeroffset=0; registeroffset<=M88K_LOADSTORE_REGISTEROFFSET;
+	for (no_pc_sync=0; no_pc_sync<=M88K_LOADSTORE_NO_PC_SYNC;
+		      no_pc_sync+=M88K_LOADSTORE_NO_PC_SYNC)
+	 for (registeroffset=0; registeroffset<=M88K_LOADSTORE_REGISTEROFFSET;
 		      registeroffset+=M88K_LOADSTORE_REGISTEROFFSET)
-	 for (usr=0; usr<=M88K_LOADSTORE_USR; usr+=M88K_LOADSTORE_USR)
-	  for (scaledness=0; scaledness<=M88K_LOADSTORE_SCALEDNESS;
+	  for (usr=0; usr<=M88K_LOADSTORE_USR; usr+=M88K_LOADSTORE_USR)
+	   for (scaledness=0; scaledness<=M88K_LOADSTORE_SCALEDNESS;
 			scaledness+=M88K_LOADSTORE_SCALEDNESS)
 	    for (endianness=0; endianness<=M88K_LOADSTORE_ENDIANNESS;
 			  endianness+=M88K_LOADSTORE_ENDIANNESS)
@@ -196,15 +212,18 @@ int main(int argc, char *argv[])
 			      store+=M88K_LOADSTORE_STORE)
 		  for (size=0; size<=3; size++)
 			loadstore(size, store, signedness,
-			    endianness, scaledness, usr, registeroffset);
+			    endianness, scaledness, usr, registeroffset,
+			    no_pc_sync);
 
 	/*  Array of pointers to fast load/store functions:  */
-	printf("\n\nvoid (*m88k_loadstore[256])(struct cpu *, struct "
+	printf("\n\nvoid (*m88k_loadstore[512])(struct cpu *, struct "
 	    "m88k_instr_call *) = {\n");
-	for (registeroffset=0; registeroffset<=M88K_LOADSTORE_REGISTEROFFSET;
+	for (no_pc_sync=0; no_pc_sync<=M88K_LOADSTORE_NO_PC_SYNC;
+		      no_pc_sync+=M88K_LOADSTORE_NO_PC_SYNC)
+	 for (registeroffset=0; registeroffset<=M88K_LOADSTORE_REGISTEROFFSET;
 		      registeroffset+=M88K_LOADSTORE_REGISTEROFFSET)
-	 for (usr=0; usr<=M88K_LOADSTORE_USR; usr+=M88K_LOADSTORE_USR)
-	  for (scaledness=0; scaledness<=M88K_LOADSTORE_SCALEDNESS;
+	  for (usr=0; usr<=M88K_LOADSTORE_USR; usr+=M88K_LOADSTORE_USR)
+	   for (scaledness=0; scaledness<=M88K_LOADSTORE_SCALEDNESS;
 			scaledness+=M88K_LOADSTORE_SCALEDNESS)
 	    for (endianness=0; endianness<=M88K_LOADSTORE_ENDIANNESS;
 			  endianness+=M88K_LOADSTORE_ENDIANNESS)
@@ -214,7 +233,7 @@ int main(int argc, char *argv[])
 			      store+=M88K_LOADSTORE_STORE)
 		  for (size=0; size<=3; size++) {
 			if (store || size || signedness || endianness
-			    || scaledness || usr || registeroffset)
+			    || scaledness || usr || registeroffset || no_pc_sync)
 				printf(",\n");
 
 			if (store && signedness) {
@@ -239,7 +258,8 @@ int main(int argc, char *argv[])
 
 			printf("\tm88k_instr_");
 			print_function_name(size, store, signedness,
-			    endianness, scaledness, usr, registeroffset);
+			    endianness, scaledness, usr, registeroffset,
+			    no_pc_sync);
 		}
 	printf(" };\n");
 

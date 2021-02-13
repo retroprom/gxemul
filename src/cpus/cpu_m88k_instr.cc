@@ -303,6 +303,7 @@ X(ff1)
 #define M88K_LOADSTORE_SCALEDNESS       32
 #define M88K_LOADSTORE_USR              64
 #define M88K_LOADSTORE_REGISTEROFFSET   128
+#define	M88K_LOADSTORE_NO_PC_SYNC	256
 
 
 /*
@@ -1601,91 +1602,87 @@ abort_dump:
  */
 X(xmem_slow)
 {
-	uint32_t iword = ic->arg[0], addr;
-	uint8_t tmp[4];
-	uint8_t data[4];
+	uint32_t iword = ic->arg[0];
+	uint32_t tmp;
 	int d      = (iword >> 21) & 0x1f;
 	int s1     = (iword >> 16) & 0x1f;
 	int s2     =  iword        & 0x1f;
 	int imm16  =  iword        & 0xffff;
+	int regofs = (iword & 0xf0000000) != 0;
 	int scaled = iword & 0x200;
 	int size   = iword & 0x400;
 	int user   = iword & 0x80;
+	uint32_t pc_before_memory_access;
+	void (*xmem_load)(struct cpu*, struct m88k_instr_call*);
+	void (*xmem_store)(struct cpu*, struct m88k_instr_call*);
+	struct m88k_instr_call call;
 
 	SYNCH_PC;
+	pc_before_memory_access = (uint32_t)cpu->pc;
 
-	if (user) {
-		fatal("xmem_slow: user: not yet (TODO)\n");
-		exit(1);
-	}
-
-	if ((iword & 0xf0000000) == 0) {
+	if (!regofs) {
 		/*  immediate offset:  */
-		addr = imm16;
 		scaled = 0;
 		size = (iword >> 26) & 1;
 		user = 0;
-	} else {
-		/*  register offset:  */
-		addr = cpu->cd.m88k.r[s2];
-		if (scaled && size)
-			addr *= sizeof(uint32_t);
 	}
 
-	addr += cpu->cd.m88k.r[s1];
+	tmp = cpu->cd.m88k.r[d];
 
-	if (size) {
-		uint32_t x = cpu->cd.m88k.r[d];
-		if (cpu->byte_order == EMUL_LITTLE_ENDIAN)
-			x = LE32_TO_HOST(x);
-		else
-			x = BE32_TO_HOST(x);
+	xmem_load = m88k_loadstore[ (size? 2 : 0)
+	    + (cpu->byte_order == EMUL_BIG_ENDIAN? M88K_LOADSTORE_ENDIANNESS : 0)
+	    + (scaled? M88K_LOADSTORE_SCALEDNESS : 0)
+	    + (user? M88K_LOADSTORE_USR : 0)
+	    + (regofs? M88K_LOADSTORE_REGISTEROFFSET : 0)
+	    + M88K_LOADSTORE_NO_PC_SYNC ];
 
-		{
-			uint32_t *p = (uint32_t *) tmp;
-			*p = x;
-		}
+	call.f = xmem_load;
+	call.arg[0] = (size_t) &cpu->cd.m88k.r[d];
+	call.arg[1] = (size_t) &cpu->cd.m88k.r[s1];
+	if (regofs)
+		call.arg[2] = (size_t) &cpu->cd.m88k.r[s2];
+	else
+		call.arg[2] = imm16;
 
-		if (addr & 3) {
-			m88k_exception(cpu,
-			    M88K_EXCEPTION_MISALIGNED_ACCESS, 0);
-			return;
-		}
-	} else
-		tmp[0] = cpu->cd.m88k.r[d];
+	if (d == M88K_ZERO_REG)
+		call.arg[0] = (size_t)&cpu->cd.m88k.zero_scratch;
 
-	if (!cpu->memory_rw(cpu, cpu->mem, addr, (uint8_t *) &data,
-	    size? 4 : 1, MEM_READ, CACHE_DATA)) {
-		/*  Exception.  */
+	xmem_load(cpu, &call);
 
-		fatal("XMEM exception: TODO: update the transaction"
-		    " registers!\n");
-		exit(1);
-		/*  return;  */
-	}
+	// If there was an exception in the load or store call, then the pc
+	// will have changed. Alternatively, one could check for changes in
+	// the transaction registers. (But handling the theoretical tiny risk
+	// that the pc was the same before and after, i.e. that the faulting
+	// instruction was the same as the exception handler, is not worth it.)
+	if ((uint32_t)cpu->pc != pc_before_memory_access)
+		return;
 
-	if (!cpu->memory_rw(cpu, cpu->mem, addr, (uint8_t *) &tmp,
-	    size? 4 : 1, MEM_WRITE, CACHE_DATA)) {
-		/*  Exception.  */
+	xmem_store = m88k_loadstore[ (size? 2 : 0)
+	    + M88K_LOADSTORE_STORE
+	    + (cpu->byte_order == EMUL_BIG_ENDIAN? M88K_LOADSTORE_ENDIANNESS : 0)
+	    + (scaled? M88K_LOADSTORE_SCALEDNESS : 0)
+	    + (user? M88K_LOADSTORE_USR : 0)
+	    + (regofs? M88K_LOADSTORE_REGISTEROFFSET : 0)
+	    + M88K_LOADSTORE_NO_PC_SYNC ];
 
-		fatal("XMEM exception: TODO: update the transaction"
-		    " registers!\n");
-		exit(1);
-		/*  return;  */
-	}
+	call.f = xmem_store;
+	call.arg[0] = (size_t) &tmp;
+	call.arg[1] = (size_t) &cpu->cd.m88k.r[s1];
+	if (regofs)
+		call.arg[2] = (size_t) &cpu->cd.m88k.r[s2];
+	else
+		call.arg[2] = imm16;
 
-	if (size) {
-		uint32_t x;
-		uint32_t *p = (uint32_t *) data;
-		x = *p;
+	if (d == M88K_ZERO_REG)
+		tmp = 0;
 
-		if (cpu->byte_order == EMUL_LITTLE_ENDIAN)
-			x = LE32_TO_HOST(x);
-		else
-			x = BE32_TO_HOST(x);
-		cpu->cd.m88k.r[d] = x;
-	} else
-		cpu->cd.m88k.r[d] = data[0];
+	xmem_store(cpu, &call);
+
+	// If there was an exception in xmem_store(), then the exception has
+	// already been handled, and cpu->pc set to the exception handler;
+	// this isn't needed here, if we are at the end of the function anyway.
+	// 	if ((uint32_t)cpu->pc != pc_before_memory_access)
+	//		return;
 }
 
 
