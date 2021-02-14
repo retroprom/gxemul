@@ -255,11 +255,20 @@ halt -p</b>
 
 </pre>
 	When asked about root device, enter <tt>le0</tt>.
-	<p>
-	If you want to run with the graphical framebuffer, uncomment the
-	<tt>use_x11(1)</tt> line in <tt>config_client</tt> first.
 </ol>
 
+
+<p><br>
+If you want to run with the graphical framebuffer, uncomment the
+<tt>use_x11(1)</tt> line in <tt>config_client</tt> first.
+Unfortunately, Xorg lacks a driver for <tt>wsfb</tt> in OpenBSD/luna88k
+6.8, which is needed. A naive attempt at simply copying the driver from
+OpenBSD/luna88k 6.7 resulted in Xorg's gray default background being
+visible for a second or so, when running <tt>startx</tt>, but then everything
+failed due to keyboard mapping not working.
+
+<p>(I also attempted to do the entire install using 6.7, but then logging in
+as root on the console was not possible.)
 
 
 <p><br>
