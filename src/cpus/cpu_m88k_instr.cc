@@ -1220,6 +1220,36 @@ X(fdiv_sss)
 
 	reg(ic->arg[0]) = d;
 }
+X(fdiv_dss)
+{
+	struct ieee_float_value f1;
+	struct ieee_float_value f2;
+	uint64_t d;
+	uint32_t s1 = reg(ic->arg[1]);
+	uint32_t s2 = reg(ic->arg[2]);
+
+	if (cpu->cd.m88k.cr[M88K_CR_PSR] & M88K_PSR_SFD1) {
+		SYNCH_PC;
+		cpu->cd.m88k.fcr[M88K_FPCR_FPECR] = M88K_FPECR_FUNIMP;
+		m88k_exception(cpu, M88K_EXCEPTION_SFU1_PRECISE, 0);
+		return;
+	}
+
+	ieee_interpret_float_value(s1, &f1, IEEE_FMT_S);
+	ieee_interpret_float_value(s2, &f2, IEEE_FMT_S);
+
+	if (f2.f == 0) {
+		SYNCH_PC;
+		cpu->cd.m88k.fcr[M88K_FPCR_FPECR] = M88K_FPECR_FDVZ;
+		m88k_exception(cpu, M88K_EXCEPTION_SFU1_PRECISE, 0);
+		return;
+	}
+
+	d = ieee_store_float_value(f1.f / f2.f, IEEE_FMT_D);
+
+	reg(ic->arg[0]) = d >> 32;	/*  High 32-bit word,  */
+	reg(ic->arg[0] + 4) = d;	/*  and low word.  */
+}
 X(fdiv_dsd)
 {
 	struct ieee_float_value f1;
@@ -1654,8 +1684,10 @@ X(xmem_slow)
 	// the transaction registers. (But handling the theoretical tiny risk
 	// that the pc was the same before and after, i.e. that the faulting
 	// instruction was the same as the exception handler, is not worth it.)
-	if ((uint32_t)cpu->pc != pc_before_memory_access)
+	if ((uint32_t)cpu->pc != pc_before_memory_access) {
+		// printf("xmem_load exception, pc_before_memory_access = %08x\n", pc_before_memory_access);
 		return;
+	}
 
 	xmem_store = m88k_loadstore[ (size? 2 : 0)
 	    + M88K_LOADSTORE_STORE
@@ -1681,6 +1713,7 @@ X(xmem_slow)
 	// If there was an exception in xmem_store(), then return the d register
 	// to what it was before the xmem_load().
 	if ((uint32_t)cpu->pc != pc_before_memory_access) {
+		// printf("xmem_store exception, pc_before_memory_access = %08x\n", pc_before_memory_access);
 		cpu->cd.m88k.r[d] = tmp;
 		return;
 	}
@@ -2353,6 +2386,7 @@ X(to_be_translated)
 			ic->arg[2] = (size_t) &cpu->cd.m88k.r[s2];
 			switch ((iword >> 5) & 0x3f) {
 			case 0x00:	ic->f = instr(fdiv_sss); break;
+			case 0x01:	ic->f = instr(fdiv_dss); break;
 			case 0x05:	ic->f = instr(fdiv_dsd); break;
 			case 0x15:	ic->f = instr(fdiv_ddd); break;
 			default:if (!cpu->translation_readahead)

@@ -4948,3 +4948,4 @@ Changelog for GXemul:
 		OpenBSD/luna88k get further.
 20210209	Adding keyboard support to dev_luna88k.
 20210213	Implementing exception cases in 88K xmem_slow implementation.
+20210214	Implementing the fdiv.dss 88K instruction.
