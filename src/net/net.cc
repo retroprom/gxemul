@@ -439,7 +439,8 @@ void net_ethernet_tx(struct net *net, struct nic_data *nic,
 	 *  (DHCP packets are let through, though.)
 	 */
 
-	if (!for_the_gateway && packet[0] != 0xff && packet[0] != 0x00)
+	if (!for_the_gateway && packet[0] != 0xff &&
+	    !(packet[0] == 0x00 && packet[5] == 0x00))
 		return;
 
 #if 0
