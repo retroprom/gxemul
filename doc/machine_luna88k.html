@@ -145,9 +145,9 @@ dd if=/dev/zero of=swap bs=1024 count=262144
 echo inet 10.0.0.3 > /tftpboot/etc/hostname.le0
 echo 10.0.0.254 > /tftpboot/etc/mygate
 echo nameserver 10.0.0.254 > /tftpboot/etc/resolv.conf
-echo 10.0.0.2:/tftpboot / nfs rw 0 0 > /tftpboot/etc/fstab
 echo 127.0.0.1 client localhost > /tftpboot/etc/hosts
-echo 10.0.0.2:/tftpboot/swap none swap sw 0 0 >> /tftpboot/etc/fstab
+echo 10.0.0.2:/tftpboot / nfs rw 0 0 > /tftpboot/etc/fstab
+echo 10.0.0.2:/tftpboot/swap none swap sw,nfsmntpt=/swap >> /tftpboot/etc/fstab
 
 halt</b>
 </pre></td></tr></table>
@@ -263,9 +263,8 @@ If you want to run with the graphical framebuffer, uncomment the
 <tt>use_x11(1)</tt> line in <tt>config_client</tt> first.
 Unfortunately, Xorg lacks a driver for <tt>wsfb</tt> in OpenBSD/luna88k
 6.8, which is needed. A naive attempt at simply copying the driver from
-OpenBSD/luna88k 6.7 resulted in Xorg's gray default background being
-visible for a second or so, when running <tt>startx</tt>, but then everything
-failed due to keyboard mapping not working.
+OpenBSD/luna88k 6.7 randomly resulted in Xorg's gray default background being
+visible for a second or so, when running <tt>startx</tt>.
 
 <p>(I also attempted to do the entire install using 6.7, but then logging in
 as root on the console was not possible.)
