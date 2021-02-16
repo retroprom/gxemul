@@ -39,7 +39,8 @@
  *	Lance ethernet
  *
  *  Things that are NOT implemented yet:
- *	Actually working multi-CPU interrupt support
+ *	Actually working multi-CPU interrupt support:
+ *		Interrupt mask & status, clocks, etc.
  *	SCSI
  *	Parallel I/O
  *	Mouse
@@ -78,7 +79,7 @@
 
 #define	MAX_CPUS	4
 
-#define	SIO_QUEUE_SIZE	64
+#define	SIO_QUEUE_SIZE	256
 
 #define	BCD(x) ((((x) / 10) << 4) + ((x) % 10))
 
@@ -151,6 +152,7 @@ static void add_to_sio_queue(struct luna88k_data* d, int n, uint8_t c)
 static void reassert_interrupts(struct luna88k_data *d)
 {
 	// TODO: Per-cpu, for multiprocessor machines.
+	// MAYBE just one interrupt_status, but 4 enable words?
 	//
 	// printf("status = 0x%08x, enable = 0x%08x\n",
 	//	d->interrupt_status[0], d->interrupt_enable[0]);
@@ -182,6 +184,13 @@ static void luna88k_interrupt_deassert(struct interrupt *interrupt)
 	reassert_interrupts(d);
 }
 
+static void reassert_timer_interrupt(struct luna88k_data* d)
+{
+	if (d->pending_timer_interrupts)
+		INTERRUPT_ASSERT(d->timer_irq);
+	else
+		INTERRUPT_DEASSERT(d->timer_irq);
+}
 
 static void reassert_serial_interrupt(struct luna88k_data* d)
 {
@@ -223,7 +232,7 @@ static void luna88k_timer_tick(struct timer *t, void *extra)
 	struct luna88k_data* d = (struct luna88k_data*) extra;
 	d->pending_timer_interrupts ++;
 	
-	if (d->pending_timer_interrupts > 50) {
+	if (d->pending_timer_interrupts > (int)(LUNA88K_PSEUDO_TIMER_HZ/2)) {
 		d->pending_timer_interrupts = 0;
 		debug("[ luna88k_timer_tick: tick lost... restarting timer ticks. ]\n");
 	}
@@ -233,9 +242,6 @@ static void luna88k_timer_tick(struct timer *t, void *extra)
 DEVICE_TICK(luna88k)
 {
 	struct luna88k_data *d = (struct luna88k_data *) extra;
-
-	if (d->pending_timer_interrupts)
-		INTERRUPT_ASSERT(d->timer_irq);
 
 	/*  Serial console:  */
 	if (d->fb == NULL && space_available_in_sio_queue(d, 0) > 3) {
@@ -366,6 +372,7 @@ DEVICE_TICK(luna88k)
 	}
 
 	reassert_serial_interrupt(d);
+	reassert_timer_interrupt(d);
 }
 
 
@@ -622,10 +629,12 @@ DEVICE_ACCESS(luna88k)
 
 		break;
 
+	/*  TODO: One clock per CPU.  */
 	case OBIO_CLOCK0:	/*  0x63000000: Clock ack?  */
 		if (d->pending_timer_interrupts > 0)
 			d->pending_timer_interrupts --;
-		INTERRUPT_DEASSERT(d->timer_irq);
+
+		reassert_timer_interrupt(d);
 		break;
 
 	case INT_ST_MASK0:	/*  0x65000000: Interrupt status CPU 0.  */
