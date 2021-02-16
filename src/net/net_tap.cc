@@ -35,7 +35,7 @@
  *  GXemul.
  *
  *  Use of the tap interface is completely optional, but if it is used
- *  the all of the virtual IP network support is bypassed completely.
+ *  then all of the virtual IP network support is bypassed completely.
  */
 
 #include <sys/types.h>
@@ -151,7 +151,8 @@ void net_tap_tx(struct net *net, struct nic_data *nic,
 	 * kernel will either take the entire packet or none of it, and
 	 * there isn't any useful error recovery for us anyway.
 	 */
-	write(net->tap_fd, packet, len);
+	int ignored = write(net->tap_fd, packet, len);
+	(void)ignored;
 }
 
 /*
