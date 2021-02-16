@@ -4950,3 +4950,5 @@ Changelog for GXemul:
 20210213	Implementing exception cases in 88K xmem_slow implementation.
 20210214	Implementing the fdiv.dss 88K instruction.
 20210215	Implementing the fsub.sss 88K instruction.
+
+==============  RELEASE 0.6.3  ==============
