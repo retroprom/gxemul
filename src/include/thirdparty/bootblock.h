@@ -121,6 +121,10 @@
 #ifndef _SYS_BOOTBLOCK_H
 #define	_SYS_BOOTBLOCK_H
 
+#ifndef __packed
+#define __packed
+#endif
+
 #if !defined(__ASSEMBLER__)
 #include <sys/cdefs.h>
 #if defined(_KERNEL) || defined(_STANDALONE)
