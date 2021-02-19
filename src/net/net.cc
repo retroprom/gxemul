@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2004-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -586,25 +586,6 @@ static void parse_resolvconf(struct net *net)
 			net->nameserver_known = 1;
 			break;
 		}
-
-	for (i=0; i<len; i++)
-		if (strncmp(buf+i, "domain", 6) == 0) {
-			/*  "domain" (1 or more whitespace) domain_name  */
-			i += 6;
-			while (i<len && (buf[i]==' ' || buf[i]=='\t'))
-				i++;
-			if (i >= len)
-				break;
-
-			start = i;
-			while (i<len && buf[i]!='\n' && buf[i]!='\r')
-				i++;
-			if (i < len)
-				buf[i] = '\0';
-			/*  fatal("DOMAIN='%s'\n", buf + start);  */
-			CHECK_ALLOCATION(net->domain_name = strdup(buf+start));
-			break;
-		}
 }
 
 
@@ -714,9 +695,6 @@ void net_dumpinfo(struct net *net)
 		debug("\n");
 	}
 
-	if (net->domain_name != NULL && net->domain_name[0])
-		debug("domain: %s\n", net->domain_name);
-
 	rnp = net->remote_nets;
 	if (net->local_port != 0)
 		debug("distributed network: local port = %i\n",
@@ -800,7 +778,6 @@ struct net *net_init(struct emul *emul, int init_flags,
 	net->netmask_ipv4_len = netipv4len;
 
 	net->nameserver_known = 0;
-	net->domain_name = strdup("");
 	parse_resolvconf(net);
 
 	/*  Distributed network? Then add remote hosts:  */
