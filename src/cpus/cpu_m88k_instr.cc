@@ -883,6 +883,29 @@ X(fadd_sss)
 
 	reg(ic->arg[0]) = d;
 }
+X(fadd_dss)
+{
+	struct ieee_float_value f1;
+	struct ieee_float_value f2;
+	uint64_t d;
+	uint32_t s2 = reg(ic->arg[2]);
+	uint32_t s1 = reg(ic->arg[1]);
+
+	if (cpu->cd.m88k.cr[M88K_CR_PSR] & M88K_PSR_SFD1) {
+		SYNCH_PC;
+		cpu->cd.m88k.fcr[M88K_FPCR_FPECR] = M88K_FPECR_FUNIMP;
+		m88k_exception(cpu, M88K_EXCEPTION_SFU1_PRECISE, 0);
+		return;
+	}
+
+	ieee_interpret_float_value(s1, &f1, IEEE_FMT_S);
+	ieee_interpret_float_value(s2, &f2, IEEE_FMT_S);
+
+	d = ieee_store_float_value(f1.f + f2.f, IEEE_FMT_D);
+
+	reg(ic->arg[0]) = d >> 32;	/*  High 32-bit word,  */
+	reg(ic->arg[0] + 4) = d;	/*  and low word.  */
+}
 X(fadd_dsd)
 {
 	struct ieee_float_value f1;
@@ -1650,6 +1673,12 @@ abort_dump:
  *  xmem_slow:  Unoptimized xmem (exchange register with memory)
  *
  *  arg[0] = copy of the instruction word
+ *
+ *  NOTE: The alternative would be to extend the load/store instructions
+ *  to also include xmem, and thus implement a "fast" version (where
+ *  the page is already accessible both readable and writable) and a
+ *  generic version. (The generic implementation would then not need to
+ *  have a NO_PC_SYNC flag, since they would always sync.)
  */
 X(xmem_slow)
 {
@@ -1706,7 +1735,11 @@ X(xmem_slow)
 	// that the pc was the same before and after, i.e. that the faulting
 	// instruction was the same as the exception handler, is not worth it.)
 	if ((uint32_t)cpu->pc != pc_before_memory_access) {
-		// printf("xmem_load exception, pc_before_memory_access = %08x\n", pc_before_memory_access);
+		printf("xmem_load exception, pc_before_memory_access = %08x\n", pc_before_memory_access);
+		cpu->cd.m88k.dmd[0] = tmp;
+		cpu->cd.m88k.dmt[0] |= DMT_LOCKBAR | DMT_WRITE;
+		cpu->cd.m88k.dmt[0] &= ~((0x1f) << DMT_DREGSHIFT);
+		cpu->cd.m88k.dmt[0] |= d << DMT_DREGSHIFT;
 		return;
 	}
 
@@ -1720,11 +1753,7 @@ X(xmem_slow)
 
 	call.f = xmem_store;
 	call.arg[0] = (size_t) &tmp;
-	call.arg[1] = (size_t) &cpu->cd.m88k.r[s1];
-	if (regofs)
-		call.arg[2] = (size_t) &cpu->cd.m88k.r[s2];
-	else
-		call.arg[2] = imm16;
+	// arg[1] and arg[2] are already set up from xmem_load call.
 
 	if (d == M88K_ZERO_REG)
 		tmp = 0;
@@ -1734,8 +1763,12 @@ X(xmem_slow)
 	// If there was an exception in xmem_store(), then return the d register
 	// to what it was before the xmem_load().
 	if ((uint32_t)cpu->pc != pc_before_memory_access) {
-		// printf("xmem_store exception, pc_before_memory_access = %08x\n", pc_before_memory_access);
-		cpu->cd.m88k.r[d] = tmp;
+		printf("xmem_store exception, pc_before_memory_access = %08x\n", pc_before_memory_access);
+		// cpu->cd.m88k.r[d] = tmp;
+		cpu->cd.m88k.dmd[0] = tmp;
+		cpu->cd.m88k.dmt[0] |= DMT_LOCKBAR | DMT_WRITE;
+		cpu->cd.m88k.dmt[0] &= ~((0x1f) << DMT_DREGSHIFT);
+		cpu->cd.m88k.dmt[0] |= d << DMT_DREGSHIFT;
 		return;
 	}
 }
@@ -2324,6 +2357,7 @@ X(to_be_translated)
 			ic->arg[2] = (size_t) &cpu->cd.m88k.r[s2];
 			switch ((iword >> 5) & 0x3f) {
 			case 0x00:	ic->f = instr(fadd_sss); break;
+			case 0x01:	ic->f = instr(fadd_dss); break;
 			case 0x05:	ic->f = instr(fadd_dsd); break;
 			case 0x11:	ic->f = instr(fadd_dds); break;
 			case 0x15:	ic->f = instr(fadd_ddd); break;
