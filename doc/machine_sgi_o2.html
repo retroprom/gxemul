@@ -295,7 +295,7 @@ extract the OpenBSD distribution:
 echo ifconfig_le0=\"inet 10.0.0.2\" &gt;&gt; /etc/rc.conf
 echo nameserver 10.0.0.254 &gt;&gt; /etc/resolv.conf
 echo 10.0.0.254 &gt; /etc/mygate
-echo /tftpboot -maproot=root 10.0.0.1 &gt; /etc/exports
+echo /tftpboot -maproot=root -alldirs 10.0.0.1 &gt; /etc/exports
 echo rpcbind=YES &gt;&gt; /etc/rc.conf
 echo nfs_server=YES &gt;&gt; /etc/rc.conf
 echo mountd=YES &gt;&gt; /etc/rc.conf
