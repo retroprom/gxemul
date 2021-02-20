@@ -1735,7 +1735,7 @@ X(xmem_slow)
 	// that the pc was the same before and after, i.e. that the faulting
 	// instruction was the same as the exception handler, is not worth it.)
 	if ((uint32_t)cpu->pc != pc_before_memory_access) {
-		printf("xmem_load exception, pc_before_memory_access = %08x\n", pc_before_memory_access);
+		//printf("xmem_load exception, pc_before_memory_access = %08x\n", pc_before_memory_access);
 		cpu->cd.m88k.dmd[0] = tmp;
 		cpu->cd.m88k.dmt[0] |= DMT_LOCKBAR | DMT_WRITE;
 		cpu->cd.m88k.dmt[0] &= ~((0x1f) << DMT_DREGSHIFT);
@@ -1763,7 +1763,7 @@ X(xmem_slow)
 	// If there was an exception in xmem_store(), then return the d register
 	// to what it was before the xmem_load().
 	if ((uint32_t)cpu->pc != pc_before_memory_access) {
-		printf("xmem_store exception, pc_before_memory_access = %08x\n", pc_before_memory_access);
+		//printf("xmem_store exception, pc_before_memory_access = %08x\n", pc_before_memory_access);
 		// cpu->cd.m88k.r[d] = tmp;
 		cpu->cd.m88k.dmd[0] = tmp;
 		cpu->cd.m88k.dmt[0] |= DMT_LOCKBAR | DMT_WRITE;
