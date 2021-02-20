@@ -54,7 +54,7 @@ were based on <a href="https://en.wikipedia.org/wiki/Motorola_88000">Motorola
 	<li>88100 CPU  (Only a single CPU works. Real LUNA machines could have up to 4.)
 	<li>Interrupt controller and parts of the system board
 	<li>Serial console
-	<li>Keyboard
+	<li>Keyboard and mouse
 	<li>Graphical monochrome framebuffer, 1280 x 1024
 	<li>Lance Ethernet
 </ul>
@@ -62,13 +62,11 @@ were based on <a href="https://en.wikipedia.org/wiki/Motorola_88000">Motorola
 <p><b>NOT</b> emulated yet:
 <ul>
 	<li>SCSI
-	<li>Mouse
 	<li><i>Color</i> framebuffers
 </ul>
 
-<p>OpenBSD/luna88k running as a guest OS can reach userland and be
-interacted with, using either serial console or a graphical framebuffer,
-when using root-on-nfs.
+<p>OpenBSD/luna88k works as a guest OS, with either serial console or
+graphical framebuffer, when using root-on-nfs.
 
 
 
@@ -91,6 +89,7 @@ step of the root-on-nfs installation.
 
 <p><a href="openbsd-luna88k-20210130.png"><img src="openbsd-luna88k-20210130-small.png"></a>
 <a href="openbsd-luna88k-20210209.png"><img src="openbsd-luna88k-20210209-small.png"></a>
+<a href="openbsd-luna88k-20210220.png"><img src="openbsd-luna88k-20210220-small.png"></a>
 
 <p>Let's get started.
 
@@ -265,12 +264,16 @@ halt -p</b>
 If you want to run with the graphical framebuffer, uncomment the
 <tt>use_x11(1)</tt> line in <tt>config_client</tt> first.
 Unfortunately, Xorg lacks a driver for <tt>wsfb</tt> in OpenBSD/luna88k
-6.8, which is needed. A naive attempt at simply copying the driver from
-OpenBSD/luna88k 6.7 randomly resulted in Xorg's gray default background being
-visible for a second or so, when running <tt>startx</tt>.
+6.8, which is needed.
 
-<p>(I also attempted to do the entire install using 6.7, but then logging in
-as root on the console was not possible.)
+<p>You can extract the files
+<pre>./usr/X11R6/lib/modules/drivers/wsfb_drv.la
+./usr/X11R6/lib/modules/drivers/wsfb_drv.so
+</pre>
+<p>from the OpenBSD 6.7 xserver distribution file, and use them even if the
+rest of the OS is version 6.8. If you have extracted the files above,
+then start X by running <tt>startx</tt>.
+
 
 
 <p><br>

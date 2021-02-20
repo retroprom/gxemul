@@ -33,8 +33,7 @@
  *
  *  Things that are implemented:
  *	Interrupt controller for CPU #0
- *	Serial I/O
- *	Keyboard
+ *	Serial I/O (including Keyboard and Mouse)
  *	Monochrome framebuffer
  *	Lance ethernet
  *
@@ -43,7 +42,7 @@
  *		Interrupt mask & status, clocks, etc.
  *	SCSI
  *	Parallel I/O
- *	Mouse
+ *	Front LCD display
  *	Color framebuffer
  *
  *  TODO: Separate out these devices to their own files, so that they can
@@ -108,6 +107,10 @@ struct luna88k_data {
 	uint8_t		sio_queue[2][SIO_QUEUE_SIZE];
 	int		sio_queue_head[2];
 	int		sio_queue_tail[2];
+	int		mouse_enable;
+	int		mouse_x;
+	int		mouse_y;
+	int		mouse_buttons;
 
 	/*  ROM and RAM (used by the Ethernet interface)  */
 	uint32_t	fuse_rom[FUSE_ROM_SPACE / sizeof(uint32_t)];
@@ -195,23 +198,20 @@ static void reassert_timer_interrupt(struct luna88k_data* d)
 static void reassert_serial_interrupt(struct luna88k_data* d)
 {
 	int assertSerial = 0;
+	int port;
 
-	if ((d->obio_sio_wr[0][SCC_WR1] & SCC_WR1_RXI_ALL_CHAR) ||
-	    (d->obio_sio_wr[0][SCC_WR1] & SCC_WR1_RXI_FIRST_CHAR)) {
-		if (anything_in_sio_queue(d, 0))
-			assertSerial = 1;
-	}
+	for (port = 0; port <= 1; port++) {
+		if ((d->obio_sio_wr[port][SCC_WR1] & SCC_WR1_RXI_ALL_CHAR) ||
+		    (d->obio_sio_wr[port][SCC_WR1] & SCC_WR1_RXI_FIRST_CHAR)) {
+			if (anything_in_sio_queue(d, port))
+				assertSerial = 1;
+		}
 
-	if ((d->obio_sio_wr[1][SCC_WR1] & SCC_WR1_RXI_ALL_CHAR) ||
-	    (d->obio_sio_wr[1][SCC_WR1] & SCC_WR1_RXI_FIRST_CHAR)) {
-		if (anything_in_sio_queue(d, 1))
-			assertSerial = 1;
-	}
-
-	if (d->obio_sio_wr[0][SCC_WR1] & SCC_WR1_TX_IE) {
-		if (--d->sio_tx_interrupt_countdown <= 0) {
-			assertSerial = 1;
-			d->sio_tx_interrupt_countdown = 30;
+		if (d->obio_sio_wr[port][SCC_WR1] & SCC_WR1_TX_IE) {
+			if (--d->sio_tx_interrupt_countdown <= 0) {
+				assertSerial = 1;
+				d->sio_tx_interrupt_countdown = 30;
+			}
 		}
 	}
 
@@ -244,16 +244,18 @@ DEVICE_TICK(luna88k)
 	struct luna88k_data *d = (struct luna88k_data *) extra;
 
 	/*  Serial console:  */
-	if (d->fb == NULL && space_available_in_sio_queue(d, 0) > 3) {
-		if (console_charavail(d->console_handle)) {
+	if (d->fb == NULL) {
+		 while (space_available_in_sio_queue(d, 0) > 2 &&
+		    console_charavail(d->console_handle)) {
 			int c = console_readchar(d->console_handle);
 			add_to_sio_queue(d, 0, c);
 		}
 	}
 
-	/*  Keyboard:  */
-	if (d->fb != NULL && space_available_in_sio_queue(d, 1) > 7) {
-		if (console_charavail(d->console_handle)) {
+	/*  Keyboard and mouse:  */
+	if (d->fb != NULL) {
+		while (space_available_in_sio_queue(d, 1) > 7 &&
+		    console_charavail(d->console_handle)) {
 			int c = console_readchar(d->console_handle);
 			int shifted = 0;
 			int controlled = 0;
@@ -367,6 +369,47 @@ DEVICE_TICK(luna88k)
 					add_to_sio_queue(d, 1, 0x0a | 0x80);
 				if (shifted)
 					add_to_sio_queue(d, 1, 0x0d | 0x80);
+			}
+		}
+
+		if (space_available_in_sio_queue(d, 1) > 4 && d->mouse_enable) {
+			int mouse_x, mouse_y, mouse_buttons, mouse_fb_nr;
+			console_getmouse(&mouse_x, &mouse_y, &mouse_buttons, &mouse_fb_nr);
+
+			int xdelta = mouse_x - d->mouse_x;
+			int ydelta = d->mouse_y - mouse_y;	// note: inverted
+
+			const int m = 100;
+
+			if (xdelta > m)
+				xdelta = m;
+			if (xdelta < -m)
+				xdelta = -m;
+			if (ydelta > m)
+				ydelta = m;
+			if (ydelta < -m)
+				ydelta = -m;
+
+			/*  Only send update if there is an actual diff.  */
+			if (xdelta != 0 || ydelta != 0 || d->mouse_buttons != mouse_buttons) {
+				d->mouse_x = mouse_x;
+				d->mouse_y = mouse_y;
+				d->mouse_buttons = mouse_buttons;
+
+				// 3-byte protocol according to
+				// OpenBSD/luna88k's lunaws.c.
+				uint8_t b1 = 0x80;
+				int8_t b2 = xdelta;
+				int8_t b3 = ydelta;
+
+				// Buttons are L=4, M=2, R=1, but off means
+				// button down, on means button up! Weird...
+				b1 |= ((~mouse_buttons) & 7);
+
+				//printf("x=%i y=%i b1=%02x %02x %02x\n", xdelta, ydelta, b1,b2,b3);
+				add_to_sio_queue(d, 1, b1);
+				add_to_sio_queue(d, 1, b2);
+				add_to_sio_queue(d, 1, b3);
 			}
 		}
 	}
@@ -611,11 +654,33 @@ DEVICE_ACCESS(luna88k)
 		} else {
 			/*  data  */
 			if (writeflag == MEM_WRITE) {
+				d->sio_tx_interrupt_countdown = 0;
 				if (sio_devnr == 0) {
 					console_putchar(d->console_handle, idata);
-					d->sio_tx_interrupt_countdown = 0;
 				} else
-					fatal("[ luna88k sio write data to dev 1 (keyboard/mouse): TODO ]\n");
+					/*  These are according to OpenBSD/luna88k's lunaws.c  */
+					switch (idata) {
+					case 0x00:
+						/*  "kana LED off".  TODO  */
+						break;
+					case 0x01:
+						/*  "caps LED off".  TODO  */
+						break;
+					case 0x10:
+						/*  "kana LED on".  TODO  */
+						break;
+					case 0x11:
+						/*  "caps LED on".  TODO  */
+						break;
+					case 0x20:
+						d->mouse_enable = 0;
+						break;
+					case 0x60:
+						d->mouse_enable = 1;
+						break;
+					default:
+						fatal("[ luna88k: sio write to dev 1 (keyboard/mouse): 0x%02x ]\n", (int)idata);
+					}
 			} else {
 				if (anything_in_sio_queue(d, sio_devnr)) {
 					odata = get_from_sio_queue(d, sio_devnr);
