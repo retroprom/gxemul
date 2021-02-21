@@ -144,6 +144,7 @@ chmod 1777 tmp
 dd if=/dev/zero of=swap bs=1024 count=262144
 
 echo inet 10.0.0.3 > /tftpboot/etc/hostname.le0
+chmod 640 /tftpboot/etc/hostname.le0
 echo 10.0.0.254 > /tftpboot/etc/mygate
 echo nameserver 10.0.0.254 > /tftpboot/etc/resolv.conf
 echo 127.0.0.1 client localhost > /tftpboot/etc/hosts

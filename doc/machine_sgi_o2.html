@@ -324,6 +324,7 @@ dd if=/dev/zero of=swap bs=1024 count=262144
 
 echo inet 10.0.0.1 > /tftpboot/etc/hostname.mec0
 chmod 640 /tftpboot/etc/hostname.mec0
+echo 10.0.0.254 > /tftpboot/etc/mygate
 echo nameserver 10.0.0.254 > /tftpboot/etc/resolv.conf
 echo 10.0.0.2:/tftpboot / nfs rw 0 0 > /tftpboot/etc/fstab
 echo 10.0.0.2:/tftpboot/swap none swap sw,nfsmntpt=/swap >> /tftpboot/etc/fstab
@@ -406,11 +407,9 @@ reboot</b>
 
 
 <p>Log in as root, with empty password.
-Many things are not working yet, for example X11 does not start yet due
-to some bug in the keyboard emulation.
-It is also very slow, mostly due to having the file system on NFS.
-In order to self-compile GXemul under emulated OpenBSD/sgi, you need
-to run <tt>swapctl -a /swap</tt> as root.
+To start X11, type <tt>startx</tt>.
+Note that the emulation is a bit slow, mostly due to having the file
+system on NFS.
 
 
 
