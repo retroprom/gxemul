@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -95,6 +95,26 @@ struct scc_data {
 
 	struct lk201_data lk201;
 };
+
+
+/*
+ *  Check if space is available in the receive queue.
+ */
+int dev_scc_space_available_in_queue(void *e, int portnr)
+{
+	struct scc_data *d = (struct scc_data *) e;
+
+	int entries_in_use = d->cur_rx_queue_pos_write[portnr] -
+	    d->cur_rx_queue_pos_read[portnr];
+
+	while (entries_in_use < 0)
+		entries_in_use += MAX_QUEUE_LEN;
+
+	if (entries_in_use < MAX_QUEUE_LEN - 20)
+		return 1;
+
+	return 0;
+}
 
 
 /*
@@ -474,7 +494,9 @@ void *dev_scc_init(struct machine *machine, struct memory *mem,
 
 	d->scc_register_r[SCC_RR0] |= SCC_RR0_TX_UNDERRUN;
 
-	lk201_init(&d->lk201, use_fb, dev_scc_add_to_rx_queue,
+	lk201_init(&d->lk201, use_fb,
+	    dev_scc_space_available_in_queue,
+	    dev_scc_add_to_rx_queue,
 	    d->console_handle, d);
 
 	memory_device_register(mem, "scc", baseaddr, DEV_SCC_LENGTH,

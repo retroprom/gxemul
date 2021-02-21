@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -44,7 +44,7 @@
 
 #define	DC_TICK_SHIFT		14
 
-#define	MAX_QUEUE_LEN		32768
+#define	MAX_QUEUE_LEN		1024
 
 struct dc_data {
 	struct dc7085regs	regs;
@@ -66,6 +66,25 @@ struct dc_data {
 
 	struct lk201_data	lk201;
 };
+
+
+/*
+ *  Check if space is available in the receive queue.
+ */
+int space_available_in_queue(void *e, int line_no)
+{
+	struct dc_data *d = (struct dc_data *) e;
+	int entries_in_use = d->cur_rx_queue_pos_write -
+	    d->cur_rx_queue_pos_read;
+
+	while (entries_in_use < 0)
+		entries_in_use += MAX_QUEUE_LEN;
+
+	if (entries_in_use < MAX_QUEUE_LEN - 20)
+		return 1;
+
+	return 0;
+}
 
 
 /*
@@ -311,7 +330,10 @@ int dev_dc7085_init(struct machine *machine, struct memory *mem,
 
 	d->console_handle = console_start_slave(machine, "DC7085", 1);
 
-	lk201_init(&d->lk201, use_fb, add_to_rx_queue, d->console_handle, d);
+	lk201_init(&d->lk201, use_fb,
+	    space_available_in_queue,
+	    add_to_rx_queue,
+	    d->console_handle, d);
 
 	memory_device_register(mem, "dc7085", baseaddr, DEV_DC7085_LENGTH,
 	    dev_dc7085_access, d, DM_DEFAULT, NULL);

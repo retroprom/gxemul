@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -229,56 +229,54 @@ static int lk201_send_mouse_update_sequence(struct lk201_data *d, int mouse_x,
  *  lk201_tick():
  *
  *  This function should be called "every now and then".
- *  If a key is available from the keyboard, add it to the rx queue.
+ *  If keys are available from the keyboard, add them to the rx queue.
  *  If other bits are set, an interrupt might need to be caused.
  */
 void lk201_tick(struct machine *machine, struct lk201_data *d)
 {
-	int mouse_x, mouse_y, mouse_buttons, mouse_fb_nr;
+	int mouse_x, mouse_y, mouse_buttons, mouse_fb_nr, port;
 
-	if (console_charavail(d->console_handle)) {
+	/*
+	 *  Different machines seem to use different ports for their
+	 *  serial console:
+	 *
+	 *  DEC MIPSMATE 5100 uses the keyboard port.
+	 *  DECstation 3100 (PMAX) and 5000/2000 (3MAX) use the printer port.
+	 *  Others seem to use the comm port.
+	 */
+	port = DCCOMM_PORT;
+
+	if (machine->machine_type == MACHINE_PMAX) {
+		switch (machine->machine_subtype) {
+		case MACHINE_DEC_MIPSMATE_5100:
+			port = DCKBD_PORT;
+			break;
+		case MACHINE_DEC_PMAX_3100:
+		case MACHINE_DEC_3MAX_5000:
+			port = DCPRINTER_PORT;
+			break;
+		default:
+			port = DCCOMM_PORT;
+		}
+	}
+
+	if (d->use_fb)
+		port = DCKBD_PORT;
+
+	while (d->space_available_in_queue(d->add_data, port) &&
+	    console_charavail(d->console_handle)) {
 		unsigned char ch = console_readchar(d->console_handle);
 		if (d->use_fb)
 			lk201_convert_ascii_to_keybcode(d, ch);
-		else {
-			/*
-			 *  This is ugly, but necessary because different
-			 *  machines seem to use different ports for their
-			 *  serial console:
-			 *
-			 *  DEC MIPSMATE 5100 uses the keyboard port.
-			 *  DECstation 3100 (PMAX) and 5000/2000 (3MAX) use
-			 *  the printer port.
-			 *  Others seem to use the comm port.
-			 */
-			if (machine->machine_type == MACHINE_PMAX) {
-				switch (machine->machine_subtype) {
-				case MACHINE_DEC_MIPSMATE_5100:
-					d->add_to_rx_queue(d->add_data,
-					    ch, DCKBD_PORT);
-					break;
-				case MACHINE_DEC_PMAX_3100:
-				case MACHINE_DEC_3MAX_5000:
-					d->add_to_rx_queue(d->add_data,
-					    ch, DCPRINTER_PORT);
-					break;
-				default:
-					d->add_to_rx_queue(d->add_data,
-					    ch, DCCOMM_PORT);
-				}
-			} else {
-				d->add_to_rx_queue(d->add_data,
-				    ch, DCCOMM_PORT);
-			}
-		}
+		else
+			d->add_to_rx_queue(d->add_data, ch, port);
 	}
 
 	/*  Don't do mouse updates if we're running in serial console mode:  */
 	if (!d->use_fb)
 		return;
 
-	console_getmouse(&mouse_x, &mouse_y, &mouse_buttons,
-	    &mouse_fb_nr);
+	console_getmouse(&mouse_x, &mouse_y, &mouse_buttons, &mouse_fb_nr);
 
 	lk201_send_mouse_update_sequence(d, mouse_x, mouse_y,
 	    mouse_buttons, mouse_fb_nr);
@@ -396,11 +394,13 @@ void lk201_tx_data(struct lk201_data *d, int port, int idata)
  *  Initialize lk201 keyboard/mouse settings.
  */
 void lk201_init(struct lk201_data *d, int use_fb,
+	int (*space_available_in_queue)(void *,int),
 	void (*add_to_rx_queue)(void *,int,int),
 	int console_handle, void *add_data)
 {
 	memset(d, 0, sizeof(struct lk201_data));
 
+	d->space_available_in_queue = space_available_in_queue;
 	d->add_to_rx_queue = add_to_rx_queue;
 	d->add_data = add_data;
 

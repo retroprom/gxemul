@@ -2,7 +2,7 @@
 #define	DEVICES_H
 
 /*
- *  Copyright (C) 2003-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -511,6 +511,7 @@ struct lk201_data {
         int                     use_fb;
 	int			console_handle;
 
+        int                     (*space_available_in_queue)(void *,int);
         void                    (*add_to_rx_queue)(void *,int,int);
 	void			*add_data;
                 
@@ -524,7 +525,9 @@ struct lk201_data {
 void lk201_tick(struct machine *, struct lk201_data *); 
 void lk201_tx_data(struct lk201_data *, int port, int idata);
 void lk201_init(struct lk201_data *d, int use_fb,
-	void (*add_to_rx_queue)(void *,int,int), int console_handle, void *);
+	int (*space_available_in_queue)(void *,int),
+	void (*add_to_rx_queue)(void *,int,int),
+	int console_handle, void *);
 
 
 #endif	/*  DEVICES_H  */
