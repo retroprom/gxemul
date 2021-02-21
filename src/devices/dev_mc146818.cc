@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2020  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -243,8 +243,11 @@ static void mc146818_update_time(struct mc_data *d)
 		break;
 	case MC146818_DEC:
 		/*
-		 *  DECstations must have 72 or 73 in the
-		 *  Year field, or Ultrix screems.  (Weird.)
+		 *  DECstations must have 72 or 73 in the Year field, or
+		 *  Ultrix screems. This is also mentioned in NetBSD's
+		 *  mcclock.c.  Unfortunately, this means that NetBSD cannot
+		 *  know what year it actually is, so it has to deduce it
+		 *  from the filesystem.
 		 */
 		d->reg[4 * MC_YEAR] = 72;
 
