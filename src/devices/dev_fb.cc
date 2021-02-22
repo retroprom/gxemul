@@ -604,7 +604,7 @@ DEVICE_TICK(fb)
 #if 0
 
 This is a hack used to produce raw ppm image dumps, which can then be
-used to make movies, e.g. http://www.youtube.com/watch?v=Afh1ECLWac8
+used to make movies.
 
 {
 	static struct timeval tv_last;
