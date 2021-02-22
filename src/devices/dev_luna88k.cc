@@ -38,6 +38,7 @@
  *	Lance ethernet
  *
  *  Things that are NOT implemented yet:
+ *	LUNA-88K2 specifics. (Some registers are at different addresses etc.)
  *	Actually working multi-CPU interrupt support:
  *		Interrupt mask & status, clocks, etc.
  *	SCSI
@@ -100,7 +101,7 @@ struct luna88k_data {
 	/*  sio: Serial controller, two channels.  */
 	int		console_handle;
 	struct interrupt sio_irq;
-	int		sio_tx_interrupt_countdown;
+	int		sio_tx_pending[2];
 	int		obio_sio_regno[2];
 	uint8_t		obio_sio_rr[2][8];
 	uint8_t		obio_sio_wr[2][8];
@@ -207,12 +208,9 @@ static void reassert_serial_interrupt(struct luna88k_data* d)
 				assertSerial = 1;
 		}
 
-		if (d->obio_sio_wr[port][SCC_WR1] & SCC_WR1_TX_IE) {
-			if (--d->sio_tx_interrupt_countdown <= 0) {
-				assertSerial = 1;
-				d->sio_tx_interrupt_countdown = 30;
-			}
-		}
+		if (d->obio_sio_wr[port][SCC_WR1] & SCC_WR1_TX_IE &&
+		    d->sio_tx_pending[port])
+			assertSerial = 1;
 	}
 
 	if (assertSerial)
@@ -553,6 +551,8 @@ DEVICE_ACCESS(luna88k)
 		break;
 
 	case OBIO_CAL_CTL:	/*  calendar control register  */
+		// TODO: Freeze bit etc.
+		// Perhaps same as dev_mk48txx.cc?
 		break;
 	case OBIO_CAL_SEC:
 		timet = time(NULL); tmp = gmtime(&timet);
@@ -620,14 +620,21 @@ DEVICE_ACCESS(luna88k)
 
 			/*  Similar to dev_scc.cc ?  */
 			if (writeflag == MEM_WRITE) {
+				int old_tx_enable = d->obio_sio_wr[sio_devnr][SCC_WR1] & SCC_WR1_TX_IE;
 				if (d->obio_sio_regno[sio_devnr] == 0) {
 					int regnr = idata & 7;
+					int cmd = idata & ~7;
 
-					d->obio_sio_regno[sio_devnr] = regnr;
-
-					// printf("[ sio: setting regno for next operation to 0x%02x ]\n", (int)regnr);
+					// printf("[ sio: cmd=0x%02x, then setting regno for next operation to 0x%02x ]\n", cmd, regnr);
 
 					/*  High bits are command.  */
+					switch (cmd) {
+					case SCC_RESET_TX_IP:
+						d->sio_tx_pending[sio_devnr] = 0;
+						break;
+					}
+
+					d->obio_sio_regno[sio_devnr] = regnr;
 				} else {
 					int regnr = d->obio_sio_regno[sio_devnr] & 7;
 					d->obio_sio_wr[sio_devnr][regnr] = idata;
@@ -635,9 +642,12 @@ DEVICE_ACCESS(luna88k)
 					// printf("[ sio: setting reg 0x%02x = 0x%02x ]\n", d->obio_sio_regno[sio_devnr], (int)idata);
 
 					d->obio_sio_regno[sio_devnr] = 0;
-
-					reassert_serial_interrupt(d);
 				}
+
+				if (d->obio_sio_wr[sio_devnr][SCC_WR1] & SCC_WR1_TX_IE && !old_tx_enable)
+					d->sio_tx_pending[sio_devnr] = 1;
+
+				reassert_serial_interrupt(d);
 			} else {
 				d->obio_sio_rr[sio_devnr][SCC_RR0] = SCC_RR0_TX_EMPTY | SCC_RR0_DCD | SCC_RR0_CTS;
 
@@ -654,10 +664,11 @@ DEVICE_ACCESS(luna88k)
 		} else {
 			/*  data  */
 			if (writeflag == MEM_WRITE) {
-				d->sio_tx_interrupt_countdown = 0;
+				// printf("[ sio: writing data 0x%02x to port %i ]\n", (int)idata, sio_devnr);
 				if (sio_devnr == 0) {
 					console_putchar(d->console_handle, idata);
-				} else
+				} else {
+					/*  Mouse and Keyboard.  */
 					/*  These are according to OpenBSD/luna88k's lunaws.c  */
 					switch (idata) {
 					case 0x00:
@@ -681,6 +692,9 @@ DEVICE_ACCESS(luna88k)
 					default:
 						fatal("[ luna88k: sio write to dev 1 (keyboard/mouse): 0x%02x ]\n", (int)idata);
 					}
+				}
+
+				d->sio_tx_pending[sio_devnr] = 1;
 			} else {
 				if (anything_in_sio_queue(d, sio_devnr)) {
 					odata = get_from_sio_queue(d, sio_devnr);
