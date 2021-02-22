@@ -529,8 +529,9 @@ DEVICE_TICK(fb)
 	if (d->update_x2 != -1) {
 #ifdef WITH_X11
 		int y;
+		int addr, addr2;
 #endif
-		int addr, addr2, q = d->vfb_scaledown;
+		int q = d->vfb_scaledown;
 
 		if (d->update_x1 >= d->visible_xsize)
 			d->update_x1 = d->visible_xsize - 1;
@@ -550,12 +551,12 @@ DEVICE_TICK(fb)
 		d->update_y1 = d->update_y1 / q * q;
 		d->update_y2 = d->update_y2 / q * q;
 
+#ifdef WITH_X11
 		addr  = d->update_y1 * d->bytes_per_line +
 		    d->update_x1 * d->bit_depth / 8;
 		addr2 = d->update_y1 * d->bytes_per_line +
 		    d->update_x2 * d->bit_depth / 8;
 
-#ifdef WITH_X11
 		for (y=d->update_y1; y<=d->update_y2; y+=q) {
 			d->redraw_func(d, addr, addr2 - addr);
 			addr  += d->bytes_per_line * q;

@@ -109,7 +109,9 @@ struct bt459_data {
 static void bt459_update_X_cursor(struct cpu *cpu, struct bt459_data *d)
 {
 	int i, x,y, xmax=0, ymax=0;
+#ifdef WITH_X11
 	int bw_only = 1;
+#endif
 
 	/*  First, let's calculate the size of the cursor:  */
 	for (y=0; y<64; y++)
@@ -124,8 +126,10 @@ static void bt459_update_X_cursor(struct cpu *cpu, struct bt459_data *d)
 				int color = (data >> (6-2*i)) & 3;
 				if (color != 0)
 					xmax = x + i;
+#ifdef WITH_X11
 				if (color != 0 && color != 3)
 					bw_only = 0;
+#endif
 			}
 		}
 
