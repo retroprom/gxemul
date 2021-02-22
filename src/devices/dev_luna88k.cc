@@ -33,6 +33,7 @@
  *
  *  Things that are implemented:
  *	Interrupt controller for CPU #0
+ *	Time-of-day clock
  *	Serial I/O (including Keyboard and Mouse)
  *	Monochrome framebuffer
  *	Lance ethernet
@@ -580,7 +581,8 @@ DEVICE_ACCESS(luna88k)
 		break;
 	case OBIO_CAL_YEAR:
 		timet = time(NULL); tmp = gmtime(&timet);
-		odata = BCD(tmp->tm_year - 2000) << 24;  // ?
+		// TODO: 1970 for LUNA88K (MK), 1990 for LUNA88K2 (DS)
+		odata = BCD((tmp->tm_year + 1900) - 1970) << 24;
 		break;
 
 	case OBIO_PIO0A:	/*  0x49000000: PIO-0 port A  */
