@@ -159,7 +159,7 @@ void LS_GENERIC_N(struct cpu *cpu, struct m88k_instr_call *ic)
 #ifndef LS_1
 	/*  Check alignment:  */
 	if (addr & (LS_SIZE - 1)) {
-#if 0
+#if 1
 		/*  Cause an address alignment exception:  */
 		m88k_exception(cpu, M88K_EXCEPTION_MISALIGNED_ACCESS, 0);
 #else
