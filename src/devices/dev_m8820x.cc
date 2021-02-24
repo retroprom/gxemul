@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2007-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -44,6 +44,7 @@
 
 
 struct m8820x_data {
+	int		cpu_nr;
 	int		cmmu_nr;
 };
 
@@ -128,10 +129,14 @@ static void m8820x_command(struct cpu *cpu, struct m8820x_data *d)
 
 DEVICE_ACCESS(m8820x)
 {
+	// NOTE:
+	//	cpu is the struct cpu* of the processor doing the device access.
+	//	c   is the struct cpu* where the M88200 CMMU is located.
 	uint64_t idata = 0, odata = 0;
 	struct m8820x_data *d = (struct m8820x_data *) extra;
-	uint32_t *regs = cpu->cd.m88k.cmmu[d->cmmu_nr]->reg;
-	uint32_t *batc = cpu->cd.m88k.cmmu[d->cmmu_nr]->batc;
+	struct cpu* c = cpu->machine->cpus[d->cpu_nr];
+	uint32_t *regs = c->cd.m88k.cmmu[d->cmmu_nr]->reg;
+	uint32_t *batc = c->cd.m88k.cmmu[d->cmmu_nr]->batc;
 
 	if (writeflag == MEM_WRITE)
 		idata = memory_readmax64(cpu, data, len);
@@ -154,7 +159,7 @@ DEVICE_ACCESS(m8820x)
 			exit(1);
 		} else {
 			regs[relative_addr / sizeof(uint32_t)] = idata;
-			m8820x_command(cpu, d);
+			m8820x_command(c, d);
 		}
 		break;
 
@@ -172,7 +177,7 @@ DEVICE_ACCESS(m8820x)
 	case CMMU_SAPR:		/*  TODO: Invalidate something for  */
 	case CMMU_UAPR:		/*  SAPR and UAPR writes?  */
 		/*  TODO: Don't invalidate everything.  */
-		cpu->invalidate_translation_caches(cpu, 0, INVALIDATE_ALL);
+		c->invalidate_translation_caches(c, 0, INVALIDATE_ALL);
 		if (writeflag == MEM_WRITE)
 			regs[relative_addr / sizeof(uint32_t)] = idata;
 		break;
@@ -196,8 +201,8 @@ DEVICE_ACCESS(m8820x)
 			batc[i] = idata;
 			if (old != idata) {
 				/*  TODO: Don't invalidate everything?  */
-				cpu->invalidate_translation_caches(
-				    cpu, 0, INVALIDATE_ALL);
+				c->invalidate_translation_caches(
+				    c, 0, INVALIDATE_ALL);
 			}
 		}
 		break;
@@ -229,7 +234,10 @@ DEVINIT(m8820x)
 	CHECK_ALLOCATION(d = (struct m8820x_data *) malloc(sizeof(struct m8820x_data)));
 	memset(d, 0, sizeof(struct m8820x_data));
 
-	d->cmmu_nr = devinit->addr2;
+	// Hack: Use the addr2 field to select cpu and cmmu numbers.
+	// cmmu nr 0 = instruction, 1 = data.
+	d->cmmu_nr = devinit->addr2 & 1;
+	d->cpu_nr = devinit->addr2 >> 1;
 
 	memory_device_register(devinit->machine->memory, devinit->name,
 	    devinit->addr, M8820X_LENGTH, dev_m8820x_access, (void *)d,

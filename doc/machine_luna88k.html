@@ -51,7 +51,7 @@ were based on <a href="https://en.wikipedia.org/wiki/Motorola_88000">Motorola
 
 <p>Emulated hardware:
 <ul>
-	<li>88100 CPU  (Only a single CPU works. Real LUNA machines could have up to 4.)
+	<li>88100 CPU  (Only a single CPU works well, up to 4 can be experimented with.)
 	<li>Interrupt controller and parts of the system board
 	<li>Serial console
 	<li>Keyboard and mouse
@@ -154,8 +154,9 @@ echo 10.0.0.2:/tftpboot/swap none swap sw,nfsmntpt=/swap >> /tftpboot/etc/fstab
 
 halt</b>
 </pre></td></tr></table>
-  <li>Download the OpenBSD/luna88k GENERIC and RAMDISK kernels:<pre>
+  <li>Download the OpenBSD/luna88k GENERIC, MULTIPROCESSOR, and RAMDISK kernels:<pre>
 	<a href="http://ftp.eu.openbsd.org/pub/OpenBSD/6.8/luna88k/bsd">http://ftp.eu.openbsd.org/pub/OpenBSD/6.8/luna88k/bsd</a>
+	<a href="http://ftp.eu.openbsd.org/pub/OpenBSD/6.8/luna88k/bsd.mp">http://ftp.eu.openbsd.org/pub/OpenBSD/6.8/luna88k/bsd.mp</a>
 	<a href="http://ftp.eu.openbsd.org/pub/OpenBSD/6.8/luna88k/bsd.rd">http://ftp.eu.openbsd.org/pub/OpenBSD/6.8/luna88k/bsd.rd</a>
 
 </pre>
@@ -178,6 +179,10 @@ machine(
         type("luna88k")
         subtype("luna-88k")
 	! use_x11(1)
+
+	! For multiprocessor experiments:
+	! ncpus(4)
+        ! load("bsd.mp")
 
         ! load("bsd.rd")
         load("bsd")
@@ -275,6 +280,11 @@ Unfortunately, Xorg lacks a driver for <tt>wsfb</tt> in OpenBSD/luna88k
 rest of the OS is version 6.8. If you have extracted the files above,
 then start X by running <tt>startx</tt>.
 
+<p>You can experiment with the multiprocessor kernel (bsd.mp), with up to
+4 emulated CPUs. It is not as stable as running single-processor, though.
+Also, the emulator itself is not multithreaded, so all CPUs are emulated
+using a single host processor, so a higher number of emulated CPUs means
+a slower total emulation speed.
 
 
 <p><br>

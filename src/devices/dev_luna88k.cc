@@ -32,7 +32,7 @@
  *  work to some basic degree.
  *
  *  Things that are implemented:
- *	Interrupt controller for CPU #0
+ *	Interrupt controller (hopefully working with all 4 CPUs)
  *	Time-of-day clock
  *	Serial I/O (including Keyboard and Mouse)
  *	Monochrome framebuffer
@@ -40,8 +40,6 @@
  *
  *  Things that are NOT implemented yet:
  *	LUNA-88K2 specifics. (Some registers are at different addresses etc.)
- *	Actually working multi-CPU interrupt support:
- *		Interrupt mask & status, clocks, etc.
  *	SCSI
  *	Parallel I/O
  *	Front LCD display
@@ -88,10 +86,10 @@
 struct luna88k_data {
 	struct vfb_data *fb;
 
-	struct interrupt cpu_irq;
-	int		irqActive;
+	struct interrupt cpu_irq[MAX_CPUS];
+	int		irqActive[MAX_CPUS];
 	uint32_t	interrupt_enable[MAX_CPUS];
-	uint32_t	interrupt_status[MAX_CPUS];
+	uint32_t	interrupt_status;
 	uint32_t	software_interrupt_status[MAX_CPUS];
 
 	/*  Timer stuff  */
@@ -156,36 +154,47 @@ static void add_to_sio_queue(struct luna88k_data* d, int n, uint8_t c)
 
 static void reassert_interrupts(struct luna88k_data *d)
 {
-	// TODO: Per-cpu, for multiprocessor machines.
-	// MAYBE just one interrupt_status, but 4 enable words?
-	//
-	// printf("status = 0x%08x, enable = 0x%08x\n",
-	//	d->interrupt_status[0], d->interrupt_enable[0]);
+	int cpu;
 
-        if (d->interrupt_status[0] & d->interrupt_enable[0]) {
-		if (!d->irqActive)
-	                INTERRUPT_ASSERT(d->cpu_irq);
+	for (cpu = 0; cpu < MAX_CPUS; cpu++) {
+		// printf("cpu%i: status = 0x%08x, enable = 0x%08x\n",
+		//	cpu, d->interrupt_status, d->interrupt_enable[0]);
 
-		d->irqActive = 1;
-	} else {
-		if (d->irqActive)
-	                INTERRUPT_DEASSERT(d->cpu_irq);
+		// General interrupt status is for the entire machine,
+		// but the Software interrupts (IPIs) are per CPU.
+		uint32_t status = d->interrupt_status;
+		uint32_t enable = d->interrupt_enable[cpu];
 
-		d->irqActive = 0;
+		if (d->software_interrupt_status[cpu])
+			status |= (1 << 26);
+
+	        if (status & enable) {
+			if (!d->irqActive[cpu])
+		                INTERRUPT_ASSERT(d->cpu_irq[cpu]);
+
+			d->irqActive[cpu] = 1;
+		} else {
+			if (d->irqActive[cpu])
+		                INTERRUPT_DEASSERT(d->cpu_irq[cpu]);
+
+			d->irqActive[cpu] = 0;
+		}
 	}
+
+	// printf("--\n");
 }
 
 static void luna88k_interrupt_assert(struct interrupt *interrupt)
 {
         struct luna88k_data *d = (struct luna88k_data *) interrupt->extra;
-	d->interrupt_status[0] |= (1 << (interrupt->line + 25));
+	d->interrupt_status |= (1 << (interrupt->line + 25));
 	reassert_interrupts(d);
 }
 
 static void luna88k_interrupt_deassert(struct interrupt *interrupt)
 {
         struct luna88k_data *d = (struct luna88k_data *) interrupt->extra;
-	d->interrupt_status[0] &= ~(1 << (interrupt->line + 25));
+	d->interrupt_status &= ~(1 << (interrupt->line + 25));
 	reassert_interrupts(d);
 }
 
@@ -710,8 +719,12 @@ DEVICE_ACCESS(luna88k)
 
 		break;
 
-	/*  TODO: One clock per CPU.  */
 	case OBIO_CLOCK0:	/*  0x63000000: Clock ack?  */
+	case OBIO_CLOCK1:	/*  0x63000004: Clock ack?  */
+	case OBIO_CLOCK2:	/*  0x63000008: Clock ack?  */
+	case OBIO_CLOCK3:	/*  0x6300000c: Clock ack?  */
+		cpunr = (addr - OBIO_CLOCK0) / 4;
+		// TODO: Pending counter per cpu?
 		if (d->pending_timer_interrupts > 0)
 			d->pending_timer_interrupts --;
 
@@ -740,12 +753,13 @@ DEVICE_ACCESS(luna88k)
 			reassert_interrupts(d);
 		} else {
 			uint32_t currentMask = d->interrupt_enable[cpunr];
+			uint32_t status = d->interrupt_status & currentMask;
 			int highestCurrentStatus = 0;
 			odata = currentMask >> 8;
 			
 			for (int i = 1; i <= 6; ++i) {
 				int m = 1 << (25 + i);
-				if (d->interrupt_status[cpunr] & m)
+				if (status & m)
 					highestCurrentStatus = i;
 			}
 
@@ -760,15 +774,16 @@ DEVICE_ACCESS(luna88k)
 	case SOFT_INT2:		/*  0x69000008: Software Interrupt status CPU 2.  */
 	case SOFT_INT3:		/*  0x6900000c: Software Interrupt status CPU 3.  */
 		cpunr = (addr - SOFT_INT0) / 4;
-		odata = d->software_interrupt_status[cpunr];
-
-		// Reading status clears it.
-		d->software_interrupt_status[cpunr] = 0;
 
 		if (writeflag == MEM_WRITE) {
-			fatal("TODO: luna88k write to software interrupts\n");
-			exit(1);
+			d->software_interrupt_status[cpunr] = idata;
+		} else {
+			// Reading status clears it.
+			odata = d->software_interrupt_status[cpunr];
+			d->software_interrupt_status[cpunr] = 0;
 		}
+
+		reassert_interrupts(d);
 		break;
 
 	case RESET_CPU_ALL:	/*  0x6d000010: Reset all CPUs  */
@@ -853,30 +868,31 @@ void add_cmmu_for_cpu(struct devinit* devinit, int cpunr, uint32_t iaddr, uint32
 	char tmpstr[300];
 	struct m8820x_cmmu *cmmu;
 
+	if (cpunr >= devinit->machine->ncpus)
+		return;
+
 	/*  Instruction CMMU:  */
 	CHECK_ALLOCATION(cmmu = (struct m8820x_cmmu *) malloc(sizeof(struct m8820x_cmmu)));
 	memset(cmmu, 0, sizeof(struct m8820x_cmmu));
 
-	if (cpunr < devinit->machine->ncpus)
-		devinit->machine->cpus[cpunr]->cd.m88k.cmmu[0] = cmmu;
+	devinit->machine->cpus[cpunr]->cd.m88k.cmmu[0] = cmmu;
 
 	/*  This is a 88200, revision 9:  */
 	cmmu->reg[CMMU_IDR] = (M88200_ID << 21) | (9 << 16);
-	snprintf(tmpstr, sizeof(tmpstr), "m8820x addr=0x%x addr2=0", iaddr);
+	snprintf(tmpstr, sizeof(tmpstr), "m8820x addr=0x%x addr2=%i", iaddr, 2 * cpunr);
 	device_add(devinit->machine, tmpstr);
 
 	/*  ... and data CMMU:  */
 	CHECK_ALLOCATION(cmmu = (struct m8820x_cmmu *) malloc(sizeof(struct m8820x_cmmu)));
 	memset(cmmu, 0, sizeof(struct m8820x_cmmu));
 
-	if (cpunr < devinit->machine->ncpus)
-		devinit->machine->cpus[cpunr]->cd.m88k.cmmu[1] = cmmu;
+	devinit->machine->cpus[cpunr]->cd.m88k.cmmu[1] = cmmu;
 
 	/*  This is also a 88200, revision 9:  */
 	cmmu->reg[CMMU_IDR] = (M88200_ID << 21) | (9 << 16);
 	cmmu->batc[8] = BATC8;
 	cmmu->batc[9] = BATC9;
-	snprintf(tmpstr, sizeof(tmpstr), "m8820x addr=0x%x addr2=1", daddr);
+	snprintf(tmpstr, sizeof(tmpstr), "m8820x addr=0x%x addr2=%i", daddr, 1 + 2 * cpunr);
 	device_add(devinit->machine, tmpstr);
 }
 
@@ -898,7 +914,16 @@ DEVINIT(luna88k)
 	 *  Connect to the CPU's interrupt pin, and register
 	 *  6 hardware interrupts:
 	 */
-	INTERRUPT_CONNECT(devinit->interrupt_path, d->cpu_irq);
+	INTERRUPT_CONNECT(devinit->interrupt_path, d->cpu_irq[0]);
+
+	// HACK for trying out CPUs 1, 2 and 3. TODO: Base on devinit->interrupt_path instead.
+	if (devinit->machine->ncpus >= 2)
+		INTERRUPT_CONNECT("machine[0].cpu[1]", d->cpu_irq[1]);
+	if (devinit->machine->ncpus >= 3)
+		INTERRUPT_CONNECT("machine[0].cpu[2]", d->cpu_irq[2]);
+	if (devinit->machine->ncpus >= 4)
+		INTERRUPT_CONNECT("machine[0].cpu[3]", d->cpu_irq[3]);
+
         for (int i = 1; i <= 6; i++) {
                 struct interrupt templ;
                 snprintf(n, sizeof(n), "%s.luna88k.%i", devinit->interrupt_path, i);
@@ -935,15 +960,13 @@ DEVINIT(luna88k)
 	d->console_handle = console_start_slave(devinit->machine, "SIO", 1);
 	devinit->machine->main_console_handle = d->console_handle;
 
-	if (devinit->machine->x11_md.in_use)
-	{
+	if (devinit->machine->x11_md.in_use) {
 		d->fb = dev_fb_init(devinit->machine, devinit->machine->memory,
 			0x100000000ULL + BMAP_BMAP0, VFB_GENERIC,
 			1280, 1024, 2048, 1024, 1, "LUNA 88K");
 	}
 
-	if (devinit->machine->ncpus > 4)
-	{
+	if (devinit->machine->ncpus > 4) {
 		printf("LUNA 88K can't have more than 4 CPUs.\n");
 		exit(1);
 	}

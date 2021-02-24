@@ -4962,3 +4962,4 @@ Changelog for GXemul:
 		for available console input. (Found when using CTRL-C on Linux
 		to enter the debugger command line, and noticed that it was
 		spuriously broken.)
+20210222	Basic multiprocessor bootup of OpenBSD/luna88k now works.

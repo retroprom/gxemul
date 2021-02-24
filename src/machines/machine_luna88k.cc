@@ -55,6 +55,7 @@
 MACHINE_SETUP(luna88k)
 {
 	const char* luna88k2_fuse_string = "MNAME=LUNA88K+";
+	size_t i;
 
 	device_add(machine, "luna88k");
 
@@ -77,7 +78,7 @@ MACHINE_SETUP(luna88k)
 		    where h is first 32-bit word, l is second.
 		*/
 
-		for (size_t i = 0; i < strlen(luna88k2_fuse_string); ++i) {
+		for (i = 0; i < strlen(luna88k2_fuse_string); ++i) {
 			uint32_t h = luna88k2_fuse_string[i] & 0xf0;
 			uint32_t l = luna88k2_fuse_string[i] & 0x0f;
 			store_32bit_word(cpu, FUSE_ROM_ADDR + i * 8 + 0, h << 24);
@@ -95,6 +96,14 @@ MACHINE_SETUP(luna88k)
 		fatal("More than 4 CPUs is not supported for LUNA 88K.\n");
 		exit(1);
 	}
+
+	// Unpause all CPUs. (Normally, the emulator only starts with
+	// one CPU running, and it is up to the OS to enable the rest,
+	// but on real LUNA-88K machines, all CPUs are started to run
+	// the OS kernel code simultaneously and it is up to the OS
+	// kernel's initial code to sort things out.)
+	for (i = 0; i < (size_t)machine->ncpus; ++i)
+		machine->cpus[i]->running = 1;
 
 	if (!machine->prom_emulation)
 		return;
