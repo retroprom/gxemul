@@ -276,7 +276,8 @@ Unfortunately, Xorg lacks a driver for <tt>wsfb</tt> in OpenBSD/luna88k
 <pre>./usr/X11R6/lib/modules/drivers/wsfb_drv.la
 ./usr/X11R6/lib/modules/drivers/wsfb_drv.so
 </pre>
-<p>from the OpenBSD 6.7 xserver distribution file, and use them even if the
+<p>from the <a href="http://ftp.eu.openbsd.org/pub/OpenBSD/6.7/luna88k/xserv67.tgz">OpenBSD
+6.7 xserver</a> distribution file, and use them even if the
 rest of the OS is version 6.8. If you have extracted the files above,
 then start X by running <tt>startx</tt>.
 
@@ -286,8 +287,13 @@ Also, the emulator itself is not multithreaded, so all CPUs are emulated
 using a single host processor, so a higher number of emulated CPUs means
 a slower total emulation speed.
 
+<p><a href="20210222-openbsd-luna88k-mp-1.png"><img src="20210222-openbsd-luna88k-mp-1-small.png"></a>
+<a href="20210222-openbsd-luna88k-mp-2.png"><img src="20210222-openbsd-luna88k-mp-2-small.png"></a>
 
-<p><br>
+<p>Uncomment the bsd.mp file in the configuration file, and set ncpus to the
+number of cpus (1 through 4).
+
+
 <p>
 One can also experiment with the RAMDISK kernel (much easier than following
 the rather involved process above):
