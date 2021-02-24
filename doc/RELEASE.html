@@ -9,7 +9,7 @@
 
 <!-- 10 lines header.  -->
 
-<h1>Release notes for GXemul 0.6.3</h1>
+<h1>Release notes for GXemul 0.6.3.1</h1>
 
 <p><i>Copyright (C) 2003-2021  Anders Gavare</i>
 
@@ -34,10 +34,24 @@ still one of the guest OSes that works best.
 
 
 
-<p><br>The most important changes between release 0.6.2 and 0.6.3 are:
-
+<p><br>The most important changes between release 0.6.3 and 0.6.3.1 are:
 <ul>
-	<li><a href="machine_luna88k.html#openbsdluna88k">OpenBSD/luna88k can now run in GXemul</a> with root-on-nfs.
+	<li>Many small fixes that allow
+		<a href="machine_luna88k.html#openbsdluna88k">OpenBSD/luna88k</a>
+		to run better, including running X11.
+
+	<p>
+	<li>A bug regarding checking the return value from <tt>select()</tt>
+		calls when detecting whether console input was available
+		has now been fixed. This bug resulted in spuriously broken
+		interactivity on some systems (at least Linux), e.g. when
+		typing CTRL-C to enter the GXemul command prompt, which
+		required extra keypresses.
+</ul>
+
+<p><br>The most important changes between release 0.6.2 and 0.6.3 are:
+<ul>
+	<li>OpenBSD/luna88k can now run in GXemul with root-on-nfs.
 		The installation instructions are somewhat involved, but
 		it works well enough to self-compile at least an older
 		version of GXemul inside OpenBSD running in the emulator.
@@ -52,9 +66,6 @@ still one of the guest OSes that works best.
 		Usage of tar archives for passing files to and from
 		emulated machines that lack networking capability is thus
 		somewhat less buggy.
-
-	<p>
-	<li>... and various other bugfixes.
 </ul>
 
 

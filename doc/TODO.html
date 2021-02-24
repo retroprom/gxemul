@@ -23,6 +23,11 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 <p><pre>
 <b>Current "short-list":</b>
 
+o) Try using profil() for very basic runtime profiling?
+o) Continue on Luna 88k machine:
+	SMP clocks and stability?, color framebuffer?, SCSI?
+o) Continue on SGI O2: PCI (moving devices in memory at runtime?), SCSI (?), ...
+o) Continue on i960 stuff, in particular HP 700/RX stuff. :-)
 o) Double-check R10000 vs R4400 TLB specifics:
    https://techpubs.jurassic.nl/manuals/hdwr/developer/R10K_UM/sgi_html/t5.Ver.2.0.book_347.html
 o) If/when booting from SGI disk images is really meaningful (i.e. not just that it
@@ -46,13 +51,6 @@ o) Command line option for forcing fsync on each disk image write.
 o) O(n) -> O(1) 64-bit translation invalidation, _IF_ it is possible to
 	detect non-canonical virtal addresses being entered into the
 	translation arrays. Would be nice.
-o) Update NetBSD from 8.0 to 8.1 (or newer), in the documentation.
-o) Try with newest OpenBSD/sgi version? Discontinued, or perhaps not...?
-o) Continue on Luna 88k machine:
-	clock during bootup?, multi-CPU, X11, mouse, SCSI
-o) Boot args for gxemul -xeg4 -d opendarwin-6.6.2.ppc.cdr ? http://web.mit.edu/darwin/www/
-o) Continue on SGI O2: PCI, SCSI (?), ...
-o) Continue on i960 stuff, in particular HP 700/RX stuff. :-)
 o) If I decide to go back to plain C:
 	1. Reimplement the only useful stuff that was in the new
 		framework, in the old framework:
@@ -880,6 +878,9 @@ X11:
 	per second? Look for "ppm image dumps" in dev_fb.cc.html. if 
 	implemented, add to man page.
 
+Wayland:
+	-W ?
+
 MIPS:
 	o)  ALU operations (typically addiu, or, etc) can be hardcoded/inlined for common
 		register pairs or even triples. Classic generate_blahblah and an array.
@@ -995,6 +996,7 @@ POWER/PowerPC:
 	x)  make OpenBSD/macppc work (PCI controller stuff)
 	x)  Floating point exception correctness.
 	x)  Alignment exceptions.
+	x)  Boot args for gxemul -xeg4 -d opendarwin-6.6.2.ppc.cdr ? http://web.mit.edu/darwin/www/
 
 PReP:
 	x)  Clock time! ("Bad battery blah blah")
@@ -1335,4 +1337,3 @@ Better framebuffer and X-windows functionality:
 
 </body>
 </html>
-
