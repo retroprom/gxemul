@@ -30,12 +30,6 @@
  *  This is for experiments with OpenBSD/luna88k. See
  *  openbsd/sys/arch/luna88k/luna88k/locore0.S for more information about
  *  how OpenBSD starts up on this platform.
- *
- *  RAMDISK kernel used for experiments:
- *
- *	https://ftp.eu.openbsd.org/pub/OpenBSD/6.8/luna88k/bsd.rd
- *
- *  Launch with   gxemul -e luna-88k bsd.rd
  */
 
 #include <stdio.h>
