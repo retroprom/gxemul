@@ -45,11 +45,30 @@ SUCH DAMAGE.
 
 
 
-<p>This emulation mode attempts to emulate a Luna 88K workstation. Note that these
+<p>This emulation mode attempts to emulate an OMRON Luna-88K workstation. Note that these
 were based on <a href="https://en.wikipedia.org/wiki/Motorola_88000">Motorola
 88000</a> processors, not 68000.
 
-<p>Emulated hardware:
+<p>Originally, they ran OMRON's UniOS. But also of historical interest:
+<ul>
+	<li>Carnegie-Mellon University's MACH was partially
+		<a href="https://www.cbronline.com/news/omron_together_with_motorola_donate_40_workstations_to_carnegie_mellon_university/">developed
+		on these machines</a>. Some <a href="http://www.cs.cmu.edu/~jmcm/omron/luna88k.html">source code still exists (luna88k.MK84.tar.Z)</a>
+		but I have not found any ready-to-run binary distribution
+		of MACH/luna88k.
+
+	<p>
+	<li><a href="http://cap-lore.com/CapTheory/upenn/">KeyKOS</a> ran on
+		<a href="http://www.cap-lore.com/CapTheory/KK/88K.html">88K</a>,
+		and in particular
+		<a href="http://cap-lore.com/CapTheory/upenn/NanoKernel/NanoKernel.html#RTFToC21">KeyNIX</a> (a UNIX-layer on top of KeyKOS, capable
+		of running X11.		
+</ul>
+
+<p>In modern times, the only still maintained operating system for these machines
+is <a href="https://www.openbsd.org/luna88k.html">OpenBSD/luna88k</a>.
+
+<p>GXemul emulates the following devices:
 <ul>
 	<li>88100 CPU  (Only a single CPU works well, up to 4 can be experimented with.)
 	<li>Interrupt controller and parts of the system board
@@ -62,11 +81,11 @@ were based on <a href="https://en.wikipedia.org/wiki/Motorola_88000">Motorola
 <p><b>NOT</b> emulated yet:
 <ul>
 	<li>SCSI
+	<li>Front panel LCD display
+	<li>Parallel port
 	<li><i>Color</i> framebuffers
 </ul>
 
-<p>OpenBSD/luna88k works as a guest OS, with either serial console or
-graphical framebuffer, when using root-on-nfs.
 
 
 
