@@ -121,8 +121,11 @@ MACHINE_DEFAULT_CPU(luna88k)
 MACHINE_DEFAULT_RAM(luna88k)
 {
 	// Two OpenBSD dmesgs found on the Internet for a LUNA-88K2 showed
-	// 112 MB of real mem. (I don't know what the max was for a LUNA-88K.)
-	machine->physical_ram_in_mb = 112;
+	// 112 MB of real mem. The max for LUNA-88K was probably 64 MB.
+	if (machine->machine_subtype == MACHINE_LUNA_88K2)
+		machine->physical_ram_in_mb = 112;
+	else
+		machine->physical_ram_in_mb = 64;
 }
 
 
