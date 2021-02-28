@@ -1070,7 +1070,7 @@ echo "DESTDIR=$DESTDIR" >> _Makefile.header
 echo "" >> _Makefile.header
 
 #  Create the Makefiles:
-D=". src src/console src/cpus src/debugger src/devices src/old_main"
+D=". src src/console src/cpus src/debugger src/devices src/core"
 D="$D src/devices/fonts src/disk src/file src/include src/machines"
 D="$D src/net src/promemul src/symbol"
 for a in $D; do

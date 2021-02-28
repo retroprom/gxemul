@@ -6,8 +6,7 @@ all: do_include
 	$(MAKE) the_rest
 
 the_rest: do_console do_cpus do_debugger do_devices do_disk \
-	do_file do_machines do_net do_old_main \
-	do_promemul do_symbol
+	do_file do_machines do_net do_core do_promemul do_symbol
 
 do_include:
 	cd include; $(MAKE)
@@ -36,8 +35,8 @@ do_machines:
 do_net:
 	cd net; $(MAKE)
 
-do_old_main:
-	cd old_main; $(MAKE)
+do_core:
+	cd core; $(MAKE)
 
 do_promemul:
 	cd promemul; $(MAKE)
@@ -50,7 +49,7 @@ $(OBJS): Makefile
 
 
 clean:
-	rm -f $(OBJS) *core
+	rm -f $(OBJS) *.core
 	cd include; $(MAKE) clean
 	cd console; $(MAKE) clean
 	cd cpus; $(MAKE) clean
@@ -60,7 +59,7 @@ clean:
 	cd file; $(MAKE) clean
 	cd machines; $(MAKE) clean
 	cd net; $(MAKE) clean
-	cd old_main; $(MAKE) clean
+	cd core; $(MAKE) clean
 	cd promemul; $(MAKE) clean
 	cd symbol; $(MAKE) clean
 
@@ -74,7 +73,7 @@ clean_all: clean
 	cd file; $(MAKE) clean_all
 	cd machines; $(MAKE) clean_all
 	cd net; $(MAKE) clean_all
-	cd old_main; $(MAKE) clean_all
+	cd core; $(MAKE) clean_all
 	cd promemul; $(MAKE) clean_all
 	cd symbol; $(MAKE) clean_all
 	rm -f Makefile
