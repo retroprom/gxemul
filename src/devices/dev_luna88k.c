@@ -725,7 +725,7 @@ DEVICE_ACCESS(luna88k)
 	case OBIO_CLOCK3:	/*  0x6300000c: Clock ack?  */
 		cpunr = (addr - OBIO_CLOCK0) / 4;
 		// TODO: Pending counter per cpu?
-		if (d->pending_timer_interrupts > 0)
+		if (cpunr == 0 && d->pending_timer_interrupts > 0)
 			d->pending_timer_interrupts --;
 
 		reassert_timer_interrupt(d);
