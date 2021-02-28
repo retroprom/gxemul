@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2006-2014  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2006-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -148,6 +148,9 @@ MACHINE_SETUP(dreamcast)
 	device_add(machine, "dreamcast_gdrom");
 	device_add(machine, "dreamcast_maple");
 	device_add(machine, "dreamcast_rtc");
+
+	machine_add_devices_as_symbols(machine, 0x80000000U);
+	machine_add_devices_as_symbols(machine, 0xa0000000U);
 
 	if (!machine->prom_emulation)
 		return;

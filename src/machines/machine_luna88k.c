@@ -99,6 +99,8 @@ MACHINE_SETUP(luna88k)
 	for (i = 0; i < (size_t)machine->ncpus; ++i)
 		machine->cpus[i]->running = 1;
 
+	// machine_add_devices_as_symbols(machine, 0);
+
 	if (!machine->prom_emulation)
 		return;
 

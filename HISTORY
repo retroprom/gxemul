@@ -4968,3 +4968,5 @@ Changelog for GXemul:
 ==============  RELEASE 0.6.3.1  ==============
 
 20210228	Switching back from C++ to plain C.
+		Implementing a helper method for registering device addresses
+		as symbols (so that it can be used from several machines).

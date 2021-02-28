@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2020  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -508,6 +508,40 @@ void machine_setup(struct machine *machine)
 		if (machine->bootarg != NULL && strlen(machine->bootarg) >= 1)
 			debug(" %s", machine->bootarg);
 		debug("\n");
+	}
+}
+
+
+/*
+ *  machine_add_devices_as_symbols():
+ *
+ *  Registers device addresses as symbols, to make the debugging experience
+ *  somewhat nicer. offset should be e.g. 0xffffffff80000000 and
+ *  0xffffffffa0000000 on MIPS.
+ */
+void machine_add_devices_as_symbols(struct machine *machine, uint64_t offset)
+{
+	struct memory* mem = machine->cpus[machine->bootstrap_cpu]->mem;
+	int i;
+
+	for (i = 0; i < mem->n_mmapped_devices; ++i) {
+		char name[1000];
+
+		// Hm. Perhaps adding all "ram" devices looks too cluttered.
+		// if (strcmp(mem->devices[i].name, "ram") == 0)
+		//	continue;
+
+		snprintf(name, sizeof(name),
+		    "(%s@0x%llx)", mem->devices[i].name,
+		    (long long)mem->devices[i].baseaddr);
+
+		add_symbol_name(
+		    &machine->symbol_context,
+		    mem->devices[i].baseaddr + offset,
+		    mem->devices[i].length,
+		    name,
+		    0,
+		    0);
 	}
 }
 

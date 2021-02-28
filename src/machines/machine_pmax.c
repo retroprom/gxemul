@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2019  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -728,6 +728,11 @@ abort();
 	 */
 	dev_ram_init(machine, 0xa0000000, 0x20000000,
 	    DEV_RAM_MIRROR | DEV_RAM_MIGHT_POINT_TO_DEVICES, 0x0, NULL);
+
+
+	machine_add_devices_as_symbols(machine, 0xffffffff80000000);
+	machine_add_devices_as_symbols(machine, 0xffffffffa0000000);
+
 
 	if (!machine->prom_emulation)
 		return;

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2020  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -626,6 +626,9 @@ j = 0;
 		    machine->machine_subtype);
 		exit(1);
 	}
+
+	machine_add_devices_as_symbols(machine, 0xffffffff80000000);
+	machine_add_devices_as_symbols(machine, 0xffffffffa0000000);
 
 	if (!machine->prom_emulation)
 		return;
