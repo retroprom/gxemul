@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -212,7 +212,7 @@ MACHINE_SETUP(barem88k)
 }
 
 
-MACHINE_SETUP(oldtestm88k)
+MACHINE_SETUP(testm88k)
 {
 	machine->machine_name = strdup("M88K test machine");
 
@@ -226,7 +226,7 @@ MACHINE_DEFAULT_CPU(barem88k)
 }
 
 
-MACHINE_DEFAULT_CPU(oldtestm88k)
+MACHINE_DEFAULT_CPU(testm88k)
 {
 	machine->cpu_name = strdup("88110");
 }
@@ -241,12 +241,12 @@ MACHINE_REGISTER(barem88k)
 }
 
 
-MACHINE_REGISTER(oldtestm88k)
+MACHINE_REGISTER(testm88k)
 {
-	MR_DEFAULT(oldtestm88k, "Test-machine for M88K",
+	MR_DEFAULT(testm88k, "Test-machine for M88K",
 	    ARCH_M88K, MACHINE_TESTM88K);
 
-	machine_entry_add_alias(me, "oldtestm88k");
+	machine_entry_add_alias(me, "testm88k");
 }
 
 
