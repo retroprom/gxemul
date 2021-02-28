@@ -2,7 +2,7 @@
 # Makefile for GXemul machines
 #
 
-CXXFLAGS=$(CWARNINGS) $(COPTIM) $(XINCLUDE) $(DINCLUDE)
+CFLAGS=$(CWARNINGS) $(COPTIM) $(XINCLUDE) $(DINCLUDE)
 
 OBJS=	machine.o machine_algor.o machine_alpha.o \
 	machine_androidarm.o machine_arc.o \
@@ -17,7 +17,7 @@ all:
 	$(MAKE) objs
 	$(MAKE) automachine.o
 
-automachine.cc: $(OBJS) automachine_head.cc automachine_middle.cc automachine_tail.cc makeautomachine.sh
+automachine.c: $(OBJS) automachine_head.c automachine_middle.c automachine_tail.c makeautomachine.sh
 	./makeautomachine.sh
 
 objs: $(OBJS)
@@ -27,7 +27,7 @@ $(OBJS): Makefile
 
 clean:
 	rm -f $(OBJS) *core
-	rm -f automachine.cc automachine.o
+	rm -f automachine.c automachine.o
 
 clean_all: clean
 	rm -f Makefile

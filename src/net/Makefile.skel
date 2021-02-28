@@ -2,7 +2,7 @@
 #  Makefile for GXemul src/net
 #
 
-CXXFLAGS=$(CWARNINGS) $(COPTIM) $(XINCLUDE) $(DINCLUDE)
+CFLAGS=$(CWARNINGS) $(COPTIM) $(XINCLUDE) $(DINCLUDE)
 
 OBJS=net.o net_ip.o net_misc.o net_tap.o net_ether.o
 

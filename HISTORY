@@ -4967,3 +4967,4 @@ Changelog for GXemul:
 
 ==============  RELEASE 0.6.3.1  ==============
 
+20210228	Switching back from C++ to plain C.

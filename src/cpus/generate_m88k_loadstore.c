@@ -151,7 +151,7 @@ void loadstore(int size, int store, int signedness,
 	if (no_pc_sync)
 		printf("#define LS_NO_PC_SYNC\n");
 
-	printf("#include \"cpu_m88k_instr_loadstore.cc\"\n");
+	printf("#include \"cpu_m88k_instr_loadstore.c\"\n");
 	generated_functions ++;
 
 	if (no_pc_sync)

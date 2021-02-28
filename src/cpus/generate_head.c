@@ -53,7 +53,7 @@ char *uppercase(char *l)
 
 int main(int argc, char *argv[])
 {
-	char *a, *b;
+	char *a; //, *b;
 
 	if (argc != 3) {
 		fprintf(stderr, "usage: %s arch Arch\n", argv[0]);
@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
 	}
 
 	a = argv[1];
-	b = argv[2];
+	// b = argv[2];
 
 
 	printf("\n/*  AUTOMATICALLY GENERATED! Do not edit.  */\n\n");

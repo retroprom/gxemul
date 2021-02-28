@@ -368,7 +368,7 @@ void dev_px_init(struct machine *machine, struct memory *mem,
 int dev_ram_access(struct cpu *cpu, struct memory *mem, uint64_t relative_addr,
 	unsigned char *data, size_t len, int writeflag, void *);
 void dev_ram_init(struct machine *machine, uint64_t baseaddr, uint64_t length,
-	int mode, uint64_t otheraddr, const char* name = NULL);
+	int mode, uint64_t otheraddr, const char* name);
 
 /*  dev_scc.c:  */
 #define	DEV_SCC_LENGTH			0x1000
@@ -406,6 +406,7 @@ void dev_sgi_re_init(struct machine *machine, struct memory *mem, uint64_t basea
 int dev_sgi_de_access(struct cpu *cpu, struct memory *mem,
 	uint64_t relative_addr, unsigned char *data, size_t len,
 	int writeflag, void *);
+struct sgi_re_data;
 void dev_sgi_de_init(struct memory *mem, uint64_t baseaddr, struct sgi_re_data *);
 // SGI O2 Memory Transfer Engine:
 #define	DEV_SGI_MTE_LENGTH		0x1000

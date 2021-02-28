@@ -27,17 +27,17 @@
 #  SUCH DAMAGE.
 
 
-printf "Generating autodev.cc... "
+printf "Generating autodev.c... "
 
-rm -f autodev.cc
+rm -f autodev.c
 
-printf "/*\n *  DO NOT EDIT. AUTOMATICALLY CREATED\n */\n\n" >> autodev.cc
+printf "/*\n *  DO NOT EDIT. AUTOMATICALLY CREATED\n */\n\n" >> autodev.c
 
-cat autodev_head.cc >> autodev.cc
+cat autodev_head.c >> autodev.c
 
 printf "5"
 rm -f .index
-for a in *.cc; do
+for a in *.c; do
 	B=`grep COMMENT $a`
 	if [ z"$B" != z ]; then
 		printf "$a " >> .index
@@ -46,54 +46,54 @@ for a in *.cc; do
 done
 
 printf "4"
-for a in dev_*.cc; do
+for a in dev_*.c; do
 	B=`grep DEVINIT $a`
 	if [ z"$B" != z ]; then
 		C=`grep DEVINIT $a | cut -d \( -f 2|cut -d \) -f 1`
 		for B in $C; do
-			printf "int devinit_$B(struct devinit *);\n" >> autodev.cc
+			printf "int devinit_$B(struct devinit *);\n" >> autodev.c
 		done
 	fi
 done
 
 printf "3"
-for a in bus_pci.cc; do
+for a in bus_pci.c; do
 	B=`grep PCIINIT $a`
 	if [ z"$B" != z ]; then
 		C=`grep PCIINIT $a | cut -d \( -f 2|cut -d \) -f 1`
 		for B in $C; do
-			printf "void pciinit_$B(struct machine *, " >> autodev.cc
-			printf "struct memory *, struct pci_device *);\n" >> autodev.cc
+			printf "void pciinit_$B(struct machine *, " >> autodev.c
+			printf "struct memory *, struct pci_device *);\n" >> autodev.c
 		done
 	fi
 done
 
-cat autodev_middle.cc >> autodev.cc
+cat autodev_middle.c >> autodev.c
 
 printf "2"
-for a in dev_*.cc; do
+for a in dev_*.c; do
 	B=`grep DEVINIT $a`
 	if [ z"$B" != z ]; then
 		C=`grep DEVINIT $a | cut -d \( -f 2|cut -d \) -f 1`
 		for B in $C; do
-			printf "\tdevice_register(\""$B"\"," >> autodev.cc
-			printf " devinit_$B);\n" >> autodev.cc
+			printf "\tdevice_register(\""$B"\"," >> autodev.c
+			printf " devinit_$B);\n" >> autodev.c
 		done
 	fi
 done
 
 printf "1"
-for a in bus_pci.cc; do
+for a in bus_pci.c; do
 	B=`grep PCIINIT $a`
 	if [ z"$B" != z ]; then
 		C=`grep PCIINIT $a | cut -d \( -f 2|cut -d \) -f 1`
 		for B in $C; do
-			printf "\tpci_register(\""$B"\"," >> autodev.cc
-			printf " pciinit_$B);\n" >> autodev.cc
+			printf "\tpci_register(\""$B"\"," >> autodev.c
+			printf " pciinit_$B);\n" >> autodev.c
 		done
 	fi
 done
 
-cat autodev_tail.cc >> autodev.cc
+cat autodev_tail.c >> autodev.c
 
 printf " done\n"
