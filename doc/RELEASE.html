@@ -37,12 +37,31 @@ still one of the guest OSes that works best.
 <p><br>The most important changes between release 0.6.3.1 and 0.7.0 are:
 <ul>
 	<li>...
+</ul>
 
-	<p>
-	<li>The source code is also switched back from C++ to plain C.
-		TODO: mention auto generated doc changes etc,
-		no longer optional dependency on valgrind + doxygen.
-		no make test for unit tests
+<p>The source code is also switched back from C++ to plain C.
+<ul>
+	<li>The "new" framework was removed. Instead of two different emulators
+		in the same program, there's just the traditional emulation
+		framework.
+	<li>A C compiler supporting the C99 standard is needed in
+		order to build GXemul.
+	<li>For third parties that package GXemul (e.g. for package managing
+		systems used by operating systems or distibutions),
+		build scripts may need to be modified:
+	<ul>
+		<li>The unit tests (<tt>make test</tt>) are gone.
+		<li>The (optional) dependency on Valgrind is gone. It was used for
+			running leak detection during unit test execution, but
+			the unit tests were for the C++ framework.
+		<li>The (optional) dependency on doxygen is gone. It was used for
+			building documentation of the source code in the
+			C++ framework.
+		<li>Automatic generation of machine and component documentation
+			is gone (<tt>make documentation</tt>).
+		<li>In summary: the <tt>doc/</tt> sub-directory is now just static
+			content, nothing is generated at build time.
+	</ul>
 </ul>
 
 

@@ -96,32 +96,22 @@ feedback.
 </pre>
 
 <p>This should work on most Unix-like systems, with few or no modifications
-to the source code. Requirements are:
-<ul>
-	<li>A reasonably modern C++ compiler environment, including STL.
-</ul>
+to the source code. The basic requirement is a reasonably modern C compiler.
 
 <p>GXemul does not <i>require</i> any additional third-party libraries to build.
 However, the following optional libraries or third-party software give
 additional functionality:
 <ul>
 	<li>X11 headers and libraries: for graphical framebuffer emulation.
-	<li><a href="http://www.doxygen.org/">Doxygen</a>: if installed, source code documentation will be generated
-		when documentation is built.
 </ul>
 
 <p>The emulator's performance is dependent on both runtime settings 
 and on compiler settings, so you might want to experiment with using 
-different <tt>CXX</tt>, <tt>CXXFLAGS</tt>, and <tt>LDFLAGS</tt> environment
+different <tt>CC</tt>, <tt>CFLAGS</tt>, and <tt>LDFLAGS</tt> environment
 variable values when running the <tt>configure</tt> script.
 
 <p>During development of the emulator: <tt><b>configure --debug</b></tt> may be used
 to enable some debugging aids and turn off optimizations.
-<tt><b>make test</b></tt>
-can be used to run unit tests (only needed if you want to experiment with <a href="framework.html">the new
-experimental framework that is under development</a>).
-<tt><b>make documentation</b></tt> generates machine and component descriptions in HTML
-for the new framework.
 If you often recompile the whole tree (<tt>make clean_all</tt>,
 followed by <tt>configure</tt> and <tt>make</tt> again), then using
 <a href="http://ccache.samba.org/">ccache</a> is recommended.
@@ -136,9 +126,9 @@ does <i>not</i> require backends for native code generation to be written
 for each individual host architecture; the intermediate representation 
 that the dyntrans system uses can be executed on any host architecture.
 
-<p>Most of the development is done on FreeBSD/amd64 using clang and/or GNU C++,
+<p>Most of the development is done on FreeBSD/amd64 using clang and/or GNU C,
 but every now and then the code is built on Linux,
-or NetBSD/OpenBSD inside GXemul itself.
+or on NetBSD or OpenBSD inside GXemul itself.
 Although it is possible that GXemul may build and run on non-Unix-like platforms,
 such as <a href="http://www.cygwin.com/">Cygwin</a> inside Windows, Unix-like
 systems are the primary platform. Some functionality may be lost or not work as
@@ -249,7 +239,7 @@ included, listed with a <small><font color="red">small RED</font></small> font.
   <ul>
     <li><b><a href="machine_luna88k.html">Luna 88K</a></b> (<a href="machine_luna88k.html#openbsdluna88k">OpenBSD/luna88k</a>)
     <li><b><a href="machine_mvme88k.html">Motorola MVME187</a></b> (<a href="machine_mvme88k.html#openbsdmvme88kinstall">OpenBSD/mvme88k</a>)
-    <li><b><a href="experiments.html#testmachines">oldtestm88k</a></b>
+    <li><b><a href="experiments.html#testmachines">testm88k</a></b>
   </ul>
   <p>
   <li><b><u>PowerPC</u></b>
