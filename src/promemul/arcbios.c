@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2020  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -32,6 +32,8 @@
  *	
  */
 
+#include <ctype.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -2258,27 +2260,85 @@ void arcbios_console_init(struct machine *machine,
 }
 
 
-#if 0
-// TODO: CXXC REWRITE
-static string environment_string(struct machine *machine, const map<string,string>& env, const string& variable)
+struct envstrings
 {
-	string s = variable;
+	int	n;
 	
-	if  (machine->machine_type == MACHINE_ARC) {
-		std::locale loc;
-		for (size_t i = 0; i < s.length(); ++i)
-			s[i] = toupper(s[i], loc);
+	char	**name;
+	char	**value;
+};
+
+void set_env(struct envstrings* env, const char* name, const char* value)
+{
+	int found = -1;
+
+	// Linear search. Slow but it works.
+	for (int i = 0; i < env->n; ++i) {
+		if (strcasecmp(env->name[i], name) == 0) {
+			found = i;
+			break;
+		}
 	}
 
-	s = s + string("=");
-	
-	auto v = env.find(variable);
-	if (v != env.end())
-		s = s + v->second;
+	if (found >= 0) {
+		free(env->value[found]);
+		env->value[found] = strdup(value);
+	} else {
+		if (env->n == 0) {
+			env->name = malloc(0);
+			env->value = malloc(0);
+		}
+
+		env->n ++;
+
+		env->name = realloc(env->name, sizeof(const char*) * env->n);
+		env->value = realloc(env->value, sizeof(const char*) * env->n);
+
+		env->name[env->n - 1] = strdup(name);
+		env->value[env->n - 1] = strdup(value);
+	}
+}
+
+
+static char* environment_string(struct machine *machine, struct envstrings* env, const char* variable_name, bool name_and_value)
+{
+	size_t len = strlen(variable_name);
+	int found = -1;
+
+	// Linear search. Slow but it works.
+	for (int i = 0; i < env->n; ++i) {
+		if (strcasecmp(env->name[i], variable_name) == 0) {
+			found = i;
+			break;
+		}
+	}
+
+	size_t len_with_value = len + 1;
+	if (found >= 0)
+		len_with_value += strlen(env->value[found]);
+
+	char* s = malloc(len_with_value + 1);
+
+	if (name_and_value) {
+		if (found < 0)
+			snprintf(s, len_with_value + 1, "%s=", variable_name);
+		else
+			snprintf(s, len_with_value + 1, "%s=%s", variable_name, env->value[found]);
+	} else {
+		// Value only.
+		if (found < 0)
+			snprintf(s, len_with_value + 1, "");
+		else
+			snprintf(s, len_with_value + 1, "%s", env->value[found]);
+	}
+
+	if (machine->machine_type == MACHINE_ARC) {
+		for (size_t i = 0; i < len; ++i)
+			s[i] = toupper(s[i]);
+	}
 
 	return s;
 }
-#endif
 
 
 /*
@@ -2289,9 +2349,9 @@ static string environment_string(struct machine *machine, const map<string,strin
 static void arc_environment_setup(struct machine *machine, int is64bit,
 	const char *primary_ether_addr)
 {
-#if 0
-// TODO: CXXC REWRITE
-	map<string,string> env;
+	struct envstrings* env = malloc(sizeof(struct envstrings));
+	memset(env, 0, sizeof(struct envstrings));
+
 	uint64_t addr, addr2;
 	struct cpu *cpu = machine->cpus[0];
 
@@ -2301,12 +2361,12 @@ static void arc_environment_setup(struct machine *machine, int is64bit,
 	 *  TODO: How about floppies? multi()disk()fdisk()
 	 *        Is tftp() good for netbooting?
 	 */
-	string boot_device;
+	char *boot_device;
 
 	if (machine->bootdev_id < 0 || machine->force_netboot) {
 		boot_device = "tftp()";
 	} else {
-		const char* prefix = "";
+		char* prefix = "";
 
 		if (machine->machine_type == MACHINE_SGI) {
 			switch (machine->machine_subtype) {
@@ -2325,132 +2385,142 @@ static void arc_environment_setup(struct machine *machine, int is64bit,
 		boot_device = prefix;
 
 		if (diskimage_is_a_cdrom(machine, machine->bootdev_id, machine->bootdev_type)) {
-			stringstream ss;
-			ss << "scsi(0)cdrom(" << machine->bootdev_id << ")";
-			boot_device = boot_device + ss.str();
+			size_t len = strlen(boot_device) + 50;
+			char* cdrom = malloc(len);
+			snprintf(cdrom, len, "%sscsi(0)cdrom(%i)", boot_device, machine->bootdev_id);
+			boot_device = cdrom;
 		} else {
-			stringstream ss;
-			ss << "scsi(0)disk(" << machine->bootdev_id << ")rdisk(0)";
-			boot_device = boot_device + ss.str();
+			size_t len = strlen(boot_device) + 50;
+			char* disk = malloc(len);
+			snprintf(disk, len, "%sscsi(0)disk(%i)rdisk(0)", boot_device, machine->bootdev_id);
+			boot_device = disk;
 		}
 
-		string systempartition = boot_device;
+		char *systempartition;
 		if (machine->machine_type == MACHINE_SGI || !diskimage_is_a_cdrom(machine, machine->bootdev_id, machine->bootdev_type)) {
 			int partition = 1;	// default ARC partition?
 			if (machine->machine_type == MACHINE_SGI)
 				partition = 8;
 
-			stringstream ss;
-			ss << "partition(" << partition << ")";
-			systempartition = systempartition + ss.str();
+			size_t len = strlen(boot_device) + 50;
+			systempartition = malloc(len);
+			snprintf(systempartition, len, "%spartition(%i)", boot_device, partition);
 		} else {
-			systempartition = systempartition + "fdisk(0)";
+			size_t len = strlen(boot_device) + 50;
+			systempartition = malloc(len);
+			snprintf(systempartition, len, "%sfdisk(0)", boot_device);
 		}
 
-		env["SystemPartition"] = systempartition;
+		set_env(env, "SystemPartition", systempartition);
 
-		string osloadpartition = boot_device;
+		char *osloadpartition;
 		if (machine->machine_type == MACHINE_SGI || !diskimage_is_a_cdrom(machine, machine->bootdev_id, machine->bootdev_type)) {
 			int partition = 1;	// default ARC partition?
 			if (machine->machine_type == MACHINE_SGI)
 				partition = 0;
 
-			stringstream ss;
-			ss << "partition(" << partition << ")";
-			osloadpartition = osloadpartition + ss.str();
+			size_t len = strlen(boot_device) + 50;
+			osloadpartition = malloc(len);
+			snprintf(osloadpartition, len, "%spartition(%i)", boot_device, partition);
 		} else {
-			osloadpartition = osloadpartition + "fdisk(0)";
+			size_t len = strlen(boot_device) + 50;
+			osloadpartition = malloc(len);
+			snprintf(osloadpartition, len, "%sfdisk(0)", boot_device);
 		}
 
-		env["OSLoadPartition"] = osloadpartition;
+		set_env(env, "OSLoadPartition", osloadpartition);
 	}
 
 	if (machine->machine_type == MACHINE_ARC) {
-		env["OSLoader"] = "\\os\\nt\\osloader.exe";
-		env["OSLoadFilename"] = "\\todo";
+		set_env(env, "OSLoader", "\\os\\nt\\osloader.exe");
+		set_env(env, "OSLoadFilename", "\\todo");
 	} else {
-		env["OSLoader"] = "sash";
-		env["OSLoadFilename"] = "/unix";
+		set_env(env, "OSLoader", "sash");
+		set_env(env, "OSLoadFilename", "/unix");
 	}
 
-	if (machine->boot_kernel_filename[0] != '\0')
-		env["OSLoadFilename"] = string("/") + machine->boot_kernel_filename;
+	if (machine->boot_kernel_filename[0] != '\0') {
+		size_t len = strlen(machine->boot_kernel_filename) + 10;
+		char* s = malloc(len);
+		snprintf(s, len, "/%s", machine->boot_kernel_filename);
+		set_env(env, "OSLoadFilename", s);
+	}
 
 	if (machine->machine_type == MACHINE_SGI) {
 		/*  g for graphical mode. G for graphical mode with SGI logo visible on Irix?  */
 		if (machine->x11_md.in_use) {
-			env["ConsoleIn"]  = "keyboard()";
-			env["ConsoleOut"] = "video()";
-			env["console"] = "g";
-			env["gfx"] = "alive";
+			set_env(env, "ConsoleIn", "keyboard()");
+			set_env(env, "ConsoleOut", "video()");
+			set_env(env, "console", "g");
+			set_env(env, "gfx", "alive");
 		} else {
 			/*  'd' or 'd2' in Irix, 'ttyS0' in Linux?  */
-			env["ConsoleIn"]  = "serial(0)";
-			env["ConsoleOut"] = "serial(0)";
-			env["console"] = "d";
-			env["gfx"] = "dead";
+			set_env(env, "ConsoleIn", "serial(0)");
+			set_env(env, "ConsoleOut", "serial(0)");
+			set_env(env, "console", "d");
+			set_env(env, "gfx", "dead");
 		}
 
-		env["AutoLoad"] = "No";
+		set_env(env, "AutoLoad", "No");
 		
 		if (machine->bootdev_id < 0 || machine->force_netboot) {
 			/*
 			 *  diskless=1 means boot from network disk? (nfs?)
 			 *  diskless=2 means boot from network tape? TODO
 			 */
-			env["diskless"] = "1";
+			set_env(env, "diskless", "1");
 
 			// store_pointer_and_advance(cpu, &addr2, addr, is64bit);
 			// add_environment_string(cpu, "tapedevice=bootp()10.0.0.2:/dev/tape", &addr);
 
-			env["root"] = "xyz";	// TODO
+			set_env(env, "root", "xyz");	// TODO
 
-			env["bootfile"] = "bootp()10.0.0.2:/var/boot/client/unix";
-			env["SystemPartition"] = "bootp()10.0.0.2:/var/boot/client";
-			env["OSLoadPartition"] = "bootp()10.0.0.2:/var/boot/client";
+			set_env(env, "bootfile", "bootp()10.0.0.2:/var/boot/client/unix");
+			set_env(env, "SystemPartition", "bootp()10.0.0.2:/var/boot/client");
+			set_env(env, "OSLoadPartition", "bootp()10.0.0.2:/var/boot/client");
 		} else {
-			env["diskless"] = "0";
+			set_env(env, "diskless", "0");
 		}
 
 		/*  TODO: Keep these variables in sync with bootblock loading,
 			i.e. OSLoader is the name of the voldir entry to boot
 			with.  */
 
-		env["kernname"] = "unix";	// TODO: like OSLoadFilename?
+		set_env(env, "kernname", "unix");	// TODO: like OSLoadFilename?
 
-		env["volume"] = "80";
-		env["sgilogo"] = "y";
-		env["monitor"] = "h";
-		env["TimeZone"] = "GMT";
-		env["nogfxkbd"] = "1";
-		env["keybd"] = "US";
-		env["cpufreq"] = "123";
-		env["dbaud"] = "9600";
-		env["rbaud"] = "9600";
-		env["rebound"] = "y";
-		env["crt_option"] = "1";
-		env["netaddr"] = "10.0.0.1";
-		env["netmask"] = "255.0.0.0";
-		env["dlserver"] = "10.0.0.2";
-		env["srvaddr"] = "10.0.0.2";
-		env["eaddr"] = primary_ether_addr;
+		set_env(env, "volume", "80");
+		set_env(env, "sgilogo", "y");
+		set_env(env, "monitor", "h");
+		set_env(env, "TimeZone", "GMT");
+		set_env(env, "nogfxkbd", "1");
+		set_env(env, "keybd", "US");
+		set_env(env, "cpufreq", "123");
+		set_env(env, "dbaud", "9600");
+		set_env(env, "rbaud", "9600");
+		set_env(env, "rebound", "y");
+		set_env(env, "crt_option", "1");
+		set_env(env, "netaddr", "10.0.0.1");
+		set_env(env, "netmask", "255.0.0.0");
+		set_env(env, "dlserver", "10.0.0.2");
+		set_env(env, "srvaddr", "10.0.0.2");
+		set_env(env, "eaddr", primary_ether_addr);
 
 		// showconfig 0 means don't show. 1 means show some.
 		// 2 means show more. TODO: higher values?
-		env["showconfig"] = "255";
+		set_env(env, "showconfig", "255");
 
-		env["verbose"] = "1";
-		env["diagmode"] = "v";
-		env["debug_bigmem"] = "1";
+		set_env(env, "verbose", "1");
+		set_env(env, "diagmode", "v");
+		set_env(env, "debug_bigmem", "1");
 	} else {
 		//  General ARC:
 		if (machine->x11_md.in_use) {
-			env["ConsoleIn"]  = "multi()key()keyboard()console()";
-			env["ConsoleOut"] = "multi()video()monitor()console()";
+			set_env(env, "ConsoleIn", "multi()key()keyboard()console()");
+			set_env(env, "ConsoleOut", "multi()video()monitor()console()");
 		} else {
 			/*  TODO: serial console for ARC?  */
-			env["ConsoleIn"]  = "multi()serial(0)";
-			env["ConsoleOut"] = "multi()serial(0)";
+			set_env(env, "ConsoleIn", "multi()serial(0)");
+			set_env(env, "ConsoleOut", "multi()serial(0)");
 		}
 	}
 
@@ -2458,10 +2528,14 @@ static void arc_environment_setup(struct machine *machine, int is64bit,
 		SystemPartition + OSLoader	  (e.g. sash)
 	    or
 	    	OSLoadPartition + OSLoadFilename  (e.g. /unix)  */
-	string boot_string;
-	boot_string = env["SystemPartition"] +
-		(machine->machine_type == MACHINE_SGI ? "/" : "\\")
-		+ env["OSLoader"];
+
+	char* s1 = environment_string(machine, env, "SystemPartition", true);
+	char* s2 = environment_string(machine, env, "OSLoader", true);
+	size_t s3len = strlen(s1) + strlen(s2) + 100;
+	char* boot_string = malloc(s3len);
+	snprintf(boot_string, s3len, "%s%s%s", s1, machine->machine_type == MACHINE_SGI ? "/" : "\\", s2);
+	free(s2);
+	free(s1);
 
 	// boot_string = env["OSLoadPartition"] + env["OSLoadFilename"];
 
@@ -2469,9 +2543,9 @@ static void arc_environment_setup(struct machine *machine, int is64bit,
 	machine->bootarg = machine->boot_string_argument;
 
 	if (machine->machine_type == MACHINE_SGI) {
-		env["OSLoadOptions"] = "auto";
+		set_env(env, "OSLoadOptions", "auto");
 	} else {
-		env["OSLoadOptions"] = machine->bootarg;
+		set_env(env, "OSLoadOptions", machine->bootarg);
 	}
 
 	/*  a0 = argc:  */
@@ -2486,7 +2560,7 @@ static void arc_environment_setup(struct machine *machine, int is64bit,
 	addr2 = ARC_ARGV_START;
 	cpu->cd.mips.gpr[MIPS_GPR_A1] = addr2;
 
-	CHECK_ALLOCATION(machine->bootstr = strdup(boot_string.c_str()));
+	CHECK_ALLOCATION(machine->bootstr = strdup(boot_string));
 
 	/*  bootstr:  */
 	store_pointer_and_advance(cpu, &addr2, addr, is64bit);
@@ -2504,31 +2578,45 @@ static void arc_environment_setup(struct machine *machine, int is64bit,
 	    arguments, as per
 	    https://misc.openbsd.narkive.com/6hkw57ju/openbsd-sgi-snapshot-fails-to-boot-from-harddisk#post2  */
 	store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-	add_environment_string(cpu, environment_string(machine, env, "OSLoadOptions").c_str(), &addr);
+	char* ev = environment_string(machine, env, "OSLoadOptions", true);
+	add_environment_string(cpu, ev, &addr);
+	free(ev);
 	cpu->cd.mips.gpr[MIPS_GPR_A0] ++;
 
 	store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-	add_environment_string(cpu, environment_string(machine, env, "ConsoleIn").c_str(), &addr);
+	ev = environment_string(machine, env, "ConsoleIn", true);
+	add_environment_string(cpu, ev, &addr);
+	free(ev);
 	cpu->cd.mips.gpr[MIPS_GPR_A0] ++;
 
 	store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-	add_environment_string(cpu, environment_string(machine, env, "ConsoleOut").c_str(), &addr);
+	ev = environment_string(machine, env, "ConsoleOut", true);
+	add_environment_string(cpu, ev, &addr);
+	free(ev);
 	cpu->cd.mips.gpr[MIPS_GPR_A0] ++;
 
 	store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-	add_environment_string(cpu, environment_string(machine, env, "SystemPartition").c_str(), &addr);
+	ev = environment_string(machine, env, "SystemPartition", true);
+	add_environment_string(cpu, ev, &addr);
+	free(ev);
 	cpu->cd.mips.gpr[MIPS_GPR_A0] ++;
 
 	store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-	add_environment_string(cpu, environment_string(machine, env, "OSLoader").c_str(), &addr);
+	ev = environment_string(machine, env, "OSLoader", true);
+	add_environment_string(cpu, ev, &addr);
+	free(ev);
 	cpu->cd.mips.gpr[MIPS_GPR_A0] ++;
 
 	store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-	add_environment_string(cpu, environment_string(machine, env, "OSLoadPartition").c_str(), &addr);
+	ev = environment_string(machine, env, "OSLoadPartition", true);
+	add_environment_string(cpu, ev, &addr);
+	free(ev);
 	cpu->cd.mips.gpr[MIPS_GPR_A0] ++;
 
 	store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-	add_environment_string(cpu, environment_string(machine, env, "OSLoadFilename").c_str(), &addr);
+	ev = environment_string(machine, env, "OSLoadFilename", true);
+	add_environment_string(cpu, ev, &addr);
+	free(ev);
 	cpu->cd.mips.gpr[MIPS_GPR_A0] ++;
 
 	/*  a2 = envp:  */
@@ -2561,9 +2649,11 @@ static void arc_environment_setup(struct machine *machine, int is64bit,
 	 *  using add_environment_string(), and add a pointer to it to the
 	 *  pointer array.
 	 */
-	for (const auto& v : env) {
+	for (int i = 0; i < env->n; ++i) {
 		store_pointer_and_advance(cpu, &addr2, addr, is64bit);
-		add_environment_string(cpu, environment_string(machine, env, v.first).c_str(), &addr);
+		char* s = environment_string(machine, env, env->name[i], true);
+		add_environment_string(cpu, s, &addr);
+		free(s);
 	}
 
 	/*  End the environment strings with an empty zero-terminated
@@ -2573,7 +2663,6 @@ static void arc_environment_setup(struct machine *machine, int is64bit,
 
 	/*  Return address:  (0x20 = ReturnFromMain())  */
 	cpu->cd.mips.gpr[MIPS_GPR_RA] = ARC_FIRMWARE_ENTRIES + 0x20;
-#endif
 }
 
 
