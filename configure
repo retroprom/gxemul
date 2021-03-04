@@ -69,8 +69,8 @@
 #
 DEFAULTPREFIX=/usr/local
 
-# Special exception for Linux systems: /usr
 if [ z`uname` = zLinux ]; then
+	# /usr is more common on Linux than /usr/local
 	DEFAULTPREFIX=/usr
 else
 	TRY=/usr/local
@@ -160,9 +160,7 @@ if [ z"$UNSTABLE" = zYES ]; then
 fi
 
 if [ z"$DEBUG" = zYES ]; then
-	echo "Building a debug version!"
-else
-	CFLAGS="-DNDEBUG $CFLAGS"
+	echo "Building a DEBUG version!"
 fi
 
 
@@ -247,13 +245,19 @@ printf "#
 #  known to be completely broken, for instance.)
 
 echo '#include <stdio.h>
+#include <stdbool.h>
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-        static int x = 0;
-        static int y = 1;
-        printf("%i,%i", x, y);
-        return 0;
+	static int s = 0;
+	int x = 2;	// make sure that BCPL style comments work,
+	x ++;		// that code and variable declarations can be
+	int y = -2;	// mixed, and that the bool type behaves
+	bool a = x;	// reasonably.
+	bool b = y;
+	bool c = a + b;
+	int d = a + b;
+	printf("%i,%i,%i,%i,%i\n", s, a, b, c, d);
 }
 ' > _testprog.c
 
@@ -262,31 +266,37 @@ int main(int argc, char *argv[])
 printf "checking which C compiler to use... "
 rm -f _testprog
 if [ z"$CC" = z ]; then
-	#  Try cc first:
-	printf "#!/bin/sh\ncc $CFLAGS _testprog.c -o _testprog >" > _test.sh
-	printf " /dev/null 2> /dev/null\n" >> _test.sh
-	chmod 755 _test.sh
-	./_test.sh > /dev/null 2> /dev/null
-	if [ -x _testprog ]; then
-		if [ z`./_testprog` = z0,1 ]; then
-			CC=cc
-		else
-			printf "broken cc detected\n"
-			printf "The test program:\n\n"
-			cat _testprog.c
-			printf "\nshould have resulted in 0,1, but the"
-			printf " result was: "
-			./_testprog
-		fi
-	fi
-	rm -f _testprog
-	rm -f _test.sh
+	CC=cc
 fi
 
-rm -f _testprog
+printf "#!/bin/sh\n$CC $CFLAGS _testprog.c -o _testprog >" > _test.sh
+printf " /dev/null 2> /dev/null\n" >> _test.sh
+chmod 755 _test.sh
+./_test.sh > /dev/null 2> /dev/null
+OK=0
+if [ -x _testprog ]; then
+	OK=1
+	if [ z`./_testprog` = z0,1,1,1,2 ]; then
+		OK=2
+	fi
+fi
 
-if [ z"$CC" = z ]; then
-	printf "no working compiler detected\n"
+if [ z$OK = z0 ]; then
+	printf "broken cc detected: $CC $CFLAGS\n"
+	printf "The test program:\n\n"
+	cat _testprog.c
+	printf "could not be compiled at all.\n"
+fi
+
+if [ z$OK = z1 ]; then
+	printf "broken cc detected: $CC $CFLAGS\n"
+	printf "The test program:\n\n"
+	cat _testprog.c
+	printf "should have resulted in  0,1,1,1,2  but the result was: "
+	./_testprog
+fi
+
+if [ z$OK != z2 ]; then
 	printf "\nPlease set the CC environment variable to a working C "
 	printf "compiler before running\nthe configure script, and make"
 	printf " sure that the CFLAGS environment variable is\nalso valid"
@@ -294,7 +304,16 @@ if [ z"$CC" = z ]; then
 	exit
 fi
 
+rm -f _testprog
+rm -f _test.sh
+
+
 echo "$CC $CFLAGS"
+
+
+if [ z"$DEBUG" != zYES ]; then
+	CFLAGS="-DNDEBUG $CFLAGS"
+fi
 
 
 if [ z$NOX11 = z ]; then
@@ -395,8 +414,8 @@ if [ z$NOX11 = z ]; then
 		echo "Failed to compile X11 test program." \
 		    "Configuring without X11."
 	else
-		printf "X11 headers: $XINCLUDE\n"
-		printf "X11 libraries: $XLIB\n"
+		printf "   headers:   $XINCLUDE\n"
+		printf "   libraries: $XLIB\n"
 		echo "XINCLUDE=$XINCLUDE" >> _Makefile.header
 		echo "XLIB=$XLIB" >> _Makefile.header
 		printf "#define WITH_X11\n" >> config.h
@@ -496,23 +515,6 @@ fi
 rm -f _testprog _testprog.error _testprog.stdout
 
 
-#  -Wcast-qual
-#printf "checking whether -Wcast-qual can be used... "
-#$CC $CFLAGS -Wcast-qual _testprog.c -o _testprog 1> _testprog.stdout 2>&1
-#cat _testprog.stdout >> _testprog.error
-#if grep strict _testprog.error > /dev/null 2>&1; then
-	#printf "no\n"
-#else
-	#if [ -x _testprog ]; then
-#		CWARNINGS="-Wcast-qual $CWARNINGS"
-		#printf "yes\n"
-#	else
-		#printf "no\n"
-#	fi
-#fi
-#rm -f _testprog _testprog.error _testprog.stdout
-
-
 #  -Wshadow
 printf "checking whether -Wshadow can be used... "
 $CC $CFLAGS -Wshadow _testprog.c -o _testprog 1> _testprog.stdout 2>&1
@@ -532,15 +534,20 @@ rm -f _testprog _testprog.error _testprog.stdout
 
 #  -O optimization for non-debug builds. Try -O and -O3.
 if [ ! z"$DEBUG" = zYES ]; then
+	printf "checking whether -O3 or -O can be used (non-DEBUG build)... "
 	$CC $CFLAGS -O _testprog.c -o _testprog 2> /dev/null
 	if [ -x _testprog ]; then
 		rm -f _testprog
 		$CC $CFLAGS -O3 _testprog.c -o _testprog 2> /dev/null
 		if [ -x _testprog ]; then
 			CFLAGS="-O3 $CFLAGS"
+			printf "yes, -O3\n"
 		else
 			CFLAGS="-O $CFLAGS"
+			printf "yes, -O\n"
 		fi
+	else
+		printf "no\n"
 	fi
 fi
 rm -f _testprog
@@ -1073,8 +1080,8 @@ echo "" >> _Makefile.header
 D=". src src/console src/cpus src/debugger src/devices src/core"
 D="$D src/devices/fonts src/disk src/file src/include src/machines"
 D="$D src/net src/promemul src/symbol"
+echo "creating Makefiles..."
 for a in $D; do
-	echo "creating $a/Makefile"
 	touch $a/Makefile
 	cat _Makefile.header > $a/Makefile
 	cat $a/Makefile.skel >> $a/Makefile
@@ -1089,5 +1096,5 @@ printf "\n#endif  /*  CONFIG_H  */\n" >> config.h
 #  Remove temporary Makefile header, etc.:
 rm -f _Makefile.header _test*
 
-echo Configured. You may now run make to build gxemul.
+echo Configured. You may now run ' make ' to build gxemul.
 
