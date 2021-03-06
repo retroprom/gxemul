@@ -24,12 +24,8 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 <b>Current "short-list":</b>
 
 o) C++ to C switch:
-	x. C99 detection in configure script? stdbool? __Something__ according
-		to wikipedia? https://en.wikipedia.org/wiki/C99#Version_detection
 	x. Reimplement the i960 CPU. (Disassembly of i960CA instructions.)
 	x. Reimplement the HP700/RX machine.
-	x. Rewrite the (very few) parts that are actual C++ code to plain C:
-		TODO: CXXC REWRITE (in arcbios.c)
 o) Mouse capture for X11 windows?
 o) Disk overlay short-hand for temporary images. -R?
 o) Continue on Luna 88k machine:
@@ -41,6 +37,7 @@ o) Continue on Luna 88k machine:
 	Front-side LED?
 o) Go through the ,NULL arguments to dev_ram_init, and see if more suitable names can be used!
 o) Try using profil() for very basic runtime profiling?
+o) CTRL-T in main window could print SIGINFO-like status summary
 o) Continue on SGI O2: PCI (moving devices in memory at runtime?), SCSI (?), ...
 o) Continue on i960 stuff, in particular HP 700/RX stuff. :-)
 o) Double-check R10000 vs R4400 TLB specifics:
