@@ -374,11 +374,19 @@ int console_charavail(int handle)
 			/*  printf("[ %i: %i ]\n", i, ch[i]);  */
 
 			if (!allow_slaves) {
-				/*  Ugly hack: convert ctrl-b into ctrl-c.
-				    (TODO: fix)  */
+				/*  Convert CTRL-B intro CTRL-C.  */
 				if (ch[i] == 2)
 					ch[i] = 3;
 			}
+
+			// CTRL-T (SIGINFO-like) info. This does not work
+			// well when running with -x, since noone checks
+			// for charavail at stdin then...
+			//
+			// if (ch[i] == 20 && d == STDIN_FILENO) {
+			//	printf("\n");
+			//	cpu_show_cycles(machine..., true);
+			// }
 
 			console_makeavail(handle, ch[i]);
 		}
