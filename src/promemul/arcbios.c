@@ -2327,7 +2327,7 @@ static char* environment_string(struct machine *machine, struct envstrings* env,
 	} else {
 		// Value only.
 		if (found < 0)
-			snprintf(s, len_with_value + 1, "");
+			s[0] = '\0';
 		else
 			snprintf(s, len_with_value + 1, "%s", env->value[found]);
 	}
