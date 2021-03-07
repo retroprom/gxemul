@@ -1196,6 +1196,15 @@ void net_ip_broadcast(struct net *net, struct nic_data *nic,
 		return;
 	}
 
+	/*  NetBSD seems to send this during shutdown:  */
+	if (packet[14] == 0x45 &&			/*  IPv4  */
+	    packet[23] == 0x11 &&			/*  UDP  */
+	    packet[34] == 0xff && packet[35] == 0xff &&	/*  0xffff  */
+	    packet[36] == 0x00 && packet[37] == 0x6f) {	/*  ipx-in-ip  */
+		// Let's ignore for now.
+		return;
+	}
+
 	/*  Unknown packet:  */
 	fatal("[ net: UNIMPLEMENTED IP BROADCAST: ");
 	fatal("ver=%02x ", packet[14]);
