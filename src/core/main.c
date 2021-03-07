@@ -223,8 +223,7 @@ static void usage(bool longusage)
 	printf("\nMachine selection options:\n");
 	printf("  -E t      try to emulate machine type t. (Use -H to get "
 	    "a list of types.)\n");
-	printf("  -e st     try to emulate machine subtype st. (Use this "
-	    "with -E.)\n");
+	printf("  -e st     try to emulate machine subtype st.\n");
 
 	printf("\nOther options:\n");
 	printf("  -C x      try to emulate a specific CPU. (Use -H to get a "
