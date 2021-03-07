@@ -154,11 +154,17 @@ char *get_symbol_name_and_n_args(struct symbol_context *sc, uint64_t addr,
 			if (addr >= s->addr && addr <= s->addr + (s->len - 1)) {
 				if (addr == s->addr)
 					snprintf(symbol_buf, SYMBOLBUF_MAX,
-					    "%s", s->name);
+					    "%s%s%s",
+					    color_symbol_ptr(),
+					    s->name,
+					    color_normal_ptr());
 				else
 					snprintf(symbol_buf, SYMBOLBUF_MAX,
-					    "%s+0x%" PRIx64, s->name, (uint64_t)
-					    (addr - s->addr));
+					    "%s%s%s+0x%" PRIx64,
+					    color_symbol_ptr(),
+					    s->name,
+					    color_normal_ptr(),
+					    (uint64_t) (addr - s->addr));
 
 				if (offset != NULL)
 					*offset = addr - s->addr;

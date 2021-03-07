@@ -2,7 +2,7 @@
 #define	CPU_H
 
 /*
- *  Copyright (C) 2005-2019  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -32,6 +32,7 @@
  */
 
 
+#include <stdbool.h>
 #include <sys/types.h>
 #include <inttypes.h>
 #include <sys/time.h>
@@ -471,7 +472,7 @@ void cpu_run_deinit(struct machine *machine);
 
 void cpu_dumpinfo(struct machine *m, struct cpu *cpu);
 void cpu_list_available_types(void);
-void cpu_show_cycles(struct machine *machine, int forced);
+void cpu_show_cycles(struct machine *machine, bool forced);
 
 struct cpu_family *cpu_family_ptr_by_number(int arch);
 void cpu_init(void);

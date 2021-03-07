@@ -495,7 +495,7 @@ void machine_setup(struct machine *machine)
 	}
 
 	if (machine->machine_name != NULL)
-		debug("machine: %s", machine->machine_name);
+		debug("name: %s", machine->machine_name);
 
 	if (machine->emulated_hz > 0)
 		debug(" (%.2f MHz)", (float)machine->emulated_hz / 1000000);

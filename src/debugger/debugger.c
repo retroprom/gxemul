@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2004-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -354,7 +354,11 @@ static char *debugger_readline(void)
 	char *cmd = last_cmd[last_cmd_index];
 
 	cmd_len = 0; cmd[0] = '\0';
+
+	color_prompt();
 	printf("GXemul> ");
+	color_normal();
+
 	fflush(stdout);
 
 	ch = '\0';

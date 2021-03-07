@@ -664,7 +664,9 @@ void net_dumpinfo(struct net *net)
 	int iadd = DEBUG_INDENTATION;
 	struct remote_net *rnp;
 
+	color_emul_header();
 	debug("net:\n");
+	color_normal();
 
 	debug_indentation(iadd);
 
@@ -688,7 +690,7 @@ void net_dumpinfo(struct net *net)
 	debug(")\n");
 
 	if (!net->nameserver_known) {
-		debug("(could not determine nameserver)\n");
+		debug("(could not determine real nameserver from /etc/resolv.conf)\n");
 	} else {
 		debug("simulated nameserver uses real nameserver ");
 		net_debugaddr(&net->nameserver_ipv4, NET_ADDR_IPV4);

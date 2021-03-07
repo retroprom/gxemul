@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2019  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -393,7 +393,7 @@ void cpu_run_deinit(struct machine *machine)
 	}
 
 	if (machine->show_nr_of_instructions)
-		cpu_show_cycles(machine, 1);
+		cpu_show_cycles(machine, true);
 
 	fflush(stdout);
 }
@@ -405,7 +405,7 @@ void cpu_run_deinit(struct machine *machine)
  *  If show_nr_of_instructions is on, then print a line to stdout about how
  *  many instructions/cycles have been executed so far.
  */
-void cpu_show_cycles(struct machine *machine, int forced)
+void cpu_show_cycles(struct machine *machine, bool forced)
 {
 	uint64_t offset, pc;
 	char *symbol;

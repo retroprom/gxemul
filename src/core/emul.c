@@ -359,11 +359,13 @@ void emul_machine_setup(struct machine *m, int n_load, char **load_names,
 	uint64_t memory_amount, entrypoint = 0, gp = 0, toc = 0;
 	int byte_order;
 
+	color_emul_header();
 	if (m->name != NULL)
 		debug("machine \"%s\":\n", m->name);
 	else
 		debug("machine:\n");
 
+	color_normal();
 	debug_indentation(iadd);
 
 	if (m->machine_type == MACHINE_NONE) {
@@ -709,15 +711,16 @@ void emul_dumpinfo(struct emul *e)
 		net_dumpinfo(e->net);
 
 	for (i = 0; i < e->n_machines; i++) {
+		color_emul_header();
 		if (e->n_machines > 1)
 			debug("machine %i: \"%s\"\n", i, e->machines[i]->name);
 		else
 			debug("machine:\n");
 
+		color_normal();
+
 		debug_indentation(DEBUG_INDENTATION);
-
 		machine_dumpinfo(e->machines[i]);
-
 		debug_indentation(-DEBUG_INDENTATION);
 	}
 }
@@ -878,7 +881,7 @@ void emul_run(struct emul *emul)
 		if (bootcpu->ninstrs > bootcpu->ninstrs_show + (1<<25)) {
 			bootcpu->ninstrs_since_gettimeofday +=
 			    (bootcpu->ninstrs - bootcpu->ninstrs_show);
-			cpu_show_cycles(emul->machines[0], 0);
+			cpu_show_cycles(emul->machines[0], false);
 			bootcpu->ninstrs_show = bootcpu->ninstrs;
 		}
 

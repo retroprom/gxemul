@@ -259,6 +259,12 @@ void fatal(const char *fmt, ...);
 
 
 /*  misc.c:  */
+void color_prompt();
+void color_normal();
+void color_banner();
+void color_emul_header();
+const char* color_symbol_ptr();
+const char* color_normal_ptr();
 unsigned long long mystrtoull(const char *s, char **endp, int base);
 int mymkstemp(char *templ);
 #ifdef USE_STRLCPY_REPLACEMENTS

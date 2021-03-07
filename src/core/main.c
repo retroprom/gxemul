@@ -28,6 +28,7 @@
  *  GXemul's main entry point.
  */
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -189,17 +190,29 @@ void internal_w(char *arg)
 
 
 /*
+ *  print_banner():
+ *
+ *  Prints program startup banner to stdout.
+ */
+static void print_banner()
+{
+	color_banner();
+	printf("GXemul " VERSION"    " COPYRIGHT_MSG"\n" SECONDARY_MSG);
+	printf("Read the source code and/or documentation for other Copyright messages.\n\n");
+	color_normal();
+}
+
+
+/*
  *  usage():
  *
  *  Prints program usage to stdout.
  */
-static void usage(int longusage)
+static void usage(bool longusage)
 {
+	print_banner();
 
-	printf("GXemul " VERSION"    " COPYRIGHT_MSG"\n" SECONDARY_MSG);
-	printf("Read the source code and/or documentation for other Copyright messages.\n");
-
-	printf("\nUsage: %s [machine, other, and general options] [file [...]]\n", progname);
+	printf("Usage: %s [machine, other, and general options] [file [...]]\n", progname);
 	printf("   or  %s [general options] @configfile\n", progname);
 
 	if (!longusage) {
@@ -396,7 +409,7 @@ int get_cmd_args(int argc, char *argv[], struct emul *emul,
 			machine_list_available_types_and_cpus();
 			exit(1);
 		case 'h':
-			usage(1);
+			usage(true);
 			exit(1);
 		case 'I':
 			m->emulated_hz = atoi(optarg);
@@ -590,7 +603,7 @@ int get_cmd_args(int argc, char *argv[], struct emul *emul,
 		if (using_switch_d) {
 			/*  Booting directly from a disk image...  */
 		} else {
-			usage(0);
+			usage(false);
 			fprintf(stderr, "\nNo filename given. Aborting.\n");
 			exit(1);
 		}
@@ -632,9 +645,7 @@ int get_cmd_args(int argc, char *argv[], struct emul *emul,
  *
  *  Two kinds of emulations are started from here:
  *
- *	o)  Simple emulations, using command line arguments, compatible with
- *	    earlier version of GXemul/mips64emul.
- *
+ *	o)  Simple emulations, using command line arguments.
  *	o)  Emulations set up by parsing special config files. (0 or more.)
  */
 int main(int argc, char *argv[])
@@ -706,10 +717,8 @@ int main(int argc, char *argv[])
 		srandom(tv.tv_sec ^ getpid() ^ tv.tv_usec);
 	}
 
-	/*  Print startup message:  */
-	debug("GXemul " VERSION"    " COPYRIGHT_MSG"\n" SECONDARY_MSG
-	    "Read the source code and/or documentation for other Copyright "
-	    "messages.\n\n");
+	if (!quiet_mode)
+		print_banner();
 
 	/*  Simple initialization, from command line arguments:  */
 	if (emul->machines[0]->machine_type != MACHINE_NONE) {

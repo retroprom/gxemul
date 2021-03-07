@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2020  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -29,13 +29,75 @@
  *  implementations of libc functions that are missing on some systems.
  */
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 #include "cpu.h"
 #include "misc.h"
+
+
+bool isatty_cached()
+{
+	static bool isatty_initialized = false;
+	static bool r = false;
+
+	if (!isatty_initialized) {
+		r = isatty(STDIN_FILENO) && isatty(STDOUT_FILENO);
+		isatty_initialized = true;
+	}
+
+	return r;
+}
+
+
+void color_prompt()
+{
+	if (isatty_cached())
+		printf("\e[34;1m");
+}
+
+
+void color_normal()
+{
+	if (isatty_cached())
+		printf("%s", color_normal_ptr());
+}
+
+
+void color_banner()
+{
+	if (isatty_cached())
+		printf("\e[1m");
+}
+
+
+void color_emul_header()
+{
+	if (isatty_cached())
+		printf("\e[33m");
+}
+
+
+const char* color_symbol_ptr()
+{
+	if (isatty_cached())
+		return "\e[35m";
+	else
+		return "";
+}
+
+
+const char* color_normal_ptr()
+{
+	if (isatty_cached())
+		return "\e[0m";
+	else
+		return "";
+}
 
 
 /*

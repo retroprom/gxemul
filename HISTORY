@@ -4970,3 +4970,5 @@ Changelog for GXemul:
 20210228	Switching back from C++ to plain C.
 		Implementing a helper method for registering device addresses
 		as symbols (so that it can be used from several machines).
+20210307	Subtle colorized output when stdin/stdout are connected to a
+		tty, to make it quicker to interpret text output.
