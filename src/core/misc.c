@@ -40,7 +40,10 @@
 #include "misc.h"
 
 
-bool isatty_cached()
+bool enable_colorized_output = true;
+
+
+static bool use_colorized_output()
 {
 	static bool isatty_initialized = false;
 	static bool r = false;
@@ -50,41 +53,41 @@ bool isatty_cached()
 		isatty_initialized = true;
 	}
 
-	return r;
+	return r && enable_colorized_output;
 }
 
 
 void color_prompt()
 {
-	if (isatty_cached())
+	if (use_colorized_output())
 		printf("\e[34;1m");
 }
 
 
 void color_normal()
 {
-	if (isatty_cached())
+	if (use_colorized_output())
 		printf("%s", color_normal_ptr());
 }
 
 
 void color_banner()
 {
-	if (isatty_cached())
+	if (use_colorized_output())
 		printf("\e[1m");
 }
 
 
 void color_emul_header()
 {
-	if (isatty_cached())
+	if (use_colorized_output())
 		printf("\e[33m");
 }
 
 
 const char* color_symbol_ptr()
 {
-	if (isatty_cached())
+	if (use_colorized_output())
 		return "\e[35m";
 	else
 		return "";
@@ -93,7 +96,7 @@ const char* color_symbol_ptr()
 
 const char* color_normal_ptr()
 {
-	if (isatty_cached())
+	if (use_colorized_output())
 		return "\e[0m";
 	else
 		return "";

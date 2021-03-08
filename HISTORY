@@ -4971,4 +4971,5 @@ Changelog for GXemul:
 		Implementing a helper method for registering device addresses
 		as symbols (so that it can be used from several machines).
 20210307	Subtle colorized output when stdin/stdout are connected to a
-		tty, to make it quicker to interpret text output.
+		tty, to make it quicker to interpret text output. Can be
+		disabled with -A.

@@ -50,6 +50,7 @@
 
 extern int single_step;
 extern int force_debugger_at_exit;
+extern bool enable_colorized_output;
 
 extern int optind;
 extern char *optarg;
@@ -307,6 +308,7 @@ static void usage(bool longusage)
 #endif /*  WITH_X11  */
 
 	printf("\nGeneral options:\n");
+	printf("  -A        disable colorized output\n");
 	printf("  -c cmd    add cmd as a command to run before starting "
 	    "the simulation\n");
 	printf("  -D        skip the srandom call at startup\n");
@@ -354,7 +356,7 @@ int get_cmd_args(int argc, char *argv[], struct emul *emul,
 	struct machine *m = emul_add_machine(emul, NULL);
 
 	const char *opts =
-	    "C:c:Dd:E:e:HhI:iJj:k:KM:Nn:Oo:p:QqRrSs:TtUVvW:"
+	    "AC:c:Dd:E:e:HhI:iJj:k:KM:Nn:Oo:p:QqRrSs:TtUVvW:"
 #ifdef WITH_X11
 	    "XxY:"
 #endif
@@ -362,6 +364,9 @@ int get_cmd_args(int argc, char *argv[], struct emul *emul,
 
 	while ((ch = getopt(argc, argv, opts)) != -1) {
 		switch (ch) {
+		case 'A':
+			enable_colorized_output = false;
+			break;
 		case 'C':
 			CHECK_ALLOCATION(m->cpu_name = strdup(optarg));
 			msopts = 1;
