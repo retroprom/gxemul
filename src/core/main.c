@@ -349,10 +349,14 @@ static void usage(bool longusage)
 int get_cmd_args(int argc, char *argv[], struct emul *emul,
 	char ***diskimagesp, int *n_diskimagesp)
 {
-	int ch, res, using_switch_d = 0, using_switch_Z = 0;
 	int using_switch_e = 0, using_switch_E = 0;
+	bool using_switch_Z = false;
+	bool using_switch_d = false;
+	bool machine_specific_options_used = false;
+
+	int ch, res;
+
 	char *type = NULL, *subtype = NULL;
-	int msopts = 0;		/*  Machine-specific options used  */
 	struct machine *m = emul_add_machine(emul, NULL);
 
 	const char *opts =
@@ -369,7 +373,7 @@ int get_cmd_args(int argc, char *argv[], struct emul *emul,
 			break;
 		case 'C':
 			CHECK_ALLOCATION(m->cpu_name = strdup(optarg));
-			msopts = 1;
+			machine_specific_options_used = true;
 			break;
 		case 'c':
 			emul->n_debugger_cmds ++;
@@ -390,8 +394,8 @@ int get_cmd_args(int argc, char *argv[], struct emul *emul,
 			    sizeof(char *) * (*n_diskimagesp)) );
 			CHECK_ALLOCATION( (*diskimagesp)[(*n_diskimagesp) - 1] =
 			    strdup(optarg) );
-			using_switch_d = 1;
-			msopts = 1;
+			using_switch_d = true;
+			machine_specific_options_used = true;
 			break;
 		case 'E':
 			if (using_switch_E ++ > 0) {
@@ -399,7 +403,7 @@ int get_cmd_args(int argc, char *argv[], struct emul *emul,
 				exit(1);
 			}
 			type = optarg;
-			msopts = 1;
+			machine_specific_options_used = true;
 			break;
 		case 'e':
 			if (using_switch_e ++ > 0) {
@@ -407,7 +411,7 @@ int get_cmd_args(int argc, char *argv[], struct emul *emul,
 				exit(1);
 			}
 			subtype = optarg;
-			msopts = 1;
+			machine_specific_options_used = true;
 			break;
 		case 'H':
 			machine_list_available_types_and_cpus();
@@ -417,19 +421,19 @@ int get_cmd_args(int argc, char *argv[], struct emul *emul,
 			exit(1);
 		case 'I':
 			m->emulated_hz = atoi(optarg);
-			msopts = 1;
+			machine_specific_options_used = true;
 			break;
 		case 'i':
 			m->instruction_trace = 1;
-			msopts = 1;
+			machine_specific_options_used = true;
 			break;
 		case 'J':
 			m->allow_instruction_combinations = 0;
-			msopts = 1;
+			machine_specific_options_used = true;
 			break;
 		case 'j':
 			CHECK_ALLOCATION(m->boot_kernel_filename = strdup(optarg));
-			msopts = 1;
+			machine_specific_options_used = true;
 			break;
 		case 'k':
 			dyntrans_cache_size = atoi(optarg) * 1048576;
@@ -444,62 +448,62 @@ int get_cmd_args(int argc, char *argv[], struct emul *emul,
 			break;
 		case 'M':
 			m->physical_ram_in_mb = atoi(optarg);
-			msopts = 1;
+			machine_specific_options_used = true;
 			break;
 		case 'N':
 			m->show_nr_of_instructions = 1;
-			msopts = 1;
+			machine_specific_options_used = true;
 			break;
 		case 'n':
 			m->ncpus = atoi(optarg);
-			msopts = 1;
+			machine_specific_options_used = true;
 			break;
 		case 'O':
 			m->force_netboot = 1;
-			msopts = 1;
+			machine_specific_options_used = true;
 			break;
 		case 'o':
 			CHECK_ALLOCATION(m->boot_string_argument = strdup(optarg));
-			msopts = 1;
+			machine_specific_options_used = true;
 			break;
 		case 'p':
 			machine_add_breakpoint_string(m, optarg);
-			msopts = 1;
+			machine_specific_options_used = true;
 			break;
 		case 'Q':
 			m->prom_emulation = 0;
-			msopts = 1;
+			machine_specific_options_used = true;
 			break;
 		case 'q':
 			quiet_mode = 1;
 			break;
 		case 'R':
 			m->use_random_bootstrap_cpu = 1;
-			msopts = 1;
+			machine_specific_options_used = true;
 			break;
 		case 'r':
 			m->register_dump = 1;
-			msopts = 1;
+			machine_specific_options_used = true;
 			break;
 		case 'S':
 			m->random_mem_contents = 1;
-			msopts = 1;
+			machine_specific_options_used = true;
 			break;
 		case 's':
 			machine_statistics_init(m, optarg);
-			msopts = 1;
+			machine_specific_options_used = true;
 			break;
 		case 'T':
 			m->halt_on_nonexistant_memaccess = 1;
-			msopts = 1;
+			machine_specific_options_used = true;
 			break;
 		case 't':
 			m->show_trace_tree = 1;
-			msopts = 1;
+			machine_specific_options_used = true;
 			break;
 		case 'U':
 			m->slow_serial_interrupts_hack_for_linux = 1;
-			msopts = 1;
+			machine_specific_options_used = true;
 			break;
 		case 'V':
 			single_step = ENTER_SINGLE_STEPPING;
@@ -512,7 +516,7 @@ int get_cmd_args(int argc, char *argv[], struct emul *emul,
 			exit(0);
 		case 'X':
 			m->x11_md.in_use = 1;
-			msopts = 1;
+			machine_specific_options_used = true;
 			/*  FALL-THROUGH  */
 		case 'x':
 			console_allow_slaves(1);
@@ -527,12 +531,12 @@ int get_cmd_args(int argc, char *argv[], struct emul *emul,
 				fprintf(stderr, "Invalid scaledown value.\n");
 				exit(1);
 			}
-			msopts = 1;
+			machine_specific_options_used = true;
 			break;
 		case 'Z':
 			m->n_gfx_cards = atoi(optarg);
-			using_switch_Z = 1;
-			msopts = 1;
+			using_switch_Z = true;
+			machine_specific_options_used = true;
 			break;
 		case 'z':
 			m->x11_md.n_display_names ++;
@@ -541,7 +545,7 @@ int get_cmd_args(int argc, char *argv[], struct emul *emul,
 			    m->x11_md.n_display_names * sizeof(char *)));
 			CHECK_ALLOCATION(m->x11_md.display_names[
 			    m->x11_md.n_display_names-1] = strdup(optarg));
-			msopts = 1;
+			machine_specific_options_used = true;
 			break;
 		default:
 			fprintf(stderr, "Run  %s -h  for help on command "
@@ -572,7 +576,7 @@ int get_cmd_args(int argc, char *argv[], struct emul *emul,
 			exit(1);
 	}
 
-	if (m->machine_type == MACHINE_NONE && msopts) {
+	if (m->machine_type == MACHINE_NONE && machine_specific_options_used) {
 		fprintf(stderr, "Machine specific options used directly on "
 		    "the command line, but no machine\nemulation specified?\n");
 		exit(1);
