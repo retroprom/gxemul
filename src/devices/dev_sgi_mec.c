@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -565,8 +565,8 @@ DEVICE_ACCESS(sgi_mec)
 				case 23:	// MII_NSPHY_PCR
 					odata = 0x20; // PCR_CIMDIS
 					break;
-				default:
-					fatal("[ sgi_mec: unimplemented %s PHY register %i ]\n",
+				default:debugmsg(SUBSYS_DEVICE, "sgi_mec", VERBOSITY_WARNING,
+					    "UNIMPLEMENTED %s PHY register %i",
 						writeflag ? "write to" : "read from", reg);
 				}
 			}
