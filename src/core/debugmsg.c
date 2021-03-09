@@ -30,7 +30,6 @@
  *  TODO:
  *	Debugger commands: "quiet" and a new command "verbosity"
  *	Converting debug() and fatal() calls to the new debugmsg() call.
- *	Turn off [ ] decorations when executing with slave consoles.
  *	Live registering of new subsystems.
  */
 
@@ -39,6 +38,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "console.h"
 #include "cpu.h"
 #include "machine.h"
 #include "misc.h"
@@ -109,6 +109,9 @@ static void debugmsg_va(struct cpu* cpu, int subsystem,
 
 	bool debug_currently_at_start_of_line = true;
 	bool show_decorations = emul_executing && !single_step;
+
+	if (console_are_slaves_allowed())
+		show_decorations = false;
 
 	while (true) {
 		if (debug_currently_at_start_of_line) {
