@@ -686,7 +686,6 @@ int main(int argc, char *argv[])
 			    be overwritten:  */
 			if (emul != NULL) {
 				emul_destroy(emul);
-				settings_remove(global_settings, "emul");
 				emul = NULL;
 			}
 
