@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2006-2014  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2006-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -249,7 +249,7 @@ void dreamcast_emul(struct cpu *cpu)
 
 	/*  Special case: Reboot  */
 	if ((uint32_t)cpu->pc == 0x80000000 || (uint32_t)cpu->pc == 0xa0000000) {
-	 	fatal("[ dreamcast reboot ]\n");
+		debugmsg(SUBSYS_PROMEMUL, "dreamcast", VERBOSITY_WARNING, "rebooting");
 		cpu->running = 0;
 		return;
 	}
@@ -260,11 +260,12 @@ void dreamcast_emul(struct cpu *cpu)
 		/*  SYSINFO  */
 		switch (r7) {
 		case 0:	/*  SYSINFO_INIT: Ignored for now.  */
+			debugmsg(SUBSYS_PROMEMUL, "dreamcast", VERBOSITY_INFO, "SYSINFO_INIT: ignored for now");
 			break;
 		case 3:	/*  SYSINFO_ID:  */
 			cpu->cd.sh.r[0] = (uint32_t)DREAMCAST_MACHINE_ID_ADDRESS;
 			break;
-		default:fatal("[ SYSINFO: Unimplemented r7=%i ]\n", r7);
+		default:debugmsg(SUBSYS_PROMEMUL, "dreamcast", VERBOSITY_ERROR, "SYSINFO: Unimplemented r7=%i", r7);
 			goto bad;
 		}
 		break;
@@ -275,7 +276,7 @@ void dreamcast_emul(struct cpu *cpu)
 		case 0:	/*  ROMFONT_ADDRESS  */
 			cpu->cd.sh.r[0] = DREAMCAST_ROMFONT_BASE;
 			break;
-		default:fatal("[ ROMFONT: Unimplemented r1=%i ]\n", r1);
+		default:debugmsg(SUBSYS_PROMEMUL, "dreamcast", VERBOSITY_ERROR, "ROMFONT: Unimplemented r1=%i", r1);
 			goto bad;
 		}
 		break;
@@ -291,7 +292,7 @@ void dreamcast_emul(struct cpu *cpu)
 			/*  TODO  */
 			cpu->cd.sh.r[0] = (uint32_t) -1;
 			break;
-		default:fatal("[ FLASHROM: Unimplemented r7=%i ]\n", r7);
+		default:debugmsg(SUBSYS_PROMEMUL, "dreamcast", VERBOSITY_ERROR, "FLASHROM: Unimplemented r7=%i", r7);
 			goto bad;
 		}
 		break;
@@ -317,11 +318,11 @@ void dreamcast_emul(struct cpu *cpu)
 			case 4:	/*  GDROM_CHECK_DRIVE  */
 				/*  TODO: Return status words  */
 				break;
-			default:fatal("[ GDROM: Unimplemented r7=%i ]\n", r7);
+			default:debugmsg(SUBSYS_PROMEMUL, "dreamcast", VERBOSITY_ERROR, "GDROM: Unimplemented r7=%i", r7);
 				goto bad;
 			}
 			break;
-		default:fatal("[ 0xbc: Unimplemented r6=0x%x ]\n", r6);
+		default:debugmsg(SUBSYS_PROMEMUL, "dreamcast", VERBOSITY_ERROR, "0xbc: Unimplemented r6=%i", r6);
 			goto bad;
 		}
 		break;
@@ -342,7 +343,7 @@ void dreamcast_emul(struct cpu *cpu)
 		 *  ROM emulation code, or not.
 		 */
 		if (booting_from_cdrom) {
-			debug("[ dreamcast: Switching to bootstrap 1 ]\n");
+			debugmsg(SUBSYS_PROMEMUL, "dreamcast", VERBOSITY_INFO, "Switching to bootstrap 1");
 
 			booting_from_cdrom = 0;
 
@@ -350,7 +351,7 @@ void dreamcast_emul(struct cpu *cpu)
 			cpu->pc = 0x8c00b800;
 			return;
 		} else {
-			fatal("[ dreamcast: Returning to main menu. ]\n");
+			debugmsg(SUBSYS_PROMEMUL, "dreamcast", VERBOSITY_WARNING, "Returning to main menu.");
 			cpu->running = 0;
 		}
 		break;
@@ -365,7 +366,7 @@ void dreamcast_emul(struct cpu *cpu)
 		 *  CDROM" is simulated. Control is transfered to the license
 		 *  code in the loaded IP.BIN file.
 		 */
-		debug("[ dreamcast boot from CDROM ]\n");
+		debugmsg(SUBSYS_PROMEMUL, "dreamcast", VERBOSITY_INFO, "boot from CDROM");
 		booting_from_cdrom = 1;
 		cpu->pc = 0x8c008300;
 		return;
