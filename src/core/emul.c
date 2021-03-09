@@ -60,6 +60,7 @@ extern char **extra_argv;
 extern int verbose;
 extern bool debugger_enter_at_end_of_run;
 extern bool single_step;
+extern bool about_to_enter_single_step;
 
 bool emul_executing = false;
 bool emul_shutdown = false;
@@ -870,6 +871,11 @@ void emul_run(struct emul *emul)
 			    (bootcpu->ninstrs - bootcpu->ninstrs_show);
 			cpu_show_cycles(emul->machines[0], false);
 			bootcpu->ninstrs_show = bootcpu->ninstrs;
+		}
+		
+		if (about_to_enter_single_step) {
+			single_step = true;
+			about_to_enter_single_step = false;
 		}
 
 		if (single_step)

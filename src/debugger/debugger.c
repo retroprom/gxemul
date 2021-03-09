@@ -67,7 +67,8 @@ extern int verbose;
  *  TODO: Some of these should be moved to some other place!
  */
 
-bool single_step;
+bool single_step = false;
+bool about_to_enter_single_step = false;
 bool debugger_enter_at_end_of_run = false;
 volatile int single_step_breakpoint = 0;
 int debugger_n_steps_left_before_interaction = 0;
@@ -144,8 +145,13 @@ void debugger_activate(int x)
 		printf("^C");
 		fflush(stdout);
 	} else {
-		/*  Enter the single step debugger.  */
-		single_step = true;
+		/*
+		 * Enter the single step debugger.
+		 *
+		 * NOTE: Setting single_step = true directly is not wise,
+		 * since it may be in the middle of executing.
+		 */
+		about_to_enter_single_step = true;
 
 		/*  Discard any chars in the input queue:  */
 		while (console_charavail(MAIN_CONSOLE))
