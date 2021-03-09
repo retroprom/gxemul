@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -312,8 +312,8 @@ void x11_init(struct machine *m)
 	if (m->x11_md.n_display_names > 0) {
 		int i;
 		for (i=0; i<m->x11_md.n_display_names; i++)
-			fatal("Using X11 display: %s\n",
-			    m->x11_md.display_names[i]);
+			debugmsg(SUBSYS_X11, "init", VERBOSITY_INFO,
+			    "using X11 display: %s", m->x11_md.display_names[i]);
 	}
 
 	m->x11_md.current_display_name_nr = 0;
@@ -332,7 +332,7 @@ void x11_fb_resize(struct fb_window *win, int new_xsize, int new_ysize)
 	int alloc_depth;
 
 	if (win == NULL) {
-		fatal("x11_fb_resize(): win == NULL\n");
+		debugmsg(SUBSYS_X11, "resize", VERBOSITY_ERROR, "win == NULL");
 		return;
 	}
 
@@ -421,15 +421,18 @@ struct fb_window *x11_fb_init(int xsize, int ysize, char *name,
 	}
 
 	if (display_name != NULL)
-		debug("[ x11_fb_init(): framebuffer window %i, %ix%i, DISPLAY"
-		    "=%s ]\n", fb_number, xsize, ysize, display_name);
+		debugmsg(SUBSYS_X11, "fb_init", VERBOSITY_INFO,
+		    "framebuffer window %i, %ix%i, DISPLAY"
+		    "=%s", fb_number, xsize, ysize, display_name);
 
 	x11_display = XOpenDisplay(display_name);
 
 	if (x11_display == NULL) {
-		fatal("x11_fb_init(\"%s\"): couldn't open display\n", name);
+		debugmsg(SUBSYS_X11, "fb_init", VERBOSITY_ERROR,
+		    "couldn't open display '%s'", name);
 		if (display_name != NULL)
-			fatal("display_name = '%s'\n", display_name);
+			debugmsg(SUBSYS_X11, "fb_init", VERBOSITY_ERROR, "display_name = '%s'", display_name);
+
 		exit(1);
 	}
 
@@ -443,17 +446,19 @@ struct fb_window *x11_fb_init(int xsize, int ysize, char *name,
 	    fbwin->x11_screen_depth != 15 &&
 	    fbwin->x11_screen_depth != 16 &&
 	    fbwin->x11_screen_depth != 24) {
-		fatal("\n***\n***  WARNING! Your X server is running %i-bit "
+		debugmsg(SUBSYS_X11, "fb_init", VERBOSITY_WARNING,
+		    "***\n***  WARNING! Your X server is running %i-bit "
 		    "color mode. This is not really\n",
-		    fbwin->x11_screen_depth);
-		fatal("***  supported yet.  8, 15, 16, and 24 bits should "
+		    "***  supported yet.  8, 15, 16, and 24 bits should "
 		    "work.\n***  24-bit server gives color.  Any other bit "
-		    "depth gives undefined result!\n***\n\n");
+		    "depth gives undefined result!\n***",
+		    fbwin->x11_screen_depth);
 	}
 
 	if (fbwin->x11_screen_depth <= 8)
-		debug("WARNING! X11 screen depth is not enough for color; "
-		    "using only 16 grayscales instead\n");
+		debugmsg(SUBSYS_X11, "fb_init", VERBOSITY_WARNING,
+		    "screen depth is not enough for color; "
+		    "using only 16 grayscales instead");
 
 	strlcpy(bg, "Black", sizeof(bg));
 	strlcpy(fg, "White", sizeof(fg));
@@ -534,7 +539,8 @@ struct fb_window *x11_fb_init(int xsize, int ysize, char *name,
 	if (fbwin->x11_screen_depth > 8)
 		memset(fbwin->ximage_data, 0, alloclen);
 	else {
-		debug("x11_fb_init(): clearing the XImage\n");
+		debugmsg(SUBSYS_X11, "fb_init", VERBOSITY_DEBUG,
+		    "clearing the XImage\n");
 		for (y=0; y<ysize; y++)
 			for (x=0; x<xsize; x++)
 				XPutPixel(fbwin->fb_ximage, x, y,
@@ -628,16 +634,16 @@ static void x11_check_events_machine(struct emul *emul, struct machine *m)
 			}
 
 			if (event.type == ButtonPress) {
-				debug("[ X11 ButtonPress: %i ]\n",
-				    event.xbutton.button);
+				/*  debug("[ X11 ButtonPress: %i ]\n",
+				    event.xbutton.button);  */
 				/*  button = 1,2,3 = left,middle,right  */
 
 				console_mouse_button(event.xbutton.button, 1);
 			}
 
 			if (event.type == ButtonRelease) {
-				debug("[ X11 ButtonRelease: %i ]\n",
-				    event.xbutton.button);
+				/*  debug("[ X11 ButtonRelease: %i ]\n",
+				    event.xbutton.button);  */
 				/*  button = 1,2,3 = left,middle,right  */
 
 				console_mouse_button(event.xbutton.button, 0);
@@ -818,7 +824,8 @@ static void x11_check_events_machine(struct emul *emul, struct machine *m)
 						    main_console_handle, '~');
 						break;
 					default:
-						debug("[ unimplemented X11 "
+						debugmsg(SUBSYS_X11, "", VERBOSITY_WARNING,
+						    "[ unimplemented X11 "
 						    "keycode %i ]\n", x);
 					}
 				}

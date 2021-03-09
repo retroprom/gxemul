@@ -316,7 +316,7 @@ void debugmsg_add_verbosity_level(int subsystem, int verbosity_delta)
  */
 void debugmsg_init()
 {
-	debugmsg_nr_of_subsystems = 9;
+	debugmsg_nr_of_subsystems = 10;
 	debugmsg_subsystem_name = malloc(sizeof(char*) * debugmsg_nr_of_subsystems);
 	debugmsg_current_verbosity = malloc(sizeof(int) * debugmsg_nr_of_subsystems);;
 
@@ -329,6 +329,7 @@ void debugmsg_init()
 	debugmsg_subsystem_name[SUBSYS_MEMORY]    = "memory";
 	debugmsg_subsystem_name[SUBSYS_EXCEPTION] = "exception";
 	debugmsg_subsystem_name[SUBSYS_PROMEMUL]  = "promemul";
+	debugmsg_subsystem_name[SUBSYS_X11]       = "x11";
 
 	// Default verbosity levels.
 	debugmsg_set_verbosity_level(SUBSYS_ALL, VERBOSITY_INFO);

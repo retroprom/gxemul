@@ -238,6 +238,7 @@ int decstation_prom_emul(struct cpu *cpu);
 #define	SUBSYS_MEMORY		6	/*  Memory related  */
 #define	SUBSYS_EXCEPTION	7	/*  CPU exceptions  */
 #define	SUBSYS_PROMEMUL		8	/*  PROM emulation related  */
+#define	SUBSYS_X11		9	/*  X11 related  */
 #define	VERBOSITY_ERROR		0
 #define	VERBOSITY_WARNING	1
 #define	VERBOSITY_INFO		2
