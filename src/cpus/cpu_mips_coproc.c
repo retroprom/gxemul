@@ -46,8 +46,6 @@
 #include "timer.h"
 
 
-extern volatile int single_step;
-
 static const char *cop0_names[] = COP0_NAMES;
 static const char *regnames[] = MIPS_REGISTER_NAMES;
 

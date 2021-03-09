@@ -855,7 +855,7 @@ void console_init_main(struct emul *emul)
  */
 void console_debug_dump(struct machine *machine)
 {
-	int i, iadd = DEBUG_INDENTATION, listed_main = 0;
+	int i, iadd = 1, listed_main = 0;
 
 	if (verbose < 2)
 		return;

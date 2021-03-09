@@ -1129,7 +1129,7 @@ int diskimage_is_a_tape(struct machine *machine, int id, int type)
  */
 void diskimage_dump_info(struct machine *machine)
 {
-	int i, iadd = DEBUG_INDENTATION;
+	int i, iadd = 1;
 	struct diskimage *d = machine->first_diskimage;
 
 	while (d != NULL) {

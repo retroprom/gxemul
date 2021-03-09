@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2004-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -32,7 +32,7 @@
 /*
  *  debugger_cmd_allsettings():
  */
-static void debugger_cmd_allsettings(struct machine *m, char *cmd_line)
+static void debugger_cmd_allsettings(struct machine *m, char *args)
 {
 	settings_debugdump(global_settings, GLOBAL_SETTINGS_NAME, 1);
 }
@@ -43,14 +43,14 @@ static void debugger_cmd_allsettings(struct machine *m, char *cmd_line)
  *
  *  TODO: automagic "expansion" for the subcommand names (s => show).
  */
-static void debugger_cmd_breakpoint(struct machine *m, char *cmd_line)
+static void debugger_cmd_breakpoint(struct machine *m, char *args)
 {
 	int i, res;
 
-	while (cmd_line[0] != '\0' && cmd_line[0] == ' ')
-		cmd_line ++;
+	while (args[0] != '\0' && args[0] == ' ')
+		args ++;
 
-	if (cmd_line[0] == '\0') {
+	if (args[0] == '\0') {
 		printf("syntax: breakpoint subcmd [args...]\n");
 		printf("Available subcmds (and args) are:\n");
 		printf("  add addr      add a breakpoint for address addr\n");
@@ -59,7 +59,7 @@ static void debugger_cmd_breakpoint(struct machine *m, char *cmd_line)
 		return;
 	}
 
-	if (strcmp(cmd_line, "show") == 0) {
+	if (strcmp(args, "show") == 0) {
 		if (m->breakpoints.n == 0)
 			printf("No breakpoints set.\n");
 		for (i=0; i<m->breakpoints.n; i++)
@@ -67,8 +67,8 @@ static void debugger_cmd_breakpoint(struct machine *m, char *cmd_line)
 		return;
 	}
 
-	if (strncmp(cmd_line, "delete ", 7) == 0) {
-		int x = atoi(cmd_line + 7);
+	if (strncmp(args, "delete ", 7) == 0) {
+		int x = atoi(args + 7);
 
 		if (m->breakpoints.n == 0) {
 			printf("No breakpoints set.\n");
@@ -95,15 +95,15 @@ static void debugger_cmd_breakpoint(struct machine *m, char *cmd_line)
 		return;
 	}
 
-	if (strncmp(cmd_line, "add ", 4) == 0) {
+	if (strncmp(args, "add ", 4) == 0) {
 		uint64_t tmp;
 		size_t breakpoint_buf_len;
 
 		i = m->breakpoints.n;
 
-		res = debugger_parse_expression(m, cmd_line + 4, 0, &tmp);
+		res = debugger_parse_expression(m, args + 4, 0, &tmp);
 		if (!res) {
-			printf("Couldn't parse '%s'\n", cmd_line + 4);
+			printf("Couldn't parse '%s'\n", args + 4);
 			return;
 		}
 
@@ -114,11 +114,11 @@ static void debugger_cmd_breakpoint(struct machine *m, char *cmd_line)
 		    m->breakpoints.addr, sizeof(uint64_t) *
 		   (m->breakpoints.n + 1)));
 
-		breakpoint_buf_len = strlen(cmd_line+4) + 1;
+		breakpoint_buf_len = strlen(args+4) + 1;
 
 		CHECK_ALLOCATION(m->breakpoints.string[i] = (char *)
 		    malloc(breakpoint_buf_len));
-		strlcpy(m->breakpoints.string[i], cmd_line+4,
+		strlcpy(m->breakpoints.string[i], args+4,
 		    breakpoint_buf_len);
 		m->breakpoints.addr[i] = tmp;
 
@@ -139,27 +139,27 @@ static void debugger_cmd_breakpoint(struct machine *m, char *cmd_line)
 /*
  *  debugger_cmd_continue():
  */
-static void debugger_cmd_continue(struct machine *m, char *cmd_line)
+static void debugger_cmd_continue(struct machine *m, char *args)
 {
-	if (*cmd_line) {
+	if (*args) {
 		printf("syntax: continue\n");
 		return;
 	}
 
-	exit_debugger = 1;
+	exit_debugger = true;
 }
 
 
 /*
  *  debugger_cmd_device():
  */
-static void debugger_cmd_device(struct machine *m, char *cmd_line)
+static void debugger_cmd_device(struct machine *m, char *args)
 {
 	int i;
 	struct memory *mem;
 	struct cpu *c;
 
-	if (cmd_line[0] == '\0')
+	if (args[0] == '\0')
 		goto return_help;
 
 	if (m->cpus == NULL) {
@@ -184,19 +184,19 @@ static void debugger_cmd_device(struct machine *m, char *cmd_line)
 	}
 	mem = m->cpus[m->bootstrap_cpu]->mem;
 
-	if (strcmp(cmd_line, "all") == 0) {
+	if (strcmp(args, "all") == 0) {
 		device_dumplist();
-	} else if (strncmp(cmd_line, "add ", 4) == 0) {
-		device_add(m, cmd_line+4);
-	} else if (strcmp(cmd_line, "consoles") == 0) {
+	} else if (strncmp(args, "add ", 4) == 0) {
+		device_add(m, args+4);
+	} else if (strcmp(args, "consoles") == 0) {
 		console_debug_dump(m);
-	} else if (strncmp(cmd_line, "remove ", 7) == 0) {
-		i = atoi(cmd_line + 7);
-		if (i==0 && cmd_line[7]!='0') {
+	} else if (strncmp(args, "remove ", 7) == 0) {
+		i = atoi(args + 7);
+		if (i==0 && args[7]!='0') {
 			printf("Weird device number. Use 'device list'.\n");
 		} else
 			memory_device_remove(m->memory, i);
-	} else if (strcmp(cmd_line, "list") == 0) {
+	} else if (strcmp(args, "list") == 0) {
 		if (mem->n_mmapped_devices == 0)
 			printf("No memory-mapped devices in this machine.\n");
 
@@ -242,7 +242,7 @@ return_help:
  *
  *  syntax: dump [addr [endaddr]]
  */
-static void debugger_cmd_dump(struct machine *m, char *cmd_line)
+static void debugger_cmd_dump(struct machine *m, char *args)
 {
 	uint64_t addr, addr_start, addr_end;
 	struct cpu *c;
@@ -250,11 +250,11 @@ static void debugger_cmd_dump(struct machine *m, char *cmd_line)
 	char *p = NULL;
 	int x, r;
 
-	if (cmd_line[0] != '\0') {
+	if (args[0] != '\0') {
 		uint64_t tmp;
 		char *tmps;
 
-		CHECK_ALLOCATION(tmps = strdup(cmd_line));
+		CHECK_ALLOCATION(tmps = strdup(args));
 
 		/*  addr:  */
 		p = strchr(tmps, ' ');
@@ -264,13 +264,13 @@ static void debugger_cmd_dump(struct machine *m, char *cmd_line)
 		free(tmps);
 
 		if (r == PARSE_NOMATCH || r == PARSE_MULTIPLE) {
-			printf("Unparsable address: %s\n", cmd_line);
+			printf("Unparsable address: %s\n", args);
 			return;
 		} else {
 			last_dump_addr = tmp;
 		}
 
-		p = strchr(cmd_line, ' ');
+		p = strchr(args, ' ');
 	}
 
 	if (m->cpus == NULL) {
@@ -297,7 +297,7 @@ static void debugger_cmd_dump(struct machine *m, char *cmd_line)
 			p++;
 		r = debugger_parse_expression(m, p, 0, &addr_end);
 		if (r == PARSE_NOMATCH || r == PARSE_MULTIPLE) {
-			printf("Unparsable address: %s\n", cmd_line);
+			printf("Unparsable address: %s\n", args);
 			return;
 		}
 	}
@@ -357,11 +357,9 @@ static void debugger_cmd_dump(struct machine *m, char *cmd_line)
  *
  *  Dump info about the current emulation.
  */
-static void debugger_cmd_emul(struct machine *m, char *cmd_line)
+static void debugger_cmd_emul(struct machine *m, char *args)
 {
-	int iadd = DEBUG_INDENTATION;
-
-	if (*cmd_line) {
+	if (*args) {
 		printf("syntax: emul\n");
 		return;
 	}
@@ -369,9 +367,9 @@ static void debugger_cmd_emul(struct machine *m, char *cmd_line)
 	debug("emulation \"%s\":\n", debugger_emul->name == NULL?
 	    "(simple setup)" : debugger_emul->name);
 
-	debug_indentation(iadd);
+	debug_indentation(1);
 	emul_dumpinfo(debugger_emul);
-	debug_indentation(-iadd);
+	debug_indentation(-1);
 }
 
 
@@ -381,12 +379,12 @@ static void debugger_cmd_emul(struct machine *m, char *cmd_line)
  *  Changes focus to specific cpu, in a specific machine (in a specific
  *  emulation).
  */
-static void debugger_cmd_focus(struct machine *m, char *cmd_line)
+static void debugger_cmd_focus(struct machine *m, char *args)
 {
 	int x = -1, y = -1;
 	char *p, *p2;
 
-	if (!cmd_line[0]) {
+	if (!args[0]) {
 		printf("syntax: focus x[,y]\n");
 		printf("where x (cpu id) and y (machine number) "
 		    "are integers as\nreported by the 'emul'"
@@ -394,9 +392,9 @@ static void debugger_cmd_focus(struct machine *m, char *cmd_line)
 		goto print_current_focus_and_return;
 	}
 
-	x = atoi(cmd_line);
-	p = strchr(cmd_line, ',');
-	if (p == cmd_line) {
+	x = atoi(args);
+	p = strchr(args, ',');
+	if (p == args) {
 		printf("No cpu number specified?\n");
 		return;
 	}
@@ -440,38 +438,41 @@ print_current_focus_and_return:
 
 
 /*  This is defined below.  */
-static void debugger_cmd_help(struct machine *m, char *cmd_line);
+static void debugger_cmd_help(struct machine *m, char *args);
 
 
 /*
  *  debugger_cmd_itrace():
  */
-static void debugger_cmd_itrace(struct machine *m, char *cmd_line)
+static void debugger_cmd_itrace(struct machine *m, char *args)
 {
-	if (*cmd_line) {
+	if (*args) {
 		printf("syntax: itrace\n");
 		return;
 	}
 
-	old_instruction_trace = 1 - old_instruction_trace;
-	printf("instruction_trace = %s\n", old_instruction_trace? "ON":"OFF");
-	/*  TODO: how to preserve quiet_mode?  */
-	old_quiet_mode = 0;
-	printf("quiet_mode = %s\n", old_quiet_mode? "ON" : "OFF");
+	m->instruction_trace = !m->instruction_trace;
+
+	if (m->instruction_trace)
+		verbose ++;
+	else
+		verbose --;
+
+	printf("instruction_trace = %s\n", m->instruction_trace? "ON":"OFF");
 }
 
 
 /*
  *  debugger_cmd_lookup():
  */
-static void debugger_cmd_lookup(struct machine *m, char *cmd_line)
+static void debugger_cmd_lookup(struct machine *m, char *args)
 {
 	uint64_t addr;
 	int res;
 	char *symbol;
 	uint64_t offset;
 
-	if (cmd_line[0] == '\0') {
+	if (args[0] == '\0') {
 		printf("syntax: lookup name|addr\n");
 		return;
 
@@ -479,17 +480,17 @@ static void debugger_cmd_lookup(struct machine *m, char *cmd_line)
 
 	/*  Addresses never need to be given in decimal form anyway,
 	    so assuming hex here will be ok.  */
-	addr = strtoull(cmd_line, NULL, 16);
+	addr = strtoull(args, NULL, 16);
 
 	if (addr == 0) {
 		uint64_t newaddr;
 		res = get_symbol_addr(&m->symbol_context,
-		    cmd_line, &newaddr);
+		    args, &newaddr);
 		if (!res) {
-			printf("lookup for '%s' failed\n", cmd_line);
+			printf("lookup for '%s' failed\n", args);
 			return;
 		}
-		printf("%s = 0x", cmd_line);
+		printf("%s = 0x", args);
 		if (m->cpus[0]->is_32bit)
 			printf("%08" PRIx32"\n", (uint32_t) newaddr);
 		else
@@ -506,7 +507,7 @@ static void debugger_cmd_lookup(struct machine *m, char *cmd_line)
 			printf("0x%016" PRIx64, (uint64_t) addr);
 		printf(" = %s\n", symbol);
 	} else
-		printf("lookup for '%s' failed\n", cmd_line);
+		printf("lookup for '%s' failed\n", args);
 }
 
 
@@ -515,18 +516,18 @@ static void debugger_cmd_lookup(struct machine *m, char *cmd_line)
  *
  *  Dump info about the currently focused machine.
  */
-static void debugger_cmd_machine(struct machine *m, char *cmd_line)
+static void debugger_cmd_machine(struct machine *m, char *args)
 {
 	int iadd = 0;
 
-	if (*cmd_line) {
+	if (*args) {
 		printf("syntax: machine\n");
 		return;
 	}
 
 	if (m->name != NULL) {
 		debug("machine \"%s\":\n", m->name);
-		iadd = DEBUG_INDENTATION;
+		iadd = 1;
 	}
 
 	debug_indentation(iadd);
@@ -538,15 +539,15 @@ static void debugger_cmd_machine(struct machine *m, char *cmd_line)
 /*
  *  debugger_cmd_ninstrs():
  */
-static void debugger_cmd_ninstrs(struct machine *m, char *cmd_line)
+static void debugger_cmd_ninstrs(struct machine *m, char *args)
 {
 	int toggle = 1;
 	int previous_mode = m->show_nr_of_instructions;
 
-	if (cmd_line[0] != '\0') {
-		while (cmd_line[0] != '\0' && cmd_line[0] == ' ')
-			cmd_line ++;
-		switch (cmd_line[0]) {
+	if (args[0] != '\0') {
+		while (args[0] != '\0' && args[0] == ' ')
+			args ++;
+		switch (args[0]) {
 		case '0':
 			toggle = 0;
 			m->show_nr_of_instructions = 0;
@@ -558,7 +559,7 @@ static void debugger_cmd_ninstrs(struct machine *m, char *cmd_line)
 		case 'o':
 		case 'O':
 			toggle = 0;
-			switch (cmd_line[1]) {
+			switch (args[1]) {
 			case 'n':
 			case 'N':
 				m->show_nr_of_instructions = 1;
@@ -587,12 +588,12 @@ static void debugger_cmd_ninstrs(struct machine *m, char *cmd_line)
 /*
  *  debugger_cmd_pause():
  */
-static void debugger_cmd_pause(struct machine *m, char *cmd_line)
+static void debugger_cmd_pause(struct machine *m, char *args)
 {
 	int cpuid = -1;
 
-	if (cmd_line[0] != '\0')
-		cpuid = atoi(cmd_line);
+	if (args[0] != '\0')
+		cpuid = atoi(args);
 	else {
 		printf("syntax: pause cpuid\n");
 		return;
@@ -614,20 +615,20 @@ static void debugger_cmd_pause(struct machine *m, char *cmd_line)
 /*
  *  debugger_cmd_print():
  */
-static void debugger_cmd_print(struct machine *m, char *cmd_line)
+static void debugger_cmd_print(struct machine *m, char *args)
 {
 	int res;
 	uint64_t tmp;
 
-	while (cmd_line[0] != '\0' && cmd_line[0] == ' ')
-		cmd_line ++;
+	while (args[0] != '\0' && args[0] == ' ')
+		args ++;
 
-	if (cmd_line[0] == '\0') {
+	if (args[0] == '\0') {
 		printf("syntax: print expr\n");
 		return;
 	}
 
-	res = debugger_parse_expression(m, cmd_line, 0, &tmp);
+	res = debugger_parse_expression(m, args, 0, &tmp);
 	switch (res) {
 	case PARSE_NOMATCH:
 		printf("No match.\n");
@@ -636,13 +637,13 @@ static void debugger_cmd_print(struct machine *m, char *cmd_line)
 		printf("Multiple matches. Try prefixing with %%, $, or @.\n");
 		break;
 	case PARSE_SETTINGS:
-		printf("%s = 0x%" PRIx64"\n", cmd_line, (uint64_t)tmp);
+		printf("%s = 0x%" PRIx64"\n", args, (uint64_t)tmp);
 		break;
 	case PARSE_SYMBOL:
 		if (m->cpus[0]->is_32bit)
-			printf("%s = 0x%08" PRIx32"\n", cmd_line, (uint32_t)tmp);
+			printf("%s = 0x%08" PRIx32"\n", args, (uint32_t)tmp);
 		else
-			printf("%s = 0x%016" PRIx64"\n", cmd_line,(uint64_t)tmp);
+			printf("%s = 0x%016" PRIx64"\n", args,(uint64_t)tmp);
 		break;
 	case PARSE_NUMBER:
 		printf("0x%" PRIx64"\n", (uint64_t) tmp);
@@ -654,7 +655,7 @@ static void debugger_cmd_print(struct machine *m, char *cmd_line)
 /*
  *  debugger_cmd_put():
  */
-static void debugger_cmd_put(struct machine *m, char *cmd_line)
+static void debugger_cmd_put(struct machine *m, char *args)
 {
 	static char put_type = ' ';  /*  Remembered across multiple calls.  */
 	char copy[200];
@@ -663,7 +664,7 @@ static void debugger_cmd_put(struct machine *m, char *cmd_line)
 	uint64_t addr, data;
 	unsigned char a_byte;
 
-	strncpy(copy, cmd_line, sizeof(copy));
+	strncpy(copy, args, sizeof(copy));
 	copy[sizeof(copy)-1] = '\0';
 
 	/*  syntax: put [b|h|w|d|q] addr, data  */
@@ -832,15 +833,15 @@ static void debugger_cmd_put(struct machine *m, char *cmd_line)
 /*
  *  debugger_cmd_quiet():
  */
-static void debugger_cmd_quiet(struct machine *m, char *cmd_line)
+static void debugger_cmd_quiet(struct machine *m, char *args)
 {
 	int toggle = 1;
 	int previous_mode = old_quiet_mode;
 
-	if (cmd_line[0] != '\0') {
-		while (cmd_line[0] != '\0' && cmd_line[0] == ' ')
-			cmd_line ++;
-		switch (cmd_line[0]) {
+	if (args[0] != '\0') {
+		while (args[0] != '\0' && args[0] == ' ')
+			args ++;
+		switch (args[0]) {
 		case '0':
 			toggle = 0;
 			old_quiet_mode = 0;
@@ -852,7 +853,7 @@ static void debugger_cmd_quiet(struct machine *m, char *cmd_line)
 		case 'o':
 		case 'O':
 			toggle = 0;
-			switch (cmd_line[1]) {
+			switch (args[1]) {
 			case 'n':
 			case 'N':
 				old_quiet_mode = 1;
@@ -880,51 +881,37 @@ static void debugger_cmd_quiet(struct machine *m, char *cmd_line)
 /*
  *  debugger_cmd_quit():
  */
-static void debugger_cmd_quit(struct machine *m, char *cmd_line)
+static void debugger_cmd_quit(struct machine *m, char *args)
 {
-	int j, k;
-
-	if (*cmd_line) {
+	if (*args) {
 		printf("syntax: quit\n");
 		return;
 	}
 
-	single_step = NOT_SINGLE_STEPPING;
-
-	force_debugger_at_exit = 0;
-
-	for (j=0; j<debugger_emul->n_machines; j++) {
-		struct machine *mp = debugger_emul->machines[j];
-
-		for (k=0; k<mp->ncpus; k++)
-			mp->cpus[k]->running = 0;
-
-		mp->exit_without_entering_debugger = 1;
-	}
-
-	exit_debugger = 1;
+	emul_shutdown = true;
+	exit_debugger = true;
 }
 
 
 /*
  *  debugger_cmd_reg():
  */
-static void debugger_cmd_reg(struct machine *m, char *cmd_line)
+static void debugger_cmd_reg(struct machine *m, char *args)
 {
 	int cpuid = debugger_cur_cpu, coprocnr = -1;
 	int gprs, coprocs;
 	char *p;
 
 	/*  [cpuid][,c]  */
-	if (cmd_line[0] != '\0') {
-		if (cmd_line[0] != ',') {
-			cpuid = strtoull(cmd_line, NULL, 0);
+	if (args[0] != '\0') {
+		if (args[0] != ',') {
+			cpuid = strtoull(args, NULL, 0);
 			if (cpuid < 0 || cpuid >= m->ncpus) {
 				printf("cpu%i doesn't exist.\n", cpuid);
 				return;
 			}
 		}
-		p = strchr(cmd_line, ',');
+		p = strchr(args, ',');
 		if (p != NULL) {
 			coprocnr = atoi(p + 1);
 			if (coprocnr < 0 || coprocnr >= 4) {
@@ -944,12 +931,12 @@ static void debugger_cmd_reg(struct machine *m, char *cmd_line)
 /*
  *  debugger_cmd_step():
  */
-static void debugger_cmd_step(struct machine *m, char *cmd_line)
+static void debugger_cmd_step(struct machine *m, char *args)
 {
 	int n = 1;
 
-	if (cmd_line[0] != '\0') {
-		n = strtoull(cmd_line, NULL, 0);
+	if (args[0] != '\0') {
+		n = strtoull(args, NULL, 0);
 		if (n < 1) {
 			printf("invalid nr of steps\n");
 			return;
@@ -958,8 +945,9 @@ static void debugger_cmd_step(struct machine *m, char *cmd_line)
 
 	debugger_n_steps_left_before_interaction = n - 1;
 
-	/*  Special hack, see debugger() for more info.  */
-	exit_debugger = -1;
+	/*  Special hack, see the main debugger() loop for more info.  */
+	exit_debugger = true;
+	exit_debugger_to_continue_single_stepping = true;
 
 	strlcpy(repeat_cmd, "step", MAX_CMD_BUFLEN);
 }
@@ -970,21 +958,21 @@ static void debugger_cmd_step(struct machine *m, char *cmd_line)
  *
  *  Dump each CPU's TLB contents.
  */
-static void debugger_cmd_tlbdump(struct machine *m, char *cmd_line)
+static void debugger_cmd_tlbdump(struct machine *m, char *args)
 {
 	int x = -1;
 	int rawflag = 0;
 
-	if (cmd_line[0] != '\0') {
+	if (args[0] != '\0') {
 		char *p;
-		if (cmd_line[0] != ',') {
-			x = strtoull(cmd_line, NULL, 0);
+		if (args[0] != ',') {
+			x = strtoull(args, NULL, 0);
 			if (x < 0 || x >= m->ncpus) {
 				printf("cpu%i doesn't exist.\n", x);
 				return;
 			}
 		}
-		p = strchr(cmd_line, ',');
+		p = strchr(args, ',');
 		if (p != NULL) {
 			switch (p[1]) {
 			case 'r':
@@ -1006,33 +994,33 @@ static void debugger_cmd_tlbdump(struct machine *m, char *cmd_line)
 /*
  *  debugger_cmd_trace():
  */
-static void debugger_cmd_trace(struct machine *m, char *cmd_line)
+static void debugger_cmd_trace(struct machine *m, char *args)
 {
 	int toggle = 1;
-	int previous_mode = old_show_trace_tree;
+	int previous_mode = m->show_trace_tree;
 
-	if (cmd_line[0] != '\0') {
-		while (cmd_line[0] != '\0' && cmd_line[0] == ' ')
-			cmd_line ++;
-		switch (cmd_line[0]) {
+	if (args[0] != '\0') {
+		while (args[0] != '\0' && args[0] == ' ')
+			args ++;
+		switch (args[0]) {
 		case '0':
 			toggle = 0;
-			old_show_trace_tree = 0;
+			m->show_trace_tree = 0;
 			break;
 		case '1':
 			toggle = 0;
-			old_show_trace_tree = 1;
+			m->show_trace_tree = 1;
 			break;
 		case 'o':
 		case 'O':
 			toggle = 0;
-			switch (cmd_line[1]) {
+			switch (args[1]) {
 			case 'n':
 			case 'N':
-				old_show_trace_tree = 1;
+				m->show_trace_tree = 1;
 				break;
 			default:
-				old_show_trace_tree = 0;
+				m->show_trace_tree = 0;
 			}
 			break;
 		default:
@@ -1042,10 +1030,10 @@ static void debugger_cmd_trace(struct machine *m, char *cmd_line)
 	}
 
 	if (toggle)
-		old_show_trace_tree = 1 - old_show_trace_tree;
+		m->show_trace_tree = !m->show_trace_tree;
 
-	printf("show_trace_tree = %s", old_show_trace_tree? "ON" : "OFF");
-	if (old_show_trace_tree != previous_mode)
+	printf("show_trace_tree = %s", m->show_trace_tree? "ON" : "OFF");
+	if (m->show_trace_tree != previous_mode)
 		printf("  (was: %s)", previous_mode? "ON" : "OFF");
 	printf("\n");
 }
@@ -1058,7 +1046,7 @@ static void debugger_cmd_trace(struct machine *m, char *cmd_line)
  *
  *  syntax: unassemble [addr [endaddr]]
  */
-static void debugger_cmd_unassemble(struct machine *m, char *cmd_line)
+static void debugger_cmd_unassemble(struct machine *m, char *args)
 {
 	uint64_t addr, addr_start, addr_end;
 	struct cpu *c;
@@ -1066,11 +1054,11 @@ static void debugger_cmd_unassemble(struct machine *m, char *cmd_line)
 	char *p = NULL;
 	int r, lines_left = -1;
 
-	if (cmd_line[0] != '\0') {
+	if (args[0] != '\0') {
 		uint64_t tmp;
 		char *tmps;
 
-		CHECK_ALLOCATION(tmps = strdup(cmd_line));
+		CHECK_ALLOCATION(tmps = strdup(args));
 
 		/*  addr:  */
 		p = strchr(tmps, ' ');
@@ -1080,13 +1068,13 @@ static void debugger_cmd_unassemble(struct machine *m, char *cmd_line)
 		free(tmps);
 
 		if (r == PARSE_NOMATCH || r == PARSE_MULTIPLE) {
-			printf("Unparsable address: %s\n", cmd_line);
+			printf("Unparsable address: %s\n", args);
 			return;
 		} else {
 			last_unasm_addr = tmp;
 		}
 
-		p = strchr(cmd_line, ' ');
+		p = strchr(args, ' ');
 	}
 
 	if (m->cpus == NULL) {
@@ -1113,7 +1101,7 @@ static void debugger_cmd_unassemble(struct machine *m, char *cmd_line)
 			p++;
 		r = debugger_parse_expression(m, p, 0, &addr_end);
 		if (r == PARSE_NOMATCH || r == PARSE_MULTIPLE) {
-			printf("Unparsable address: %s\n", cmd_line);
+			printf("Unparsable address: %s\n", args);
 			return;
 		}
 	} else
@@ -1172,9 +1160,9 @@ static void debugger_cmd_unassemble(struct machine *m, char *cmd_line)
 /*
  *  debugger_cmd_version():
  */
-static void debugger_cmd_version(struct machine *m, char *cmd_line)
+static void debugger_cmd_version(struct machine *m, char *args)
 {
-	if (*cmd_line) {
+	if (*args) {
 		printf("syntax: version\n");
 		return;
 	}
@@ -1190,7 +1178,7 @@ struct cmd {
 	const char	*name;
 	const char	*args;
 	int		tmp_flag;
-	void		(*f)(struct machine *, char *cmd_line);
+	void		(*f)(struct machine *, char *args);
 	const char	*description;
 };
 
@@ -1293,14 +1281,14 @@ static struct cmd cmds[] = {
  *
  *  TODO: Command completion (ie just type "help s" for "help step").
  */
-static void debugger_cmd_help(struct machine *m, char *cmd_line)
+static void debugger_cmd_help(struct machine *m, char *args)
 {
 	int only_one = 0, only_one_match = 0;
 	char *nlines_env = getenv("LINES");
 	int nlines = atoi(nlines_env != NULL? nlines_env : "999999"), curlines;
 	size_t i, j, max_name_len = 0;
 
-	if (cmd_line[0] != '\0') {
+	if (args[0] != '\0') {
 		only_one = 1;
 	}
 
@@ -1326,7 +1314,7 @@ static void debugger_cmd_help(struct machine *m, char *cmd_line)
 		snprintf(buf, sizeof(buf), "%s", cmds[i].name);
 
 		if (only_one) {
-			if (strcmp(cmds[i].name, cmd_line) != 0) {
+			if (strcmp(cmds[i].name, args) != 0) {
 				i++;
 				continue;
 			}
@@ -1361,7 +1349,7 @@ static void debugger_cmd_help(struct machine *m, char *cmd_line)
 
 	if (only_one) {
 		if (!only_one_match)
-			printf("%s: no such command\n", cmd_line);
+			printf("%s: no such command\n", args);
 		return;
 	}
 

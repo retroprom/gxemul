@@ -28,6 +28,7 @@
  *  SUCH DAMAGE.
  */
 
+#include <stdbool.h>
 #include <sys/types.h>
 
 #include "symbol.h"
@@ -169,7 +170,6 @@ struct machine {
 	uint64_t file_loaded_end_addr;
 	char	*boot_kernel_filename;
 	char	*boot_string_argument;
-	int	exit_without_entering_debugger;
 	int	n_gfx_cards;
 
 	/*  Instruction statistics:  */
@@ -393,7 +393,7 @@ void machine_add_devices_as_symbols(struct machine *machine, uint64_t offset);
 void machine_memsize_fix(struct machine *);
 void machine_default_cputype(struct machine *);
 void machine_dumpinfo(struct machine *);
-int machine_run(struct machine *machine);
+bool machine_run(struct machine *machine);
 void machine_list_available_types_and_cpus(void);
 struct machine_entry *machine_entry_new(const char *name, 
 	int arch, int oldstyle_type);

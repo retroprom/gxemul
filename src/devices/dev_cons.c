@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -74,7 +74,6 @@ DEVICE_ACCESS(cons)
 	/*  Exit the emulator:  */
 	if (relative_addr == DEV_CONS_HALT) {
 		/*  cpu->running = 0;
-		    cpu->machine->exit_without_entering_debugger = 1;
 		    return 1;  */
 		/*  TODO: this doesn't work yet. for now, let's
 		    simply use exit()  */

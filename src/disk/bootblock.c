@@ -294,7 +294,7 @@ int load_bootblock(struct machine *m, struct cpu *cpu,
 		}
 
 		debug("SGI boot block:\n");
-		debug_indentation(DEBUG_INDENTATION);
+		debug_indentation(1);
 		debug("root partition: %i\n", sgi_root);
 		debug("swap partition: %i\n", sgi_swap);
 		debug("bootfile: %s\n", sgi_bootfile);
@@ -312,7 +312,7 @@ int load_bootblock(struct machine *m, struct cpu *cpu,
 		int32_t found_osloader_bytes = -1;
 
 		debug("voldir:\n");
-		debug_indentation(DEBUG_INDENTATION);
+		debug_indentation(1);
 		for (size_t vi = 0; vi < SGI_BOOT_BLOCK_MAXVOLDIRS; ++vi) {
 			char voldir_name[sizeof(sgi_boot_block.voldir[0].name) + 1];
 			int32_t voldir_block = ntohl(sgi_boot_block.voldir[vi].block);
@@ -350,10 +350,10 @@ int load_bootblock(struct machine *m, struct cpu *cpu,
 			found_osloader_bytes |= 511;
 			found_osloader_bytes++;
 		}
-		debug_indentation(-DEBUG_INDENTATION);
+		debug_indentation(-1);
 
 		debug("partitions:\n");
-		debug_indentation(DEBUG_INDENTATION);
+		debug_indentation(1);
 		for (size_t pi = 0; pi < SGI_BOOT_BLOCK_MAXPARTITIONS; ++pi) {
 			int32_t partitions_blocks = ntohl(sgi_boot_block.partitions[pi].blocks);
 			int32_t partitions_first = ntohl(sgi_boot_block.partitions[pi].first);
@@ -363,7 +363,7 @@ int load_bootblock(struct machine *m, struct cpu *cpu,
 				debug("partition %i: %i blocks at %i (type %i)\n",
 					pi, partitions_blocks, partitions_first, partitions_type);
 		}
-		debug_indentation(-DEBUG_INDENTATION);
+		debug_indentation(-1);
 
 		// Read OSLoader binary into emulated RAM. (Typically "sash.")
 		uint64_t diskoffset = found_osloader_block * 512;
@@ -419,7 +419,7 @@ int load_bootblock(struct machine *m, struct cpu *cpu,
 
 		free(tmpfname);
 
-		debug_indentation(-DEBUG_INDENTATION);
+		debug_indentation(-1);
 		return 1;
 	}
 

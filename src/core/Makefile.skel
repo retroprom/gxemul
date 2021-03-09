@@ -1,11 +1,11 @@
 #
-#  Makefile for GXemul src/old_main
+#  Makefile for GXemul src/core
 #
 
 CFLAGS=$(CWARNINGS) $(COPTIM) $(XINCLUDE) $(DINCLUDE)
 
-OBJS=emul.o emul_parse.o float_emul.o interrupt.o main.o memory.o misc.o \
-	settings.o timer.o
+OBJS=debugmsg.o emul.o emul_parse.o float_emul.o interrupt.o main.o \
+	memory.o misc.o settings.o timer.o
 
 all: $(OBJS)
 

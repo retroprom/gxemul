@@ -121,7 +121,7 @@ void file_load(struct machine *machine, struct memory *mem,
 	char *filename, uint64_t *entrypointp,
 	int arch, uint64_t *gpp, int *byte_orderp, uint64_t *tocp)
 {
-	int iadd = DEBUG_INDENTATION, old_quiet_mode;
+	int old_quiet_mode;
 	FILE *f;
 	const char *tmpdir = getenv("TMPDIR") == NULL?
 	    DEFAULT_TMP_DIR : getenv("TMPDIR");
@@ -151,7 +151,7 @@ void file_load(struct machine *machine, struct memory *mem,
 		return;
 
 	debug("loading %s%s\n", filename, verbose >= 2? ":" : "");
-	debug_indentation(iadd);
+	debug_indentation(1);
 
 	old_quiet_mode = quiet_mode;
 	if (verbose < 1)
@@ -365,7 +365,7 @@ void file_load(struct machine *machine, struct memory *mem,
 	symbol_readfile(&machine->symbol_context, filename);
 
 ret:
-	debug_indentation(-iadd);
+	debug_indentation(-1);
 	quiet_mode = old_quiet_mode;
 }
 

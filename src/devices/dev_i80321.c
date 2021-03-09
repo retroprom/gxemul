@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -199,7 +199,6 @@ DEVICE_ACCESS(i80321)
 			int j;
 			for (j=0; j<cpu->machine->ncpus; j++)
 				cpu->machine->cpus[j]->running = 0;
-			cpu->machine->exit_without_entering_debugger = 1;
 		}
 		break;
 	case VERDE_ATU_BASE + ATU_ATUIMR:

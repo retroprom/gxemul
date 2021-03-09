@@ -56,7 +56,9 @@
 extern int extra_argc;
 extern char **extra_argv;
 extern struct settings *global_settings;
+
 extern int quiet_mode;
+extern int verbose;
 
 
 /*
@@ -65,16 +67,17 @@ extern int quiet_mode;
  *  TODO: Some of these should be moved to some other place!
  */
 
-volatile int single_step = NOT_SINGLE_STEPPING;
-volatile int exit_debugger;
-int force_debugger_at_exit = 0;
-
+bool single_step;
+bool debugger_enter_at_end_of_run = false;
 volatile int single_step_breakpoint = 0;
 int debugger_n_steps_left_before_interaction = 0;
 
-int old_instruction_trace = 0;
+extern bool emul_shutdown;
+
 int old_quiet_mode = 0;
-int old_show_trace_tree = 0;
+
+static volatile bool exit_debugger;
+static volatile bool exit_debugger_to_continue_single_stepping;
 
 
 /*
@@ -131,7 +134,7 @@ void debugger_activate(int x)
 {
 	ctrl_c = 1;
 
-	if (single_step != NOT_SINGLE_STEPPING) {
+	if (single_step) {
 		/*  Already in the debugger. Do nothing.  */
 		int i;
 		for (i=0; i<MAX_CMD_BUFLEN; i++)
@@ -142,7 +145,7 @@ void debugger_activate(int x)
 		fflush(stdout);
 	} else {
 		/*  Enter the single step debugger.  */
-		single_step = ENTER_SINGLE_STEPPING;
+		single_step = true;
 
 		/*  Discard any chars in the input queue:  */
 		while (console_charavail(MAIN_CONSOLE))
@@ -638,7 +641,8 @@ void debugger(void)
 	/*  Stop timers while interacting with the user:  */
 	timer_stop();
 
-	exit_debugger = 0;
+	exit_debugger = false;
+	exit_debugger_to_continue_single_stepping = false;
 
 	while (!exit_debugger) {
 		/*  Read a line from the terminal:  */
@@ -670,7 +674,7 @@ void debugger(void)
 		debugger_execute_cmd(cmd, cmd_len);
 
 		/*  Special hack for the "step" command:  */
-		if (exit_debugger == -1)
+		if (exit_debugger_to_continue_single_stepping)
 			return;
 	}
 
@@ -684,9 +688,7 @@ void debugger(void)
 		debugger_machine->cpus[i]->ninstrs_since_gettimeofday = 0;
 	}
 
-	single_step = NOT_SINGLE_STEPPING;
-	debugger_machine->instruction_trace = old_instruction_trace;
-	debugger_machine->show_trace_tree = old_show_trace_tree;
+	single_step = false;
 	quiet_mode = old_quiet_mode;
 }
 

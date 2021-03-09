@@ -29,6 +29,7 @@
  */
 
 #include <signal.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
@@ -52,20 +53,16 @@
 #include "timer.h"
 #include "x11.h"
 
-#include "thirdparty/exec_elf.h"
-
 
 extern int extra_argc;
 extern char **extra_argv;
 
 extern int verbose;
-extern int quiet_mode;
-extern int force_debugger_at_exit;
-extern int single_step;
-extern int old_show_trace_tree;
-extern int old_instruction_trace;
-extern int old_quiet_mode;
-extern int quiet_mode;
+extern bool debugger_enter_at_end_of_run;
+extern bool single_step;
+
+bool emul_executing = false;
+bool emul_shutdown = false;
 
 
 /*
@@ -355,18 +352,15 @@ void emul_machine_setup(struct machine *m, int n_load, char **load_names,
 	int n_devices, char **device_names)
 {
 	struct cpu *cpu;
-	int i, iadd = DEBUG_INDENTATION;
 	uint64_t memory_amount, entrypoint = 0, gp = 0, toc = 0;
-	int byte_order;
+	int i, byte_order;
 
-	color_emul_header();
-	if (m->name != NULL)
-		debug("machine \"%s\":\n", m->name);
+	if (m->name != NULL && m->name[0])
+		debugmsg(SUBSYS_MACHINE, m->name, VERBOSITY_INFO, "");
 	else
-		debug("machine:\n");
+		debugmsg(SUBSYS_MACHINE, "", VERBOSITY_INFO, "");
 
-	color_normal();
-	debug_indentation(iadd);
+	debug_indentation(1);
 
 	if (m->machine_type == MACHINE_NONE) {
 		fatal("No machine type specified?\n");
@@ -694,14 +688,14 @@ void emul_machine_setup(struct machine *m, int n_load, char **load_names,
 	}
 	debug("\n");
 
-	debug_indentation(-iadd);
+	debug_indentation(-1);
 }
 
 
 /*
  *  emul_dumpinfo():
  *
- *  Dump info about all machines in an emul.
+ *  Dump info about the network (if any), and all machines in an emul.
  */
 void emul_dumpinfo(struct emul *e)
 {
@@ -711,17 +705,15 @@ void emul_dumpinfo(struct emul *e)
 		net_dumpinfo(e->net);
 
 	for (i = 0; i < e->n_machines; i++) {
-		color_emul_header();
+	
 		if (e->n_machines > 1)
-			debug("machine %i: \"%s\"\n", i, e->machines[i]->name);
+			debugmsg(SUBSYS_MACHINE, "", VERBOSITY_INFO, "%s (%i)", e->machines[i]->name, i);
 		else
-			debug("machine:\n");
+			debugmsg(SUBSYS_MACHINE, "", VERBOSITY_INFO, "");
 
-		color_normal();
-
-		debug_indentation(DEBUG_INDENTATION);
+		debug_indentation(1);
 		machine_dumpinfo(e->machines[i]);
-		debug_indentation(-DEBUG_INDENTATION);
+		debug_indentation(-1);
 	}
 }
 
@@ -736,7 +728,6 @@ void emul_dumpinfo(struct emul *e)
  */
 void emul_simple_init(struct emul *emul)
 {
-	int iadd = DEBUG_INDENTATION;
 	struct machine *m;
 
 	if (emul->n_machines != 1) {
@@ -747,7 +738,7 @@ void emul_simple_init(struct emul *emul)
 	m = emul->machines[0];
 
 	debug("Simple setup...\n");
-	debug_indentation(iadd);
+	debug_indentation(1);
 
 	/*  Create a simple network:  */
 	emul->net = net_init(emul, NET_INIT_FLAG_GATEWAY,
@@ -759,7 +750,7 @@ void emul_simple_init(struct emul *emul)
 	/*  Create the machine:  */
 	emul_machine_setup(m, extra_argc, extra_argv, 0, NULL);
 
-	debug_indentation(-iadd);
+	debug_indentation(-1);
 }
 
 
@@ -770,15 +761,14 @@ void emul_simple_init(struct emul *emul)
  */
 struct emul *emul_create_from_configfile(char *fname)
 {
-	int iadd = DEBUG_INDENTATION;
 	struct emul *e = emul_new(fname);
 
 	debug("Creating emulation from configfile \"%s\":\n", fname);
-	debug_indentation(iadd);
+	debug_indentation(1);
 
 	emul_parse_config(e, fname);
 
-	debug_indentation(-iadd);
+	debug_indentation(-1);
 	return e;
 }
 
@@ -787,15 +777,11 @@ struct emul *emul_create_from_configfile(char *fname)
  *  emul_run():
  *
  *	o)  Set up things needed before running an emulation.
- *
  *	o)  Run instructions in all machines.
- *
  *	o)  De-initialize things.
  */
 void emul_run(struct emul *emul)
 {
-	int i = 0, j, go = 1, n, anything;
-
 	atexit(fix_console);
 
 	if (emul == NULL) {
@@ -813,8 +799,8 @@ void emul_run(struct emul *emul)
 
 	/*  Run any additional debugger commands before starting:  */
 	if (emul->n_debugger_cmds > 0) {
-		if (i == 0)
-			print_separator_line();
+		print_separator_line();
+
 		for (int k = 0; k < emul->n_debugger_cmds; k ++) {
 			debug("> %s\n", emul->debugger_cmds[k]);
 			debugger_execute_cmd(emul->debugger_cmds[k],
@@ -835,19 +821,18 @@ void emul_run(struct emul *emul)
 	 *  The SIGCONT handler is invoked whenever the user presses CTRL-Z
 	 *  (or sends SIGSTOP) and then continues. It makes sure that the
 	 *  terminal is in an expected state.
+	 *
+	 *  Note that CTRL-T (SIGINFO on BSD systems) cannot be handled by
+	 *  using signal(SIGINFO, ...), since the terminal is in non-canonical
+	 *  mode.
 	 */
 	console_init_main(emul);
 
 	signal(SIGINT, debugger_activate);
 	signal(SIGCONT, console_sigcont);
 
-	/*  Not in verbose mode? Then set quiet_mode.  */
-	if (!verbose)
-		quiet_mode = 1;
-
-
 	/*  Initialize all CPUs in all machines:  */
-	for (j=0; j<emul->n_machines; j++)
+	for (int j = 0; j < emul->n_machines; j++)
 		cpu_run_init(emul->machines[j]);
 
 	/*  TODO: Generalize:  */
@@ -864,12 +849,14 @@ void emul_run(struct emul *emul)
 	 *
 	 *  Run all emulations in parallel, running instructions from each
 	 *  cpu in each machine.
+	 *
+	 *  TODO:
+	 *	Rewrite the X11/console flush to use a timer (?).
+	 *	General guest-OS idling support should be here somewhere.
 	 */
-	while (go) {
+	while (!emul_shutdown) {
 		struct cpu *bootcpu = emul->machines[0]->cpus[
 		    emul->machines[0]->bootstrap_cpu];
-
-		go = 0;
 
 		/*  Flush X11 and serial console output every now and then:  */
 		if (bootcpu->ninstrs > bootcpu->ninstrs_flush + (1<<19)) {
@@ -885,26 +872,28 @@ void emul_run(struct emul *emul)
 			bootcpu->ninstrs_show = bootcpu->ninstrs;
 		}
 
-		if (single_step == ENTER_SINGLE_STEPPING) {
-			/*  TODO: Cleanup!  */
-			old_instruction_trace =
-			    emul->machines[0]->instruction_trace;
-			old_quiet_mode = quiet_mode;
-			old_show_trace_tree =
-			    emul->machines[0]->show_trace_tree;
-			emul->machines[0]->instruction_trace = 1;
-			emul->machines[0]->show_trace_tree = 1;
-			quiet_mode = 0;
-			single_step = SINGLE_STEPPING;
-		}
-
-		if (single_step == SINGLE_STEPPING)
+		if (single_step)
 			debugger();
 
-		for (j=0; j<emul->n_machines; j++) {
-			anything = machine_run(emul->machines[j]);
-			if (anything)
-				go = 1;
+		if (emul_shutdown)
+			break;
+
+		emul_executing = true;
+
+		bool any_machine_still_running = false;
+		for (int i = 0; i < emul->n_machines; i++)
+			any_machine_still_running |= machine_run(emul->machines[i]);
+
+		emul_executing = false;
+
+		if (!any_machine_still_running) {
+			if (debugger_enter_at_end_of_run) {
+				debugmsg_set_verbosity_level(SUBSYS_ALL, VERBOSITY_DEBUG);
+				debugger_reset();
+				single_step = true;
+			} else {
+				break;
+			}
 		}
 	}
 
@@ -912,31 +901,10 @@ void emul_run(struct emul *emul)
 	timer_stop();
 
 	/*  Deinitialize all CPUs in all machines:  */
-	for (j=0; j<emul->n_machines; j++)
+	for (int j = 0; j <emul->n_machines; j++)
 		cpu_run_deinit(emul->machines[j]);
-
-	/*  force_debugger_at_exit flag set? Then enter the debugger:  */
-	if (force_debugger_at_exit) {
-		quiet_mode = 0;
-		debugger_reset();
-		debugger();
-	}
-
-	/*  Any machine using X11? Then wait before exiting:  */
-	n = 0;
-	for (j=0; j<emul->n_machines; j++)
-		if (emul->machines[j]->x11_md.in_use)
-			n++;
-
-	if (n > 0) {
-		printf("Press enter to quit.\n");
-		while (!console_charavail(MAIN_CONSOLE)) {
-			x11_check_event(emul);
-			usleep(10000);
-		}
-		console_readchar(MAIN_CONSOLE);
-	}
 
 	console_deinit_main();
 }
+
 

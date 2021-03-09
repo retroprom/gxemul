@@ -661,12 +661,10 @@ static void net_gateway_init(struct net *net)
  */
 void net_dumpinfo(struct net *net)
 {
-	int iadd = DEBUG_INDENTATION;
+	int iadd = 1;
 	struct remote_net *rnp;
 
-	color_emul_header();
-	debug("net:\n");
-	color_normal();
+	debugmsg(SUBSYS_NET, "", VERBOSITY_INFO, "");
 
 	debug_indentation(iadd);
 

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2014  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -423,8 +423,9 @@ not just the device in question.
 #endif /* MIPS */
 		{
 			if (paddr >= mem->physical_max && !no_exceptions)
-				memory_warn_about_unimplemented_addr
-				    (cpu, mem, writeflag, paddr, data, len);
+				if (memory_warn_about_unimplemented_addr
+				    (cpu, mem, writeflag, paddr, len))
+					return MEMORY_ACCESS_FAILED;
 
 			if (writeflag == MEM_READ) {
 				/*  Return all zeroes? (Or 0xff? TODO)  */

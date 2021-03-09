@@ -28,6 +28,7 @@
  *  Machine registry.
  */
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -45,6 +46,9 @@
 #include "settings.h"
 #include "symbol.h"
 
+
+extern bool debugmsg_executing_noninteractively;
+extern bool single_step;
 
 /*  This is initialized by machine_init():  */
 struct machine_entry *first_machine_entry = NULL;
@@ -639,20 +643,27 @@ void machine_default_cputype(struct machine *m)
  *  around N_SAFE_DYNTRANS_LIMIT instructions will be run by the dyntrans
  *  system.)
  *
- *  Return value is 1 if any CPU in this machine is still running,
- *  or 0 if all CPUs are stopped.
+ *  Return value is true if any CPU in this machine is still running,
+ *  false if all CPUs are stopped.
  */
-int machine_run(struct machine *machine)
+bool machine_run(struct machine *machine)
 {
 	struct cpu **cpus = machine->cpus;
-	int ncpus = machine->ncpus, cpu0instrs = 0, i, te;
+	int ncpus = machine->ncpus, cpu0instrs = 0;
+	bool any_running = false;
 
-	for (i=0; i<ncpus; i++) {
+	for (int i=0; i<ncpus; i++) {
 		if (cpus[i]->running) {
+			any_running = true;
 			int instrs_run = cpus[i]->run_instr(cpus[i]);
 			if (i == 0)
 				cpu0instrs += instrs_run;
 		}
+	}
+
+	if (!any_running) {
+		debugmsg(SUBSYS_MACHINE, NULL, VERBOSITY_ERROR, "All CPUs stopped.");
+		return false;
 	}
 
 	/*
@@ -663,7 +674,7 @@ int machine_run(struct machine *machine)
 	 *  TODO: This should be redesigned into some "mainbus" stuff instead!
 	 */
 
-	for (te=0; te<machine->tick_functions.n_entries; te++) {
+	for (int te=0; te<machine->tick_functions.n_entries; te++) {
 		machine->tick_functions.ticks_till_next[te] -= cpu0instrs;
 		if (machine->tick_functions.ticks_till_next[te] <= 0) {
 			while (machine->tick_functions.ticks_till_next[te]<=0) {
@@ -678,11 +689,11 @@ int machine_run(struct machine *machine)
 	}
 
 	/*  Is any CPU still alive?  */
-	for (i=0; i<ncpus; i++)
+	for (int i=0; i<ncpus; i++)
 		if (cpus[i]->running)
-			return 1;
+			return true;
 
-	return 0;
+	return false;
 }
 
 
@@ -830,7 +841,7 @@ void machine_entry_register(struct machine_entry *me, int arch)
 void machine_list_available_types_and_cpus(void)
 {
 	struct machine_entry *me;
-	int iadd = DEBUG_INDENTATION * 2;
+	int iadd = 2;
 
 	debug("Available CPU types:\n\n");
 
@@ -850,7 +861,7 @@ void machine_list_available_types_and_cpus(void)
 		fatal("No machines defined!\n");
 
 	while (me != NULL) {
-		int i, j, iadd2 = DEBUG_INDENTATION;
+		int i, j, iadd2 = 1;
 
 		debug("%s [%s] (", me->name,
 		    cpu_family_ptr_by_number(me->arch)->name);

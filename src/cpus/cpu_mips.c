@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2020  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -355,10 +355,9 @@ int mips_cpu_new(struct cpu *cpu, struct memory *mem, struct machine *machine,
  */
 void mips_cpu_dumpinfo(struct cpu *cpu)
 {
-	int iadd = DEBUG_INDENTATION;
 	struct mips_cpu_type_def *ct = &cpu->cd.mips.cpu_type;
 
-	debug_indentation(iadd);
+	debug_indentation(1);
 
 	debug("\n%i-bit %s-endian (MIPS",
 	    cpu->is_32bit? 32 : 64,
@@ -418,7 +417,7 @@ void mips_cpu_dumpinfo(struct cpu *cpu)
 		debug("\n");
 	}
 
-	debug_indentation(-iadd);
+	debug_indentation(-1);
 }
 
 
@@ -1759,6 +1758,11 @@ void mips_cpu_exception(struct cpu *cpu, int exccode, int tlb, uint64_t vaddr,
 		int x;
 		char *symbol = get_symbol_name(&cpu->machine->symbol_context,
 		    cpu->pc, &offset);
+
+
+		// TODO: build up full exception string...
+		//debugmsg_cpu(cpu, SUBSYS_EXCEPTION, exception_names[exccode], VERBOSITY_INFO, "todo");
+
 
 		debug("[ ");
 		if (cpu->machine->ncpus > 1)

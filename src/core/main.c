@@ -48,9 +48,12 @@
 #include "timer.h"
 
 
-extern int single_step;
-extern int force_debugger_at_exit;
+extern bool single_step;
+extern bool debugger_enter_at_end_of_run;
 extern bool enable_colorized_output;
+
+extern int verbose;
+extern int quiet_mode;
 
 extern int optind;
 extern char *optarg;
@@ -62,109 +65,14 @@ char **extra_argv;
 char *progname;
 
 size_t dyntrans_cache_size = DEFAULT_DYNTRANS_CACHE_SIZE;
-static int skip_srandom_call = 0;
-
-
-/*****************************************************************************
- *
- *  NOTE:  debug(), fatal(), and debug_indentation() are not re-entrant.
- *         The global variable quiet_mode can be used to suppress the output
- *         of debug(), but not the output of fatal().
- *
- *****************************************************************************/
-
-int verbose = 0;
-int quiet_mode = 0;
-
-static int debug_indent = 0;
-static int debug_currently_at_start_of_line = 1;
-
-
-/*
- *  va_debug():
- *
- *  Used internally by debug() and fatal().
- */
-static void va_debug(va_list argp, const char *fmt)
-{
-	char buf[DEBUG_BUFSIZE + 1];
-	char *s;
-	int i;
-
-	buf[0] = buf[DEBUG_BUFSIZE] = 0;
-	vsnprintf(buf, DEBUG_BUFSIZE, fmt, argp);
-
-	s = buf;
-	while (*s) {
-		if (debug_currently_at_start_of_line) {
-			for (i=0; i<debug_indent; i++)
-				printf(" ");
-		}
-
-		printf("%c", *s);
-
-		debug_currently_at_start_of_line = 0;
-		if (*s == '\n' || *s == '\r')
-			debug_currently_at_start_of_line = 1;
-		s++;
-	}
-}
-
-
-/*
- *  debug_indentation():
- *
- *  Modify the debug indentation.
- */
-void debug_indentation(int diff)
-{
-	debug_indent += diff;
-	if (debug_indent < 0)
-		fprintf(stderr, "WARNING: debug_indent less than 0!\n");
-}
-
-
-/*
- *  debug():
- *
- *  Debug output (ignored if quiet_mode is set).
- */
-void debug(const char *fmt, ...)
-{
-	va_list argp;
-
-	if (quiet_mode)
-		return;
-
-	va_start(argp, fmt);
-	va_debug(argp, fmt);
-	va_end(argp);
-}
-
-
-/*
- *  fatal():
- *
- *  Fatal works like debug(), but doesn't care about the quiet_mode
- *  setting.
- */
-void fatal(const char *fmt, ...)
-{
-	va_list argp;
-
-	va_start(argp, fmt);
-	va_debug(argp, fmt);
-	va_end(argp);
-}
-
-
-/*****************************************************************************/
+static bool skip_srandom_call = false;
 
 
 /*
  *  internal_w():
  *
- *  For internal use by gxemul itself.
+ *  For internal use by gxemul itself. Currently only used to launch
+ *  slave consoles.
  */
 void internal_w(char *arg)
 {
@@ -185,9 +93,6 @@ void internal_w(char *arg)
 		    arg);
 	}
 }
-
-
-/*****************************************************************************/
 
 
 /*
@@ -312,15 +217,16 @@ static void usage(bool longusage)
 	printf("  -c cmd    add cmd as a command to run before starting "
 	    "the simulation\n");
 	printf("  -D        skip the srandom call at startup\n");
+	printf("  -G        enable colorized output (same as if the CLICOLOR"
+	    " env. var is set)\n");
 	printf("  -H        display a list of possible CPU and "
 	    "machine types\n");
 	printf("  -h        display this help message\n");
 	printf("  -k n      set dyntrans translation caches to n MB (default"
 	    " size is %i MB)\n", DEFAULT_DYNTRANS_CACHE_SIZE / 1048576);
-	printf("  -K        force the debugger to be entered at the end "
-	    "of a simulation\n");
+	printf("  -K        show the debugger prompt instead of exiting, when a simulation ends\n");
 	printf("  -q        quiet mode (don't print startup messages)\n");
-	printf("  -V        start up in the single-step debugger, paused\n");
+	printf("  -V        start up in the interactive debugger, paused; this also sets -K\n");
 	printf("  -v        increase debug message verbosity\n");
 	printf("\n");
 	printf("If you are selecting a machine type to emulate directly "
@@ -360,7 +266,7 @@ int get_cmd_args(int argc, char *argv[], struct emul *emul,
 	struct machine *m = emul_add_machine(emul, NULL);
 
 	const char *opts =
-	    "AC:c:Dd:E:e:HhI:iJj:k:KM:Nn:Oo:p:QqRrSs:TtUVvW:"
+	    "AC:c:Dd:E:e:GHhI:iJj:k:KM:Nn:Oo:p:QqRrSs:TtUVvW:"
 #ifdef WITH_X11
 	    "XxY:"
 #endif
@@ -384,7 +290,7 @@ int get_cmd_args(int argc, char *argv[], struct emul *emul,
 			    n_debugger_cmds-1] = strdup(optarg));
 			break;
 		case 'D':
-			skip_srandom_call = 1;
+			skip_srandom_call = true;
 			break;
 		case 'd':
 			/*  diskimage_add() is called further down  */
@@ -412,6 +318,9 @@ int get_cmd_args(int argc, char *argv[], struct emul *emul,
 			}
 			subtype = optarg;
 			machine_specific_options_used = true;
+			break;
+		case 'G':
+			enable_colorized_output = true;
 			break;
 		case 'H':
 			machine_list_available_types_and_cpus();
@@ -444,7 +353,7 @@ int get_cmd_args(int argc, char *argv[], struct emul *emul,
 			}
 			break;
 		case 'K':
-			force_debugger_at_exit = 1;
+			debugger_enter_at_end_of_run = true;
 			break;
 		case 'M':
 			m->physical_ram_in_mb = atoi(optarg);
@@ -506,7 +415,8 @@ int get_cmd_args(int argc, char *argv[], struct emul *emul,
 			machine_specific_options_used = true;
 			break;
 		case 'V':
-			single_step = ENTER_SINGLE_STEPPING;
+			single_step = true;
+			debugger_enter_at_end_of_run = true;
 			break;
 		case 'v':
 			verbose ++;
@@ -561,8 +471,10 @@ int get_cmd_args(int argc, char *argv[], struct emul *emul,
 	extra_argv = argv;
 
 	// If -V is used, -q is ignored.
-	if (single_step == ENTER_SINGLE_STEPPING)
+	if (single_step && quiet_mode) {
+		fprintf(stderr, "ignoring -q, because -V is used\n");
 		quiet_mode = 0;
+	}
 
 	if (type != NULL || subtype != NULL) {
 		if (type == NULL)
@@ -665,7 +577,7 @@ int main(int argc, char *argv[])
 	int constant_false = 0;
 
 	struct emul *emul;
-	int config_file = 0;
+	bool using_config_file = false;
 
 	char **diskimages = NULL;
 	int n_diskimages = 0;
@@ -673,6 +585,11 @@ int main(int argc, char *argv[])
 
 
 	progname = argv[0];
+
+
+	enable_colorized_output = getenv("CLICOLOR") != NULL;
+
+	debugmsg_init();
 
 
 	/*
@@ -692,20 +609,13 @@ int main(int argc, char *argv[])
 	settings_add(global_settings, "false", 0, SETTINGS_TYPE_INT,
 	    SETTINGS_FORMAT_BOOL, (void *)&constant_false);
 
-	/*  Read-only settings:  */
-	settings_add(global_settings, "single_step", 0,
-	    SETTINGS_TYPE_INT, SETTINGS_FORMAT_YESNO, (void *)&single_step);
-
 	/*  Read/write settings:  */
-	settings_add(global_settings, "force_debugger_at_exit", 1,
-	    SETTINGS_TYPE_INT, SETTINGS_FORMAT_YESNO,
-	    (void *)&force_debugger_at_exit);
 	settings_add(global_settings, "verbose", 1,
 	    SETTINGS_TYPE_INT, SETTINGS_FORMAT_YESNO, (void *)&verbose);
 	settings_add(global_settings, "quiet_mode", 1,
 	    SETTINGS_TYPE_INT, SETTINGS_FORMAT_YESNO, (void *)&quiet_mode);
 
-	/*  Initialize all emulator subsystems:  */
+	/*  Initialize various subsystems:  */
 	console_init();
 	cpu_init();
 	device_init();
@@ -724,6 +634,13 @@ int main(int argc, char *argv[])
 		gettimeofday(&tv, NULL);
 		srandom(tv.tv_sec ^ getpid() ^ tv.tv_usec);
 	}
+
+	// -q means that only errors should be shown.
+	if (quiet_mode)
+		debugmsg_set_verbosity_level(SUBSYS_ALL, VERBOSITY_ERROR);
+
+	for (int k = 0; k < verbose; ++k)
+		debugmsg_add_verbosity_level(SUBSYS_ALL, 1);
 
 	if (!quiet_mode)
 		print_banner();
@@ -753,7 +670,7 @@ int main(int argc, char *argv[])
 		if (argv[i][0] == '@') {
 			char *s = argv[i] + 1;
 
-			if (config_file) {
+			if (using_config_file) {
 				fprintf(stderr, "More than one configuration "
 				    "file cannot be used.\n");
 				exit(1);
@@ -778,7 +695,7 @@ int main(int argc, char *argv[])
 			settings_add(global_settings, "emul", 1,
 			    SETTINGS_TYPE_SUBSETTINGS, 0, emul->settings);
 
-			config_file = 1;
+			using_config_file = true;
 		}
 	}
 
@@ -800,6 +717,9 @@ int main(int argc, char *argv[])
 
 	device_set_exit_on_error(0);
 	console_warn_if_slaves_are_needed(1);
+
+	// Print "INFO" during startup, but then just "WARNINGS" by default.
+	debugmsg_add_verbosity_level(SUBSYS_ALL, -1);
 
 
 	/*  Run the emulation:  */

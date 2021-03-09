@@ -479,8 +479,6 @@ DEVICE_ACCESS(mc146818)
 				fatal("[ md146818: power off ]\n");
 				for (j=0; j<cpu->machine->ncpus; j++)
 					cpu->machine->cpus[j]->running = 0;
-				cpu->machine->
-				    exit_without_entering_debugger = 1;
 			}
 			break;
 		default:

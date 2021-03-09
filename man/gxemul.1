@@ -384,6 +384,9 @@ more deterministic behaviour than running without this option.
 However, if the emulated machine has clocks or timer interrupt sources,
 or if user interaction is taking place (e.g. keyboard input at irregular
 intervals), then this option is meaningless.
+.It Fl G
+Enable colorized output. If the environment variable CLICOLOR is set, then
+this is the default behavior.
 .It Fl H
 Display a list of available CPU types and machine types.
 (Most of these don't work. Please read the HTML documentation included in the
@@ -396,13 +399,14 @@ Set the size of the dyntrans cache (per emulated CPU) to
 .Ar n
 MB. The default size is 96 MB.
 .It Fl K
-Force the single-step debugger to be entered at the end of a simulation.
+Show the debugger prompt instead of exiting, when a simulation ends.
 .It Fl q
 Quiet mode; this suppresses startup messages.
 .It Fl V
-Start up in the single-step debugger, paused. If this option is used,
+Start up in the interactive debugger, paused. If this option is used,
 .Fl q
-is ignored.
+is ignored. This option also sets
+.Fl K.
 .It Fl v
 Increase verbosity (show more debug messages). This option can be used
 multiple times.

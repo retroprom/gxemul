@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -88,8 +88,6 @@ DEVICE_ACCESS(pmppc_board)
 			if (d->reset_reg == PMPPC_RESET_SEQ_STEP1 &&
 			    idata == PMPPC_RESET_SEQ_STEP2) {
 				cpu->running = 0;
-				cpu->machine->
-				    exit_without_entering_debugger = 1;
 			}
 			d->reset_reg = idata;
 		}

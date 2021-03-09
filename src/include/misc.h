@@ -32,6 +32,7 @@
  */
 
 
+#include <stdbool.h>
 #include <sys/types.h>
 #include <inttypes.h>
 
@@ -176,11 +177,6 @@ enum Endianness
 #endif
 
 
-/*  Debug stuff:  */
-#define	DEBUG_BUFSIZE		1024
-#define	DEBUG_INDENTATION	4
-
-
 #ifdef HAVE___FUNCTION__
 
 #define	FAILURE(error_msg)					{	\
@@ -231,6 +227,33 @@ int iso_load_bootblock(struct machine *m, struct cpu *cpu,
 int decstation_prom_emul(struct cpu *cpu);
 
 
+/*  debugmsg.c:  */
+#define	SUBSYS_ALL		-1
+#define	SUBSYS_STARTUP		0	/*  Startup messages  */
+#define	SUBSYS_DISK		1	/*  Disk I/O related  */
+#define	SUBSYS_NET		2	/*  Network related  */
+#define	SUBSYS_MACHINE		3	/*  Machine related  */
+#define	SUBSYS_DEVICE		4	/*  Device specific  */
+#define	SUBSYS_CPU		5	/*  General CPU  */
+#define	SUBSYS_MEMORY		6	/*  Memory related  */
+#define	SUBSYS_EXCEPTION	7	/*  CPU exceptions  */
+#define	SUBSYS_PROMEMUL		8	/*  PROM emulation related  */
+#define	VERBOSITY_ERROR		0
+#define	VERBOSITY_WARNING	1
+#define	VERBOSITY_INFO		2
+#define	VERBOSITY_DEBUG		3
+#define	ENOUGH_VERBOSITY(subsys,reqverb)	(debugmsg_current_verbosity[(subsys)] >= (reqverb))
+extern int *debugmsg_current_verbosity;
+void debug_indentation(int diff);
+void debug(const char *fmt, ...);
+void fatal(const char *fmt, ...);
+void debugmsg_init();
+void debugmsg_add_verbosity_level(int subsystem, int verbosity_delta);
+void debugmsg_set_verbosity_level(int subsystem, int verbosity);
+void debugmsg(int subsystem, const char *name, int verbosity_required, const char *fmt, ...);
+void debugmsg_cpu(struct cpu* cpu, int subsystem, const char *name, int verbosity_required, const char *fmt, ...);
+
+
 /*  dreamcast.c:  */
 void dreamcast_machine_setup(struct machine *);
 void dreamcast_emul(struct cpu *cpu);
@@ -252,17 +275,13 @@ void luna88kprom_init(struct machine *machine);
 int luna88kprom_emul(struct cpu *cpu);
 
 
-/*  main.c:  */
-void debug_indentation(int diff);
-void debug(const char *fmt, ...);
-void fatal(const char *fmt, ...);
-
-
 /*  misc.c:  */
 void color_prompt();
 void color_normal();
+void color_error(bool bold);
+void color_debugmsg_subsystem();
+void color_debugmsg_name();
 void color_banner();
-void color_emul_header();
 const char* color_symbol_ptr();
 const char* color_normal_ptr();
 unsigned long long mystrtoull(const char *s, char **endp, int base);

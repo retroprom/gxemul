@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -589,58 +589,57 @@ uint64_t memory_checksum(struct memory *mem)
  *  memory_warn_about_unimplemented_addr():
  *
  *  Called from memory_rw whenever memory outside of the physical address space
- *  is accessed (and quiet_mode isn't set).
+ *  is accessed.
  */
-void memory_warn_about_unimplemented_addr(struct cpu *cpu, struct memory *mem,
-	int writeflag, uint64_t paddr, uint8_t *data, size_t len)
+bool memory_warn_about_unimplemented_addr(struct cpu *cpu, struct memory *mem,
+	int writeflag, uint64_t paddr, size_t len)
 {
-	uint64_t offset, old_pc = cpu->pc;
-	char *symbol;
-
 	/*
-	 *  This allows guest OS kernels to probe memory a few KBs past the
-	 *  end of memory, without giving too many warnings.
+	 *  HACK: This allows guest OS kernels to probe memory a few KBs past
+	 *  the end of memory, without giving too many warnings.
 	 */
 	if (paddr < mem->physical_max + 0x40000)
-		return;
+		return false;
 
-	if (!cpu->machine->halt_on_nonexistant_memaccess && quiet_mode)
-		return;
+	int verbosity = VERBOSITY_WARNING;
+	if (cpu->machine->halt_on_nonexistant_memaccess)
+		verbosity = VERBOSITY_ERROR;
 
-	fatal("[ memory_rw(): %s ", writeflag? "write":"read");
+	// ERROR is always "enough", so we will print in that case.
+	if (!ENOUGH_VERBOSITY(SUBSYS_MEMORY, verbosity))
+		return false;
 
-	if (writeflag) {
-		unsigned int i;
-		debug("data={", writeflag);
-		if (len > 16) {
-			int start2 = len-16;
-			for (i=0; i<16; i++)
-				debug("%s%02x", i?",":"", data[i]);
-			debug(" .. ");
-			if (start2 < 16)
-				start2 = 16;
-			for (i=start2; i<len; i++)
-				debug("%s%02x", i?",":"", data[i]);
-		} else
-			for (i=0; i<len; i++)
-				debug("%s%02x", i?",":"", data[i]);
-		debug("} ");
-	}
+	uint64_t offset;
+	char* symbol = get_symbol_name(&cpu->machine->symbol_context, cpu->pc, &offset);
 
-	fatal("paddr=0x%" PRIx64" >= physical_max; pc=", paddr);
+	// Not the prettiest, but should work fine.
 	if (cpu->is_32bit)
-		fatal("0x%08" PRIx32, (uint32_t) old_pc);
+		debugmsg_cpu(cpu, SUBSYS_MEMORY, "", verbosity, "%s non-existant memory;"
+			" len=%i paddr=0x%08" PRIx32 " pc=0x%08" PRIx32 " <%s>",
+		    writeflag ? "write to" : "read from",
+		    len,
+		    (uint32_t) paddr,
+		    (uint32_t) cpu->pc,
+		    symbol ? symbol : "?");
 	else
-		fatal("0x%016" PRIx64, (uint64_t) old_pc);
-	symbol = get_symbol_name(&cpu->machine->symbol_context,
-	    old_pc, &offset);
-	fatal(" <%s> ]\n", symbol? symbol : " no symbol ");
+		debugmsg_cpu(cpu, SUBSYS_MEMORY, "", verbosity, "%s non-existant memory;"
+			" len=%i paddr=0x%016" PRIx64 " pc=0x%016" PRIx64 " <%s>",
+		    writeflag ? "write to" : "read from",
+		    len,
+		    (uint64_t) paddr,
+		    (uint64_t) cpu->pc,
+		    symbol ? symbol : "?");
 
 	if (cpu->machine->halt_on_nonexistant_memaccess) {
-		/*  TODO: Halt in a nicer way. Not possible with the
-		    current dyntrans system...  */
-		exit(1);
+		// Halt all CPUs, even though the bad memory access was on
+		// just one of them.
+		for (int i = 0; i < cpu->machine->ncpus; ++i)
+			cpu->machine->cpus[i]->running = 0;
+
+		return true;
 	}
+
+	return false;
 }
 
 

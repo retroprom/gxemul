@@ -259,7 +259,7 @@ int diskimage_scsicommand(struct cpu *cpu, int id, int type,
 		fatal(" %02x", xferp->cmd[i]);
 	fatal("\n");
 if (xferp->cmd_len > 7 && xferp->cmd[5] == 0x11)
-	single_step = ENTER_SINGLE_STEPPING;
+	single_step = true;
 #endif
 
 #if 0

@@ -343,10 +343,7 @@ void cpu_dumpinfo(struct machine *m, struct cpu *cpu)
  */
 void cpu_list_available_types(void)
 {
-	struct cpu_family *fp;
-	int iadd = DEBUG_INDENTATION;
-
-	fp = first_cpu_family;
+	struct cpu_family *fp = first_cpu_family;
 
 	if (fp == NULL) {
 		debug("No CPUs defined!\n");
@@ -355,13 +352,13 @@ void cpu_list_available_types(void)
 
 	while (fp != NULL) {
 		debug("%s:\n", fp->name);
-		debug_indentation(iadd);
+		debug_indentation(1);
 		if (fp->list_available_types != NULL)
 			fp->list_available_types();
 		else
 			debug("(internal error: list_available_types"
 			    " = NULL)\n");
-		debug_indentation(-iadd);
+		debug_indentation(-1);
 
 		fp = fp->next;
 	}

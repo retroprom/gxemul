@@ -4971,5 +4971,12 @@ Changelog for GXemul:
 		Implementing a helper method for registering device addresses
 		as symbols (so that it can be used from several machines).
 20210307	Subtle colorized output when stdin/stdout are connected to a
-		tty, to make it quicker to interpret text output. Can be
+		tty, to make it quicker to interpret text output. Enabled with
+		-G or by setting the CLICOLOR environment variable. Can be
 		disabled with -A.
+20210309	Beginning to separate debug messages into subsystems, that have
+		individual verbosity levels.
+		Making -K work more consistently (enter the debugger at the
+		end of a run). -V implies -K.
+		Making -T work better for M88K (breaking into the debugger
+		directly on bad memory accesses, if -K is used).

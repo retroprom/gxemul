@@ -2,7 +2,7 @@
 #define	DEBUGGER_H
 
 /*
- *  Copyright (C) 2004-2010  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2004-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -42,11 +42,6 @@ void debugger_execute_cmd(char *cmd, int cmd_len);
 void debugger(void);
 void debugger_reset(void);
 void debugger_init(struct emul *emul);
-
-/*  single_step values:  */
-#define	NOT_SINGLE_STEPPING		0
-#define	ENTER_SINGLE_STEPPING		1
-#define	SINGLE_STEPPING			2
 
 /*  debugger_expr.c:  */
 #define	PARSE_NOMATCH		0

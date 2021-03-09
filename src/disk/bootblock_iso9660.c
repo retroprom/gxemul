@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -100,7 +100,7 @@ int iso_load_bootblock(struct machine *m, struct cpu *cpu,
 	int disk_id, int disk_type, int iso_type, unsigned char *buf,
 	int *n_loadp, char ***load_namesp)
 {
-	int filenr, dirlen, res = 0, res2, iadd = DEBUG_INDENTATION, found_dir;
+	int filenr, dirlen, res = 0, res2, found_dir;
 	uint64_t dirofs, fileofs;
 	ssize_t filelen;
 	unsigned char *dirbuf = NULL, *dp, *match_entry = NULL, *filebuf = NULL;
@@ -116,7 +116,7 @@ int iso_load_bootblock(struct machine *m, struct cpu *cpu,
 	filename_orig = filename;
 
 	debug("ISO9660 boot:\n");
-	debug_indentation(iadd);
+	debug_indentation(1);
 
 	debug_print_volume_id_and_filename(iso_type, buf, filename);
 
@@ -413,7 +413,7 @@ ret:
 
 	free(filename_orig);
 
-	debug_indentation(-iadd);
+	debug_indentation(-1);
 	return res;
 }
 

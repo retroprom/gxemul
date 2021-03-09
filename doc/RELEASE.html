@@ -33,11 +33,29 @@ guest operating systems</a> that can be regarded as working in GXemul.
 <p><br>The most important changes between release 0.6.3.1 and 0.7.0 are:
 <ul>
 	<li>...
-	
+
+	<p>
+	<li>Some cleanup to make the <tt>-K</tt> command line option work
+		more like it was always supposed to.
+		This option should cause the emulator to show the
+		<tt>GXemul&gt;</tt> debugger prompt whenever
+		the emulated program or guest operating system ends,
+		regardless of whether it was a normal shutdown or some form
+		of error. Starting the emulator with <tt>-V</tt> also
+		implicitly sets <tt>-K</tt>. If neither <tt>-V</tt> nor <tt>-K</tt>
+		is used, and the guest OS halts with powerdown or "reboots", the emulator
+		should now exit gracefully (for the machine modes where this
+		has been implemented).
+
+	<p>
+	<li>TODO: debugmsg subsystem verbosity levels...
+
 	<p>
 	<li>Output from the emulator is now subtly colorized, to make it
-		easier to quickly interpret the text. (This can be disabled
-		using <tt>-A</tt>.)
+		easier to quickly interpret the text. This is enabled by
+		launching the emulator with the environment variable
+		CLICOLOR set, or if <tt>-G</tt> is used. It can be disabled
+		using <tt>-A</tt>.
 </ul>
 
 <p>The source code is also switched back from C++ to plain C:

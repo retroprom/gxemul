@@ -182,7 +182,11 @@ void LS_GENERIC_N(struct cpu *cpu, struct m88k_instr_call *ic)
 #ifdef LS_LOAD
 	if (!cpu->memory_rw(cpu, cpu->mem, addr, data, sizeof(data),
 	    MEM_READ, memory_rw_flags)) {
-		/*  Exception.  */
+		/*  Exception or aborted execution.  */
+		if (!cpu->running) {
+			cpu->cd.m88k.next_ic = &nothing_call;
+			debugger_n_steps_left_before_interaction = 0;
+		}
 		return;
 	}
 	x = memory_readmax64(cpu, data, LS_SIZE);
@@ -225,7 +229,11 @@ void LS_GENERIC_N(struct cpu *cpu, struct m88k_instr_call *ic)
 	memory_writemax64(cpu, data, LS_SIZE, x);
 	if (!cpu->memory_rw(cpu, cpu->mem, addr, data, sizeof(data),
 	    MEM_WRITE, memory_rw_flags)) {
-		/*  Exception.  */
+		/*  Exception or aborted execution.  */
+		if (!cpu->running) {
+			cpu->cd.m88k.next_ic = &nothing_call;
+			debugger_n_steps_left_before_interaction = 0;
+		}
 		return;
 	}
 #endif

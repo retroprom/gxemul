@@ -70,18 +70,36 @@ void color_normal()
 		printf("%s", color_normal_ptr());
 }
 
+void color_error(bool bold)
+{
+	if (!use_colorized_output())
+		return;
+
+	if (bold)
+		printf("\e[31;1m");
+	else
+		printf("\e[31m");
+}
+
+
+void color_debugmsg_subsystem()
+{
+	if (use_colorized_output())
+		printf("\e[33m");
+}
+
+
+void color_debugmsg_name()
+{
+	if (use_colorized_output())
+		printf("\e[34;1m");
+}
+
 
 void color_banner()
 {
 	if (use_colorized_output())
 		printf("\e[1m");
-}
-
-
-void color_emul_header()
-{
-	if (use_colorized_output())
-		printf("\e[33m");
 }
 
 

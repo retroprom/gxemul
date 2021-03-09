@@ -1092,7 +1092,7 @@ static void arcbios_handle_to_start_and_size(struct machine *machine,
 		 *  Warn about accessing partitions that are not specified
 		 *  with a size > 0.
 		 */
-		fatal("[ TODO: sgi partition() ]\n");
+		debugmsg(SUBSYS_PROMEMUL, "arcbios", VERBOSITY_WARNING, "TODO: sgi partition");
 		return;
 	}
 
@@ -1162,38 +1162,38 @@ void arcbios_sgi_emul(struct cpu *cpu)
 	switch (vector) {
 
 	case 0x00:
-		debug("[ ARCBIOS SGI: ioctl? TODO ]\n");
+		debugmsg(SUBSYS_PROMEMUL, "arcbios", VERBOSITY_WARNING, "SGI: ioctl? TODO");
 		cpu->cd.mips.gpr[MIPS_GPR_V0] = 0;
 		break;
 /*
 	case 0x04:
-		debug("[ ARCBIOS SGI: get nvram table(): TODO ]\n");
+		debugmsg(SUBSYS_PROMEMUL, "arcbios", VERBOSITY_WARNING, "SGI: get nvram table(): TODO");
 		cpu->cd.mips.gpr[MIPS_GPR_V0] = 0;
 		break;
 */
 	case 0x14:
-		debug("[ ARCBIOS SGI: fs_register? TODO ]\n");
+		debugmsg(SUBSYS_PROMEMUL, "arcbios", VERBOSITY_WARNING, "SGI: fs_register? TODO");
 		cpu->cd.mips.gpr[MIPS_GPR_V0] = 0;
 		break;
 
 	case 0x1c:
-		debug("[ ARCBIOS SGI: Signal? TODO ]\n");
+		debugmsg(SUBSYS_PROMEMUL, "arcbios", VERBOSITY_WARNING, "SGI: Signal? TODO");
 		cpu->cd.mips.gpr[MIPS_GPR_V0] = 0;
 		break;
 
 	case 0x20:
-		debug("[ ARCBIOS SGI: initGfxGui? TODO ]\n");
+		debugmsg(SUBSYS_PROMEMUL, "arcbios", VERBOSITY_WARNING, "SGI: initGfxGui? TODO");
 		cpu->cd.mips.gpr[MIPS_GPR_V0] = 0;
 		break;
 
 	case 0x24:
-		debug("[ ARCBIOS SGI: sgivers? TODO ]\n");
+		debugmsg(SUBSYS_PROMEMUL, "arcbios", VERBOSITY_WARNING, "SGI: sgivers? TODO");
 		cpu->cd.mips.gpr[MIPS_GPR_V0] = 0;
 		break;
 
 	case 0x30:
 		// This value is displayed by hinv (in sash) as "Processor: xxx MHz"
-		debug("[ ARCBIOS SGI: cpufreq ]\n");
+		debugmsg(SUBSYS_PROMEMUL, "arcbios", VERBOSITY_DEBUG, "SGI: cpufreq");
 		cpu->cd.mips.gpr[MIPS_GPR_V0] = 175;
 		break;
 
@@ -1272,12 +1272,32 @@ int arcbios_emul(struct cpu *cpu)
 	case 0x18:		/*  Reboot()  */
 	case 0x1c:		/*  EnterInteractiveMode()  */
 	case 0x20:		/*  ReturnFromMain()  */
-		debug("[ ARCBIOS Halt() or similar ]\n");
+		switch (vector) {
+		case 0x0c:
+			debugmsg(SUBSYS_PROMEMUL, "arcbios", VERBOSITY_DEBUG, "Halt()");
+			break;
+		case 0x10:
+			debugmsg(SUBSYS_PROMEMUL, "arcbios", VERBOSITY_DEBUG, "PowerDown()");
+			break;
+		case 0x14:
+			debugmsg(SUBSYS_PROMEMUL, "arcbios", VERBOSITY_DEBUG, "Restart()");
+			break;
+		case 0x18:
+			debugmsg(SUBSYS_PROMEMUL, "arcbios", VERBOSITY_DEBUG, "Reboot()");
+			break;
+		case 0x1c:
+			debugmsg(SUBSYS_PROMEMUL, "arcbios", VERBOSITY_DEBUG, "EnterInteractiveMode()");
+			break;
+		case 0x20:
+			debugmsg(SUBSYS_PROMEMUL, "arcbios", VERBOSITY_DEBUG, "ReturnFromMain()");
+			break;
+		}
+
 		/*  Halt all CPUs.  */
 		for (i=0; i<machine->ncpus; i++) {
 			machine->cpus[i]->running = 0;
 		}
-		machine->exit_without_entering_debugger = 1;
+
 		break;
 	case 0x24:		/*  GetPeer(node)  */
 		if (cpu->cd.mips.gpr[MIPS_GPR_A0] == 0) {
@@ -1510,11 +1530,11 @@ int arcbios_emul(struct cpu *cpu)
 		}
 		break;
 	case 0x44:		/*  GetSystemId()  */
-		debug("[ ARCBIOS GetSystemId() ]\n");
+		debugmsg(SUBSYS_PROMEMUL, "arcbios", VERBOSITY_DEBUG, "GetSystemId()");
 		cpu->cd.mips.gpr[MIPS_GPR_V0] = SGI_SYSID_ADDR;
 		break;
 	case 0x48:		/*  void *GetMemoryDescriptor(void *ptr)  */
-		debug("[ ARCBIOS GetMemoryDescriptor(0x%08x) ]\n",
+		debugmsg(SUBSYS_PROMEMUL, "arcbios", VERBOSITY_DEBUG, "GetMemoryDescriptor(0x%08x)",
 		    (int)cpu->cd.mips.gpr[MIPS_GPR_A0]);
 
 		/*  If a0=NULL, then return the first descriptor:  */
@@ -1600,7 +1620,7 @@ int arcbios_emul(struct cpu *cpu)
 			    (int)cpu->cd.mips.gpr[MIPS_GPR_V0]);
 		break;
 	case 0x60:		/*  Close(uint32_t handle)  */
-		debug("[ ARCBIOS Close(%i) ]\n",
+		debugmsg(SUBSYS_PROMEMUL, "arcbios", VERBOSITY_DEBUG, "Close(%i)",
 		    (int)cpu->cd.mips.gpr[MIPS_GPR_A0]);
 		if (!machine->md.arc->file_handle_in_use[cpu->cd.mips.gpr[
 		    MIPS_GPR_A0]]) {
@@ -1692,7 +1712,7 @@ int arcbios_emul(struct cpu *cpu)
 			arcbios_handle_to_start_and_size(machine, handleTmp,
 			    &partition_offset, &size);
 
-			debug("[ ARCBIOS Read(%i,0x%08x,0x%08x,0x%08x) ]\n",
+			debugmsg(SUBSYS_PROMEMUL, "arcbios", VERBOSITY_DEBUG, "Read(%i,0x%08x,0x%08x,0x%08x)",
 			    (int)cpu->cd.mips.gpr[MIPS_GPR_A0],
 			    (int)cpu->cd.mips.gpr[MIPS_GPR_A1],
 			    (int)cpu->cd.mips.gpr[MIPS_GPR_A2],
@@ -1855,7 +1875,7 @@ int arcbios_emul(struct cpu *cpu)
 			    cpu->cd.mips.gpr[MIPS_GPR_A0] + i,
 			    &buf[i], sizeof(char), MEM_READ, CACHE_NONE);
 		buf[sizeof(buf)-1] = '\0';
-		debug("[ ARCBIOS GetEnvironmentVariable(\"%s\") ]\n", buf);
+		debugmsg(SUBSYS_PROMEMUL, "arcbios", VERBOSITY_DEBUG, "GetEnvironmentVariable(\"%s\")", buf);
 		for (i=0; i<0x1000; i++) {
 			/*  Matching string at offset i?  */
 			int nmatches = 0;
@@ -2865,7 +2885,7 @@ void arcbios_init(struct machine *machine, int is64bit, uint64_t sgi_ram_offset,
 
 	case MACHINE_SGI:
 		debug("ARCS:\n");
-		debug_indentation(DEBUG_INDENTATION);
+		debug_indentation(1);
 
 		CHECK_ALLOCATION(name = (char *) malloc(alloclen));
 		snprintf(name, alloclen, "SGI-IP%i", machine->machine_subtype);
@@ -2878,7 +2898,7 @@ void arcbios_init(struct machine *machine, int is64bit, uint64_t sgi_ram_offset,
 
 	case MACHINE_ARC:
 		debug("ARC:\n");
-		debug_indentation(DEBUG_INDENTATION);
+		debug_indentation(1);
 
 		switch (machine->machine_subtype) {
 		case MACHINE_ARC_JAZZ_PICA:
@@ -3137,6 +3157,6 @@ void arcbios_init(struct machine *machine, int is64bit, uint64_t sgi_ram_offset,
 
 	arc_environment_setup(machine, is64bit, primary_ether_addr);
 
-	debug_indentation(-DEBUG_INDENTATION);
+	debug_indentation(-1);
 }
 

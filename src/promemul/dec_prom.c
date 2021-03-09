@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2020  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -102,17 +102,14 @@ int dec_jumptable_func(struct cpu *cpu, int vector)
 	switch (vector) {
 	case 0x0:	/*  reset()  */
 		/*  TODO  */
-		cpu->machine->exit_without_entering_debugger = 1;
 		cpu->running = 0;
 		break;
 	case 0x10:	/*  restart()  */
 		/*  TODO  */
-		cpu->machine->exit_without_entering_debugger = 1;
 		cpu->running = 0;
 		break;
 	case 0x18:	/*  reinit()  */
 		/*  TODO  */
-		cpu->machine->exit_without_entering_debugger = 1;
 		cpu->cd.mips.gpr[MIPS_GPR_V0] = 0;
 		break;
 	case 0x30:	/*  open()  */
@@ -583,7 +580,6 @@ int decstation_prom_emul(struct cpu *cpu)
 		break;
 	case 0x9c:		/*  halt()  */
 		debug("[ DEC PROM halt() ]\n");
-		cpu->machine->exit_without_entering_debugger = 1;
 		cpu->running = 0;
 		break;
 	case 0xa4:		/*  gettcinfo()  */
@@ -622,13 +618,11 @@ int decstation_prom_emul(struct cpu *cpu)
 		switch ((int32_t)cpu->cd.mips.gpr[MIPS_GPR_A0]) {
 		case 'h':
 			debug("DEC PROM: rex('h') ==> halt\n");
-			cpu->machine->exit_without_entering_debugger = 1;
 			cpu->running = 0;
 			break;
 		case 'b':
 			debug("DEC PROM: rex('b') ==> reboot: TODO "
 			    "(halting CPU instead)\n");
-			cpu->machine->exit_without_entering_debugger = 1;
 			cpu->running = 0;
 			break;
 		default:

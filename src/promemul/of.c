@@ -610,7 +610,6 @@ static void of_add_service(struct of_data *of_data, const char *name,
  */
 static void of_dump_devices(struct of_data *ofd, int parent)
 {
-	int iadd = DEBUG_INDENTATION;
 	struct of_device *od = ofd->of_devices;
 
 	while (od != NULL) {
@@ -622,7 +621,7 @@ static void of_dump_devices(struct of_data *ofd, int parent)
 		
 		debug("\"%s\"", od->name);
 		debug(" (handle %i)\n", od->handle);
-		debug_indentation(iadd);
+		debug_indentation(1);
 		
 		while (pr != NULL) {
 			debug("(%s: ", pr->name);
@@ -635,7 +634,7 @@ static void of_dump_devices(struct of_data *ofd, int parent)
 		}
 		
 		of_dump_devices(ofd, od->handle);
-		debug_indentation(-iadd);
+		debug_indentation(-1);
 		od = od->next;
 	}
 }
@@ -648,11 +647,10 @@ static void of_dump_devices(struct of_data *ofd, int parent)
  */
 static void of_dump_all(struct of_data *ofd)
 {
-	int iadd = DEBUG_INDENTATION;
 	struct of_service *os;
 
 	debug("openfirmware debug dump:\n");
-	debug_indentation(iadd);
+	debug_indentation(1);
 
 	/*  Devices:  */
 	of_dump_devices(ofd, 0);
@@ -678,7 +676,7 @@ static void of_dump_all(struct of_data *ofd)
 		os = os->next;
 	}
 
-	debug_indentation(-iadd);
+	debug_indentation(-1);
 }
 
 

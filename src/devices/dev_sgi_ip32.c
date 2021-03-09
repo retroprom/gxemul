@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2020  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -341,8 +341,7 @@ DEVICE_ACCESS(crime)
 				    "reboot" command:  */
 				for (j=0; j<cpu->machine->ncpus; j++)
 					cpu->machine->cpus[j]->running = 0;
-				cpu->machine->
-				    exit_without_entering_debugger = 1;
+
 				idata &= ~CRIME_CONTROL_HARD_RESET;
 			}
 

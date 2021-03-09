@@ -23,45 +23,19 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 <p><pre>
 <b>Current "short-list":</b>
 
+o) More register-devices-as-symbols (for more machines).
+	o) Mention in release notes?
+o) Per-arch overrides for whether to print symbols when executing in userspace?
+	e.g. MIPS is OK since symbols are at kseg0.
+	e.g. M88K is not OK, since userland and supervisor are the same numeric values.
 o) verbosity settings for debug messages for individual subsystems:
-	debugmsg_init() -- registers subsystems.
-		SUBSYS_STARTUP = ""
-		SUBSYS_NET = "net"
-		SUBSYS_DEVICE = "device"
-		SUBSYS_CPU = "cpu"
-		SUBSYS_EXCEPTION = "exception"
-	int subsys_number = debugmsg_register_subsystem(const char* name);
-		int *debugmsg_current_verbosity;
-		const char *debugmsg_subsystem_name;
-		static int debugmsg_nr_of_subsystems;
-	debugmsg(int subsys, int verbosity_required, "%s", ...)
-	if (debugmsg_current_verbosity[subsys] >= verbosity_required) ...
-
-	"[ " + " ]" only when executing, i.e. not during startup or when
-	paused in the debugger.
-	
-	subsysname only if not "" (SUBSYS_STARTUP).
-	"name: " only if name is not "" or NULL.
-
-	[ subsysname name: string ]
-
-	if using color, then subtly color subsysname in one color, and name
-	in a second color.
-	
-	VERBOSITY_ERROR = 0
-	VERBOSITY_WARNING = 1
-	VERBOSITY_INFO = 2
-	VERBOSITY_DEBUG = 3
-	...
-
-	Use red/bold for ERROR for the string?
-
+	Modify and add a new command:
+		quiet [on|off] -> quiet [subsystem] [on|off]
+		verbosity [subsystem] [n]
 o) C++ to C switch:
 	x. Reimplement the i960 CPU. (Disassembly of i960CA instructions.)
 	x. Reimplement the HP700/RX machine.
-
 o) Mouse capture for X11 windows?
-
 o) Disk overlay short-hand for temporary images. -R?
 o) Continue on Luna 88k machine:
 	SMP stability?
@@ -71,12 +45,14 @@ o) Continue on Luna 88k machine:
 	separate out some devices into their own files? (reuse TOD clock for example)
 	Front-side LED?
 o) Go through "exit()" calls and replace by reasonable break-into-the-debugger
-   constructs. Make sure that -K, -T etc are adhered to.
+   constructs.
+   	o) -T cleanup for all CPU archs! (88K fixed so far)
 o) Breakpoints with config files doesn't seem to work correctly? (luna88k?)
 o) Go through the ,NULL arguments to dev_ram_init, and see if more suitable names can be used!
 o) Try using profil() for very basic runtime profiling?
 o) MIPS: ehb detection, cop0 write -> tlb instructions.
 o) CTRL-T in main window could print SIGINFO-like status summary
+   o)  also CTRL-T at debugger prompt?
 o) Continue on SGI O2: PCI (moving devices in memory at runtime?), SCSI (?), ...
 o) Continue on i960 stuff, in particular HP 700/RX stuff. :-)
 o) Double-check R10000 vs R4400 TLB specifics:

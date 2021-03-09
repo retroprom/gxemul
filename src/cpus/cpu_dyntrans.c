@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2019  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -277,7 +277,7 @@ int DYNTRANS_RUN_INSTR_DEF(struct cpu *cpu)
 			debug("\n");
 			cpu_register_dump(cpu->machine, cpu, 1, 0x1);
 		}
-		if (cpu->machine->instruction_trace) {
+		if (single_step || cpu->machine->instruction_trace) {
 			/*  TODO/Note: This must be large enough to hold
 			    any instruction for any ISA:  */
 			unsigned char instr[1 <<
@@ -1783,7 +1783,7 @@ cpu->cd.DYNTRANS_ARCH.vph_tlb_entry[r].valid);
 					    " slot! Not yet supported.\n");
 #endif
 				single_step_breakpoint = 1;
-				single_step = ENTER_SINGLE_STEPPING;
+				single_step = true;
 				goto stop_running_translated;
 			}
 	}
