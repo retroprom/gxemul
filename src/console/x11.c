@@ -824,7 +824,7 @@ static void x11_check_events_machine(struct emul *emul, struct machine *m)
 						    main_console_handle, '~');
 						break;
 					default:
-						debugmsg(SUBSYS_X11, "event", VERBOSITY_WARNING,
+						debugmsg(SUBSYS_X11, "event", VERBOSITY_DEBUG,
 						    "unimplemented keycode %i", x);
 					}
 				}
