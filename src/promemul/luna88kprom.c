@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2018-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -100,7 +100,7 @@ int luna88kprom_emul(struct cpu *cpu)
 	default:
 		cpu_register_dump(cpu->machine, cpu, 1, 0);
 		cpu_register_dump(cpu->machine, cpu, 0, 1);
-		fatal("[ LUNA88K PROM emulation: unimplemented function 0x%" PRIx32" ]\n", func);
+		debugmsg(SUBSYS_PROMEMUL, "luna88k", VERBOSITY_ERROR, "unimplemented function 0x%" PRIx32, func);
 		cpu->running = 0;
 		return 0;
 	}
