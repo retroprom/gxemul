@@ -730,10 +730,6 @@ abort();
 	    DEV_RAM_MIRROR | DEV_RAM_MIGHT_POINT_TO_DEVICES, 0x0, NULL);
 
 
-	machine_add_devices_as_symbols(machine, 0xffffffff80000000);
-	machine_add_devices_as_symbols(machine, 0xffffffffa0000000);
-
-
 	if (!machine->prom_emulation)
 		return;
 

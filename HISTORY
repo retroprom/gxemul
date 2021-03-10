@@ -4980,3 +4980,5 @@ Changelog for GXemul:
 		end of a run). -V implies -K.
 		Making -T work better for M88K (breaking into the debugger
 		directly on bad memory accesses, if -K is used).
+20210310	All MIPS machines now register their devices as symbols (based
+		in kseg1, i.e. 0xffffffffa0000000).

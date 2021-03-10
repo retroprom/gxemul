@@ -627,9 +627,6 @@ j = 0;
 		exit(1);
 	}
 
-	machine_add_devices_as_symbols(machine, 0xffffffff80000000);
-	machine_add_devices_as_symbols(machine, 0xffffffffa0000000);
-
 	if (!machine->prom_emulation)
 		return;
 

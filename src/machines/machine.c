@@ -477,12 +477,6 @@ void machine_setup(struct machine *machine)
 		}
 	}
 
-
-	/*
-	 *  If the machine has a setup function in src/machines/machine_*.c
-	 *  then use that one, otherwise use the old hardcoded stuff here:
-	 */
-
 	me = first_machine_entry;
 	while (me != NULL) {
 		if (machine->machine_type == me->machine_type &&
@@ -490,6 +484,7 @@ void machine_setup(struct machine *machine)
 			me->setup(machine, cpu);
 			break;
 		}
+
 		me = me->next;
 	}
 
@@ -498,6 +493,16 @@ void machine_setup(struct machine *machine)
 		exit(1);
 	}
 
+	switch (machine->arch) {
+	case ARCH_MIPS:
+		// Register devices at the "typical" kseg1 base:
+		// 0xffffffff80000000 (kseg0) could work too but it is more
+		// likely that devices are accessed using their uncached address.
+		// TODO: How about "high" mapping for 64-bit systems?
+		machine_add_devices_as_symbols(machine, 0xffffffffa0000000);
+		break;
+	}
+	
 	if (machine->machine_name != NULL)
 		debug("name: %s", machine->machine_name);
 
