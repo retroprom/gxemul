@@ -22,10 +22,10 @@ surrounding hardware components such as framebuffers, busses, interrupt
 controllers, ethernet controllers, disk controllers, and serial port
 controllers.
 
-GXemul, including the dynamic translation system, is implemented in C,
-which means that the emulator will (at least in theory) run on
-practically any modern host architecture and unix-like operating system, for
-which a C compiler is available.
+GXemul, including the dynamic translation system, is implemented in C, which
+means that the emulator will (at least in theory) run on practically any
+modern host architecture and unix-like operating system, for which a C99
+compiler is available.
 
 The documentation lists the machines and specific guest operating systems
 that can be regarded as "working" in GXemul. The guest operating system
