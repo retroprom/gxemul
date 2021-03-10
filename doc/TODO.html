@@ -23,36 +23,53 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 <p><pre>
 <b>Current "short-list":</b>
 
-o) More register-devices-as-symbols (for more machines).
+o) register-devices-as-symbols for more machines
 	o) Mention in release notes?
 o) Per-arch overrides for whether to print symbols when executing in userspace?
 	e.g. MIPS is OK since symbols are at kseg0.
 	e.g. M88K is not OK, since userland and supervisor are the same numeric values.
+o) -T cleanup for all CPU archs! (88K fixed so far)
+	Go through all calls to memory_rw!
+	Check "if (!cpu->running)" after calls to memory_rw in instruction implementations;
+	break out of the dyntrans loop by using the "nothing" call.
+	alpha, arm, mips, ppc, sh
 o) verbosity settings for debug messages for individual subsystems:
 	Modify and add a new command:
 		quiet [on|off] -> quiet [subsystem] [on|off]
-		verbosity [subsystem] [n]
-o) C++ to C switch:
-	x. Reimplement the i960 CPU. (Disassembly of i960CA instructions.)
-	x. Reimplement the HP700/RX machine.
-o) Mouse capture for X11 windows?
+		verbosity [subsystem] [n]   (where n is a number? 0,1,2,3)
+o) Reimplement after the C++ to C switch:
+	x. i960 CPU: Disassembly of at least i960CA instructions.
+	x. HP700/RX machine skeleton.
+	x. Add RISC-V (again); possibly using 16-bit base encoding, treating
+		32-bit instructions as "two slots". Special case, but could work.
+o) CTRL-T in main window could print SIGINFO-like status summary
+   o)  CTRL-T should then be checked in the emul loop, not in console.c?
+   o)  also CTRL-T at debugger prompt?
+o) Experiment with Mouse capture for X11 windows?
+	XGrabPointer?
+		grab window = same as confine to?
+		owner events = false?
+		confine to = the window.
+		cursor = none (since the guest OS shows its own)
+		time = ?
+		GrabSuccess / GrabNotViewable / ?
+	XGrabKeyboard too?
+	Release using left CTRL+ALT?
+	Change window title during capture.
 o) Disk overlay short-hand for temporary images. -R?
-o) Continue on Luna 88k machine:
-	SMP stability?
-	color framebuffer?
-	SCSI?
+o) Continue on the Luna 88k machine:
+	Color framebuffer
+	SCSI
 	Cursor keys in the graphical framebuffer window? (Works with pckbd for SGI?)
 	separate out some devices into their own files? (reuse TOD clock for example)
-	Front-side LED?
-o) Go through "exit()" calls and replace by reasonable break-into-the-debugger
-   constructs.
-   	o) -T cleanup for all CPU archs! (88K fixed so far)
+	Front-side LED panel
+	SMP stability
+o) ARCBIOS output should go to some terminal; right now (for e.g. SGI O2), it goes to the main window.
+o) Go through more "exit()" calls and replace by reasonable break-into-the-debugger constructs.
 o) Breakpoints with config files doesn't seem to work correctly? (luna88k?)
 o) Go through the ,NULL arguments to dev_ram_init, and see if more suitable names can be used!
 o) Try using profil() for very basic runtime profiling?
 o) MIPS: ehb detection, cop0 write -> tlb instructions.
-o) CTRL-T in main window could print SIGINFO-like status summary
-   o)  also CTRL-T at debugger prompt?
 o) Continue on SGI O2: PCI (moving devices in memory at runtime?), SCSI (?), ...
 o) Continue on i960 stuff, in particular HP 700/RX stuff. :-)
 o) Double-check R10000 vs R4400 TLB specifics:
