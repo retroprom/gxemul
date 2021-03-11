@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -49,6 +49,12 @@
 #endif
 #if defined(A__SIGNED) && defined(A__H) && !defined(A__L)
 #define A__STRD
+#endif
+
+
+#ifndef NOTHING_CALL
+#define NOTHING_CALL
+static struct arm_instr_call nothing_call = { arm_instr_nothing, {0,0,0} };
 #endif
 
 
@@ -122,6 +128,10 @@ void A__NAME__general(struct cpu *cpu, struct arm_instr_call *ic)
 	if (!cpu->memory_rw(cpu, cpu->mem, addr, data, datalen,
 	    MEM_READ, memory_rw_flags)) {
 		/*  load failed, an exception was generated  */
+		if (!cpu->running) {
+			cpu->cd.arm.next_ic = &nothing_call;
+			debugger_n_steps_left_before_interaction = 0;
+		}
 		return;
 	}
 #if defined(A__B) && !defined(A__LDRD)
@@ -194,6 +204,10 @@ void A__NAME__general(struct cpu *cpu, struct arm_instr_call *ic)
 	if (!cpu->memory_rw(cpu, cpu->mem, addr, data, datalen,
 	    MEM_WRITE, memory_rw_flags)) {
 		/*  store failed, an exception was generated  */
+		if (!cpu->running) {
+			cpu->cd.arm.next_ic = &nothing_call;
+			debugger_n_steps_left_before_interaction = 0;
+		}
 		return;
 	}
 #endif

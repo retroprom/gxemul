@@ -4982,4 +4982,4 @@ Changelog for GXemul:
 		directly on bad memory accesses, if -K is used).
 20210310	All MIPS machines now register their devices as symbols (based
 		in kseg1, i.e. 0xffffffffa0000000).
-20210311	Making -T work better for MIPS, PPC, and SuperH.
+20210311	Making -T work better for MIPS, PPC, ARM, and SuperH.

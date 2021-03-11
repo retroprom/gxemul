@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -59,12 +59,12 @@ int main(int argc, char *argv[])
 	    "#define DYNTRANS_PC_TO_POINTERS arm_pc_to_pointers\n"
 	    "#include \"quick_pc_to_pointers.h\"\n"
 	    "#define reg(x) (*((uint32_t *)(x)))\n");
-	printf("extern void arm_instr_nop(struct cpu *, "
-	    "struct arm_instr_call *);\n");
-	printf("extern void arm_instr_invalid(struct cpu *, "
-	    "struct arm_instr_call *);\n");
+	printf("extern void arm_instr_nop(struct cpu *, struct arm_instr_call *);\n");
+	printf("extern void arm_instr_nothing(struct cpu *, struct arm_instr_call *);\n");
+	printf("extern void arm_instr_invalid(struct cpu *, struct arm_instr_call *);\n");
 	printf("extern void arm_pc_to_pointers(struct cpu *);\n");
-
+	printf("extern int debugger_n_steps_left_before_interaction;\n");
+	
 	if (!only_array)
 	  for (reg=0; reg<=1; reg++)
 	      for (b=0; b<=1; b++)
