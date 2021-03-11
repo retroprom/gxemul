@@ -731,9 +731,9 @@ void DYNTRANS_PC_TO_POINTERS_GENERIC(struct cpu *cpu)
 	}
 
 	if (cpu->translation_cache_cur_ofs >= dyntrans_cache_size) {
-#ifdef UNSTABLE_DEVEL
-		fatal("[ dyntrans: resetting the translation cache ]\n");
-#endif
+		debugmsg(SUBSYS_CPU, "dyntrans", VERBOSITY_INFO,
+		    "resetting the translation cache");
+
 		cpu_create_or_reset_tc(cpu);
 	}
 
