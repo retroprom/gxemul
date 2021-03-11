@@ -64,14 +64,19 @@ system (usually referred to as just "dyntrans").
 <a name="staticvsdynamic"></a>
 <h3>Static vs. dynamic:</h3>
 
-<p>In order to support guest operating systems, which can overwrite old 
-code pages in memory with new code, it is necessary to translate code 
-<a href="http://en.wikipedia.org/wiki/Binary_translation#Dynamic_translation"><i>dynamically</i></a>.
-It is not possible to do a static (one-pass) translation.
+<p>In order to support guest operating systems, it is important to take into
+account the fact that code pages in memory can be overwritten with new code,
+e.g. when loading new programs inside the guest OS.
+Statically doing a one-time translation of the code to run will thus not work,
+it is necessary to translate code <i>dynamically</i> <sup>*</sup>.
 Self-modifying code and Just-in-Time compilers running inside 
 the emulator are other things that would not work with a static 
 translator. GXemul is a dynamic translator. However, it does not 
 necessarily translate into <a href="#native">native code</a>, like some other emulators.
+
+<p><small>* Actually this is not necessary. Instead of translating the
+code ahead of execution, the instructions could be interpreted one-at-a-time.
+But this is slow.</small>
 
 
 
@@ -108,9 +113,12 @@ additional slots, which are special "end of page" slots. These do not count as
 executed instructions. Instead, they jump to the first instruction
 on the next virtual page (which might cause exceptions, etc).
 
+<p>(For architectures with 32-bit long instructions and 4 KB page size
+<b>without</b> a delay slot, there are 1025 entries, and for those <b>with</b>
+a delay slot there are 1026 entries.)
+
 <p>The core dyntrans loop, which executes the instructions in the
-instruction call slots, looks something like this: (Note: This is from
-pre-0.6.x.)
+instruction call slots, looks something like this:
 
 <pre>
 	<font color="#0000ff">/*  The normal instruction execution core:  */</font>
@@ -149,9 +157,19 @@ loops of those lenghts will thus result in the same host branch being taken from
 the same place multiple times, which seems to fit with some modern CPUs'
 branch prediction mechanisms.
 
+<p>There are two important pointers: next_ic points to the next instruction
+call, and cur_ic_page points to the whole page of such instructions. Thus,
+when the main loop exits, we can check what next_ic points to. If it points
+to one of the slots inside the current page (cur_ic_page), then the program
+counter's lowest bits should be adjusted to be in sync with the next_ic
+pointer. It can also happen that the next_ic points to something else:
+a special case is when one wants to break out of the dyntrans loop, e.g.
+if there was an error. Then, next_ic does not point to any of the instruction
+slots in that page, and thus the program counter's lowest bits are not synced
+from the next_ic value.
+
 <p>The complexity of individual instructions vary. A simple example of
-what an instruction can look like is the MIPS <tt>addu</tt> instruction.
-First, as implemented in the current dyntrans framework:
+what an instruction can look like is the MIPS <tt>addu</tt> instruction:
 <pre>
 	<font color="#0000ff">/*
 	 *  3-register arithmetic instructions:
@@ -180,55 +198,35 @@ instruction. This is a branch which also sets the return address register to the
 instruction following the branch. Here is the implementation for "samepage" offsets,
 i.e. branch offsets which are inside the same dyntrans page:
 
-<p>(Implementation taken from C++ in 0.6.x, but the C version in 0.7.x is similar.)
-
 <pre>
-	DYNTRANS_INSTR(M88K_CPUComponent,bsr_samepage)
+	X(bsr_samepage)
 	<font color="#404040">{</font>
-		<font color="#0000ff">//  This declares a <b>cpu</b> variable of the correct type which we can use.</font>
-		DYNTRANS_INSTR_HEAD(M88K_CPUComponent)
-
-		<font color="#0000ff">//  Set the return address.</font>
-		cpu->m_r[M88K_RETURN_REG] = (cpu->m_pc & ~((M88K_IC_ENTRIES_PER_PAGE-1)
-		    << M88K_INSTR_ALIGNMENT_SHIFT)) + ic->arg[2].u32;
-
-		<font color="#0000ff">//  Branch.</font>
-		cpu->m_nextIC = (struct DyntransIC *) ic->arg[0].p;
+		cpu->cd.m88k.r[M88K_RETURN_REG] = (cpu->pc &
+		    ~((M88K_IC_ENTRIES_PER_PAGE-1) << M88K_INSTR_ALIGNMENT_SHIFT))
+		    + ic->arg[2];
+		cpu->cd.m88k.next_ic = (struct m88k_instr_call *) ic->arg[0];
 	<font color="#404040">}</font>
 </pre>
 
 <p>
-Here, the M88K <tt>r1</tt> register (the return register) is set to the return address
-(the current program counter plus an offset in <tt>arg[2]</tt> pointing to the next instruction)
-and then the next instruction call to execute is set to <tt>arg[0]</tt>.
+Don't be scared by the logic operators.
+Here, the M88K <tt>r1</tt> register (the return register) is set to the
+return address, which is calculated by taking the current program counter,
+clearing the lowest bits, and adding arg[2] which is the offset within the
+page of the next instruction.
+Then the next instruction call to execute is set to <tt>arg[0]</tt>, which
+needs to be on the same page (since cur_ic_page is not updated).
 
-<p>Although it looks like the <tt>bsr_samepage</tt> code would result in quite
-a lot of host instructions, objdump reveals that the compiler was able to
-optimize it to a reasonably short sequence:
-
-<pre>
-	On Alpha (compiled with GNU C++ 3.4.6):
-	<font color="#808080">&lt;_ZN17M88K_CPUComponent18instr_bsr_samepageEP20CPUDyntransComponentP10DyntransIC&gt;:</font>
-	     760:       b0 00 90 a4     ldq     t3,176(a0)
-	     764:       1f 04 ff 47     nop     
-	     768:       03 f0 bf 20     lda     t4,-4093
-	     76c:       18 00 71 a0     ldl     t2,24(a1)
-	     770:       00 00 85 44     and     t3,t4,v0
-	     774:       01 04 03 40     addq    v0,t2,t0
-	     778:       d0 01 30 b0     stl     t0,464(a0)		<i>; Set the return address</i>
-	     77c:       08 00 51 a4     ldq     t1,8(a1)
-	     780:       38 01 50 b4     stq     t1,312(a0)		<i>; ... and update nextIC.</i>
-	     784:       01 80 fa 6b     ret
-
-	On AMD64 (compiled with GNU C++ 4.2.1):
-	<font color="#808080">&lt;_ZN17M88K_CPUComponent18instr_bsr_samepageEP20CPUDyntransComponentP10DyntransIC&gt;:</font>
-	  419310:       8b 87 b0 00 00 00       mov    0xb0(%rdi),%eax
-	  419316:       25 03 f0 ff ff          and    $0xfffff003,%eax
-	  41931b:       03 46 18                add    0x18(%rsi),%eax
-	  41931e:       89 87 d0 01 00 00       mov    %eax,0x1d0(%rdi)		<i>; Set the return address</i>
-	  419324:       48 8b 46 08             mov    0x8(%rsi),%rax
-	  419328:       48 89 87 38 01 00 00    mov    %rax,0x138(%rdi)		<i>; ... and update nextIC.</i>
-	  41932f:       c3                      retq   
+<p>
+The compiled code may look like this (example from an AMD64 host):
+<pre>000000000036dac0 <m88k_instr_bsr_samepage>:
+  36dac0:       b8 03 f0 ff ff          mov    $0xfffff003,%eax
+  36dac5:       23 87 a8 00 00 00       and    0xa8(%rdi),%eax
+  36dacb:       03 46 18                add    0x18(%rsi),%eax
+  36dace:       89 87 e4 00 00 00       mov    %eax,0xe4(%rdi)
+  36dad4:       48 8b 46 08             mov    0x8(%rsi),%rax
+  36dad8:       48 89 87 e0 03 00 00    mov    %rax,0x3e0(%rdi)
+  36dadf:       c3                      retq   
 </pre>
 
 
@@ -448,9 +446,6 @@ pattern is not done. (Note: The <tt>sw</tt> instruction is in the
 	<font color="#404040">}</font>
 </pre>
 
-<p><small>(Note: This is from the old C dyntrans system, not the 0.6.x
-dyntrans implementation.)</small>
-
 <p>For large memsets, calling the native/system <tt>memset</tt> implementation will most
 likely be a lot faster than emulating the MIPS <tt>memset</tt> one instruction at a time.
 
@@ -476,9 +471,11 @@ the most common instructions can be retrieved from that statistics.
 <h3>Native Code Generation Back-ends:</h3>
 
 <p>Native code generation was included in GXemul before 0.4.x, but only for
-i386 and Alpha hosts, but that did not feel clean and portable enough to work
-as a long-term solution. Time has proved this right; i386 has been superseded
+i386 and Alpha hosts. That did not feel clean and portable enough to work
+as a long-term solution. Time has proved this right: i386 has been superseded
 by amd64, and the Alpha architecture has unfortunately been killed.
+
+<p>
 The current implementation instead focuses on an having an intermediate
 representation that can be executed regardless of what the native architecture
 is.
