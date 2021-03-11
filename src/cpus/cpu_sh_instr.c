@@ -224,12 +224,20 @@ X(xor_b_imm_r0_gbr)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		   sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 		data ^= ic->arg[0];
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		   sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -247,12 +255,20 @@ X(or_b_imm_r0_gbr)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		   sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 		data |= ic->arg[0];
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		   sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -270,12 +286,20 @@ X(and_b_imm_r0_gbr)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		   sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 		data &= ic->arg[0];
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		   sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -320,6 +344,10 @@ X(mov_b_rm_predec_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		   sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 		/*  The store was ok:  */
@@ -345,6 +373,10 @@ X(mov_w_rm_predec_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		   sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 		/*  The store was ok:  */
@@ -370,6 +402,10 @@ X(mov_l_rm_predec_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		   sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 		/*  The store was ok:  */
@@ -397,6 +433,10 @@ X(stc_l_rm_predec_rn_md)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		   sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 		/*  The store was ok:  */
@@ -426,6 +466,10 @@ X(mov_l_disp_pc_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -470,6 +514,10 @@ X(mov_w_disp_pc_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -521,6 +569,10 @@ X(load_b_rm_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -539,6 +591,10 @@ X(load_w_rm_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -561,6 +617,10 @@ X(load_l_rm_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -597,6 +657,10 @@ X(fmov_rm_frn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr + 4, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 
@@ -612,6 +676,10 @@ X(fmov_rm_frn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -652,6 +720,10 @@ X(fmov_r0_rm_frn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -686,6 +758,10 @@ X(fmov_rm_postinc_frn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -700,8 +776,13 @@ X(fmov_rm_postinc_frn)
 		addr += 4;
 		SYNCH_PC;
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned
-		    char *)&data2, sizeof(data2), MEM_READ, CACHE_DATA))
+		    char *)&data2, sizeof(data2), MEM_READ, CACHE_DATA)) {
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
+		}
 
 		if (cpu->byte_order == EMUL_LITTLE_ENDIAN)
 			data2 = LE32_TO_HOST(data2);
@@ -725,6 +806,10 @@ X(mov_b_disp_gbr_r0)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -742,6 +827,10 @@ X(mov_w_disp_gbr_r0)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -763,6 +852,10 @@ X(mov_l_disp_gbr_r0)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -784,6 +877,10 @@ X(mov_b_arg1_postinc_to_arg0)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -804,6 +901,10 @@ X(mov_w_arg1_postinc_to_arg0)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -828,6 +929,10 @@ X(mov_l_arg1_postinc_to_arg0)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -854,6 +959,10 @@ X(mov_l_arg1_postinc_to_arg0_md)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -885,6 +994,10 @@ X(mov_l_arg1_postinc_to_arg0_fp)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -914,6 +1027,10 @@ X(mov_b_r0_rm_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -933,6 +1050,10 @@ X(mov_w_r0_rm_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -956,6 +1077,10 @@ X(mov_l_r0_rm_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -980,6 +1105,10 @@ X(mov_l_disp_rm_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -1003,6 +1132,10 @@ X(mov_b_disp_rn_r0)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -1022,6 +1155,10 @@ X(mov_w_disp_rn_r0)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -1068,6 +1205,10 @@ X(mov_b_store_rm_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, &data,
 		    sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -1090,6 +1231,10 @@ X(mov_w_store_rm_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -1112,6 +1257,10 @@ X(mov_l_store_rm_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -1143,6 +1292,10 @@ X(fmov_frm_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr + 4, (unsigned char *)&data2,
 		    sizeof(data2), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 		
@@ -1161,6 +1314,10 @@ X(fmov_frm_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -1191,6 +1348,10 @@ X(fmov_frm_r0_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -1225,6 +1386,10 @@ X(fmov_frm_predec_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -1238,8 +1403,13 @@ X(fmov_frm_predec_rn)
 			data = BE32_TO_HOST(data);
 		SYNCH_PC;
 		if (!cpu->memory_rw(cpu, cpu->mem, addr + 4, (unsigned
-		    char *)&data, sizeof(data), MEM_WRITE, CACHE_DATA))
+		    char *)&data, sizeof(data), MEM_WRITE, CACHE_DATA)) {
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
+		}
 	}
 
 	reg(ic->arg[1]) = addr;
@@ -1256,6 +1426,10 @@ X(mov_b_rm_r0_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -1278,6 +1452,10 @@ X(mov_w_rm_r0_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -1300,6 +1478,10 @@ X(mov_l_rm_r0_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -1316,6 +1498,10 @@ X(mov_b_r0_disp_gbr)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -1338,6 +1524,10 @@ X(mov_w_r0_disp_gbr)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -1360,6 +1550,10 @@ X(mov_l_r0_disp_gbr)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -1383,6 +1577,10 @@ X(mov_l_rm_disp_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -1400,6 +1598,10 @@ X(mov_b_r0_disp_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -1422,6 +1624,10 @@ X(mov_w_r0_disp_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
+			if (!cpu->running) {
+				cpu->cd.sh.next_ic = &nothing_call;
+				debugger_n_steps_left_before_interaction = 0;
+			}
 			return;
 		}
 	}
@@ -2947,6 +3153,10 @@ X(tas_b_rn)
 	if (!cpu->memory_rw(cpu, cpu->mem, addr, &byte, 1, MEM_READ,
 	   CACHE_DATA)) {
 		/*  Exception.  */
+		if (!cpu->running) {
+			cpu->cd.sh.next_ic = &nothing_call;
+			debugger_n_steps_left_before_interaction = 0;
+		}
 		return;
 	}
 
@@ -2955,6 +3165,10 @@ X(tas_b_rn)
 	if (!cpu->memory_rw(cpu, cpu->mem, addr, &newbyte, 1, MEM_WRITE,
 	   CACHE_DATA)) {
 		/*  Exception.  */
+		if (!cpu->running) {
+			cpu->cd.sh.next_ic = &nothing_call;
+			debugger_n_steps_left_before_interaction = 0;
+		}
 		return;
 	}
 
