@@ -266,7 +266,7 @@ void debug(const char *fmt, ...)
 	if (single_step)
 		v++;
 
-	if (quiet_mode || v < 0)
+	if ((quiet_mode && !single_step) || v < 0)
 		return;
 
 	va_start(argp, fmt);

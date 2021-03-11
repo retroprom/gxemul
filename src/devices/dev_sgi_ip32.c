@@ -577,15 +577,15 @@ DEVICE_ACCESS(mace)
 				(MACE_ISA_LED_RED | MACE_ISA_LED_GREEN);
 			if (change) {
 				switch (d->reg[MACE_ISA_FLASH_NIC_REG + 7] & (MACE_ISA_LED_RED | MACE_ISA_LED_GREEN)) {
-				case 0:	debug("[ mace: turning LED WHITE/ORANGE ]\n");
+				case 0:	debugmsg(SUBSYS_DEVICE, "mace", VERBOSITY_INFO, "turning LED WHITE/ORANGE");
 					break;
 				case MACE_ISA_LED_RED:
-					debug("[ mace: turning LED GREEN ]\n");
+					debugmsg(SUBSYS_DEVICE, "mace", VERBOSITY_INFO, "turning LED GREEN");
 					break;
 				case MACE_ISA_LED_GREEN:
-					debug("[ mace: turning LED RED ]\n");
+					debugmsg(SUBSYS_DEVICE, "mace", VERBOSITY_INFO, "turning LED RED");
 					break;
-				default:fatal("[ mace: turning LED OFF ]\n");
+				default:debugmsg(SUBSYS_DEVICE, "mace", VERBOSITY_WARNING, "turning LED OFF");
 					break;
 				}
 			}

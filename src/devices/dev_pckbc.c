@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -625,8 +625,9 @@ DEVICE_TICK(pckbc)
 					break;
 				case 3:	ascii_to_pc_scancodes_type3(ch, d);
 					break;
-				default:fatal("[ pckbc: unimplemented translation table type %i ]\n",
-						d->translation_table);
+				default:debugmsg(SUBSYS_DEVICE, "pckbc", VERBOSITY_WARNING,
+					    "unimplemented translation table type %i",
+					    d->translation_table);
 				}
 			}
 		}
@@ -855,8 +856,8 @@ static void dev_pckbc_command(struct pckbc_data *d, int port_nr)
 
 	default:
 		pckbc_add_code(d, KBR_RESEND, port_nr); // Error
-		fatal("[ pckbc: UNIMPLEMENTED command"
-		    " 0x%02x (port %i) ]\n", cmd, port_nr);
+		debugmsg(SUBSYS_DEVICE, "pckbc", VERBOSITY_WARNING,
+		    "UNIMPLEMENTED command 0x%02x (port %i)", cmd, port_nr);
 	}
 }
 

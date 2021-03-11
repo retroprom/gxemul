@@ -572,9 +572,9 @@ DEVICE_ACCESS(sgi_mec)
 			}
 
 			if (!writeflag) {
-				debug("[ sgi_mec: read from MEC_PHY_DATA (dev %i, reg %i): "
-				    "0x%016llx ]\n",
-				    dev, reg, (long long)odata);
+				debugmsg(SUBSYS_DEVICE, "sgi_mec", VERBOSITY_DEBUG,
+				    "read from MEC_PHY_DATA (dev %i, reg %i): "
+				    "0x%016llx", dev, reg, (long long)odata);
 			}
 		}
 		break;
@@ -637,12 +637,14 @@ DEVICE_ACCESS(sgi_mec)
 		break;
 	default:
 		if (writeflag == MEM_WRITE)
-			fatal("[ sgi_mec: unimplemented write to address"
-			    " 0x%llx, data=0x%016llx ]\n",
+			debugmsg(SUBSYS_DEVICE, "sgi_mec", VERBOSITY_WARNING,
+			    "unimplemented write to address"
+			    " 0x%llx, data=0x%016llx",
 			    (long long)relative_addr, (long long)idata);
 		else
-			fatal("[ sgi_mec: unimplemented read from address"
-			    " 0x%llx ]\n", (long long)relative_addr);
+			debugmsg(SUBSYS_DEVICE, "sgi_mec", VERBOSITY_WARNING,
+			    "unimplemented read from address"
+			    " 0x%llx", (long long)relative_addr);
 	}
 
 	if (writeflag == MEM_READ)

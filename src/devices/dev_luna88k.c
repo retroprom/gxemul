@@ -240,9 +240,12 @@ static void luna88k_timer_tick(struct timer *t, void *extra)
 	struct luna88k_data* d = (struct luna88k_data*) extra;
 	d->pending_timer_interrupts ++;
 	
-	if (d->pending_timer_interrupts > (int)(LUNA88K_PSEUDO_TIMER_HZ/2)) {
-		d->pending_timer_interrupts = 0;
-		debug("[ luna88k_timer_tick: tick lost... restarting timer ticks. ]\n");
+	// More than a second lost? Then restart the nr of pending interrupts.
+	if (d->pending_timer_interrupts > (int)(LUNA88K_PSEUDO_TIMER_HZ)) {
+		d->pending_timer_interrupts = 1;
+
+		debugmsg(SUBSYS_DEVICE, "luna88k", VERBOSITY_WARNING,
+		    "Timer ticks lost... Host too slow?");
 	}
 }
 

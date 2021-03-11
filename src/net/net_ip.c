@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2020  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2004-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -28,6 +28,7 @@
  *  Internet Protocol related networking stuff.
  */
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -882,26 +883,31 @@ static void net_ip_udp(struct net *net, struct nic_data *nic,
 void net_ip(struct net *net, struct nic_data *nic, unsigned char *packet,
 	int len)
 {
-#if 1
 	int i;
 
-	debug("[ net: IP: ");
-	debug("ver=%02x ", packet[14]);
-	debug("tos=%02x ", packet[15]);
-	debug("len=%02x%02x ", packet[16], packet[17]);
-	debug("id=%02x%02x ",  packet[18], packet[19]);
-	debug("ofs=%02x%02x ", packet[20], packet[21]);
-	debug("ttl=%02x ", packet[22]);
-	debug("p=%02x ", packet[23]);
-	debug("sum=%02x%02x ", packet[24], packet[25]);
-	debug("src=%02x%02x%02x%02x ",
-	    packet[26], packet[27], packet[28], packet[29]);
-	debug("dst=%02x%02x%02x%02x ",
-	    packet[30], packet[31], packet[32], packet[33]);
-	for (i=34; i<len; i++)
-		debug("%02x", packet[i]);
-	debug(" ]\n");
-#endif
+	if (ENOUGH_VERBOSITY(SUBSYS_NET, VERBOSITY_DEBUG)) {
+		char s[2000];
+		
+		snprintf(s, sizeof(s), "ver=%02x ", packet[14]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "tos=%02x ", packet[15]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "len=%02x%02x ", packet[16], packet[17]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "id=%02x%02x ",  packet[18], packet[19]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "ofs=%02x%02x ", packet[20], packet[21]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "ttl=%02x ", packet[22]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "p=%02x ", packet[23]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "sum=%02x%02x ", packet[24], packet[25]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "src=%02x%02x%02x%02x ",
+		    packet[26], packet[27], packet[28], packet[29]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "dst=%02x%02x%02x%02x ",
+		    packet[30], packet[31], packet[32], packet[33]);
+		for (i=34; i<len; i++) {
+			if (strlen(s) > sizeof(s) - 5)
+				break;
+			snprintf(s+strlen(s), sizeof(s)-strlen(s), "%02x", packet[i]);
+		}
+
+		debugmsg(SUBSYS_NET, "IP", VERBOSITY_DEBUG, "%s", s);
+	}
 
 	/*  Cut off overflowing tail data:  */
 	if (len > 14 + packet[16]*256 + packet[17])
@@ -919,13 +925,15 @@ void net_ip(struct net *net, struct nic_data *nic, unsigned char *packet,
 		case 17:/*  UDP  */
 			net_ip_udp(net, nic, packet, len);
 			break;
-		default:
-			fatal("[ net: IP: UNIMPLEMENTED protocol %i ]\n",
+		default:debugmsg(SUBSYS_NET, "IP", VERBOSITY_WARNING,
+			    "UNIMPLEMENTED protocol %i",
 			    packet[23]);
 		}
-	} else
-		fatal("[ net: IP: UNIMPLEMENTED ip, first byte = 0x%02x ]\n",
+	} else {
+		debugmsg(SUBSYS_NET, "IP", VERBOSITY_WARNING,
+		    "UNIMPLEMENTED ip version, first byte = 0x%02x",
 		    packet[14]);
+	}
 }
 
 
@@ -940,36 +948,35 @@ void net_ip(struct net *net, struct nic_data *nic, unsigned char *packet,
 static void net_ip_broadcast_dhcp(struct net *net, struct nic_data *nic,
 	unsigned char *packet, int len)
 {
-	/*
-	 *  TODO
-	 */
-#if 1
 	struct ethernet_packet_link *lp;
         int i, reply_len;
 
-	fatal("[ net: IPv4 DHCP: ");
-#if 1
-	fatal("ver=%02x ", packet[14]);
-	fatal("tos=%02x ", packet[15]);
-	fatal("len=%02x%02x ", packet[16], packet[17]);
-	fatal("id=%02x%02x ",  packet[18], packet[19]);
-	fatal("ofs=%02x%02x ", packet[20], packet[21]);
-	fatal("ttl=%02x ", packet[22]);
-	fatal("p=%02x ", packet[23]);
-	fatal("sum=%02x%02x ", packet[24], packet[25]);
-#endif
-	fatal("src=%02x%02x%02x%02x ",
-	    packet[26], packet[27], packet[28], packet[29]);
-	fatal("dst=%02x%02x%02x%02x ",
-	    packet[30], packet[31], packet[32], packet[33]);
+	if (ENOUGH_VERBOSITY(SUBSYS_NET, VERBOSITY_DEBUG)) {
+		char s[4000];
+		
+		snprintf(s, sizeof(s), "ver=%02x ", packet[14]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "tos=%02x ", packet[15]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "len=%02x%02x ", packet[16], packet[17]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "id=%02x%02x ",  packet[18], packet[19]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "ofs=%02x%02x ", packet[20], packet[21]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "ttl=%02x ", packet[22]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "p=%02x ", packet[23]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "sum=%02x%02x ", packet[24], packet[25]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "src=%02x%02x%02x%02x ",
+		    packet[26], packet[27], packet[28], packet[29]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "dst=%02x%02x%02x%02x ",
+		    packet[30], packet[31], packet[32], packet[33]);
+		for (i=34; i<len; i++) {
+			if (strlen(s) > sizeof(s) - 5)
+				break;
+			snprintf(s+strlen(s), sizeof(s)-strlen(s), "%02x", packet[i]);
+		}
 
-	if (net_ip_debug) {
-		for (i=34; i<len; i++)
-			fatal("%02x", packet[i]);
+		debugmsg(SUBSYS_NET, "IPv4 DHCP", VERBOSITY_DEBUG, "%s", s);
 	}
 
 	if (len < 34 + 8 + 236) {
-		fatal("[ DHCP packet too short? Len=%i ]\n", len);
+		debugmsg(SUBSYS_NET, "IPv4 DHCP", VERBOSITY_ERROR, "packet too short? len=%i", len);
 		return;
 	}
 
@@ -981,6 +988,7 @@ static void net_ip_broadcast_dhcp(struct net *net, struct nic_data *nic,
 	 *         0000000000102030405060...0000...638253633501...000
 	 */
 
+#if 0
 	fatal("op=%02x ", packet[42]);
 	fatal("htype=%02x ", packet[43]);
 	fatal("hlen=%02x ", packet[44]);
@@ -1001,10 +1009,11 @@ static void net_ip_broadcast_dhcp(struct net *net, struct nic_data *nic,
 	for (i=70; i<70+16; i++)
 		fatal("%02x", packet[i]);
 	/*
-   |                          sname   (64)                         |
-   |                          file    (128)                        |
+	   |                          sname   (64)                         |
+	   |                          file    (128)                        |
 	 */
 	fatal(" ]\n");
+#endif
 
         reply_len = 307;
         lp = net_allocate_ethernet_packet_link(net, nic, reply_len);
@@ -1039,7 +1048,7 @@ static void net_ip_broadcast_dhcp(struct net *net, struct nic_data *nic,
 	lp->data[58] = 10;
 	lp->data[59] = 0;
 	lp->data[60] = 0;
-	lp->data[61] = 1;
+	lp->data[61] = 1;	/*  TODO  */
 
 	/*  Server's IPv4 address:  (giaddr)  */
 	memcpy(lp->data + 66, &net->gateway_ipv4_addr[0], 4);
@@ -1080,46 +1089,55 @@ static void net_ip_broadcast_dhcp(struct net *net, struct nic_data *nic,
         net_ip_tcp_checksum(lp->data + 34, 6, reply_len - 34,
 	    lp->data + 26, lp->data + 30, 1);
 
+	if (ENOUGH_VERBOSITY(SUBSYS_NET, VERBOSITY_DEBUG)) {
+		char s[4000];
+		s[0] = '\0';
 
-/*  Debug dump:  */
-packet = lp->data;
-	fatal("[ net: IPv4 DHCP REPLY: ");
-	for (i=0; i<14; i++)
-		fatal("%02x", packet[i]);
-	fatal("ver=%02x ", packet[14]);
-	fatal("tos=%02x ", packet[15]);
-	fatal("len=%02x%02x ", packet[16], packet[17]);
-	fatal("id=%02x%02x ",  packet[18], packet[19]);
-	fatal("ofs=%02x%02x ", packet[20], packet[21]);
-	fatal("ttl=%02x ", packet[22]);
-	fatal("p=%02x ", packet[23]);
-	fatal("sum=%02x%02x ", packet[24], packet[25]);
-	fatal("src=%02x%02x%02x%02x ",
-	    packet[26], packet[27], packet[28], packet[29]);
-	fatal("dst=%02x%02x%02x%02x ",
-	    packet[30], packet[31], packet[32], packet[33]);
-	fatal("op=%02x ", packet[42]);
-	fatal("htype=%02x ", packet[43]);
-	fatal("hlen=%02x ", packet[44]);
-	fatal("hops=%02x ", packet[45]);
-	fatal("xid=%02x%02x%02x%02x ", packet[46], packet[47],
-	    packet[48], packet[49]);
-	fatal("secs=%02x%02x ", packet[50], packet[51]);
-	fatal("flags=%02x%02x ", packet[52], packet[53]);
-	fatal("ciaddr=%02x%02x%02x%02x ", packet[54], packet[55],
-	    packet[56], packet[57]);
-	fatal("yiaddr=%02x%02x%02x%02x ", packet[58], packet[59],
-	    packet[60], packet[61]);
-	fatal("siaddr=%02x%02x%02x%02x ", packet[62], packet[63],
-	    packet[64], packet[65]);
-	fatal("giaddr=%02x%02x%02x%02x ", packet[66], packet[67],
-	    packet[68], packet[69]);
-	fatal("chaddr=");
-	for (i=70; i<70+16; i++)
-		fatal("%02x", packet[i]);
-	fatal(" ]\n");
+		packet = lp->data;
 
-#endif
+		for (i=0; i<14; i++) {
+			if (strlen(s) > sizeof(s) - 5)
+				break;
+			snprintf(s+strlen(s), sizeof(s)-strlen(s), "%02x", packet[i]);
+		}
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "ver=%02x ", packet[14]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "tos=%02x ", packet[15]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "len=%02x%02x ", packet[16], packet[17]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "id=%02x%02x ",  packet[18], packet[19]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "ofs=%02x%02x ", packet[20], packet[21]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "ttl=%02x ", packet[22]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "p=%02x ", packet[23]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "sum=%02x%02x ", packet[24], packet[25]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "src=%02x%02x%02x%02x ",
+		    packet[26], packet[27], packet[28], packet[29]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "dst=%02x%02x%02x%02x ",
+		    packet[30], packet[31], packet[32], packet[33]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "op=%02x ", packet[42]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "htype=%02x ", packet[43]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "hlen=%02x ", packet[44]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "hops=%02x ", packet[45]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "xid=%02x%02x%02x%02x ",
+			packet[46], packet[47], packet[48], packet[49]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "secs=%02x%02x ", packet[50], packet[51]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "flags=%02x%02x ", packet[52], packet[53]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "ciaddr=%02x%02x%02x%02x ",
+			packet[54], packet[55], packet[56], packet[57]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "yiaddr=%02x%02x%02x%02x ",
+			packet[58], packet[59], packet[60], packet[61]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "siaddr=%02x%02x%02x%02x ",
+			packet[62], packet[63], packet[64], packet[65]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "giaddr=%02x%02x%02x%02x ",
+			packet[66], packet[67], packet[68], packet[69]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "chaddr=");
+		for (i=70; i<70+16; i++) {
+			if (strlen(s) > sizeof(s) - 5)
+				break;
+
+			snprintf(s+strlen(s), sizeof(s)-strlen(s), "%02x", packet[i]);
+		}
+
+		debugmsg(SUBSYS_NET, "IPv4 DHCP REPLY", VERBOSITY_DEBUG, "%s", s);
+	}
 }
 
 
@@ -1136,23 +1154,28 @@ void net_ip_broadcast(struct net *net, struct nic_data *nic,
 	uint32_t x, y;
 	int i, xl, warning = 0, match = 0;
 
-	if (net_ip_debug) {
-		fatal("[ net: IP BROADCAST: ");
-		fatal("ver=%02x ", packet[14]);
-		fatal("tos=%02x ", packet[15]);
-		fatal("len=%02x%02x ", packet[16], packet[17]);
-		fatal("id=%02x%02x ",  packet[18], packet[19]);
-		fatal("ofs=%02x%02x ", packet[20], packet[21]);
-		fatal("ttl=%02x ", packet[22]);
-		fatal("p=%02x ", packet[23]);
-		fatal("sum=%02x%02x ", packet[24], packet[25]);
-		fatal("src=%02x%02x%02x%02x ",
+	if (ENOUGH_VERBOSITY(SUBSYS_NET, VERBOSITY_DEBUG)) {
+		char s[4000];
+		
+		snprintf(s, sizeof(s), "ver=%02x ", packet[14]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "tos=%02x ", packet[15]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "len=%02x%02x ", packet[16], packet[17]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "id=%02x%02x ",  packet[18], packet[19]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "ofs=%02x%02x ", packet[20], packet[21]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "ttl=%02x ", packet[22]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "p=%02x ", packet[23]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "sum=%02x%02x ", packet[24], packet[25]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "src=%02x%02x%02x%02x ",
 		    packet[26], packet[27], packet[28], packet[29]);
-		fatal("dst=%02x%02x%02x%02x ",
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "dst=%02x%02x%02x%02x ",
 		    packet[30], packet[31], packet[32], packet[33]);
-		for (i=34; i<len; i++)
-			fatal("%02x", packet[i]);
-		fatal(" ]\n");
+		for (i=34; i<len; i++) {
+			if (strlen(s) > sizeof(s) - 5)
+				break;
+			snprintf(s+strlen(s), sizeof(s)-strlen(s), "%02x", packet[i]);
+		}
+
+		debugmsg(SUBSYS_NET, "ip BROADCAST", VERBOSITY_DEBUG, "%s", s);
 	}
 
 	/*  Check for 10.0.0.255 first, maybe some guest OSes think that
@@ -1206,22 +1229,30 @@ void net_ip_broadcast(struct net *net, struct nic_data *nic,
 	}
 
 	/*  Unknown packet:  */
-	fatal("[ net: UNIMPLEMENTED IP BROADCAST: ");
-	fatal("ver=%02x ", packet[14]);
-	fatal("tos=%02x ", packet[15]);
-	fatal("len=%02x%02x ", packet[16], packet[17]);
-	fatal("id=%02x%02x ",  packet[18], packet[19]);
-	fatal("ofs=%02x%02x ", packet[20], packet[21]);
-	fatal("ttl=%02x ", packet[22]);
-	fatal("p=%02x ", packet[23]);
-	fatal("sum=%02x%02x ", packet[24], packet[25]);
-	fatal("src=%02x%02x%02x%02x ",
-	    packet[26], packet[27], packet[28], packet[29]);
-	fatal("dst=%02x%02x%02x%02x ",
-	    packet[30], packet[31], packet[32], packet[33]);
-	for (i=34; i<len; i++)
-		fatal("%02x", packet[i]);
-	fatal(" (match=%i) ]\n", match);
+	if (ENOUGH_VERBOSITY(SUBSYS_NET, VERBOSITY_ERROR)) {
+		char s[4000];
+		
+		snprintf(s, sizeof(s), "ver=%02x ", packet[14]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "tos=%02x ", packet[15]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "len=%02x%02x ", packet[16], packet[17]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "id=%02x%02x ",  packet[18], packet[19]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "ofs=%02x%02x ", packet[20], packet[21]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "ttl=%02x ", packet[22]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "p=%02x ", packet[23]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "sum=%02x%02x ", packet[24], packet[25]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "src=%02x%02x%02x%02x ",
+		    packet[26], packet[27], packet[28], packet[29]);
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), "dst=%02x%02x%02x%02x ",
+		    packet[30], packet[31], packet[32], packet[33]);
+		for (i=34; i<len; i++) {
+			if (strlen(s) > sizeof(s) - 50)
+				break;
+			snprintf(s+strlen(s), sizeof(s)-strlen(s), "%02x", packet[i]);
+		}
+		snprintf(s+strlen(s), sizeof(s)-strlen(s), " (match=%i)", match);
+
+		debugmsg(SUBSYS_NET, "ip UNIMPLEMENTED BROADCAST", VERBOSITY_ERROR, "%s", s);
+	}
 }
 
 
