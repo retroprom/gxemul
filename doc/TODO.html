@@ -26,11 +26,6 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 o) Per-arch overrides for whether to print symbols when executing in userspace?
 	e.g. MIPS is OK since symbols are at kseg0.
 	e.g. M88K is not OK, since userland and supervisor are the same numeric values.
-o) -T cleanup for all CPU archs! (88K fixed so far)
-	Go through all calls to memory_rw!
-	Check "if (!cpu->running)" after calls to memory_rw in instruction implementations;
-	break out of the dyntrans loop by using the "nothing" call.
-	alpha, arm, mips, ppc, sh
 o) verbosity settings for debug messages for individual subsystems:
 	Modify and add a new command:
 		quiet [on|off] -> quiet [subsystem] [on|off]
