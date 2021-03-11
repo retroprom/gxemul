@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2006-2019  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2006-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -108,6 +108,10 @@ void LS_GENERIC_N(struct cpu *cpu, struct mips_instr_call *ic)
 	if (!cpu->memory_rw(cpu, cpu->mem, addr, data, sizeof(data),
 	    MEM_READ, CACHE_DATA)) {
 		/*  Exception.  */
+		if (!cpu->running) {
+			cpu->cd.mips.next_ic = &nothing_call;
+			debugger_n_steps_left_before_interaction = 0;
+		}
 		return;
 	}
 	x = memory_readmax64(cpu, data, LS_SIZE);
@@ -128,6 +132,10 @@ void LS_GENERIC_N(struct cpu *cpu, struct mips_instr_call *ic)
 	if (!cpu->memory_rw(cpu, cpu->mem, addr, data, sizeof(data),
 	    MEM_WRITE, CACHE_DATA)) {
 		/*  Exception.  */
+		if (!cpu->running) {
+			cpu->cd.mips.next_ic = &nothing_call;
+			debugger_n_steps_left_before_interaction = 0;
+		}
 		return;
 	}
 #endif
