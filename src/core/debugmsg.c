@@ -130,7 +130,7 @@ static void va_debug(va_list argp, const char *fmt)
 static void debugmsg_va(struct cpu* cpu, int subsystem,
 	const char *name, int verbosity, va_list argp, const char *fmt)
 {
-	if (!ENOUGH_VERBOSITY(subsystem, verbosity))
+	if (!single_step && !ENOUGH_VERBOSITY(subsystem, verbosity))
 		return;
 
 	char buf[DEBUG_BUFSIZE];
@@ -178,14 +178,17 @@ static void debugmsg_va(struct cpu* cpu, int subsystem,
 				color_debugmsg_subsystem();
 
 			bool print_colon = false;
+			bool print_subsystem_name =
+			    debugmsg_subsystem_name[subsystem][0] != '\0' &&
+			    (debug_indent == 0 || (name == NULL || name[0] == '\0'));
 
-			if (debugmsg_subsystem_name[subsystem][0] != '\0') {
+			if (print_subsystem_name) {
 				printf("%s", debugmsg_subsystem_name[subsystem]);
 				print_colon = true;
 			}
 
 			if (name != NULL && name[0] != '\0') {
-				if (debugmsg_subsystem_name[subsystem][0] != '\0')
+				if (print_subsystem_name)
 					printf(" ");
 
 				if (verbosity != VERBOSITY_ERROR)
@@ -365,11 +368,12 @@ void debugmsg_add_verbosity_level(int subsystem, int verbosity_delta)
  */
 void debugmsg_init()
 {
-	debugmsg_nr_of_subsystems = 10;
+	debugmsg_nr_of_subsystems = 11;
 	debugmsg_subsystem_name = malloc(sizeof(char*) * debugmsg_nr_of_subsystems);
 	debugmsg_current_verbosity = malloc(sizeof(int) * debugmsg_nr_of_subsystems);;
 
 	debugmsg_subsystem_name[SUBSYS_STARTUP]   = "";
+	debugmsg_subsystem_name[SUBSYS_EMUL]      = "emul";
 	debugmsg_subsystem_name[SUBSYS_DISK]      = "disk";
 	debugmsg_subsystem_name[SUBSYS_NET]       = "net";
 	debugmsg_subsystem_name[SUBSYS_MACHINE]   = "machine";

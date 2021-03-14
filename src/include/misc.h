@@ -230,15 +230,16 @@ int decstation_prom_emul(struct cpu *cpu);
 /*  debugmsg.c:  */
 #define	SUBSYS_ALL		-1
 #define	SUBSYS_STARTUP		0	/*  Startup messages  */
-#define	SUBSYS_DISK		1	/*  Disk I/O related  */
-#define	SUBSYS_NET		2	/*  Network related  */
-#define	SUBSYS_MACHINE		3	/*  Machine related  */
-#define	SUBSYS_DEVICE		4	/*  Device specific  */
-#define	SUBSYS_CPU		5	/*  General CPU  */
-#define	SUBSYS_MEMORY		6	/*  Memory related  */
-#define	SUBSYS_EXCEPTION	7	/*  CPU exceptions  */
-#define	SUBSYS_PROMEMUL		8	/*  PROM emulation related  */
-#define	SUBSYS_X11		9	/*  X11 related  */
+#define	SUBSYS_EMUL		1	/*  Emulation setup related  */
+#define	SUBSYS_DISK		2	/*  Disk I/O related  */
+#define	SUBSYS_NET		3	/*  Network related  */
+#define	SUBSYS_MACHINE		4	/*  Machine related  */
+#define	SUBSYS_DEVICE		5	/*  Device specific  */
+#define	SUBSYS_CPU		6	/*  General CPU  */
+#define	SUBSYS_MEMORY		7	/*  Memory related  */
+#define	SUBSYS_EXCEPTION	8	/*  CPU exceptions  */
+#define	SUBSYS_PROMEMUL		9	/*  PROM emulation related  */
+#define	SUBSYS_X11		10	/*  X11 related  */
 #define	VERBOSITY_ERROR		0
 #define	VERBOSITY_WARNING	1
 #define	VERBOSITY_INFO		2
