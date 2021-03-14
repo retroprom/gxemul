@@ -616,7 +616,7 @@ bool memory_warn_about_unimplemented_addr(struct cpu *cpu, struct memory *mem,
 	if (cpu->is_32bit)
 		debugmsg_cpu(cpu, SUBSYS_MEMORY, "", verbosity, "%s non-existant memory;"
 			" len=%i paddr=0x%08" PRIx32 " pc=0x%08" PRIx32 " <%s>",
-		    writeflag ? "write to" : "read from",
+		    writeflag ? "WRITE to" : "READ from",
 		    len,
 		    (uint32_t) paddr,
 		    (uint32_t) cpu->pc,
@@ -624,7 +624,7 @@ bool memory_warn_about_unimplemented_addr(struct cpu *cpu, struct memory *mem,
 	else
 		debugmsg_cpu(cpu, SUBSYS_MEMORY, "", verbosity, "%s non-existant memory;"
 			" len=%i paddr=0x%016" PRIx64 " pc=0x%016" PRIx64 " <%s>",
-		    writeflag ? "write to" : "read from",
+		    writeflag ? "WRITE to" : "READ from",
 		    len,
 		    (uint64_t) paddr,
 		    (uint64_t) cpu->pc,
