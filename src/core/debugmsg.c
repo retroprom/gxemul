@@ -27,10 +27,40 @@
  *
  *  Debug message functionality.
  *
+ *  To print a debug message, use debugmsg() or debugmsg_cpu(). The _cpu
+ *  variant is if the message comes from a particular CPU. In that case, the
+ *  name of the machine and cpu id may be printed.
+ *
+ *  In addition to the actual message to be printed, a subsystem, a component
+ *  name, and a verbosity level also need to be supplied. The component name
+ *  may be empty.
+ *
+ *  If it is relatively expensive to construct the message, then it would be
+ *  a bad idea to do that every time the debugmsg is called in case it is
+ *  rarely shown anyway (due to verbosity level being higher than the current
+ *  setting). Then, the following construct may be used to quickly check before
+ *  constructing the message that it will be shown:
+ *
+ *	if (ENOUGH_VERBOSITY(SUBSYS_XXX, VERBOSITY_YYY)) {
+ *		char msg[....];
+ *		// Construct msg here...
+ *
+ *		debugmsg(SUBSYS_XXX, "component", VERBOSITY_YYY, "%s", msg);
+ *	}
+ *
+ *
  *  TODO:
- *	Debugger commands: "quiet" and a new command "verbosity"
- *	Converting debug() and fatal() calls to the new debugmsg() call.
- *	Live registering of new subsystems.
+ *	Debugger commands:
+ *		"quiet"
+ *		new command "verbosity"
+ *		command for showing debug output in new xterms?
+ *
+ *	Convert existing debug() and fatal() calls to the new debugmsg() call.
+ *
+ *	Live registering of new subsystems, e.g. entire devices.
+ *
+ *	Make sure that all the hardcoded subsystems are actually used, and/or
+ *		move registering to individual subsystems.
  */
 
 #include <stdarg.h>
@@ -40,6 +70,7 @@
 
 #include "console.h"
 #include "cpu.h"
+#include "emul.h"
 #include "machine.h"
 #include "misc.h"
 
@@ -54,6 +85,8 @@ size_t debugmsg_nr_of_subsystems = 0;
 static const char **debugmsg_subsystem_name = NULL;
 int *debugmsg_current_verbosity = NULL;
 
+static const int default_verbosity = VERBOSITY_INFO;
+
 static size_t debug_indent = 0;
 static bool debug_old_currently_at_start_of_line = true;
 
@@ -64,7 +97,7 @@ static bool debug_old_currently_at_start_of_line = true;
 /*
  *  va_debug():
  *
- *  Used internally by debug() and fatal().
+ *  Used internally by the old debug() and fatal() functions.
  */
 static void va_debug(va_list argp, const char *fmt)
 {
@@ -124,8 +157,18 @@ static void debugmsg_va(struct cpu* cpu, int subsystem,
 			}
 
 			if (cpu != NULL) {
-				// TODO: Full emul -> machine -> cpu path.
-				if (cpu->machine->ncpus > 1)
+				// With multiple machines being emulated in the
+				// same emulation instance, print both the machine
+				// name and cpu id. If it is just one machine,
+				// only print the cpu id if there are multiple
+				// CPUs in order to not clutter the output
+				// needlessly.
+				struct emul* emul = cpu->machine->emul;
+				if (emul->n_machines > 1)
+					printf("machine \"%s\" cpu%i: ",
+					    cpu->machine->name ? cpu->machine->name : "(no name)",
+					    cpu->cpu_id);
+				else if (cpu->machine->ncpus > 1)
 					printf("cpu%i: ", cpu->cpu_id);
 			}
 
@@ -219,7 +262,8 @@ void debugmsg(int subsystem, const char *name,
 /*
  *  debugmsg():
  *
- *  The main routine to call, when something should be printed.
+ *  The main routine to call, when something should be printed and we are
+ *  in the context of a specific CPU.
  */
 void debugmsg_cpu(struct cpu* cpu, int subsystem, const char *name,
 	int verbosity_required, const char *fmt, ...)
@@ -237,6 +281,9 @@ void debugmsg_cpu(struct cpu* cpu, int subsystem, const char *name,
  *
  *  Modify the debug indentation. diff should be +1 to increase, and -1 to
  *  decrease after printing something.
+ *
+ *  This affects both the older debug() and fatal() functions, and the new
+ *  debugmsg/debugmsg_cpu() functions.
  */
 void debug_indentation(int diff)
 {
@@ -254,7 +301,9 @@ void debug_indentation(int diff)
  *
  *  These are here because of all the legacy code that uses them. Basically,
  *  debug() is mapped to something that is only displayed with verbosity
- *  at the default level, and fatal() is used to always print stuff.
+ *  at the default level, and fatal() is used to always print stuff. With some
+ *  hacks to make it work reasonable with -q and when executing normally or
+ *  when executing single-stepping.
  */
 void debug(const char *fmt, ...)
 {
@@ -332,22 +381,7 @@ void debugmsg_init()
 	debugmsg_subsystem_name[SUBSYS_X11]       = "X11";
 
 	// Default verbosity levels.
-	debugmsg_set_verbosity_level(SUBSYS_ALL, VERBOSITY_INFO);
-
-#if 0
-	//  For debugging:
-	debugmsg_current_verbosity[SUBSYS_NET] = VERBOSITY_DEBUG;
-	debugmsg_current_verbosity[SUBSYS_DEVICE] = VERBOSITY_DEBUG;
-	debugmsg(SUBSYS_STARTUP, NULL, VERBOSITY_ERROR, "hi %s", "some fault");
-	debugmsg(SUBSYS_NET, "ip", VERBOSITY_WARNING, "warning");
-	debugmsg(SUBSYS_NET, "", VERBOSITY_INFO, "info");
-	debugmsg(SUBSYS_NET, "", VERBOSITY_INFO, "");
-	debug_indentation(1);
-	debugmsg(SUBSYS_DEVICE, "somedev", VERBOSITY_DEBUG, "debug %i\nfrom device", 12345);
-	debug_indentation(1);
-	debugmsg(SUBSYS_DEVICE, "somedev", VERBOSITY_ERROR, "debug %i\nfrom device", 12345);
-	debug_indentation(-2);
-#endif
+	debugmsg_set_verbosity_level(SUBSYS_ALL, default_verbosity);
 }
 
 
