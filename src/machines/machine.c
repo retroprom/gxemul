@@ -132,10 +132,8 @@ void machine_destroy(struct machine *machine)
 	for (i=0; i<machine->ncpus; i++)
 		cpu_destroy(machine->cpus[i]);
 
-	// TODO: Memory leak; but it's ok, since the whole legacy thing should
-	// be replaced anyway.
-	// if (machine->name != NULL)
-	// 	free(machine->name);
+	if (machine->name != NULL)
+	 	free(machine->name);
 
 	if (machine->path != NULL)
 		free(machine->path);
@@ -402,12 +400,17 @@ void machine_dumpinfo(struct machine *m)
 		debug("  (nr of NICs: %i)", m->nr_of_nics);
 	debug("\n");
 
-	debug("memory: %i MB", m->physical_ram_in_mb);
+	char meminfo[2000];
+	snprintf(meminfo, sizeof(meminfo), "%i MB", m->physical_ram_in_mb);
+
 	if (m->memory_offset_in_mb != 0)
-		debug(" (offset by %i MB)", m->memory_offset_in_mb);
+		snprintf(meminfo + strlen(meminfo), sizeof(meminfo) - strlen(meminfo),
+		    " (offset by %i MB)", m->memory_offset_in_mb);
 	if (m->random_mem_contents)
-		debug(", randomized contents");
-	debug("\n");
+		snprintf(meminfo + strlen(meminfo), sizeof(meminfo) - strlen(meminfo),
+		    ", randomized content");
+
+	debugmsg(SUBSYS_MACHINE, "memory", VERBOSITY_INFO, "%s", meminfo);
 
 	if (!m->prom_emulation)
 		debug("PROM emulation disabled\n");
@@ -504,19 +507,20 @@ void machine_setup(struct machine *machine)
 	}
 	
 	if (machine->machine_name != NULL)
-		debug("name: %s", machine->machine_name);
+		debugmsg(SUBSYS_MACHINE, "model", VERBOSITY_INFO, "%s", machine->machine_name);
 
 	if (machine->emulated_hz > 0)
-		debug(" (%.2f MHz)", (float)machine->emulated_hz / 1000000);
-	debug("\n");
+		debugmsg(SUBSYS_MACHINE, "clock speed", VERBOSITY_INFO,
+		    "%.2f MHz", (float)machine->emulated_hz / 1000000);
 
-	if (machine->bootstr != NULL) {
-		debug("bootstring%s: %s", (machine->bootarg!=NULL &&
-		    strlen(machine->bootarg) >= 1)? "(+bootarg)" : "",
-		    machine->bootstr);
-		if (machine->bootarg != NULL && strlen(machine->bootarg) >= 1)
-			debug(" %s", machine->bootarg);
-		debug("\n");
+	if (machine->bootstr != NULL && machine->bootstr[0]) {
+		bool has_bootarg = machine->bootarg != NULL && machine->bootarg[0];
+		debugmsg(SUBSYS_MACHINE,
+		    has_bootarg ? "bootstring & bootarg" : "bootstring",
+		    VERBOSITY_INFO,
+		    "%s %s",
+		    machine->bootstr,
+		    has_bootarg ? machine->bootarg : "");
 	}
 }
 

@@ -37,6 +37,16 @@ OS combinations</a> that can be regarded as working in GXemul.
 		enabled from configuration files.
 
 	<p>
+	<li>Previously, the behavior when using configuration files was to
+		implicitly start new terminal windows (xterms) for serial
+		I/O, similar to the <tt>-x</tt> command line option. This has
+		now been changed, so that new terminal windows are only used
+		if there are two or more machines in the same configuration
+		file. If you still want xterms to be launched when using a
+		configuration file with a single machine in it, you now need
+		to add <tt>-x</tt> to the command line.
+
+	<p>
 	<li>Some cleanup to make the <tt>-K</tt> command line option work
 		more like it was always supposed to.
 		This option should cause the emulator to show the

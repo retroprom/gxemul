@@ -201,9 +201,6 @@ static void usage(bool longusage)
 	printf("  -U        enable slow_serial_interrupts_hack_for_linux\n");
 #ifdef WITH_X11
 	printf("  -X        use X11\n");
-	printf("  -x        open up new xterms for emulated serial ports "
-	    "(default is on when\n            using configuration files or"
-	    " when X11 is used, off otherwise)\n");
 	printf("  -Y n      scale down framebuffer windows by n x n times\n");
 #endif /*  WITH_X11  */
 	printf("  -Z n      set nr of graphics cards, for emulating a "
@@ -229,6 +226,11 @@ static void usage(bool longusage)
 	printf("  -q        quiet mode (don't print startup messages)\n");
 	printf("  -V        start up in the interactive debugger, paused; this also sets -K\n");
 	printf("  -v        increase debug message verbosity\n");
+#ifdef WITH_X11
+	printf("  -x        open up new xterms for emulated serial ports (default is on when\n"
+	       "            using configuration files with multiple machines specified, or\n"
+	       "            when X11 is used, off otherwise)\n");
+#endif /*  WITH_X11  */
 	printf("\n");
 	printf("If you are selecting a machine type to emulate directly "
 	    "on the command line,\nthen you must specify one or more names"
@@ -685,9 +687,6 @@ int main(int argc, char *argv[])
 
 			if (strlen(s) == 0 && i+1 < argc && *argv[i+1] != '@')
 				s = argv[++i];
-
-			/*  Always allow slave xterms:  */
-			console_allow_slaves(1);
 
 			/*  Destroy the temporary emul, since it will
 			    be overwritten:  */

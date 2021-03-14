@@ -4985,3 +4985,5 @@ Changelog for GXemul:
 20210311	Making -T work better for MIPS, PPC, ARM, and SuperH.
 20210314	Adding a -L command line option for enabling tap networking
 		without using configuration files.
+		-x is now needed if one wants separate xterm windows for serial
+		I/O when using configuration files with a single machine.

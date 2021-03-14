@@ -28,6 +28,7 @@
  *  SUCH DAMAGE.
  */
 
+#include <stdbool.h>
 #include "misc.h"
 
 struct machine;
@@ -57,7 +58,7 @@ struct emul *emul_new(char *name);
 void emul_destroy(struct emul *emul);
 
 struct machine *emul_add_machine(struct emul *e, char *name);
-void emul_machine_setup(struct machine *machine, int n_load, char **load_names,
+bool emul_machine_setup(struct machine *machine, int n_load, char **load_names,
 	int n_devices, char **device_names);
 void emul_dumpinfo(struct emul *e);
 bool emul_simple_init(struct emul *emul, char* tap_devname);

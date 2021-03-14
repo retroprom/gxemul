@@ -64,8 +64,8 @@ struct cpu *cpu_new(struct memory *mem, struct machine *machine,
 	char tmpstr[30];
 
 	if (name == NULL) {
-		fprintf(stderr, "cpu_new(): cpu name = NULL?\n");
-		exit(1);
+		debugmsg(SUBSYS_CPU, "", VERBOSITY_ERROR, "cpu name = NULL?");
+		return NULL;
 	}
 
 	CHECK_ALLOCATION(cpu_type_name = strdup(name));
@@ -78,6 +78,7 @@ struct cpu *cpu_new(struct memory *mem, struct machine *machine,
 
 	cpu->memory_rw  = NULL;
 	cpu->name       = cpu_type_name;
+	cpu->cpuinfo    = "TODO debugmsg:ify";
 	cpu->mem        = mem;
 	cpu->machine    = machine;
 	cpu->cpu_id     = cpu_id;
@@ -101,31 +102,34 @@ struct cpu *cpu_new(struct memory *mem, struct machine *machine,
 
 	while (fp != NULL) {
 		if (fp->cpu_new != NULL) {
-			if (fp->cpu_new(cpu, mem, machine, cpu_id,
-			    cpu_type_name)) {
-				/*  Sanity check:  */
-				if (cpu->memory_rw == NULL) {
-					fatal("\ncpu_new(): memory_rw == "
-					    "NULL\n");
-					exit(1);
-				}
+			if (fp->cpu_new(cpu, mem, machine, cpu_id, cpu_type_name))
 				break;
-			}
 		}
 
 		fp = fp->next;
 	}
 
 	if (fp == NULL) {
-		fatal("\ncpu_new(): unknown cpu type '%s'\n", cpu_type_name);
+		debugmsg_cpu(cpu, SUBSYS_CPU, "", VERBOSITY_ERROR,
+		    "unknown cpu type '%s'", cpu_type_name);
+		free(cpu);
+		return NULL;
+	}
+
+	if (cpu->memory_rw == NULL) {
+		debugmsg_cpu(cpu, SUBSYS_CPU, "", VERBOSITY_ERROR,
+		    "memory_rw == NULL");
+		free(cpu);
 		return NULL;
 	}
 
 	fp->init_tables(cpu);
 
 	if (cpu->byte_order == EMUL_UNDEFINED_ENDIAN) {
-		fatal("\ncpu_new(): Internal bug: Endianness not set.\n");
-		exit(1);
+		debugmsg_cpu(cpu, SUBSYS_CPU, "endianness", VERBOSITY_ERROR,
+		    "Internal bug: Endianness not set!");
+		free(cpu);
+		return NULL;
 	}
 	
 	if (cpu->vaddr_mask == 0) {
@@ -134,7 +138,9 @@ struct cpu *cpu_new(struct memory *mem, struct machine *machine,
 		else
 			cpu->vaddr_mask = (int64_t)-1;
 
-		// debug("\n\ncpu_new(): Warning: vaddr_mask should be set in the CPU family's cpu_new()! Assuming 0x%16llx\n\n", (long long)cpu->vaddr_mask);
+		debugmsg_cpu(cpu, SUBSYS_CPU, "vaddr_mask", VERBOSITY_DEBUG,
+		    "Warning: vaddr_mask should be set in the CPU family's "
+		    "cpu_new()! Assuming 0x%16llx", (long long)cpu->vaddr_mask);
 	}
 
 	return cpu;

@@ -103,7 +103,7 @@ struct machine {
 	struct settings *settings;
 
 	/*  Name as choosen by the user:  */
-	const char *name;
+	char	*name;
 
 	/*  Full "path" to the machine, e.g. "machine[0]":  */
 	char	*path;

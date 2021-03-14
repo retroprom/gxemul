@@ -46,7 +46,6 @@
 #include "diskimage.h"
 #include "machine.h"
 #include "memory.h"
-#include "mips_cpu_types.h"
 #include "misc.h"
 #include "net.h"
 #include "settings.h"
@@ -215,6 +214,13 @@ struct machine *emul_add_machine(struct emul *e, char *name)
 
 	i = e->n_machines ++;
 
+	/*
+	 *  When emulating more than one machine, use separate terminal
+	 *  windows for each:
+	 */
+	if (e->n_machines > 1)
+		console_allow_slaves(1);
+
 	CHECK_ALLOCATION(e->machines = (struct machine **) realloc(e->machines,
 	    sizeof(struct machine *) * e->n_machines));
 
@@ -348,24 +354,25 @@ static void add_arc_components(struct machine *m)
  *	o)  Load ROM code and/or other programs into emulated memory.
  *
  *	o)  Special hacks needed after programs have been loaded.
+ *
+ *  Returns true on success, false if the machine could not be set up.
  */
-void emul_machine_setup(struct machine *m, int n_load, char **load_names,
+bool emul_machine_setup(struct machine *m, int n_load, char **load_names,
 	int n_devices, char **device_names)
 {
 	struct cpu *cpu;
 	uint64_t memory_amount, entrypoint = 0, gp = 0, toc = 0;
 	int i, byte_order;
 
-	if (m->name != NULL && m->name[0])
-		debugmsg(SUBSYS_MACHINE, m->name, VERBOSITY_INFO, "");
-	else
-		debugmsg(SUBSYS_MACHINE, "", VERBOSITY_INFO, "");
-
+	debugmsg(SUBSYS_MACHINE, "", VERBOSITY_INFO, "");
 	debug_indentation(1);
+
+	if (m->name != NULL && m->name[0])
+		debugmsg(SUBSYS_MACHINE, "config name", VERBOSITY_INFO, "%s", m->name);
 
 	if (m->machine_type == MACHINE_NONE) {
 		fatal("No machine type specified?\n");
-		exit(1);
+		return false;
 	}
 
 	m->cpu_family = cpu_family_ptr_by_number(m->arch);
@@ -376,9 +383,11 @@ void emul_machine_setup(struct machine *m, int n_load, char **load_names,
 	machine_memsize_fix(m);
 
 	/*
-	 *  Create the system's memory:
+	 *  Create the system's base memory:
 	 */
-	debug("memory: %i MB", m->physical_ram_in_mb);
+	char meminfo[2000];
+	snprintf(meminfo, sizeof(meminfo), "%i MB", m->physical_ram_in_mb);
+
 	memory_amount = (uint64_t)m->physical_ram_in_mb * 1048576;
 	if (m->memory_offset_in_mb > 0) {
 		/*
@@ -386,17 +395,25 @@ void emul_machine_setup(struct machine *m, int n_load, char **load_names,
 		 *  where memory is offset by 128MB to leave room for
 		 *  EISA space and other things.
 		 */
-		debug(" (offset by %iMB)", m->memory_offset_in_mb);
+		snprintf(meminfo + strlen(meminfo), sizeof(meminfo) - strlen(meminfo),
+		    " (offset by %i MB)", m->memory_offset_in_mb);
+
 		memory_amount += 1048576 * m->memory_offset_in_mb;
 	}
+
 	if (m->machine_type == MACHINE_SGI && m->machine_subtype == 32) {
 		if (memory_amount > 0x10000000) {
 			memory_amount = 0x10000000;
-			debug(" (SGI O2 hack: %i MB at offset 0)", 0x10000000 / 1048576);
+			snprintf(meminfo + strlen(meminfo), sizeof(meminfo) - strlen(meminfo),
+			    " (SGI O2 hack: %i MB at offset 0)", 0x10000000 / 1048576);
 		}
 	}
+
+	if (m->random_mem_contents)
+		snprintf(meminfo + strlen(meminfo), sizeof(meminfo) - strlen(meminfo),
+		    ", randomized content");
+
 	m->memory = memory_new(memory_amount, m->arch);
-	debug("\n");
 
 	/*  Create CPUs:  */
 	if (m->cpu_name == NULL)
@@ -407,19 +424,20 @@ void emul_machine_setup(struct machine *m, int n_load, char **load_names,
 	CHECK_ALLOCATION(m->cpus = (struct cpu **) malloc(sizeof(struct cpu *) * m->ncpus));
 	memset(m->cpus, 0, sizeof(struct cpu *) * m->ncpus);
 
-	debug("cpu0");
-	if (m->ncpus > 1)
-		debug(" .. cpu%i", m->ncpus - 1);
-	debug(": ");
+	char cpuname[200];
+	if (m->ncpus == 1)
+		snprintf(cpuname, sizeof(cpuname), "cpu0");
+	else
+		snprintf(cpuname, sizeof(cpuname), "cpu0 .. cpu%i", m->ncpus - 1);
+
 	for (i=0; i<m->ncpus; i++) {
 		m->cpus[i] = cpu_new(m->memory, m, i, m->cpu_name);
 		if (m->cpus[i] == NULL) {
 			fprintf(stderr, "Unable to create CPU object. "
 			    "Aborting.");
-			exit(1);
+			return false;
 		}
 	}
-	debug("\n");
 
 	if (m->use_random_bootstrap_cpu)
 		m->bootstrap_cpu = random() % m->ncpus;
@@ -448,6 +466,9 @@ void emul_machine_setup(struct machine *m, int n_load, char **load_names,
 
 	machine_setup(m);
 
+	debugmsg(SUBSYS_MACHINE, cpuname, VERBOSITY_INFO, "%s", cpu->cpuinfo);
+	debugmsg(SUBSYS_MACHINE, "memory", VERBOSITY_INFO, "%s", meminfo);
+
 	diskimage_dump_info(m);
 	console_debug_dump(m);
 
@@ -458,13 +479,13 @@ void emul_machine_setup(struct machine *m, int n_load, char **load_names,
 				fprintf(stderr, "\nNo executable files were"
 				    " specified, and booting directly from disk"
 				    " failed.\n");
-				exit(1);
+				return false;
 			}
 		} else {
 			fprintf(stderr, "No executable file(s) loaded, and "
 			    "we are not booting directly from a disk image."
 			    "\nAborting.\n");
-			exit(1);
+			return false;
 		}
 	}
 
@@ -570,7 +591,7 @@ void emul_machine_setup(struct machine *m, int n_load, char **load_names,
 		case ARCH_ARM:
 			if (cpu->pc & 2) {
 				fatal("ARM: misaligned pc: TODO\n");
-				exit(1);
+				return false;
 			}
 
 			cpu->pc = (uint32_t)cpu->pc;
@@ -583,7 +604,7 @@ void emul_machine_setup(struct machine *m, int n_load, char **load_names,
 		case ARCH_M88K:
 			if (cpu->pc & 3) {
 				fatal("M88K: lowest bits of pc set: TODO\n");
-				exit(1);
+				return false;
 			}
 			cpu->pc &= 0xfffffffc;
 			break;
@@ -618,7 +639,7 @@ void emul_machine_setup(struct machine *m, int n_load, char **load_names,
 		default:
 			fatal("emul_machine_setup(): Internal error: "
 			    "Unimplemented arch %i\n", m->arch);
-			exit(1);
+			return false;
 		}
 
 		n_load --;
@@ -647,12 +668,6 @@ void emul_machine_setup(struct machine *m, int n_load, char **load_names,
 	/*  Parse and add breakpoints:  */
 	add_breakpoints(m);
 
-	/*  TODO: This is MIPS-specific!  */
-	if (m->machine_type == MACHINE_PMAX &&
-	    cpu->cd.mips.cpu_type.mmu_model == MMU3K)
-		add_symbol_name(&m->symbol_context,
-		    0x9fff0000, 0x10000, "r2k3k_cache", 0, 0);
-
 	symbol_recalc_sizes(&m->symbol_context);
 
 	/*  Special hack for ARC/SGI emulation:  */
@@ -660,36 +675,58 @@ void emul_machine_setup(struct machine *m, int n_load, char **load_names,
 	    m->machine_type == MACHINE_SGI) && m->prom_emulation)
 		add_arc_components(m);
 
-	debug("cpu%i: starting at ", m->bootstrap_cpu);
+	char cpu_startinfo_cpuname[1000];
+	snprintf(cpu_startinfo_cpuname, sizeof(cpu_startinfo_cpuname),
+	    "cpu%i", m->bootstrap_cpu);
 
+	char cpu_startinfo[1000];
+	snprintf(cpu_startinfo, sizeof(cpu_startinfo), "starting at ");
+
+	if (cpu->is_32bit)
+		snprintf(cpu_startinfo + strlen(cpu_startinfo), sizeof(cpu_startinfo) - strlen(cpu_startinfo),
+		    "0x%08" PRIx32, (uint32_t) cpu->pc);
+	else
+		snprintf(cpu_startinfo + strlen(cpu_startinfo), sizeof(cpu_startinfo) - strlen(cpu_startinfo),
+		    "0x%016" PRIx64, (uint64_t) cpu->pc);
+
+	uint64_t offset;
+	int n_args;
+	char* bootaddr_symbol = get_symbol_name_and_n_args(&m->symbol_context, cpu->pc, &offset, &n_args);
+	if (bootaddr_symbol != NULL)
+		snprintf(cpu_startinfo + strlen(cpu_startinfo), sizeof(cpu_startinfo) - strlen(cpu_startinfo),
+		    " <%s>", bootaddr_symbol);
+
+	/*  Also show the GP (or equivalent):  */
 	switch (m->arch) {
 
 	case ARCH_MIPS:
-		if (cpu->is_32bit) {
-			debug("0x%08" PRIx32, (uint32_t)
-			    m->cpus[m->bootstrap_cpu]->pc);
-			if (cpu->cd.mips.gpr[MIPS_GPR_GP] != 0)
-				debug(" (gp=0x%08" PRIx32")", (uint32_t)
-				    m->cpus[m->bootstrap_cpu]->cd.mips.gpr[
-				    MIPS_GPR_GP]);
-		} else {
-			debug("0x%016" PRIx64, (uint64_t)
-			    m->cpus[m->bootstrap_cpu]->pc);
-			if (cpu->cd.mips.gpr[MIPS_GPR_GP] != 0)
-				debug(" (gp=0x%016" PRIx64")", (uint64_t)
-				    cpu->cd.mips.gpr[MIPS_GPR_GP]);
+		if (cpu->cd.mips.gpr[MIPS_GPR_GP] != 0) {
+			if (cpu->is_32bit)
+				snprintf(cpu_startinfo + strlen(cpu_startinfo), sizeof(cpu_startinfo) - strlen(cpu_startinfo),
+				    " (gp=0x%08" PRIx32, (uint32_t) m->cpus[m->bootstrap_cpu]->cd.mips.gpr[MIPS_GPR_GP]);
+			else
+				snprintf(cpu_startinfo + strlen(cpu_startinfo), sizeof(cpu_startinfo) - strlen(cpu_startinfo),
+				    " (gp=0x%016" PRIx64, (uint64_t) cpu->cd.mips.gpr[MIPS_GPR_GP]);
+
+			char* gp_symbol = get_symbol_name_and_n_args(&m->symbol_context,
+			    cpu->cd.mips.gpr[MIPS_GPR_GP], &offset, &n_args);
+			if (gp_symbol != NULL)
+				snprintf(cpu_startinfo + strlen(cpu_startinfo),
+				    sizeof(cpu_startinfo) - strlen(cpu_startinfo),
+		    		    " <%s>", gp_symbol);
+
+			snprintf(cpu_startinfo + strlen(cpu_startinfo),
+			    sizeof(cpu_startinfo) - strlen(cpu_startinfo),
+	    		    ")");
 		}
 		break;
-
-	default:
-		if (cpu->is_32bit)
-			debug("0x%08" PRIx32, (uint32_t) cpu->pc);
-		else
-			debug("0x%016" PRIx64, (uint64_t) cpu->pc);
 	}
-	debug("\n");
+
+	debugmsg(SUBSYS_MACHINE, cpu_startinfo_cpuname, VERBOSITY_INFO, "%s", cpu_startinfo);
 
 	debug_indentation(-1);
+	
+	return true;
 }
 
 
@@ -734,14 +771,12 @@ bool emul_simple_init(struct emul *emul, char* tap_devname)
 	struct machine *m;
 
 	if (emul->n_machines != 1) {
-		fprintf(stderr, "emul_simple_init(): n_machines != 1\n");
-		exit(1);
+		debugmsg(SUBSYS_STARTUP, "emul_simple_init()", VERBOSITY_ERROR,
+		    "n_machines = %i (should be 1!)", emul->n_machines);
+		return false;
 	}
 
 	m = emul->machines[0];
-
-	debug("Simple setup...\n");
-	debug_indentation(1);
 
 	/*  Create a simple network:  */
 	emul->net = net_init(emul, NET_INIT_FLAG_GATEWAY,
@@ -754,11 +789,7 @@ bool emul_simple_init(struct emul *emul, char* tap_devname)
 		return false;
 
 	/*  Create the machine:  */
-	emul_machine_setup(m, extra_argc, extra_argv, 0, NULL);
-
-	debug_indentation(-1);
-
-	return true;
+	return emul_machine_setup(m, extra_argc, extra_argv, 0, NULL);
 }
 
 
@@ -771,7 +802,8 @@ struct emul *emul_create_from_configfile(char *fname)
 {
 	struct emul *e = emul_new(fname);
 
-	debug("Creating emulation from configfile \"%s\":\n", fname);
+	debugmsg(SUBSYS_EMUL, "", VERBOSITY_INFO, "using configfile \"%s\"", fname);
+
 	debug_indentation(1);
 
 	emul_parse_config(e, fname);

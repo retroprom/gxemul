@@ -39,6 +39,7 @@
 #include "machine.h"
 #include "machine_pmax.h"
 #include "memory.h"
+#include "mips_cpu_types.h"
 #include "misc.h"
 
 #include "thirdparty/dec_prom.h"
@@ -728,6 +729,12 @@ abort();
 	 */
 	dev_ram_init(machine, 0xa0000000, 0x20000000,
 	    DEV_RAM_MIRROR | DEV_RAM_MIGHT_POINT_TO_DEVICES, 0x0, NULL);
+
+
+	if (machine->machine_type == MACHINE_PMAX &&
+	    cpu->cd.mips.cpu_type.mmu_model == MMU3K)
+		add_symbol_name(&machine->symbol_context,
+		    0x9fff0000, 0x10000, "r2k3k_cache", 0, 0);
 
 
 	if (!machine->prom_emulation)

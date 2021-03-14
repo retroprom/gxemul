@@ -334,6 +334,9 @@ struct cpu {
 	/*  CPU-specific name, e.g. "R2000", "21164PC", etc.  */
 	char		*name;
 
+	/*  Longer CPU info.  */
+	char		*cpuinfo;
+
 	/*  Full "path" to the CPU, e.g. "machine[0].cpu[0]":  */
 	char		*path;
 

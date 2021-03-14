@@ -364,12 +364,15 @@ static void debugger_cmd_emul(struct machine *m, char *args)
 		return;
 	}
 
-	debug("emulation \"%s\":\n", debugger_emul->name == NULL?
-	    "(simple setup)" : debugger_emul->name);
+	if (debugger_emul->name != NULL) {
+		debugmsg(SUBSYS_EMUL, "configuration", VERBOSITY_INFO, "\"%s\"", debugger_emul->name);
+		debug_indentation(1);
+	}
 
-	debug_indentation(1);
 	emul_dumpinfo(debugger_emul);
-	debug_indentation(-1);
+
+	if (debugger_emul->name != NULL)
+		debug_indentation(-1);
 }
 
 

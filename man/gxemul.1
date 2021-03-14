@@ -333,17 +333,6 @@ Show a trace tree of all function calls being made.
 Enable slow_serial_interrupts_hack_for_linux.
 .It Fl X
 Use X11. This option enables graphical framebuffers.
-.It Fl x
-Open up new xterms for emulated serial ports. The default behaviour is to 
-open up xterms when using configuration files, or if X11 is enabled. When 
-starting up a simple emulation session with settings directly on the 
-command line, and neither
-.Fl X
-nor
-.Fl x
-is used, then all output is confined to the terminal that
-.Nm
-started in.
 .It Fl Y Ar n
 Scale down framebuffer windows by
 .Ar n
@@ -412,6 +401,20 @@ is ignored. This option also sets
 .It Fl v
 Increase verbosity (show more debug messages). This option can be used
 multiple times.
+.It Fl x
+Open up separate terminal windows for emulated serial ports. The default behaviour is to 
+open up new terminals when using configuration files with more than one machine
+specified, or if X11 is enabled. When starting up a simple emulation
+session with settings directly on the command line (or when using configuration
+files with a single machine specification), and neither
+.Fl X
+nor
+.Fl x
+is used, then all output is confined to the terminal that
+.Nm
+started in.
+The default terminal to use is 'xterm', but this can be overriden by
+the XTERM environment variable.
 .El
 .Pp
 Configuration file startup:

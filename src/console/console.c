@@ -899,6 +899,11 @@ void console_debug_dump(struct machine *machine)
 void console_allow_slaves(int allow)
 {
 	allow_slaves = allow;
+
+	if (allow_slaves) {
+		for (int i = 0; i < n_console_handles; i++)
+			console_handles[i].using_xterm = USING_XTERM_BUT_NOT_YET_OPEN;
+	}
 }
 
 
