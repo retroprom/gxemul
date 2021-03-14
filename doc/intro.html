@@ -168,11 +168,12 @@ reasonable compromise to allow the emulator to be usable even on systems
 without X Windows.)
 
 <p>There is no way to send CTRL-B to the emulated program, when 
-typing in the main controlling terminal window. You either need to
-use <a href="configfiles.html">configuration files</a>, or use 
-<tt><b>-x</b></tt>. Both these solutions cause new xterms to be opened for 
-each emulated serial port that is written to. CTRL-B and CTRL-C both have 
-their original meaning in those xterm windows.
+typing in the main controlling terminal window. By using the <tt>-x<tt>
+command line option, separate terminal windows (xterms) will be launched
+for each serial I/O port being written to. This also happens when you use
+<a href="configfiles.html">configuration files</a> with more than one
+machine specified. CTRL-B and CTRL-C both have their original meaning
+in those xterm windows.
 
 
 
