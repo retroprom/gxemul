@@ -23,6 +23,12 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 <p><pre>
 <b>Current "short-list":</b>
 
+o) Apply Chris Berry's patch for tap device use on Linux.
+o) Try tap networking on FreeBSD host (e.g. using netbsd/pmax guest).
+	Performance better than when using simulated NAT?
+o) debugmsg:ify all src/net/.
+o) update src/net/README
+o) Try all guest OSes in the documentation, cleaning up debugmsg related stuff as I go along.
 o) Per-arch overrides for whether to print symbols when executing in userspace?
 	e.g. MIPS is OK since symbols are at kseg0.
 	e.g. M88K is not OK, since userland and supervisor are the same numeric values.
@@ -35,8 +41,9 @@ o) verbosity settings for debug messages for individual subsystems:
 o) Reimplement after the C++ to C switch:
 	x. i960 CPU: Disassembly of at least i960CA instructions.
 	x. HP700/RX machine skeleton.
-	x. Add RISC-V (again); possibly using 16-bit base encoding, treating
-		32-bit instructions as "two slots". Special case, but could work.
+	x. Add RISC-V skeleton again; possibly using 16-bit base encoding, treating
+		32-bit instructions as "two slots". Special case, not as
+		efficient as using full 32-bit instructions as the base case, but could work.
 o) CTRL-T in main window could print SIGINFO-like status summary
    o)  CTRL-T should then be checked in the emul loop, not in console.c?
    o)  also CTRL-T at debugger prompt?
@@ -51,6 +58,16 @@ o) Experiment with Mouse capture for X11 windows?
 	XGrabKeyboard too?
 	Release using left CTRL+ALT?
 	Change window title during capture.
+o) Investigate allowing config files to be used without implicit -x, when there
+	is just one machine being emulated in the config file.
+o) When using e.g. "-E alpha" and there was more than one subtype, then _list_
+   them instead of just complaining "Maybe you forgot the -e command line option".
+o) Go through Lance Ethernet interrupt code and memory mapping, to look at
+   performance. (Performance when downloading things from the internet is
+   extremely poor, from inside NetBSD/pmax and OpenBSD/luna88k.)
+o) Go through the DECstation serial controller, and make sure that avail* and
+   buffers are handled similar to how the luna88k does it. If possible, try to
+   get rid of the "slow linux interrupt hack".
 o) Disk overlay short-hand for temporary images. -R?
 o) Continue on the Luna 88k machine:
 	Color framebuffer
@@ -84,8 +101,8 @@ o) testmips: Add support for more than 256 MB ram, e.g. by adding
 	"actual RAM" at the 1 GB offset. A 32 bit machine can thus use
 	3 GB, no limit on 64 bit machines. Low 256 MB can be considered
 	a mirror of first 256 MB of RAM.
-o) Malta: see if 2 GB ram can be used there as well (like the SGI O2 mode).
-o) Command line option for forcing fsync on each disk image write.
+o) Command line option for forcing fsync on each disk image write; see
+	do_fsync in src/disk/diskimage.c
 o) O(n) -> O(1) 64-bit translation invalidation, _IF_ it is possible to
 	detect non-canonical virtal addresses being entered into the
 	translation arrays. Would be nice.
@@ -136,14 +153,6 @@ Disk image options:
 	overlay (created automatically in /tmp) which is removed when the
 	emulator exits. If this is implemented, update the misc
 	documentation, and the man page.
-
-X11:
-	-y n: Command line option for taking framebuffer screen shots n times
-	per second? Look for "ppm image dumps" in dev_fb.cc.html. if 
-	implemented, add to man page.
-
-Wayland:
-	-W ?
 
 MIPS:
 	o)  ALU operations (typically addiu, or, etc) can be hardcoded/inlined for common
@@ -518,6 +527,7 @@ ASC SCSI controller:
 	    NetBSD 4.x seems to work? :)
 
 Better framebuffer and X-windows functionality:
+	o)  Wayland? -W ?
 	o)  Do a complete rewrite of the framebuffer/console stuff, so that:
 		1)  It does not rely on X11 specifically.
 		2)  It is possible to interact with emulated framebuffers
@@ -563,7 +573,7 @@ Better framebuffer and X-windows functionality:
 	<ul>
 		<li>Build on as many platforms as possible, including inside guest OSes in GXemul itself.
 		<li>If there is time: Install as many as possible of the guest OSes in the documentation;
-		the documentation may need to be updated if there are regressions.
+			the documentation may need to be updated if there are regressions.
 		<li>If there is more time: try newer versions of the officially
 			supported guest OSes (sometimes these work, sometimes not).
 		<li>If there is even more time: see what the status is for the
