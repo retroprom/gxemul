@@ -726,8 +726,10 @@ void emul_dumpinfo(struct emul *e)
  *
  *	o)  Initialize a network.
  *	o)  Initialize one machine.
+ *
+ *  Returns true if the initialization succeeded, false if it failed.
  */
-void emul_simple_init(struct emul *emul)
+bool emul_simple_init(struct emul *emul, char* tap_devname)
 {
 	struct machine *m;
 
@@ -743,15 +745,20 @@ void emul_simple_init(struct emul *emul)
 
 	/*  Create a simple network:  */
 	emul->net = net_init(emul, NET_INIT_FLAG_GATEWAY,
-	    NULL,
+	    tap_devname,
 	    NET_DEFAULT_IPV4_MASK,
 	    NET_DEFAULT_IPV4_LEN,
 	    NULL, 0, 0, NULL);
+
+	if (emul->net == NULL)
+		return false;
 
 	/*  Create the machine:  */
 	emul_machine_setup(m, extra_argc, extra_argv, 0, NULL);
 
 	debug_indentation(-1);
+
+	return true;
 }
 
 

@@ -669,7 +669,8 @@ void net_dumpinfo(struct net *net)
 	debug_indentation(iadd);
 
 	if (net->tapdev) {
-		debug("tap device: %s\n", net->tapdev);
+		debugmsg(SUBSYS_NET, "tap", VERBOSITY_INFO,
+		    "using device %s", net->tapdev);
 		debug_indentation(-iadd);
 		return;
 	}
@@ -725,7 +726,7 @@ void net_dumpinfo(struct net *net)
  *  Network settings are registered if settings_prefix is non-NULL.
  *  (The one calling net_init() is also responsible for calling net_deinit().)
  *
- *  On failure, exit() is called.
+ *  On failure, NULL is returned.
  */
 struct net *net_init(struct emul *emul, int init_flags,
 	const char *tapdev,
@@ -753,8 +754,11 @@ struct net *net_init(struct emul *emul, int init_flags,
 	 *  none of the other stuff.
 	 */
 	if (tapdev) {
-		if (! net_tap_init(net, tapdev))
-			exit(1);
+		if (!net_tap_init(net, tapdev)) {
+			free(net);
+			return NULL;
+		}
+
 		net_dumpinfo(net);
 		return net;
 	}
@@ -767,14 +771,17 @@ struct net *net_init(struct emul *emul, int init_flags,
 	if (res < 1) {
 		fprintf(stderr, "net_init(): could not parse IPv4 address"
 		    " '%s'\n", ipv4addr);
-		exit(1);
+		free(net);
+		return NULL;
 	}
 
 	if (netipv4len < 1 || netipv4len > 30) {
 		fprintf(stderr, "net_init(): extremely weird ipv4 "
 		    "network length (%i)\n", netipv4len);
-		exit(1);
+		free(net);
+		return NULL;
 	}
+
 	net->netmask_ipv4_len = netipv4len;
 
 	net->nameserver_known = 0;
@@ -788,7 +795,8 @@ struct net *net_init(struct emul *emul, int init_flags,
 		net->local_port_socket = socket(AF_INET, SOCK_DGRAM, 0);
 		if (net->local_port_socket < 0) {
 			perror("socket");
-			exit(1);
+			free(net);
+			return NULL;
 		}
 
 		memset((char *)&si_self, 0, sizeof(si_self));
@@ -798,7 +806,8 @@ struct net *net_init(struct emul *emul, int init_flags,
 		if (bind(net->local_port_socket, (struct sockaddr *)&si_self,
 		    sizeof(si_self)) < 0) {
 			perror("bind");
-			exit(1);
+			free(net);
+			return NULL;
 		}
 
 		/*  Set the socket to non-blocking:  */
@@ -826,8 +835,10 @@ struct net *net_init(struct emul *emul, int init_flags,
 			if (hp == NULL) {
 				fprintf(stderr, "could not resolve '%s'\n",
 				    rnp->name);
-				exit(1);
+				free(net);
+				return NULL;
 			}
+
 			memcpy(&rnp->ipv4_addr, hp->h_addr, hp->h_length);
 			free(rnp->name);
 
@@ -836,8 +847,10 @@ struct net *net_init(struct emul *emul, int init_flags,
 			if (strchr(rnp->name, ':') == NULL) {
 				fprintf(stderr, "Remote network '%s' is not "
 				    "'host:portnr'?\n", rnp->name);
-				exit(1);
+				free(net);
+				return NULL;
 			}
+
 			rnp->portnr = atoi(strchr(rnp->name, ':') + 1);
 		}
 	}

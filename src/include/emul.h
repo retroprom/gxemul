@@ -2,7 +2,7 @@
 #define	EMUL_H
 
 /*
- *  Copyright (C) 2004-2010  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2004-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -60,7 +60,7 @@ struct machine *emul_add_machine(struct emul *e, char *name);
 void emul_machine_setup(struct machine *machine, int n_load, char **load_names,
 	int n_devices, char **device_names);
 void emul_dumpinfo(struct emul *e);
-void emul_simple_init(struct emul *emul);
+bool emul_simple_init(struct emul *emul, char* tap_devname);
 struct emul *emul_create_from_configfile(char *fname);
 void emul_run(struct emul *emul);
 

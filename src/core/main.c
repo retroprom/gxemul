@@ -167,6 +167,7 @@ static void usage(bool longusage)
 	printf("            For other emulation modes, if the boot disk is an"
 	    " ISO9660\n            filesystem, -j sets the name of the"
 	    " kernel to load.\n");
+	printf("  -L tapdev enable tap networking using device 'tapdev'\n");
 	printf("  -M m      emulate m MBs of physical RAM\n");
 	printf("  -N        display nr of instructions/second average, at"
 	    " regular intervals\n");
@@ -253,7 +254,7 @@ static void usage(bool longusage)
  *  Reads command line arguments.
  */
 int get_cmd_args(int argc, char *argv[], struct emul *emul,
-	char ***diskimagesp, int *n_diskimagesp)
+	char ***diskimagesp, int *n_diskimagesp, char **tap_devname)
 {
 	int using_switch_e = 0, using_switch_E = 0;
 	bool using_switch_Z = false;
@@ -266,7 +267,7 @@ int get_cmd_args(int argc, char *argv[], struct emul *emul,
 	struct machine *m = emul_add_machine(emul, NULL);
 
 	const char *opts =
-	    "AC:c:Dd:E:e:GHhI:iJj:k:KM:Nn:Oo:p:QqRrSs:TtUVvW:"
+	    "AC:c:Dd:E:e:GHhI:iJj:k:KL:M:Nn:Oo:p:QqRrSs:TtUVvW:"
 #ifdef WITH_X11
 	    "XxY:"
 #endif
@@ -354,6 +355,9 @@ int get_cmd_args(int argc, char *argv[], struct emul *emul,
 			break;
 		case 'K':
 			debugger_enter_at_end_of_run = true;
+			break;
+		case 'L':
+			*tap_devname = strdup(optarg);
 			break;
 		case 'M':
 			m->physical_ram_in_mb = atoi(optarg);
@@ -578,7 +582,7 @@ int main(int argc, char *argv[])
 
 	struct emul *emul;
 	bool using_config_file = false;
-
+	char *tap_devname = NULL;
 	char **diskimages = NULL;
 	int n_diskimages = 0;
 	int i;
@@ -627,7 +631,7 @@ int main(int argc, char *argv[])
 	settings_add(global_settings, "emul", 1,
 	    SETTINGS_TYPE_SUBSETTINGS, 0, emul->settings);
 
-	get_cmd_args(argc, argv, emul, &diskimages, &n_diskimages);
+	get_cmd_args(argc, argv, emul, &diskimages, &n_diskimages, &tap_devname);
 
 	if (!skip_srandom_call) {
 		struct timeval tv;
@@ -658,11 +662,14 @@ int main(int argc, char *argv[])
 				    "the command\nline, or start one or more "
 				    "emulations using configuration files."
 				    " Not both.\n");
-				exit(1);
+				return 1;
 			}
 
 		/*  Initialize one emul:  */
-		emul_simple_init(emul);
+		if (!emul_simple_init(emul, tap_devname)) {
+			fprintf(stderr, "Could not initialize the emulation.\n");
+			return 1;
+		}
 	}
 
 	/*  Initialize an emulation from a config file:  */
@@ -673,7 +680,7 @@ int main(int argc, char *argv[])
 			if (using_config_file) {
 				fprintf(stderr, "More than one configuration "
 				    "file cannot be used.\n");
-				exit(1);
+				return 1;
 			}
 
 			if (strlen(s) == 0 && i+1 < argc && *argv[i+1] != '@')
@@ -704,14 +711,14 @@ int main(int argc, char *argv[])
 		    " For example:\n\n    %s -e 3max -d disk.img\n\n"
 		    "to boot an emulated DECstation 5000/200 with a disk "
 		    "image.\n", progname);
-		exit(1);
+		return 1;
 	}
 
 	if (emul->machines[0]->machine_type == MACHINE_NONE) {
 		printf("No machine type specified? Run  gxemul -H  for a list\n"
 		    "of available machine types. Use the -e or -E option(s)\n"
 		    "to specify the machine type.\n");
-		exit(1);
+		return 1;
 	}
 
 	device_set_exit_on_error(0);

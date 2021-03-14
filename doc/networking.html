@@ -151,7 +151,14 @@ the host or by the host's connected LAN.
 <p>Support for the <i>tap</i> device was developed on NetBSD, but should
 also work on FreeBSD, OpenBSD, and Linux hosts.
 
-<p>Here is a simple example:
+<p>The easiest way to enable tap device networking is to use the <tt>-L</tt>
+command line option, e.g.:
+
+<p><pre>gxemul -e 3max <b>-L /dev/tap0</b> -d nbsd_pmax.img
+</pre>
+
+<p>Here is a simple example of how to enable it when using configuration
+files:
 
 <p><pre>
 <font color="#2020cf">!  Configuration file for

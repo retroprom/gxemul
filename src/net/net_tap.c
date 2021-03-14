@@ -159,29 +159,32 @@ void net_tap_tx(struct net *net, struct nic_data *nic,
 /*
  *  net_tap_init():
  *
- *  Initialize the tap interface.  Returns 1 if successful, 0 otherwise.
+ *  Initialize the tap interface.  Returns true if successful, false otherwise.
  */
-int net_tap_init(struct net *net, const char *tapdev)
+bool net_tap_init(struct net *net, const char *tapdev)
 {
 	int fd;
 	int one = 1;
 
 	fd = open(tapdev, O_RDWR);
 	if (fd < 0) {
-		fatal("[ net: unable to open tap device '%s': %s ]\n",
+		debugmsg(SUBSYS_NET, "tap", VERBOSITY_ERROR,
+		    "unable to open tap device '%s': %s",
 		    tapdev, strerror(errno));
-		return 0;
+		return false;
 	}
 
 	if (ioctl(fd, FIONBIO, &one) < 0) {
-		fatal("[ net: unable to set non-blocking mode on "
-		    "tap device '%s': %s ]\n", tapdev, strerror(errno));
+		debugmsg(SUBSYS_NET, "tap", VERBOSITY_ERROR,
+		    "unable to set non-blocking mode on "
+		    "tap device '%s': %s", tapdev, strerror(errno));
 		close(fd);
-		return 0;
+		return false;
 	}
 
 	net->tapdev = strdup(tapdev);
 	net->tap_fd = fd;
 
-	return 1;
+	return true;
 }
+

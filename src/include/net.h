@@ -31,6 +31,7 @@
  *  Emulated network support.  (See net.c for more info.)
  */
 
+#include <stdbool.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -167,7 +168,7 @@ struct net {
 void net_tap_rx_avail(struct net *net);
 void net_tap_tx(struct net *net, struct nic_data *nic, unsigned char *packet,
 	int len);
-int net_tap_init(struct net *net, const char *tapdev);
+bool net_tap_init(struct net *net, const char *tapdev);
 
 /*  net_ether.cc  */
 int net_ether_eq(const uint8_t *a1, const uint8_t *a2);
