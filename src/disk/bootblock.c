@@ -210,8 +210,11 @@ int load_bootblock(struct machine *m, struct cpu *cpu,
 		bootblock_pc |= 0xffffffffa0000000ULL;
 		cpu->pc = bootblock_pc;
 
-		debug("DEC boot: loadaddr=0x%08" PRIx32", pc=0x%08" PRIx32,
+		debugmsg(SUBSYS_MACHINE, "DEC boot", VERBOSITY_INFO,
+		    "loadaddr=0x%08" PRIx32", pc=0x%08" PRIx32,
 		    (uint32_t) bootblock_loadaddr, (uint32_t) bootblock_pc);
+
+		debug_indentation(1);
 
 		readofs = 0x18;
 
@@ -233,7 +236,7 @@ int load_bootblock(struct machine *m, struct cpu *cpu,
 			if (n_blocks < 1)
 				break;
 
-			debug(readofs == 0x18? ": %i" : " + %i", n_blocks);
+			debug(readofs == 0x18? "%i" : " + %i", n_blocks);
 
 			if (n_blocks * 512 > 65536)
 				fatal("\nWARNING! Unusually large bootblock "
@@ -257,7 +260,8 @@ int load_bootblock(struct machine *m, struct cpu *cpu,
 			readofs += 8;
 		}
 
-		debug(readofs == 0x18? ": no blocks?\n" : " blocks\n");
+		debug(readofs == 0x18? " no blocks?\n" : " blocks\n");
+		debug_indentation(-1);
 		return 1;
 
 	case MACHINE_SGI:

@@ -1133,7 +1133,8 @@ void diskimage_dump_info(struct machine *machine)
 	struct diskimage *d = machine->first_diskimage;
 
 	while (d != NULL) {
-		debug("diskimage: %s\n", d->fname);
+		debugmsg(SUBSYS_MACHINE, "diskimage", VERBOSITY_INFO, "%s", d->fname);
+
 		debug_indentation(iadd);
 
 		switch (d->type) {
