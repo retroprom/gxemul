@@ -24,10 +24,16 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 <b>Current "short-list":</b>
 
 o) Apply Chris Berry's patch for tap device use on Linux.
+o) Before 0.7.0 is released:
+	o) update doc/*html wherever startup messages appear to show the current message style.
+	o) update Thanks list
 o) Try tap networking on FreeBSD host (e.g. using netbsd/pmax guest).
 	Performance better than when using simulated NAT?
 o) debugmsg:ify all src/net/.
 o) update src/net/README
+o) When emulating multiple machines in one config file, and one machine halts,
+	there is an infinite number of "machine: All CPUs stopped" printed to
+	the terminal.
 o) Try all guest OSes in the documentation, cleaning up debugmsg related stuff as I go along.
 o) Per-arch overrides for whether to print symbols when executing in userspace?
 	e.g. MIPS is OK since symbols are at kseg0.
@@ -36,6 +42,8 @@ o) verbosity settings for debug messages for individual subsystems:
 	Modify and add a new command:
 		quiet [on|off] -> quiet [subsystem] [on|off]
 		verbosity [subsystem] [n]   (where n is a number? 0,1,2,3)
+			without args shows the current verbosity levels (and
+				whether or not they use separate terminals for output?)
 	Command for launching a separate terminal for output from a specified subsystem?
 		(Or a flag to the verbosity command?)
 o) Reimplement after the C++ to C switch:
@@ -44,9 +52,16 @@ o) Reimplement after the C++ to C switch:
 	x. Add RISC-V skeleton again; possibly using 16-bit base encoding, treating
 		32-bit instructions as "two slots". Special case, not as
 		efficient as using full 32-bit instructions as the base case, but could work.
-o) CTRL-T in main window could print SIGINFO-like status summary
-   o)  CTRL-T should then be checked in the emul loop, not in console.c?
-   o)  also CTRL-T at debugger prompt?
+		4 KB page => 2 K slots plus several at the end, since a long
+		instruction would have its 'next' instruction point way outside
+		the page.
+		Use the latest RISC-V specs, and make sure to check for
+		implementation C (Compact), I (Integer), F etc.
+o) Debugger:
+	o) In the debugger, type "abcdefg" followed by CTRL-C. Result: only "ab" is
+		shown after the prompt. Fix this.
+	o) CTRL-T in main window could print SIGINFO-like status summary
+	   o)  CTRL-T should also checked in the emul loop, not in console.c?
 o) Experiment with Mouse capture for X11 windows?
 	XGrabPointer?
 		grab window = same as confine to?
