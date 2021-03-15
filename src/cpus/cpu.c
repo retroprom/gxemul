@@ -78,7 +78,12 @@ struct cpu *cpu_new(struct memory *mem, struct machine *machine,
 
 	cpu->memory_rw  = NULL;
 	cpu->name       = cpu_type_name;
-	cpu->cpuinfo    = "TODO debugmsg:ify";
+	cpu->cpuinfo    = "TODO debugmsg:ify";	// OR: better: use cpu_dumpinfo() to
+						// dump compact or verbose info!
+						// Add a bool argument?
+						// Compact during bootup (unless -v is used),
+						// and verbose if running "emul" or "machine"
+						// at runtime.
 	cpu->mem        = mem;
 	cpu->machine    = machine;
 	cpu->cpu_id     = cpu_id;
@@ -270,11 +275,6 @@ void cpu_functioncall_trace(struct cpu *cpu, uint64_t f)
 		cpu->machine->cpu_family->functioncall_trace(cpu, n_args);
 
 	fatal(")>\n");
-
-#ifdef PRINT_MEMORY_CHECKSUM
-	/*  Temporary hack for finding bugs:  */
-	fatal("call chksum=%016" PRIx64"\n", memory_checksum(cpu->mem));
-#endif
 }
 
 

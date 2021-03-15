@@ -544,47 +544,6 @@ unsigned char *memory_paddr_to_hostaddr(struct memory *mem,
 }
 
 
-#define	UPDATE_CHECKSUM(value) {					\
-		internal_state -= 0x118c7771c0c0a77fULL;		\
-		internal_state = ((internal_state + (value)) << 7) ^	\
-		    (checksum >> 11) ^ ((checksum - (value)) << 3) ^	\
-		    (internal_state - checksum) ^ ((value) - internal_state); \
-		checksum ^= internal_state;				\
-	}
-
-
-/*
- *  memory_checksum():
- *
- *  Calculate a 64-bit checksum of everything in a struct memory. This is
- *  useful for tracking down bugs; an old (presumably working) version of
- *  the emulator can be compared to a newer (buggy) version.
- */
-uint64_t memory_checksum(struct memory *mem)
-{
-	uint64_t internal_state = 0x80624185376feff2ULL;
-	uint64_t checksum = 0xcb9a87d5c010072cULL;
-	const size_t n_entries = (1 << BITS_PER_PAGETABLE) - 1;
-	const size_t len = (1 << BITS_PER_MEMBLOCK) / sizeof(uint64_t);
-	size_t entry, i;
-
-	for (entry=0; entry<=n_entries; entry++) {
-		uint64_t **table = (uint64_t **) mem->pagetable;
-		uint64_t *memblock = table[entry];
-
-		if (memblock == NULL) {
-			UPDATE_CHECKSUM(0x1198ab7c8174a76fULL);
-			continue;
-		}
-
-		for (i=0; i<len; i++)
-			UPDATE_CHECKSUM(memblock[i]);
-	}
-
-	return checksum;
-}
-
-
 /*
  *  memory_warn_about_unimplemented_addr():
  *
@@ -614,21 +573,29 @@ bool memory_warn_about_unimplemented_addr(struct cpu *cpu, struct memory *mem,
 
 	// Not the prettiest, but should work fine.
 	if (cpu->is_32bit)
-		debugmsg_cpu(cpu, SUBSYS_MEMORY, "", verbosity, "%s non-existant memory;"
-			" len=%i paddr=0x%08" PRIx32 " pc=0x%08" PRIx32 " <%s>",
-		    writeflag ? "WRITE to" : "READ from",
-		    len,
+		debugmsg_cpu(cpu, SUBSYS_MEMORY,
+		    writeflag ? "WRITE" : "READ",
+		    verbosity, "%s non-existant "
+			"paddr=0x%08" PRIx32 " len=%i pc=0x%08" PRIx32 "%s%s%s",
+		    writeflag ? "to" : "from",
 		    (uint32_t) paddr,
-		    (uint32_t) cpu->pc,
-		    symbol ? symbol : "?");
-	else
-		debugmsg_cpu(cpu, SUBSYS_MEMORY, "", verbosity, "%s non-existant memory;"
-			" len=%i paddr=0x%016" PRIx64 " pc=0x%016" PRIx64 " <%s>",
-		    writeflag ? "WRITE to" : "READ from",
 		    len,
+		    (uint32_t) cpu->pc,
+		    symbol ? " <" : "",
+		    symbol ? symbol : "",
+		    symbol ? ">" : "");
+	else
+		debugmsg_cpu(cpu, SUBSYS_MEMORY,
+		    writeflag ? "WRITE" : "READ",
+		    verbosity, "%s non-existant "
+			"paddr=0x%016" PRIx64 " len=%i pc=0x%016" PRIx64 "%s%s%s",
+		    writeflag ? "to" : "from",
 		    (uint64_t) paddr,
+		    len,
 		    (uint64_t) cpu->pc,
-		    symbol ? symbol : "?");
+		    symbol ? " <" : "",
+		    symbol ? symbol : "",
+		    symbol ? ">" : "");
 
 	if (cpu->machine->halt_on_nonexistant_memaccess) {
 		// Halt all CPUs, even though the bad memory access was on

@@ -159,8 +159,6 @@ void memory_device_register(struct memory *mem, const char *,
 	void *extra, int flags, unsigned char *dyntrans_data);
 void memory_device_remove(struct memory *mem, int i);
 
-uint64_t memory_checksum(struct memory *mem);
-
 void dump_mem_string(struct cpu *cpu, uint64_t addr);
 void store_string(struct cpu *cpu, uint64_t addr, const char *s);
 int store_64bit_word(struct cpu *cpu, uint64_t addr, uint64_t data64);
