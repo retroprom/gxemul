@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2019  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -135,21 +135,6 @@ int arm_cpu_new(struct cpu *cpu, struct memory *mem,
 	} else {
 		cpu->cd.arm.cpsr |= ARM_MODE_SVC32;
 		cpu->cd.arm.control |= ARM_CONTROL_R;
-	}
-
-	/*  Only show name and caches etc for CPU nr 0:  */
-	if (cpu_id == 0) {
-		debug("%s", cpu->name);
-		if (cpu->cd.arm.cpu_type.icache_shift != 0 ||
-		    cpu->cd.arm.cpu_type.dcache_shift != 0) {
-			int isize = cpu->cd.arm.cpu_type.icache_shift;
-			int dsize = cpu->cd.arm.cpu_type.dcache_shift;
-			if (isize != 0)
-				isize = 1 << (isize - 10);
-			if (dsize != 0)
-				dsize = 1 << (dsize - 10);
-			debug(" (I+D = %i+%i KB)", isize, dsize);
-		}
 	}
 
 	/*  TODO: Some of these values (iway and dway) aren't used yet:  */
@@ -309,12 +294,14 @@ void arm_translation_table_set_l1_b(struct cpu *cpu, uint32_t vaddr,
 /*
  *  arm_cpu_dumpinfo():
  */
-void arm_cpu_dumpinfo(struct cpu *cpu)
+void arm_cpu_dumpinfo(struct cpu *cpu, bool verbose)
 {
 	struct arm_cpu_type_def *ct = &cpu->cd.arm.cpu_type;
 
-	debug(" (I+D = %i+%i KB)\n",
-	    (1 << ct->icache_shift) / 1024, (1 << ct->dcache_shift) / 1024);
+	debugmsg(SUBSYS_MACHINE, "cpu", VERBOSITY_INFO, "%s (I+D = %i+%i KB)",
+	    cpu->name,
+	    (1 << ct->icache_shift) / 1024,
+	    (1 << ct->dcache_shift) / 1024);
 }
 
 

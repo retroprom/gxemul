@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -71,7 +71,6 @@ void ppc_irq_interrupt_deassert(struct interrupt *interrupt);
 int ppc_cpu_new(struct cpu *cpu, struct memory *mem, struct machine *machine,
 	int cpu_id, char *cpu_type_name)
 {
-	int any_cache = 0;
 	int i, found;
 	struct ppc_cpu_type_def cpu_type_defs[] = PPC_CPU_TYPE_DEFS;
 
@@ -136,30 +135,6 @@ int ppc_cpu_new(struct cpu *cpu, struct memory *mem, struct machine *machine,
 	}
 
 	cpu->translate_v2p = ppc_translate_v2p;
-
-	/*  Only show name and caches etc for CPU nr 0 (in SMP machines):  */
-	if (cpu_id == 0) {
-		debug("%s", cpu->cd.ppc.cpu_type.name);
-
-		if (cpu->cd.ppc.cpu_type.icache_shift != 0)
-			any_cache = 1;
-		if (cpu->cd.ppc.cpu_type.dcache_shift != 0)
-			any_cache = 1;
-		if (cpu->cd.ppc.cpu_type.l2cache_shift != 0)
-			any_cache = 1;
-
-		if (any_cache) {
-			debug(" (I+D = %i+%i KB",
-			    (int)(1 << (cpu->cd.ppc.cpu_type.icache_shift-10)),
-			    (int)(1 << (cpu->cd.ppc.cpu_type.dcache_shift-10)));
-			if (cpu->cd.ppc.cpu_type.l2cache_shift != 0) {
-				debug(", L2 = %i KB",
-				    (int)(1 << (cpu->cd.ppc.cpu_type.
-				    l2cache_shift-10)));
-			}
-			debug(")");
-		}
-	}
 
 	cpu->cd.ppc.spr[SPR_PIR] = cpu_id;
 
@@ -232,6 +207,9 @@ int ppc_cpu_new(struct cpu *cpu, struct memory *mem, struct machine *machine,
 		interrupt_handler_register(&templ);
 	}
 
+	if (cpu->is_32bit)
+		cpu->vaddr_mask = 0x00000000ffffffffULL;
+
 	return 1;
 }
 
@@ -261,35 +239,22 @@ void ppc_cpu_list_available_types(void)
 /*
  *  ppc_cpu_dumpinfo():
  */
-void ppc_cpu_dumpinfo(struct cpu *cpu)
+void ppc_cpu_dumpinfo(struct cpu *cpu, bool verbose)
 {
 	struct ppc_cpu_type_def *ct = &cpu->cd.ppc.cpu_type;
+	int l2kb = 0;
+	if (ct->l2cache_shift)
+		l2kb = (1 << ct->l2cache_shift) / 1024;
 
-	debug(" (%i-bit ", cpu->cd.ppc.bits);
-
-	switch (cpu->cd.ppc.mode) {
-	case MODE_PPC:
-		debug("PPC");
-		break;
-	case MODE_POWER:
-		debug("POWER");
-		break;
-	default:
-		debug("_INTERNAL ERROR_");
-	}
-
-	debug(", I+D = %i+%i KB",
+	debugmsg(SUBSYS_MACHINE, "cpu", VERBOSITY_INFO,
+	    "%s (%i-bit, %s, I+D = %i+%i KB, L2 = %i %cB)",
+	    cpu->name,
+	    cpu->cd.ppc.bits,
+	    cpu->cd.ppc.mode == MODE_PPC ? "PPC" : "POWER",
 	    (1 << ct->icache_shift) / 1024,
-	    (1 << ct->dcache_shift) / 1024);
-
-	if (ct->l2cache_shift) {
-		int kb = (1 << ct->l2cache_shift) / 1024;
-		debug(", L2 = %i %cB",
-		    kb >= 1024? kb / 1024 : kb,
-		    kb >= 1024? 'M' : 'K');
-	}
-
-	debug(")\n");
+	    (1 << ct->dcache_shift) / 1024,
+	    l2kb >= 1024? l2kb / 1024 : l2kb,
+	    l2kb >= 1024? 'M' : 'K');
 }
 
 

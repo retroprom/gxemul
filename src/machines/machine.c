@@ -416,7 +416,7 @@ void machine_dumpinfo(struct machine *m)
 		debug("PROM emulation disabled\n");
 
 	for (i=0; i<m->ncpus; i++)
-		cpu_dumpinfo(m, m->cpus[i]);
+		cpu_dumpinfo(m, m->cpus[i], true);
 
 	if (m->ncpus > 1)
 		debug("Bootstrap cpu is nr %i\n", m->bootstrap_cpu);

@@ -2,7 +2,7 @@
 #define	CPU_MIPS_H
 
 /*
- *  Copyright (C) 2003-2019  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -297,7 +297,7 @@ void mips_cpu_exception(struct cpu *cpu, int exccode, int tlb, uint64_t vaddr,
         /*  uint64_t pagemask,  */  int coproc_nr, uint64_t vaddr_vpn2,
         int vaddr_asid, int x_64);
 int mips_cpu_run(struct emul *emul, struct machine *machine);
-void mips_cpu_dumpinfo(struct cpu *cpu);
+void mips_cpu_dumpinfo(struct cpu *cpu, bool verbose);
 void mips_cpu_list_available_types(void);
 int mips_cpu_family_init(struct cpu_family *);
 

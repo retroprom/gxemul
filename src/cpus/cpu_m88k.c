@@ -131,11 +131,6 @@ int m88k_cpu_new(struct cpu *cpu, struct memory *mem,
 
 	cpu->instruction_has_delayslot = m88k_cpu_instruction_has_delayslot;
 
-	/*  Only show name and caches etc for CPU nr 0:  */
-	if (cpu_id == 0) {
-		debug("%s", cpu->name);
-	}
-
 
 	/*
 	 *  Add register names as settings:
@@ -195,14 +190,12 @@ int m88k_cpu_new(struct cpu *cpu, struct memory *mem,
 /*
  *  m88k_cpu_dumpinfo():
  */
-void m88k_cpu_dumpinfo(struct cpu *cpu)
+void m88k_cpu_dumpinfo(struct cpu *cpu, bool verbose)
 {
-	/*  struct m88k_cpu_type_def *ct = &cpu->cd.m88k.cpu_type;  */
-
-	debug(", %s-endian",
+	debugmsg(SUBSYS_MACHINE, "cpu", VERBOSITY_INFO,
+	    "%s (%s-endian)",
+	    cpu->name,
 	    cpu->byte_order == EMUL_BIG_ENDIAN? "Big" : "Little");
-
-	debug("\n");
 }
 
 

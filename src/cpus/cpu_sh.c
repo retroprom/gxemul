@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2020  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -111,11 +111,6 @@ int sh_cpu_new(struct cpu *cpu, struct memory *mem, struct machine *machine,
 	    sh_invalidate_translation_caches;
 	cpu->invalidate_code_translation =
 	    sh_invalidate_code_translation;
-
-	/*  Only show name and caches etc for CPU nr 0 (in SMP machines):  */
-	if (cpu_id == 0) {
-		debug("%s", cpu->name);
-	}
 
 	/*  Initial value of FPSCR (according to the SH4 manual):  */
 	cpu->cd.sh.fpscr = 0x00040001;
@@ -380,9 +375,11 @@ void sh_cpu_list_available_types(void)
 /*
  *  sh_cpu_dumpinfo():
  */
-void sh_cpu_dumpinfo(struct cpu *cpu)
+void sh_cpu_dumpinfo(struct cpu *cpu, bool verbose)
 {
-	debug(" (%s-endian)\n",
+	debugmsg(SUBSYS_MACHINE, "cpu", VERBOSITY_INFO,
+	    "%s (%s-endian)",
+	    cpu->name,
 	    cpu->byte_order == EMUL_BIG_ENDIAN? "Big" : "Little");
 }
 

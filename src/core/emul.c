@@ -466,9 +466,8 @@ bool emul_machine_setup(struct machine *m, int n_load, char **load_names,
 
 	machine_setup(m);
 
-	debugmsg(SUBSYS_MACHINE, cpuname, VERBOSITY_INFO, "%s", cpu->cpuinfo);
+	cpu_dumpinfo(m, cpu, false);
 	debugmsg(SUBSYS_MACHINE, "memory", VERBOSITY_INFO, "%s", meminfo);
-
 	diskimage_dump_info(m);
 	console_debug_dump(m);
 

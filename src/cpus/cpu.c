@@ -78,12 +78,6 @@ struct cpu *cpu_new(struct memory *mem, struct machine *machine,
 
 	cpu->memory_rw  = NULL;
 	cpu->name       = cpu_type_name;
-	cpu->cpuinfo    = "TODO debugmsg:ify";	// OR: better: use cpu_dumpinfo() to
-						// dump compact or verbose info!
-						// Add a bool argument?
-						// Compact during bootup (unless -v is used),
-						// and verbose if running "emul" or "machine"
-						// at runtime.
 	cpu->mem        = mem;
 	cpu->machine    = machine;
 	cpu->cpu_id     = cpu_id;
@@ -330,15 +324,27 @@ void cpu_create_or_reset_tc(struct cpu *cpu)
  *  Dumps info about a CPU using debug(). "cpu0: CPUNAME, running" (or similar)
  *  is outputed, and it is up to CPU dependent code to complete the line.
  */
-void cpu_dumpinfo(struct machine *m, struct cpu *cpu)
+void cpu_dumpinfo(struct machine *m, struct cpu *cpu, bool verbose)
 {
-	debug("cpu%i: %s, %s", cpu->cpu_id, cpu->name,
-	    cpu->running? "running" : "stopped");
+	char cpuname[100];
+	snprintf(cpuname, sizeof(cpuname), "cpu%i", cpu->cpu_id);
 
-	if (m->cpu_family == NULL || m->cpu_family->dumpinfo == NULL)
-		fatal("cpu_dumpinfo(): NULL\n");
-	else
-		m->cpu_family->dumpinfo(cpu);
+	if (verbose)
+		debugmsg(SUBSYS_MACHINE, cpuname, VERBOSITY_INFO,
+		    "%s", cpu->running? "running" : "stopped");
+
+	if (m->cpu_family == NULL || m->cpu_family->dumpinfo == NULL) {
+		debugmsg(SUBSYS_MACHINE, cpuname, VERBOSITY_ERROR,
+		    "cpu_dumpinfo(): NULL");
+	} else {
+		if (verbose)
+			debug_indentation(1);
+
+		m->cpu_family->dumpinfo(cpu, verbose);
+
+		if (verbose)
+			debug_indentation(-1);
+	}
 }
 
 

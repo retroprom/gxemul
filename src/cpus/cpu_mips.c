@@ -91,7 +91,6 @@ int mips_cpu_new(struct cpu *cpu, struct memory *mem, struct machine *machine,
 {
 	int i, found, j, tags_size, n_cache_lines, size_per_cache_line;
 	struct mips_cpu_type_def cpu_type_defs[] = MIPS_CPU_TYPE_DEFS;
-	int64_t secondary_cache_size;
 	int x, linesize;
 
 	/*  Scan the cpu_type_defs list for this cpu type:  */
@@ -245,32 +244,6 @@ int mips_cpu_new(struct cpu *cpu, struct memory *mem, struct machine *machine,
 		cpu->cd.mips.cache_last_paddr[i] = IMPOSSIBLE_PADDR;
 	}
 
-	/*
-	 *  Secondary cache:
-	 */
-	secondary_cache_size = 0;
-	if (cpu->cd.mips.cache_secondary)
-		secondary_cache_size = 1 << cpu->cd.mips.cache_secondary;
-	/*  TODO: linesize...  */
-
-	if (cpu_id == 0) {
-		debug(" (I+D = %i+%i KB",
-		    (int)(cpu->cd.mips.cache_size[CACHE_INSTRUCTION] / 1024),
-		    (int)(cpu->cd.mips.cache_size[CACHE_DATA] / 1024));
-
-		if (secondary_cache_size != 0) {
-			debug(", L2 = ");
-			if (secondary_cache_size >= 1048576)
-				debug("%i MB", (int)
-				    (secondary_cache_size / 1048576));
-			else
-				debug("%i KB", (int)
-				    (secondary_cache_size / 1024));
-		}
-
-		debug(")");
-	}
-
 	/*  Register the CPU's interrupts:  */
 	for (i=2; i<8; i++) {
 		struct interrupt templ;
@@ -353,14 +326,26 @@ int mips_cpu_new(struct cpu *cpu, struct memory *mem, struct machine *machine,
  *
  *  Debug dump of MIPS-specific CPU data for specific CPU.
  */
-void mips_cpu_dumpinfo(struct cpu *cpu)
+void mips_cpu_dumpinfo(struct cpu *cpu, bool verbose)
 {
 	struct mips_cpu_type_def *ct = &cpu->cd.mips.cpu_type;
+	int secondary_cache_size = 0;
+	if (cpu->cd.mips.cache_secondary)
+		secondary_cache_size = 1 << cpu->cd.mips.cache_secondary;
 
-	debug_indentation(1);
+	if (!verbose) {
+		debugmsg(SUBSYS_MACHINE, "cpu", VERBOSITY_INFO,
+		    "%s (%i-bit, I+D = %i+%i KB, L2 = %i KB)",
+		    cpu->name,
+		    cpu->is_32bit? 32 : 64,
+		    (int)(cpu->cd.mips.cache_size[CACHE_INSTRUCTION] / 1024),
+		    (int)(cpu->cd.mips.cache_size[CACHE_DATA] / 1024),
+		    (int)(secondary_cache_size / 1024));
 
-	debug("\n%i-bit %s-endian (MIPS",
-	    cpu->is_32bit? 32 : 64,
+		return;
+	}
+
+	debug("%s-endian (MIPS",
 	    cpu->byte_order == EMUL_BIG_ENDIAN? "Big" : "Little");
 
 	switch (ct->isa_level) {
@@ -416,8 +401,6 @@ void mips_cpu_dumpinfo(struct cpu *cpu)
 			debug(", direct-mapped");
 		debug("\n");
 	}
-
-	debug_indentation(-1);
 }
 
 
@@ -1751,6 +1734,9 @@ void mips_cpu_exception(struct cpu *cpu, int exccode, int tlb, uint64_t vaddr,
 		 */
 		cpu->is_halted = 0;
 		cpu->pc += sizeof(uint32_t);
+
+		debugmsg_cpu(cpu, SUBSYS_CPU, "wakeup", VERBOSITY_DEBUG,
+		    "waking up from halted state");
 	}
 
 	if (!quiet_mode) {
@@ -1829,6 +1815,10 @@ void mips_cpu_exception(struct cpu *cpu, int exccode, int tlb, uint64_t vaddr,
 		uint64_t offset;
 		char *symbol = get_symbol_name(&cpu->machine->symbol_context,
 		    cpu->pc, &offset);
+
+		// TODO: debugmsg SUBSYS_CPU, or better: SUBSYS_EXCEPTION
+		// VERBOSITY_WARNING since this is a relatively sure sign of a bug.
+
 		fatal("[ ");
 		if (cpu->machine->ncpus > 1)
 			fatal("cpu%i: ", cpu->cpu_id);

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -93,11 +93,6 @@ int alpha_cpu_new(struct cpu *cpu, struct memory *mem,
 
 	cpu->cd.alpha.cpu_type = cpu_type_defs[i];
 
-	/*  Only show name and caches etc for CPU nr 0:  */
-	if (cpu_id == 0) {
-		debug("%s", cpu->name);
-	}
-
 	cpu->cd.alpha.r[ALPHA_SP] = 0xfffffc000000ff00ULL;
 
 	/*  Set up dummy kentry pointers to something which crashes
@@ -135,10 +130,9 @@ int alpha_cpu_new(struct cpu *cpu, struct memory *mem,
 /*
  *  alpha_cpu_dumpinfo():
  */
-void alpha_cpu_dumpinfo(struct cpu *cpu)
+void alpha_cpu_dumpinfo(struct cpu *cpu, bool verbose)
 {
-	/*  TODO  */
-	debug("\n");
+	debugmsg(SUBSYS_MACHINE, "cpu", VERBOSITY_INFO, "%s", cpu->name);
 }
 
 

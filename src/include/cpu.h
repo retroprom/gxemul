@@ -282,7 +282,7 @@ struct cpu_family {
 				    int gprs, int coprocs);
 
 	/*  Dump generic CPU info in readable format.  */
-	void			(*dumpinfo)(struct cpu *cpu);
+	void			(*dumpinfo)(struct cpu *cpu, bool verbose);
 
 	/*  Dump TLB data for CPU id x.  */
 	void			(*tlbdump)(struct machine *m, int x,
@@ -333,9 +333,6 @@ struct cpu {
 
 	/*  CPU-specific name, e.g. "R2000", "21164PC", etc.  */
 	char		*name;
-
-	/*  Longer CPU info.  */
-	char		*cpuinfo;
 
 	/*  Full "path" to the CPU, e.g. "machine[0].cpu[0]":  */
 	char		*path;
@@ -473,7 +470,7 @@ void cpu_create_or_reset_tc(struct cpu *cpu);
 void cpu_run_init(struct machine *machine);
 void cpu_run_deinit(struct machine *machine);
 
-void cpu_dumpinfo(struct machine *m, struct cpu *cpu);
+void cpu_dumpinfo(struct machine *m, struct cpu *cpu, bool verbose);
 void cpu_list_available_types(void);
 void cpu_show_cycles(struct machine *machine, bool forced);
 
