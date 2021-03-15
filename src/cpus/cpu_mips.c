@@ -135,9 +135,6 @@ int mips_cpu_new(struct cpu *cpu, struct memory *mem, struct machine *machine,
 
 	cpu->instruction_has_delayslot = mips_cpu_instruction_has_delayslot;
 
-	if (cpu_id == 0)
-		debug("%s", cpu->cd.mips.cpu_type.name);
-
 	/*
 	 *  CACHES:
 	 *
