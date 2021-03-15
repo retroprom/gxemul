@@ -902,7 +902,8 @@ void console_allow_slaves(int allow)
 
 	if (allow_slaves) {
 		for (int i = 0; i < n_console_handles; i++)
-			console_handles[i].using_xterm = USING_XTERM_BUT_NOT_YET_OPEN;
+			if (i != MAIN_CONSOLE)
+				console_handles[i].using_xterm = USING_XTERM_BUT_NOT_YET_OPEN;
 	}
 }
 
