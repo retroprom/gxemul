@@ -670,10 +670,8 @@ bool machine_run(struct machine *machine)
 		}
 	}
 
-	if (!any_running) {
-		debugmsg(SUBSYS_MACHINE, NULL, VERBOSITY_ERROR, "All CPUs stopped.");
+	if (!any_running)
 		return false;
-	}
 
 	/*
 	 *  Hardware 'ticks':  (clocks, interrupt sources...)

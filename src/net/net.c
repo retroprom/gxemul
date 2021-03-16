@@ -675,14 +675,17 @@ void net_dumpinfo(struct net *net)
 		return;
 	}
 
-	debug("simulated network: ");
+	debugmsg(SUBSYS_NET, "simulated network", VERBOSITY_INFO, "");
+
+	debug_indentation(iadd);
+
 	net_debugaddr(&net->netmask_ipv4, NET_ADDR_IPV4);
 	debug("/%i", net->netmask_ipv4_len);
 
 	debug(" (max outgoing: TCP=%i, UDP=%i)\n",
 	    MAX_TCP_CONNECTIONS, MAX_UDP_CONNECTIONS);
 
-	debug("simulated gateway+nameserver: ");
+	debug("gateway+nameserver: ");
 	net_debugaddr(&net->gateway_ipv4_addr, NET_ADDR_IPV4);
 	debug(" (");
 	net_debugaddr(&net->gateway_ethernet_addr, NET_ADDR_ETHERNET);
@@ -691,7 +694,7 @@ void net_dumpinfo(struct net *net)
 	if (!net->nameserver_known) {
 		debug("(could not determine real nameserver from /etc/resolv.conf)\n");
 	} else {
-		debug("simulated nameserver uses real nameserver ");
+		debug("nameserver uses real nameserver ");
 		net_debugaddr(&net->nameserver_ipv4, NET_ADDR_IPV4);
 		debug("\n");
 	}
@@ -709,6 +712,7 @@ void net_dumpinfo(struct net *net)
 	}
 	debug_indentation(-iadd);
 
+	debug_indentation(-iadd);
 	debug_indentation(-iadd);
 }
 

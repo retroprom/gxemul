@@ -131,6 +131,8 @@ int m88k_cpu_new(struct cpu *cpu, struct memory *mem,
 
 	cpu->instruction_has_delayslot = m88k_cpu_instruction_has_delayslot;
 
+	cpu->vaddr_mask = 0x00000000ffffffffULL;
+
 
 	/*
 	 *  Add register names as settings:

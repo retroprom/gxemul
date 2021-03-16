@@ -44,7 +44,7 @@
 
 
 /*  #define debug fatal  */
-static int net_ip_debug = 0;
+static int net_ip_debug = 0;	// replace by debugmsg(....)
 
 
 
@@ -168,7 +168,8 @@ static void net_ip_icmp(struct net *net, struct nic_data *nic,
 
 	switch (type) {
 	case 8:	/*  ECHO request  */
-		debug("[ ICMP echo ]\n");
+		debugmsg(SUBSYS_NET, "ICMP", VERBOSITY_DEBUG, "ECHO request");
+
 		lp = net_allocate_ethernet_packet_link(net, nic, len);
 
 		/*  Copy the old packet first:  */
@@ -196,7 +197,7 @@ static void net_ip_icmp(struct net *net, struct nic_data *nic,
 
 		break;
 	default:
-		fatal("[ net: ICMP type %i not yet implemented ]\n", type);
+		debugmsg(SUBSYS_NET, "ICMP", VERBOSITY_WARNING, "type %i not yet implemented", type);
 	}
 }
 

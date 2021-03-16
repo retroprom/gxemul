@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2020  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -150,7 +150,7 @@ void file_load(struct machine *machine, struct memory *mem,
 	if (filename[0] == '@')
 		return;
 
-	debug("loading %s%s\n", filename, verbose >= 2? ":" : "");
+	debugmsg(SUBSYS_MACHINE, "file", VERBOSITY_INFO, "loading %s%s", filename, verbose >= 2? ":" : "");
 	debug_indentation(1);
 
 	old_quiet_mode = quiet_mode;

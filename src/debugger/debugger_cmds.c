@@ -364,15 +364,12 @@ static void debugger_cmd_emul(struct machine *m, char *args)
 		return;
 	}
 
-	if (debugger_emul->name != NULL) {
-		debugmsg(SUBSYS_EMUL, "configuration", VERBOSITY_INFO, "\"%s\"", debugger_emul->name);
-		debug_indentation(1);
-	}
-
-	emul_dumpinfo(debugger_emul);
-
 	if (debugger_emul->name != NULL)
-		debug_indentation(-1);
+		debugmsg(SUBSYS_EMUL, "", VERBOSITY_INFO, "\"%s\"", debugger_emul->name);
+
+	debug_indentation(1);
+	emul_dumpinfo(debugger_emul);
+	debug_indentation(-1);
 }
 
 
@@ -521,21 +518,19 @@ static void debugger_cmd_lookup(struct machine *m, char *args)
  */
 static void debugger_cmd_machine(struct machine *m, char *args)
 {
-	int iadd = 0;
-
 	if (*args) {
 		printf("syntax: machine\n");
 		return;
 	}
 
-	if (m->name != NULL) {
-		debug("machine \"%s\":\n", m->name);
-		iadd = 1;
-	}
+	if (m->name != NULL && m->name[0])
+		debugmsg(SUBSYS_MACHINE, "", VERBOSITY_INFO, "%s", m->name);
+	else
+		debugmsg(SUBSYS_MACHINE, "", VERBOSITY_INFO, "");
 
-	debug_indentation(iadd);
+	debug_indentation(1);
 	machine_dumpinfo(m);
-	debug_indentation(-iadd);
+	debug_indentation(-1);
 }
 
 

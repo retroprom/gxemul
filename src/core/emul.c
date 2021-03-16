@@ -364,11 +364,12 @@ bool emul_machine_setup(struct machine *m, int n_load, char **load_names,
 	uint64_t memory_amount, entrypoint = 0, gp = 0, toc = 0;
 	int i, byte_order;
 
-	debugmsg(SUBSYS_MACHINE, "", VERBOSITY_INFO, "");
-	debug_indentation(1);
-
 	if (m->name != NULL && m->name[0])
-		debugmsg(SUBSYS_MACHINE, "config name", VERBOSITY_INFO, "%s", m->name);
+		debugmsg(SUBSYS_MACHINE, "", VERBOSITY_INFO, "%s", m->name);
+	else
+		debugmsg(SUBSYS_MACHINE, "", VERBOSITY_INFO, "");
+
+	debug_indentation(1);
 
 	if (m->machine_type == MACHINE_NONE) {
 		fatal("No machine type specified?\n");
@@ -932,7 +933,7 @@ void emul_run(struct emul *emul)
 
 		if (!any_machine_still_running) {
 			if (debugger_enter_at_end_of_run) {
-				debugmsg_set_verbosity_level(SUBSYS_ALL, VERBOSITY_DEBUG);
+				debugmsg(SUBSYS_EMUL, NULL, VERBOSITY_WARNING, "All machines stopped.");
 				debugger_reset();
 				single_step = true;
 			} else {
