@@ -24,16 +24,13 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 <b>Current "short-list":</b>
 
 o) Apply Chris Berry's patch for tap device use on Linux.
-o) Before 0.7.0 is released:
-	o) update doc/*html wherever startup messages appear to show the current message style.
-	o) update Thanks list
 o) Try tap networking on FreeBSD host (e.g. using netbsd/pmax guest).
 	Performance better than when using simulated NAT?
 o) debugmsg:ify all src/net/.
 o) update src/net/README
-o) When emulating multiple machines in one config file, and one machine halts,
-	there is an infinite number of "machine: All CPUs stopped" printed to
-	the terminal.
+o) When using e.g. "-E alpha" and there was more than one subtype, then _list_
+   them instead of just complaining "Maybe you forgot the -e command line option".
+o) Add an Example in the documentation for a config file with multiple machines (and a plain net()).
 o) Try all guest OSes in the documentation, cleaning up debugmsg related stuff as I go along.
 o) Per-arch overrides for whether to print symbols when executing in userspace?
 	e.g. MIPS is OK since symbols are at kseg0.
@@ -73,10 +70,10 @@ o) Experiment with Mouse capture for X11 windows?
 	XGrabKeyboard too?
 	Release using left CTRL+ALT?
 	Change window title during capture.
-o) Investigate allowing config files to be used without implicit -x, when there
-	is just one machine being emulated in the config file.
-o) When using e.g. "-E alpha" and there was more than one subtype, then _list_
-   them instead of just complaining "Maybe you forgot the -e command line option".
+o) Change window title in X11 windows for machines that have all cpus halted?
+o) Before 0.7.0 is released:
+	o) update doc/*html wherever startup messages appear to show the current message style.
+	o) update Thanks list
 o) Go through Lance Ethernet interrupt code and memory mapping, to look at
    performance. (Performance when downloading things from the internet is
    extremely poor, from inside NetBSD/pmax and OpenBSD/luna88k.)
