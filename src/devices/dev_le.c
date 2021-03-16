@@ -67,8 +67,6 @@
 
 #define	LE_TICK_SHIFT		14
 
-/*  #define LE_DEBUG  */
-/*  #define debug fatal  */
 
 extern int quiet_mode;
 
@@ -85,6 +83,8 @@ extern int quiet_mode;
 
 struct le_data {
 	struct nic_data	nic;
+
+	int		subsys;		/*  for debugmsg  */
 
 	struct interrupt irq;
 	int		irq_asserted;
@@ -178,10 +178,11 @@ static void le_chip_init(struct le_data *d)
 
 	d->init_block_addr = (d->reg[1] & 0xffff) + ((d->reg[2] & 0xff) << 16);
 	if (d->init_block_addr & 1)
-		fatal("[ le: WARNING! initialization block address "
-		    "not word aligned? ]\n");
+		debugmsg(d->subsys, "initialization block", VERBOSITY_WARNING,
+		    "WARNING! address not word aligned?");
 
-	debug("[ le: d->init_block_addr = 0x%06x ]\n", d->init_block_addr);
+	debugmsg(d->subsys, "initialization block", VERBOSITY_DEBUG,
+	    "init_block_addr = 0x%06x", d->init_block_addr);
 
 	d->mode = le_read_16bit(d, d->init_block_addr + 0);
 
@@ -309,22 +310,25 @@ static void le_tx(struct net *net, struct le_data *d)
 		if ((tx_descr[2] & 0xf000) != 0xf000)
 			return;
 		if (buflen < 12 || buflen > 1900) {
-			fatal("[ le_tx(): buflen = %i ]\n", buflen);
+			debugmsg(d->subsys, "tx", VERBOSITY_WARNING, "buflen = %i", buflen);
 			return;
 		}
 
-		debug("[ le_tx(): descr %3i DUMP: 0x%04x 0x%04x 0x%04x 0x%04x "
-		    "=> addr=0x%06x, len=%i bytes, STP=%i ENP=%i ]\n", d->txp,
+		debugmsg(d->subsys, "tx", VERBOSITY_DEBUG,
+		    "descr %3i DUMP: 0x%04x 0x%04x 0x%04x 0x%04x "
+		    "=> addr=0x%06x, len=%i bytes, STP=%i ENP=%i", d->txp,
 		    tx_descr[0], tx_descr[1], tx_descr[2], tx_descr[3],
 		    bufaddr, buflen, stp, enp);
 
 		if (d->tx_packet == NULL && !stp) {
-			fatal("[ le_tx(): !stp but tx_packet == NULL ]\n");
+			debugmsg(d->subsys, "tx", VERBOSITY_WARNING,
+			    "!stp but tx_packet == NULL");
 			return;
 		}
 
 		if (d->tx_packet != NULL && stp) {
-			fatal("[ le_tx(): stp but tx_packet != NULL ]\n");
+			debugmsg(d->subsys, "tx", VERBOSITY_WARNING,
+			    "stp but tx_packet != NULL");
 			free(d->tx_packet);
 			d->tx_packet = NULL;
 			d->tx_packet_len = 0;
@@ -381,7 +385,7 @@ static void le_tx(struct net *net, struct le_data *d)
 	} while (d->txp != start_txp);
 
 	/*  We are here if all descriptors were taken care of.  */
-	fatal("[ le_tx(): all TX descriptors used up? ]\n");
+	debugmsg(d->subsys, "tx", VERBOSITY_WARNING, "all descriptors used up?");
 }
 
 
@@ -420,12 +424,13 @@ static void le_rx(struct net *net, struct le_data *d)
 		if ((rx_descr[2] & 0xf000) != 0xf000)
 			return;
 		if (buflen < 12 || buflen > 1900) {
-			fatal("[ le_rx(): buflen = %i ]\n", buflen);
+			debugmsg(d->subsys, "rx", VERBOSITY_WARNING, "buflen = %i", buflen);
 			return;
 		}
 
-		debug("[ le_rx(): descr %3i DUMP: 0x%04x 0x%04x 0x%04x 0x%04x "
-		    "=> addr=0x%06x, len=%i bytes ]\n", d->rxp,
+		debugmsg(d->subsys, "rx", VERBOSITY_DEBUG,
+		    "descr %3i DUMP: 0x%04x 0x%04x 0x%04x 0x%04x "
+		    "=> addr=0x%06x, len=%i bytes", d->rxp,
 		    rx_descr[0], rx_descr[1], rx_descr[2], rx_descr[3],
 		    bufaddr, buflen);
 
@@ -490,7 +495,7 @@ static void le_rx(struct net *net, struct le_data *d)
 	} while (d->rxp != start_rxp);
 
 	/*  We are here if all descriptors were taken care of.  */
-	fatal("[ le_rx(): all RX descriptors used up? ]\n");
+	debugmsg(d->subsys, "rx", VERBOSITY_WARNING, "all descriptors used up?");
 }
 
 
@@ -558,16 +563,6 @@ static void le_register_fix(struct net *net, struct le_data *d)
 	/*  Init with new Initialization block, if needed.  */
 	if (d->reg[0] & LE_INIT)
 		le_chip_init(d);
-
-#ifdef LE_DEBUG
-	{
-		static int x = 1234;
-		if (x != d->reg[0]) {
-			debug("[ le reg[0] = 0x%04x ]\n", d->reg[0]);
-			x = d->reg[0];
-		}
-	}
-#endif
 
 	/*
 	 *  If the receiver is on:
@@ -681,8 +676,8 @@ void le_register_write(struct le_data *d, int r, uint32_t x)
 		}
 		if (x & LE_INIT) {
 			if (!(d->reg[r] & LE_STOP))
-				fatal("[ le: attempt to INIT before"
-				    " STOPped! ]\n");
+				debugmsg(d->subsys, "register write", VERBOSITY_WARNING,
+				    "attempt to INIT before STOPped!");
 			d->reg[r] |= LE_INIT;
 			d->reg[r] &= ~LE_STOP;
 		}
@@ -795,9 +790,10 @@ DEVICE_ACCESS(le)
 	case 0:
 		if (writeflag==MEM_READ) {
 			odata = d->reg[d->reg_select];
-			if (!quiet_mode)
-				debug("[ le: read from register 0x%02x: 0x"
-				    "%02x ]\n", d->reg_select, (int)odata);
+			debugmsg(d->subsys, "register", VERBOSITY_DEBUG,
+			    "READ from register 0x%02x: 0x"
+			    "%02x", d->reg_select, (int)odata);
+
 			/*
 			 *  A read from csr1..3 should return "undefined"
 			 *  result if the stop bit is set.  However, Ultrix
@@ -805,9 +801,9 @@ DEVICE_ACCESS(le)
 			 *  a warning here.
 			 */
 		} else {
-			if (!quiet_mode)
-				debug("[ le: write to register 0x%02x: 0x"
-				    "%02x ]\n", d->reg_select, (int)idata);
+			debugmsg(d->subsys, "register", VERBOSITY_DEBUG,
+			    "WRITE to register 0x%02x: 0x%02x",
+			    d->reg_select, (int)idata);
 			/*
 			 *  A write to from csr1..3 when the stop bit is
 			 *  set should be ignored. However, Ultrix writes
@@ -822,37 +818,37 @@ DEVICE_ACCESS(le)
 	case 4:
 		if (writeflag==MEM_READ) {
 			odata = d->reg_select;
-			if (!quiet_mode)
-				debug("[ le: read from register select: "
-				    "0x%02x ]\n", (int)odata);
+			debugmsg(d->subsys, "register select", VERBOSITY_DEBUG,
+			    "READ: 0x%02x", (int)odata);
 		} else {
-			if (!quiet_mode)
-				debug("[ le: write to register select: "
-				    "0x%02x ]\n", (int)idata);
+			debugmsg(d->subsys, "register select", VERBOSITY_DEBUG,
+			     "WRITE: 0x%02x", (int)idata);
 			d->reg_select = idata & (N_REGISTERS - 1);
+
 			if (idata >= N_REGISTERS)
-				fatal("[ le: WARNING! register select %i "
-				    "(max is %i) ]\n", idata, N_REGISTERS - 1);
+				debugmsg(d->subsys, "register select", VERBOSITY_WARNING,
+				    "WARNING! register %i (max is %i)",
+				    idata, N_REGISTERS - 1);
 		}
 		break;
 
 	default:
 		if (writeflag==MEM_READ) {
-			fatal("[ le: read from UNIMPLEMENTED addr 0x%06x ]\n",
+			debugmsg(d->subsys, "access", VERBOSITY_WARNING,
+			    "read from UNIMPLEMENTED addr 0x%06x",
 			    (int)relative_addr);
 		} else {
-			fatal("[ le: write to UNIMPLEMENTED addr 0x%06x: "
-			    "0x%08x ]\n", (int)relative_addr, (int)idata);
+			debugmsg(d->subsys, "access", VERBOSITY_WARNING,
+			    "write to UNIMPLEMENTED addr 0x%06x: "
+			    "0x%08x", (int)relative_addr, (int)idata);
 		}
 	}
 
 do_return:
 	if (writeflag == MEM_READ) {
 		memory_writemax64(cpu, data, len, odata);
-#ifdef LE_DEBUG
-		fatal("[ le: read from addr 0x%06x: 0x%08x ]\n",
-		    relative_addr, odata);
-#endif
+		debugmsg(d->subsys, "access", VERBOSITY_DEBUG,
+		    "read from addr 0x%06x: 0x%08x", relative_addr, odata);
 	}
 
 	dev_le_tick(cpu, extra);
@@ -873,6 +869,8 @@ void dev_le_init(struct machine *machine, struct memory *mem, uint64_t baseaddr,
 
 	CHECK_ALLOCATION(d = (struct le_data *) malloc(sizeof(struct le_data)));
 	memset(d, 0, sizeof(struct le_data));
+
+	d->subsys = debugmsg_register_subsystem("le");
 
 	d->is_bigendian = machine->cpus[0]->byte_order == EMUL_BIG_ENDIAN;
 

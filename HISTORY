@@ -4987,3 +4987,7 @@ Changelog for GXemul:
 		without using configuration files.
 		-x is now needed if one wants separate xterm windows for serial
 		I/O when using configuration files with a single machine.
+20210316	debugmsg subsystems can now be registered at runtime; this is
+		so far done from the Lance Ethernet device.
+		Adding a 'verbosity' debugger command for inspecting and
+		setting the verbosity level for individual subsystems.

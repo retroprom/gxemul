@@ -57,8 +57,6 @@
  *
  *	Convert existing debug() and fatal() calls to the new debugmsg() call.
  *
- *	Live registering of new subsystems, e.g. entire devices.
- *
  *	Make sure that all the hardcoded subsystems are actually used, and/or
  *		move registering to individual subsystems.
  */
@@ -67,6 +65,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "console.h"
 #include "cpu.h"
@@ -80,6 +79,7 @@ int quiet_mode = 0;
 
 extern bool emul_executing;
 extern bool single_step;
+extern bool about_to_enter_single_step;
 
 size_t debugmsg_nr_of_subsystems = 0;
 static const char **debugmsg_subsystem_name = NULL;
@@ -139,9 +139,9 @@ static void debugmsg_va(struct cpu* cpu, int subsystem,
 	vsnprintf(buf, DEBUG_BUFSIZE, fmt, argp);
 
 	char* s = buf;
-
+	bool ss = single_step || about_to_enter_single_step;
 	bool debug_currently_at_start_of_line = true;
-	bool show_decorations = emul_executing && !single_step;
+	bool show_decorations = emul_executing && !ss;
 
 	if (console_are_slaves_allowed())
 		show_decorations = false;
@@ -311,14 +311,14 @@ void debug_indentation(int diff)
 void debug(const char *fmt, ...)
 {
 	va_list argp;
-	
+	bool ss = single_step || about_to_enter_single_step;
 	int v = verbose;
 	if (emul_executing)
 		v--;
-	if (single_step)
+	if (ss)
 		v++;
 
-	if ((quiet_mode && !single_step) || v < 0)
+	if ((quiet_mode && !ss) || v < 0)
 		return;
 
 	va_start(argp, fmt);
@@ -358,6 +358,138 @@ void debugmsg_add_verbosity_level(int subsystem, int verbosity_delta)
 	for (size_t i = 0; i < debugmsg_nr_of_subsystems; ++i)
 		if (debugmsg_current_verbosity[i] < 0)
 			debugmsg_current_verbosity[i] = 0;
+}
+
+
+/*
+ *  debugmsg_register_subsystem():
+ *
+ *  Registers a new subsystem.
+ */
+int debugmsg_register_subsystem(const char* name)
+{
+	// TODO: Another way would be to support multiple names with e.g.
+	// a suffix. Such as "le0", "le1", "le2" for the name "le".
+	// But for now, simply return the same subsystem for all of them.
+	ssize_t subsys = -1;
+	for (size_t i = 0; i < debugmsg_nr_of_subsystems; ++i)
+		if (strcmp(name, debugmsg_subsystem_name[i]) == 0)
+			subsys = i;
+
+	if (subsys >= 0)
+		return subsys;
+	
+	subsys = debugmsg_nr_of_subsystems;
+
+	debugmsg_nr_of_subsystems ++;
+	debugmsg_subsystem_name = realloc(debugmsg_subsystem_name,
+	    sizeof(char*) * debugmsg_nr_of_subsystems);
+	debugmsg_current_verbosity = realloc(debugmsg_current_verbosity,
+	    sizeof(int) * debugmsg_nr_of_subsystems);;
+
+	debugmsg_subsystem_name[subsys] = strdup(name);
+	debugmsg_set_verbosity_level(subsys, default_verbosity);
+
+	return subsys;
+}
+
+
+/*
+ *  debugmsg_change_settings():
+ *
+ *  Changes the current verbosity level settings for a given setting name.
+ */
+void debugmsg_change_settings(char *subsystem_name, char *n)
+{
+	int ns = 0;
+
+	for (size_t i = 0; i < debugmsg_nr_of_subsystems; ++i) {
+		if (strcasecmp("ALL", subsystem_name) != 0) {
+			if (strcmp(subsystem_name, debugmsg_subsystem_name[i]) != 0)
+				continue;
+		}
+
+		int v = atoi(n);
+
+		switch (*n) {
+		case 'e':
+		case 'E':
+			v = 0;
+			break;
+		case 'w':
+		case 'W':
+			v = 1;
+			break;
+		case 'i':
+		case 'I':
+			v = 2;
+			break;
+		case 'd':
+		case 'D':
+			v = 3;
+			break;
+		}
+		
+		debugmsg_current_verbosity[i] = v;
+
+		debugmsg_print_settings(debugmsg_subsystem_name[i]);
+
+		++ns;
+	}
+
+	if (ns == 0)
+		printf("Unknown debugmsg subsystem name '%s'\n", subsystem_name);
+}
+
+
+/*
+ *  debugmsg_print_settings():
+ *
+ *  Prints the current verbosity level settings.
+ */
+void debugmsg_print_settings(const char *subsystem_name)
+{
+	int n = 0;
+
+	for (size_t i = 0; i < debugmsg_nr_of_subsystems; ++i) {
+		if (subsystem_name != NULL && subsystem_name[0] != '\0') {
+			if (strcmp(subsystem_name, debugmsg_subsystem_name[i]) != 0)
+				continue;
+		}
+
+		const char* name = debugmsg_subsystem_name[i];
+		if (i == SUBSYS_STARTUP)
+			name = "(startup related)";
+
+		char buf[100];
+		switch (debugmsg_current_verbosity[i]) {
+		case VERBOSITY_ERROR:
+			snprintf(buf, sizeof(buf), "0: ERROR");
+			break;
+		case VERBOSITY_WARNING:
+			snprintf(buf, sizeof(buf), "1: WARNING");
+			break;
+		case VERBOSITY_INFO:
+			snprintf(buf, sizeof(buf), "2: INFO");
+			break;
+		case VERBOSITY_DEBUG:
+			snprintf(buf, sizeof(buf), "3: DEBUG");
+			break;
+		default:
+			snprintf(buf, sizeof(buf), "%i", debugmsg_current_verbosity[i]);
+			break;
+		}
+
+		if (n == 0)
+			printf("Subsystem:          Level:\n");
+
+		printf("%17s   %s\n", name, buf);
+
+		++n;
+	}
+
+	if (n == 0)
+		printf("Unknown debugmsg subsystem name '%s'\n", subsystem_name);
 }
 
 

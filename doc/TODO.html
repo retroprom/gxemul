@@ -35,13 +35,7 @@ o) Try all guest OSes in the documentation, cleaning up debugmsg related stuff a
 o) Per-arch overrides for whether to print symbols when executing in userspace?
 	e.g. MIPS is OK since symbols are at kseg0.
 	e.g. M88K is not OK, since userland and supervisor are the same numeric values.
-o) verbosity settings for debug messages for individual subsystems:
-	Modify and add a new command:
-		quiet [on|off] -> quiet [subsystem] [on|off]
-		verbosity [subsystem] [n]   (where n is a number? 0,1,2,3)
-			without args shows the current verbosity levels (and
-				whether or not they use separate terminals for output?)
-	Command for launching a separate terminal for output from a specified subsystem?
+o) Command for launching a separate terminal for output from a specified subsystem?
 		(Or a flag to the verbosity command?)
 o) Reimplement after the C++ to C switch:
 	x. i960 CPU: Disassembly of at least i960CA instructions.

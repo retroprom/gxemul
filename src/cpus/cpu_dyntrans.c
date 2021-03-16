@@ -1928,16 +1928,16 @@ bad:	/*
 	if (cpu->translation_readahead)
 		return;
 
-	quiet_mode = 0;
-	fatal("to_be_translated(): TODO: unimplemented instruction");
+	about_to_enter_single_step = true;
 
-	if (cpu->machine->instruction_trace) {
-		if (cpu->is_32bit)
-			fatal(" at 0x%" PRIx32"\n", (uint32_t)cpu->pc);
-		else
-			fatal(" at 0x%" PRIx64"\n", (uint64_t)cpu->pc);
-	} else {
-		fatal(":\n");
+	if (cpu->is_32bit)
+		debugmsg_cpu(cpu, SUBSYS_CPU, "", VERBOSITY_ERROR,
+		    "UNIMPLEMENTED instruction at 0x%" PRIx32, (uint32_t)cpu->pc);
+	else
+		debugmsg_cpu(cpu, SUBSYS_CPU, "", VERBOSITY_ERROR,
+		    "UNIMPLEMENTED instruction at 0x%" PRIx64, (uint64_t)cpu->pc);
+
+	if (!cpu->machine->instruction_trace) {
 		DISASSEMBLE(cpu, ib, 1, 0);
 	}
 

@@ -871,8 +871,12 @@ static void debugger_cmd_quiet(struct machine *m, char *args)
 
 	printf("quiet_mode = %s", old_quiet_mode? "ON" : "OFF");
 	if (old_quiet_mode != previous_mode)
-		printf("  (was: %s)", previous_mode? "ON" : "OFF");
-	printf("\n");
+		printf(" (was: %s)", previous_mode? "ON" : "OFF");
+	printf("; setting verbosity for all subsystems to %s\n",
+	    old_quiet_mode ? "ERROR" : "WARNING");
+
+	debugmsg_set_verbosity_level(SUBSYS_ALL,
+	    old_quiet_mode ? VERBOSITY_ERROR : VERBOSITY_WARNING);
 }
 
 
@@ -1156,6 +1160,49 @@ static void debugger_cmd_unassemble(struct machine *m, char *args)
 
 
 /*
+ *  debugger_cmd_verbosity():
+ */
+static void debugger_cmd_verbosity(struct machine *m, char *args)
+{
+	char *subsystem = args;
+	char *n = subsystem;
+	if (*n) {
+		while (*n && *n != ' ')
+			n++;
+		while (*n && *n == ' ')
+			n++;
+	}
+
+	if (*n == '\0') {
+		debugmsg_print_settings(subsystem);
+		return;
+	}
+
+	char s[200];
+	snprintf(s, sizeof(s), "%s", subsystem);
+	size_t i = n - subsystem - 1;
+	if (i < sizeof(s))
+		s[i] = '\0';
+	else {
+		printf("syntax: verbosity [subsystem [n]]\n");
+		return;
+	}
+
+	char *n2 = n;
+	while (*n2 && *n2 != ' ')
+		n2++;
+	*n2 = '\0';
+
+	/* printf("subsystem = '%s'\n", s);
+	if (*n)
+		printf("n = '%s'\n", n);
+	*/
+
+	debugmsg_change_settings(s, n);
+}
+
+
+/*
  *  debugger_cmd_version():
  */
 static void debugger_cmd_version(struct machine *m, char *args)
@@ -1259,6 +1306,9 @@ static struct cmd cmds[] = {
 	{ "unassemble", "[addr [endaddr]]", 0, debugger_cmd_unassemble,
 		"dump memory contents as instructions" },
 
+	{ "verbosity", "[subsystem [n]]", 0, debugger_cmd_verbosity,
+		"sets or displays debug message verbosity levels" },
+
 	{ "version", "", 0, debugger_cmd_version,
 		"Print version information" },
 
@@ -1330,7 +1380,7 @@ static void debugger_cmd_help(struct machine *m, char *args)
 			else
 				printf(" ");
 
-		printf("   %s\n", cmds[i].description);
+		printf("  %s\n", cmds[i].description);
 		i++;
 
 		curlines ++;

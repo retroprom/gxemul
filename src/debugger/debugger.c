@@ -136,12 +136,8 @@ void debugger_activate(int x)
 	ctrl_c = 1;
 
 	if (single_step) {
-		/*  Already in the debugger. Do nothing.  */
-		int i;
-		for (i=0; i<MAX_CMD_BUFLEN; i++)
-			console_makeavail(MAIN_CONSOLE, '\b');
-		console_makeavail(MAIN_CONSOLE, ' ');
-		console_makeavail(MAIN_CONSOLE, '\n');
+		/*  Already in the debugger. Just abort the current line.  */
+		console_makeavail(MAIN_CONSOLE, 3);
 		printf("^C");
 		fflush(stdout);
 	} else {
@@ -413,6 +409,15 @@ static char *debugger_readline(void)
 				printf("\b");
 				cursor_pos --;
 			}
+		} else if (ch == 3) {
+			/*  CTRL-C: Abort the current line.  */
+			cmd_len = 0; cmd[0] = '\0'; cursor_pos = 0;
+			color_normal();
+			printf("\n");
+			color_prompt();
+			printf("GXemul> ");
+			color_normal();
+			fflush(stdout);
 		} else if (ch == 5) {
 			/*  CTRL-E: End of line.  */
 			while (cursor_pos < cmd_len) {
