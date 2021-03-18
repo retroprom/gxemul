@@ -15,36 +15,31 @@
 
 <p><br>GXemul is a framework for full-system computer architecture emulation. 
 Several processor architectures and machine types have been implemented. 
-It is working well enough to allow unmodified
-"guest" operating systems to run inside the emulator,
-as if they were running on real hardware.
+It is working well enough to allow unmodified "guest" operating systems to run
+inside the emulator, as if they were running on real hardware.
 
 <p>The emulator emulates (networks of) real machines. The machines may consist
 of ARM, MIPS, Motorola 88K, PowerPC, and SuperH processors, and various 
 surrounding hardware components such as framebuffers, busses, interrupt 
 controllers, ethernet controllers, disk controllers, and serial port 
 controllers.
-The documentation <a href="intro.html#emulmodes">lists the machine and guest
-OS combinations</a> that can be regarded as working in GXemul.
-
-
 
 
 <p><br>The changes between release 0.6.3.1 and 0.7.0 include:
 <ul>
-	<li>Networking using a tap device can now be enabled on the command
-		line (using the new <tt>-L</tt> option), in addition to being
-		enabled from configuration files.
+	<li>Networking using a tap device can now be enabled directly on the
+		command line using a new <tt>-L</tt> option. Previously,
+		tap devices could only be enabled when using configuration files.
 
 	<p>
 	<li>Previously, the behavior when using configuration files was to
-		implicitly start new terminal windows (xterms) for serial
-		I/O, similar to the <tt>-x</tt> command line option. This has
-		now been changed, so that new terminal windows are only used
-		if there are two or more machines in the same configuration
-		file. If you still want xterms to be launched when using a
-		configuration file with a single machine in it, you now need
-		to add <tt>-x</tt> to the command line.
+		always start new terminal windows (xterms) for emulated serial
+		I/O ports, similar to the <tt>-x</tt> command line option. This
+		has now been changed, so that new terminal windows are only used
+		if there are <i>two or more machines</i> in the same configuration
+		file. If you still want separate terminal windows to be launched
+		when using a configuration file with a single machine in it, you
+		now need to add <tt>-x</tt> to the command line.
 
 	<p>
 	<li>Some cleanup to make the <tt>-K</tt> command line option work
@@ -53,27 +48,55 @@ OS combinations</a> that can be regarded as working in GXemul.
 		<tt>GXemul&gt;</tt> debugger prompt whenever
 		the emulated program or guest operating system ends,
 		regardless of whether it was a normal shutdown or some form
-		of error. Starting the emulator with <tt>-V</tt> also
+		of error. This is useful for example if you wish to inspect
+		register or memory content.
+		Starting the emulator with <tt>-V</tt> also
 		implicitly sets <tt>-K</tt>. If neither <tt>-V</tt> nor <tt>-K</tt>
 		is used, and the guest OS halts with powerdown or "reboots", the emulator
-		should now exit gracefully (for the machine modes where this
-		has been implemented).
+		should exit gracefully (for the machine modes where shutdown
+		functionality has been implemented via device support or
+		prom emulation support).
 
 	<p>
-	<li><tt>-T</tt> has been fixed to work as it was always intended to
+	<li><tt>-T</tt> has been fixed to work the way it was always intended to
 		work, namely to abort immediately on the first load or store
-		to non-existant memory. (This is useful in combination with
-		<tt>-K</tt>.)
+		to non-existant memory. This is useful in combination with
+		<tt>-K</tt>, for example when implementing new machine modes
+		in the emulator or trying out unsupported guest operating
+		systems that access memory or devices in a not-yet-implemented
+		way.
 
 	<p>
-	<li><font color="red">TODO:</font> debugmsg subsystem verbosity levels...
+	<li>Debug messages have traditionally been printed using the rather
+		course-grained <tt>debug()</tt> and <tt>fatal()</tt>
+		functions. Work has now begun to separate this into a number of
+		<i>subsystems</i>, which can have their verbosity levels be
+		individually controlled using the new <tt>verbosity</tt>
+		debugger command. This also standardizes the way debug messages
+		are formatted:<pre>
+[ machine-and-cpu-path: <font color="brown">subsystem-name</font> <font color="#4040ff">component-or-function-name</font>: text ]</pre>
+		<p>Most of the time, not all of these are shown.
+		machine-and-cpu-path, for example, is only shown if the message comes
+		from a context where a CPU is known to cause the message,
+		and there are multiple machines or CPUs being emulated.
+		The [ ] brackets are only shown when intermixing debug messages
+		with serial I/O coming from the emulated program or guest
+		operating system.
+		<p>(There are still a huge amount of <tt>debug()</tt>
+		and <tt>fatal()</tt> calls in the code, especially in the
+		less commonly used code paths.)
 
 	<p>
 	<li>Output from the emulator is now subtly colorized, to make it
 		easier to quickly interpret the text. This is enabled by
 		launching the emulator with the environment variable
-		CLICOLOR set, or if <tt>-G</tt> is used. It can be disabled
-		using <tt>-A</tt>.
+		CLICOLOR set, or if <tt>-G</tt> is used.
+		The choice of colors was done to
+		a) be reasonably subtle, and b) work
+		with both light and dark terminal backgrounds.
+		Coloring can be explicitly disabled using <tt>-A</tt> (overriding
+		the presence of CLICOLOR), and
+		it is also disabled when outputting to a non-tty.
 </ul>
 
 <p>The source code is also switched back from C++ to plain C:
@@ -96,18 +119,14 @@ OS combinations</a> that can be regarded as working in GXemul.
 			C++ framework.
 		<li>Automatic generation of machine and component documentation
 			is gone (<tt>make documentation</tt>).
-		<li>In summary: the <tt>doc/</tt> sub-directory is now just static
-			content, nothing is generated at build time.
+		<li>In summary: the <tt>doc/</tt> directory is now just a
+			single level without sub-directories, containing static
+			content; nothing is generated at build time.
 	</ul>
 </ul>
 
 
-
 <p><br>Please read the HISTORY file for more details.
-
-<p>To build the emulator, run the <tt>configure</tt> script, and then run 
-<tt>make</tt>. This should hopefully work on most Unix-like systems, with few
-or no modifications to the source code.
 
 <p>Regarding files in the <tt>src/include/thirdparty/</tt> directory:
 most of these are from other open source projects such as NetBSD. See individual
@@ -116,7 +135,6 @@ or reuse the source code.
 
 <p>GXemul's homepage is
 <a href="http://gavare.se/gxemul/">http://gavare.se/gxemul/</a>.
-
 
 
 </body>
