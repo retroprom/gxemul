@@ -138,6 +138,7 @@ int main(int argc, char *argv[])
 	    "translated\n *  mode.\n */\n");
 	printf("X(nothing)\n{\n");
 	printf("\tcpu->cd.%s.next_ic --;\n", a);
+	printf("\tcpu->ninstrs --;\n");
 	printf("}\n\n");
 
 	/*  Ugly special hacks for SH[34]:  */
