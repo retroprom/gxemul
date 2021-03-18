@@ -156,6 +156,11 @@ static void debugmsg_va(struct cpu* cpu, int subsystem,
 					printf(" ");
 			}
 
+			bool print_subsystem_name =
+			    debugmsg_subsystem_name[subsystem][0] != '\0' &&
+			    (debug_indent == 0 || (name == NULL || name[0] == '\0'));
+			bool print_colon = false;
+
 			if (cpu != NULL) {
 				// With multiple machines being emulated in the
 				// same emulation instance, print both the machine
@@ -164,23 +169,23 @@ static void debugmsg_va(struct cpu* cpu, int subsystem,
 				// CPUs in order to not clutter the output
 				// needlessly.
 				struct emul* emul = cpu->machine->emul;
-				if (emul->n_machines > 1)
+				if (emul->n_machines > 1) {
 					printf("machine \"%s\" cpu%i: ",
 					    cpu->machine->name ? cpu->machine->name : "(no name)",
 					    cpu->cpu_id);
-				else if (cpu->machine->ncpus > 1)
+					if (subsystem == SUBSYS_CPU)
+						print_subsystem_name = false;
+				} else if (cpu->machine->ncpus > 1) {
 					printf("cpu%i: ", cpu->cpu_id);
+					if (subsystem == SUBSYS_CPU)
+						print_subsystem_name = false;
+				}
 			}
 
 			if (verbosity == VERBOSITY_ERROR)
 				color_error(false);
 			else
 				color_debugmsg_subsystem();
-
-			bool print_colon = false;
-			bool print_subsystem_name =
-			    debugmsg_subsystem_name[subsystem][0] != '\0' &&
-			    (debug_indent == 0 || (name == NULL || name[0] == '\0'));
 
 			if (print_subsystem_name) {
 				printf("%s", debugmsg_subsystem_name[subsystem]);

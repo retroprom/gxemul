@@ -479,7 +479,80 @@ static char *debugger_readline(void)
 					cursor_pos = cmd_len;
 				}
 			} while (0);
-		} else if (ch >= ' ' && cmd_len < MAX_CMD_BUFLEN-1) {
+		} else if (ch == 20) {
+			/*  CTRL-T: Print SIGINFO-like info.  */
+			color_normal();
+			printf("^T\n");
+
+			struct cpu* cpu = debugger_machine->cpus[debugger_cur_cpu];
+
+			char info[1000];
+			snprintf(info, sizeof(info), "ninstrs=%lli, pc=", (long long) cpu->ninstrs);
+
+			if (cpu->is_32bit)
+				snprintf(info + strlen(info), sizeof(info) - strlen(info),
+				    "0x%08" PRIx32, (uint32_t) cpu->pc);
+			else
+				snprintf(info + strlen(info), sizeof(info) - strlen(info),
+				    "0x%016" PRIx64, (uint64_t) cpu->pc);
+
+			uint64_t offset;
+			int n_args;
+			char* pc_symbol = get_symbol_name_and_n_args(&debugger_machine->symbol_context, cpu->pc, &offset, &n_args);
+			if (pc_symbol != NULL)
+				snprintf(info + strlen(info), sizeof(info) - strlen(info),
+				    " <%s>", pc_symbol);
+
+			if (!cpu->running)
+				snprintf(info + strlen(info), sizeof(info) - strlen(info),
+				    ", stopped");
+
+			debugmsg_cpu(cpu, SUBSYS_CPU, "", VERBOSITY_INFO, "%s", info);
+
+			color_prompt();
+			printf("GXemul> ");
+			color_normal();
+
+			// Reprint all chars, then backspace if cursor_pos is less than cmd_len.
+			for (i = 0; i < cmd_len; ++i)
+				printf("%c", cmd[i]);
+			for (i = 0; i < cmd_len - cursor_pos; ++i)
+				printf("\b");
+
+			fflush(stdout);
+		} else if (ch == 23) {
+			/*  CTRL-W: Backspace a full word.  */
+
+			while (cursor_pos >= 1 && cmd[cursor_pos-1] == ' ') {
+				/*  Backspace.  */
+				cursor_pos --;
+				cmd_len --;
+				memmove(cmd + cursor_pos, cmd + cursor_pos + 1,
+				    cmd_len);
+				cmd[cmd_len] = '\0';
+				printf("\b");
+				for (i=cursor_pos; i<cmd_len; i++)
+					printf("%c", cmd[i]);
+				printf(" \b");
+				for (i=cursor_pos; i<cmd_len; i++)
+					printf("\b");
+			}
+
+			while (cursor_pos >= 1 && cmd[cursor_pos-1] != ' ') {
+				/*  Backspace.  */
+				cursor_pos --;
+				cmd_len --;
+				memmove(cmd + cursor_pos, cmd + cursor_pos + 1,
+				    cmd_len);
+				cmd[cmd_len] = '\0';
+				printf("\b");
+				for (i=cursor_pos; i<cmd_len; i++)
+					printf("%c", cmd[i]);
+				printf(" \b");
+				for (i=cursor_pos; i<cmd_len; i++)
+					printf("\b");
+			}
+		} else if (ch >= ' ' && ch != 127 && cmd_len < MAX_CMD_BUFLEN-1) {
 			/*  Visible character:  */
 			memmove(cmd + cursor_pos + 1, cmd + cursor_pos,
 			    cmd_len - cursor_pos);

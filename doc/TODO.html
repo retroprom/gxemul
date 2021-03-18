@@ -23,6 +23,7 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 <p><pre>
 <b>Current "short-list":</b>
 
+o) "verb all 3" output does not look nice. prints headers multiple times.
 o) Apply Chris Berry's patch for tap device use on Linux.
 o) Try tap networking on FreeBSD host (e.g. using netbsd/pmax guest).
 	Performance better than when using simulated NAT?
@@ -31,6 +32,7 @@ o) update src/net/README
 o) When using e.g. "-E alpha" and there was more than one subtype, then _list_
    them instead of just complaining "Maybe you forgot the -e command line option".
 o) Add an Example in the documentation for a config file with multiple machines (and a plain net()).
+o) Add an example of the "verbosity" command to the Debugger section of the documentation?
 o) Try all guest OSes in the documentation, cleaning up debugmsg related stuff as I go along.
 o) Per-arch overrides for whether to print symbols when executing in userspace?
 	e.g. MIPS is OK since symbols are at kseg0.
@@ -40,6 +42,7 @@ o) Command for launching a separate terminal for output from a specified subsyst
 o) Reimplement after the C++ to C switch:
 	x. i960 CPU: Disassembly of at least i960CA instructions.
 	x. HP700/RX machine skeleton.
+	x. CycloneVH machine for running Linux/i960?
 	x. Add RISC-V skeleton again; possibly using 16-bit base encoding, treating
 		32-bit instructions as "two slots". Special case, not as
 		efficient as using full 32-bit instructions as the base case, but could work.
@@ -48,11 +51,7 @@ o) Reimplement after the C++ to C switch:
 		the page.
 		Use the latest RISC-V specs, and make sure to check for
 		implementation C (Compact), I (Integer), F etc.
-o) Debugger:
-	o) In the debugger, type "abcdefg" followed by CTRL-C. Result: only "ab" is
-		shown after the prompt. Fix this.
-	o) CTRL-T in main window could print SIGINFO-like status summary
-	   o)  CTRL-T should also checked in the emul loop, not in console.c?
+o) Also support CTRL-T while executing in main emul loop?
 o) Experiment with Mouse capture for X11 windows?
 	XGrabPointer?
 		grab window = same as confine to?
@@ -71,9 +70,7 @@ o) Before 0.7.0 is released:
 o) Go through Lance Ethernet interrupt code and memory mapping, to look at
    performance. (Performance when downloading things from the internet is
    extremely poor, from inside NetBSD/pmax and OpenBSD/luna88k.)
-o) Go through the DECstation serial controller, and make sure that avail* and
-   buffers are handled similar to how the luna88k does it. If possible, try to
-   get rid of the "slow linux interrupt hack".
+o) Try Linux on DECstation; If possible, try to get rid of the "slow linux interrupt hack"?
 o) Disk overlay short-hand for temporary images. -R?
 o) Continue on the Luna 88k machine:
 	Color framebuffer

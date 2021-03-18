@@ -4991,3 +4991,8 @@ Changelog for GXemul:
 		so far done from the Lance Ethernet device.
 		Adding a 'verbosity' debugger command for inspecting and
 		setting the verbosity level for individual subsystems.
+20210318	Fixing an annoying 'backspace' bug in the debugger command
+		line handling, where the response sometimes could become
+		"unknown command ''".
+		Implementing CTRL-W (erase word) in the debugger.
+		Implementing CTRL-T (SIGINFO-like status line) in the debugger.
