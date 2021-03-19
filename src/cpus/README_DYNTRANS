@@ -38,6 +38,7 @@ Long-term goal: Make sure that all of these could work, at least in theory:
 	------		-------				-----		-----
 	Alpha		32-bit				64		no
 	ARM		32-bit, 16-bit (Thumb)		32		no
+	ARM64/AArch64	32-bit ?			64		no
 	AVR		16-bit + variable		8		no
 	AVR32		16-bit + variable		32		?
 	F-CPU		?				?		?
@@ -54,6 +55,7 @@ Long-term goal: Make sure that all of these could work, at least in theory:
 	PC532		?				32 (?)		?
 	POWER/PPC	32-bit				64/32		no
 	RCA180x		8-bit (+ variable on 1805)	8-16 (?)	no
+	RISC-V		16-bit + variable (usually 32)	128/64/32	no
 	SH1..4		16-bit				32		yes
 	SH5		32-bit, 16-bit (SHcompact)	64		yes (*1)
 	SPARC		32-bit				64/32		yes
