@@ -44,10 +44,6 @@
 #include "misc.h"
 
 
-#ifdef UNSTABLE_DEVEL
-// #define debug fatal
-#endif
-
 #define	NREGS_EXT_DMA		(0x80/sizeof(uint32_t))
 #define	NREGS_MISC		(0x80/sizeof(uint32_t))
 

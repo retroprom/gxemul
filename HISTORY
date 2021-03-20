@@ -4996,3 +4996,6 @@ Changelog for GXemul:
 		"unknown command ''".
 		Implementing CTRL-W (erase word) in the debugger.
 		Implementing CTRL-T (SIGINFO-like status line) in the debugger.
+20210320	Removing the UNSTABLE_DEVEL configure define; it was not used
+		much, and the debugmsg verbosity levels can be used in its
+		place.

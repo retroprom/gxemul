@@ -79,11 +79,6 @@
 #define	SCIF_TX_FIFO_SIZE	16
 #define	SCIF_DELAYED_TX_VALUE	2	/*  2 to be safe, 1 = fast but buggy  */
 
-#ifdef UNSTABLE_DEVEL
-// #define SH4_DEBUG
-/*  #define debug fatal  */
-#endif
-
 // Clock/occilation related
 #define SH4_CPG_FRQCR		0xffc00000	/* 16-bit */
 #define SH4_CPG_STBCR 		0xffc00004	/* 8-bit */

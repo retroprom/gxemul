@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2006-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2006-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -36,11 +36,6 @@
  *  presented (e.g. it may be an int value in memory, but it should be
  *  presented as a boolean "true/false" value), and a flag which tells us
  *  whether the setting is directly writable or not.
- *
- *  If UNSTABLE_DEVEL is defined, then warnings are printed when
- *  settings_destroy() is called if individual settings have not yet been
- *  deleted. (This is to help making sure that code which uses the settings
- *  subsystem correctly un-initializes stuff.)
  */
 
 #include <stdio.h>
@@ -112,19 +107,18 @@ void settings_destroy(struct settings *settings)
 		exit(1);
 	}
 
-#ifdef UNSTABLE_DEVEL
 	if (settings->n_settings > 0)
-		printf("settings_destroy(): there are remaining settings!\n");
-#endif
+		debugmsg(SUBSYS_STARTUP, "settings", VERBOSITY_DEBUG,
+		    "settings_destroy(): there are remaining settings!");
 
 	if (settings->name != NULL) {
 		for (i=0; i<settings->n_settings; i++) {
 			if (settings->name[i] != NULL) {
-#ifdef UNSTABLE_DEVEL
-				printf("settings_destroy(): setting '%s'"
+				debugmsg(SUBSYS_STARTUP, "settings", VERBOSITY_DEBUG,
+				    "settings_destroy(): setting '%s'"
 				    " was not properly deleted before "
-				    "exiting!\n", settings->name[i]);
-#endif
+				    "exiting!", settings->name[i]);
+
 				free(settings->name[i]);
 			}
 		}
@@ -390,10 +384,9 @@ void settings_remove(struct settings *settings, const char *name)
 	}
 
 	if (i >= settings->n_settings) {
-#ifdef UNSTABLE_DEVEL
-		fprintf(stderr, "settings_remove(): attempting to remove"
-		    " non-existant setting '%s'\n", name);
-#endif
+		debugmsg(SUBSYS_STARTUP, "settings", VERBOSITY_WARNING,
+		    "settings_remove(): attempting to remove"
+		    " non-existant setting '%s'", name);
 		return;
 	}
 

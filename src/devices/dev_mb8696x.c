@@ -50,14 +50,6 @@
 #include "thirdparty/mb86960reg.h"
 
 
-#ifdef UNSTABLE_DEVEL
-#define	MB8696X_DEBUG
-#endif
-
-#ifdef MB8696X_DEBUG
-#define debug fatal
-#endif
-
 struct mb8696x_data {
 	int		addr_mult;
 
@@ -251,9 +243,7 @@ DEVICE_ACCESS(mb8696x)
 				    bank, (int)idata);
 			}
 
-#ifdef MB8696X_DEBUG
-			exit(1);
-#endif
+			// exit(1);
 		}
 	}
 
