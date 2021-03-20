@@ -54,9 +54,6 @@
 #include "net.h"
 
 
-/*  #define debug fatal  */
-
-
 /*
  *  net_allocate_ethernet_packet_link():
  *
@@ -227,14 +224,16 @@ static void net_arp(struct net *net, struct nic_data *nic,
 		case 2:		/*  Reply  */
 		case 4:		/*  Reverse Reply  */
 		default:
-			fatal("[ net: ARP: UNIMPLEMENTED request type "
-			    "0x%04x ]\n", r);
+			debugmsg(SUBSYS_NET, "ARP", VERBOSITY_WARNING,
+	    		    "UNIMPLEMENTED request type 0x%04x", r);
 		}
 	} else {
-		fatal("[ net: ARP: UNIMPLEMENTED arp packet type: ");
-		for (i=0; i<len; i++)
-			fatal("%02x", packet[i]);
-		fatal(" ]\n");
+		if (len >= 6)
+			debugmsg(SUBSYS_NET, "ARP", VERBOSITY_WARNING,
+	   		    "UNIMPLEMENTED arp packet type: "
+	   		    "0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x ...",
+	   		    packet[0], packet[1], packet[2], packet[3],
+	   		    packet[4], packet[5]);
 	}
 }
 
@@ -281,10 +280,11 @@ int net_ethernet_rx_avail(struct net *net, struct nic_data *nic)
 			if (res != -1) {
 				nreceived ++;
 
-				/*  fatal("[ incoming DISTRIBUTED packet, %i "
+				debugmsg(SUBSYS_NET, "RX avail", VERBOSITY_DEBUG,
+    				    "incoming DISTRIBUTED packet, %i "
 				    "bytes from %s:%d\n", res,
 				    inet_ntoa(si.sin_addr),
-				    ntohs(si.sin_port));  */
+				    ntohs(si.sin_port));
 
 				/*  Add the packet to all "our" NICs on this
 				    network:  */
@@ -387,8 +387,8 @@ void net_ethernet_tx(struct net *net, struct nic_data *nic,
 
 	/*  Drop too small packets:  */
 	if (len < 20) {
-		fatal("[ net_ethernet_tx: Warning: dropping tiny packet "
-		    "(%i bytes) ]\n", len);
+		debugmsg(SUBSYS_NET, "TX", VERBOSITY_WARNING,
+    		    "Warning: dropping tiny packet (%i bytes) ]\n", len);
 		return;
 	}
 
@@ -443,14 +443,6 @@ void net_ethernet_tx(struct net *net, struct nic_data *nic,
 	    !(packet[0] == 0x00 && packet[5] == 0x00))
 		return;
 
-#if 0
-	fatal("[ net: ethernet: ");
-	for (i=0; i<6; i++)	fatal("%02x", packet[i]); fatal(" ");
-	for (i=6; i<12; i++)	fatal("%02x", packet[i]); fatal(" ");
-	for (i=12; i<14; i++)	fatal("%02x", packet[i]); fatal(" ");
-	for (i=14; i<len; i++)	fatal("%02x", packet[i]); fatal(" ]\n");
-#endif
-
 	eth_type = (packet[12] << 8) + packet[13];
 
 	/*  IP:  */
@@ -470,11 +462,15 @@ void net_ethernet_tx(struct net *net, struct nic_data *nic,
 		}
 
 		if (net->n_nics < 2) {
-			fatal("[ net_ethernet_tx: IP packet not for gateway, "
-			    "and not broadcast: ");
-			for (i=0; i<14; i++)
-				fatal("%02x", packet[i]);
-			fatal(" ]\n");
+			debugmsg(SUBSYS_NET, "TX", VERBOSITY_WARNING,
+	    		    "IP packet not for gateway, "
+			    "and not broadcast: %02x %02x %02x %02x "
+			    "%02x %02x %02x %02x %02x "
+			    "%02x %02x %02x %02x %02x ",
+			    packet[0], packet[1], packet[2], packet[3],
+			    packet[4], packet[5], packet[6], packet[7],
+			    packet[8], packet[9],
+			    packet[10], packet[11], packet[12], packet[13]);
 		}
 		return;
 	}
@@ -482,8 +478,8 @@ void net_ethernet_tx(struct net *net, struct nic_data *nic,
 	/*  ARP:  */
 	if (eth_type == ETHERTYPE_ARP) {
 		if (len != 42 && len != 60)
-			fatal("[ net_ethernet_tx: WARNING! unusual "
-			    "ARP len (%i) ]\n", len);
+			debugmsg(SUBSYS_NET, "TX", VERBOSITY_WARNING,
+	    		    "unusual ARP len (%i)", len);
 		net_arp(net, nic, packet + 14, len - 14, 0);
 		return;
 	}
@@ -497,19 +493,21 @@ void net_ethernet_tx(struct net *net, struct nic_data *nic,
 	/*  Sprite:  */
 	if (eth_type == ETHERTYPE_SPRITE) {
 		/*  TODO.  */
-		fatal("[ net: TX: UNIMPLEMENTED Sprite packet ]\n");
+		debugmsg(SUBSYS_NET, "TX", VERBOSITY_WARNING,
+		    "UNIMPLEMENTED Sprite packet");
 		return;
 	}
 
 	/*  IPv6:  */
 	if (eth_type == ETHERTYPE_IPV6) {
 		/*  TODO.  */
-		fatal("[ net_ethernet_tx: IPv6 is not implemented yet! ]\n");
+		debugmsg(SUBSYS_NET, "TX", VERBOSITY_WARNING,
+		    "IPv6 is not yet implemented!");
 		return;
 	}
 
-	fatal("[ net_ethernet_tx: ethernet packet type 0x%04x not yet "
-	    "implemented ]\n", eth_type);
+	debugmsg(SUBSYS_NET, "TX", VERBOSITY_WARNING,
+	    "ethernet packet type 0x%04x not yet implemented", eth_type);
 }
 
 
