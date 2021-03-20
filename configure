@@ -257,7 +257,8 @@ int main(int argc, char* argv[])
 	bool b = y;
 	bool c = a + b;
 	int d = a + b;
-	printf("%i,%i,%i,%i,%i\n", s, a, b, c, d);
+	printf("%i,%i,%i,%i,%i", s, a, b, c, d);
+	return 0;
 }
 ' > _testprog.c
 
