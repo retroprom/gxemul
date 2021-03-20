@@ -46,6 +46,7 @@ o) Command for launching a separate terminal for output from a specified subsyst
 o) Reimplement after the C++ to C switch:
 	x. i960 CPU: Disassembly of at least i960CA instructions.
 	x. HP700/RX machine skeleton.
+	x. bout file loader?
 	x. uCLinux: CycloneVH machine for running uCLinux/i960?
 	x. uCLinux: http://www.ibiblio.org/lou/old/ViewStation/ ?
 	x. Add RISC-V skeleton again; possibly using 16-bit base encoding, treating
@@ -57,6 +58,7 @@ o) Reimplement after the C++ to C switch:
 		Use the latest RISC-V specs, and make sure to check for
 		implementation C (Compact), I (Integer), F etc.
 o) Also support CTRL-T while executing in main emul loop?
+	Should CTRL-T be checked in console.c, or in emul.c?
 o) Experiment with Mouse capture for X11 windows?
 	XGrabPointer?
 		grab window = same as confine to?
