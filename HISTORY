@@ -4999,3 +4999,6 @@ Changelog for GXemul:
 20210320	Removing the UNSTABLE_DEVEL configure define; it was not used
 		much, and the debugmsg verbosity levels can be used in its
 		place.
+		Fixing a bug for MIPS R2000/R3000 when writing to coprocessor 0
+		"entrylo" register (if the lowest 8 bits were 0, the code took
+		the non-R2000/R3000 code path).

@@ -671,8 +671,7 @@ void coproc_register_write(struct cpu *cpu,
 			break;
 		case COP0_ENTRYLO0:
 			unimpl = 0;
-			if (cpu->cd.mips.cpu_type.mmu_model == MMU3K &&
-			    (tmp & 0xff)!=0) {
+			if (cpu->cd.mips.cpu_type.mmu_model == MMU3K) {
 				/*  char *symbol;
 				    uint64_t offset;
 				    symbol = get_symbol_name(cpu->pc, &offset);
