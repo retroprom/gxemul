@@ -206,6 +206,7 @@ struct machine {
 #define	ARCH_ARM		5
 #define	ARCH_SH			6
 #define	ARCH_M88K		7
+#define	ARCH_I960		8
 
 /*  MIPS:  */
 #define	MACHINE_BAREMIPS	1000
@@ -256,6 +257,9 @@ struct machine {
 #define	MACHINE_TESTM88K	7001
 #define	MACHINE_MVME88K		7002
 #define	MACHINE_LUNA88K		7003
+
+/*  i960:  */
+#define	MACHINE_BAREI960	8000
 
 /*  Other "pseudo"-machines:  */
 #define	MACHINE_NONE		0

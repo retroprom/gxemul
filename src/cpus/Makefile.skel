@@ -113,6 +113,18 @@ tmp_arm_tail.c: generate_tail
 
 ###############################################################################
 
+cpu_i960.o: cpu_i960.c cpu_i960_instr.c cpu_dyntrans.c memory_rw.c \
+	tmp_i960_head.c tmp_i960_tail.c
+
+tmp_i960_head.c: generate_head
+	./generate_head i960 I960 > tmp_i960_head.c
+
+tmp_i960_tail.c: generate_tail
+	./generate_tail i960 I960 > tmp_i960_tail.c
+
+
+###############################################################################
+
 cpu_m88k.o: cpu_m88k.c cpu_m88k_instr.c cpu_dyntrans.c memory_rw.c \
 	tmp_m88k_loadstore.c tmp_m88k_head.c tmp_m88k_tail.c tmp_m88k_bcnd.c
 

@@ -188,6 +188,10 @@ CPU_ARCHS="$CPU_ARCHS tmp_arm_re.o tmp_arm_rf.o tmp_arm_multi.o"
 CPU_TOOLS="$CPU_TOOLS generate_arm_dpi generate_arm_r"
 CPU_TOOLS="$CPU_TOOLS generate_arm_loadstore generate_arm_multi"
 
+#  i960
+printf " add_cpu_family(i960_cpu_family_init, ARCH_I960);" >> config.h
+CPU_ARCHS="$CPU_ARCHS cpu_i960.o memory_i960.o"
+
 #  M88K
 printf " add_cpu_family(m88k_cpu_family_init, ARCH_M88K);" >> config.h
 CPU_ARCHS="$CPU_ARCHS cpu_m88k.o memory_m88k.o"

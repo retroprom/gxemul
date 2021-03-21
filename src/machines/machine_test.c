@@ -206,6 +206,27 @@ MACHINE_REGISTER(testarm)
 
 
 
+MACHINE_SETUP(barei960)
+{
+	machine->machine_name = strdup("Generic \"bare\" i960 machine");
+}
+
+
+MACHINE_DEFAULT_CPU(barei960)
+{
+	machine->cpu_name = strdup("i960");
+}
+
+
+MACHINE_REGISTER(barei960)
+{
+	MR_DEFAULT(barei960, "Generic \"bare\" i960 machine",
+	    ARCH_I960, MACHINE_BAREI960);
+
+	machine_entry_add_alias(me, "barei960");
+}
+
+
 MACHINE_SETUP(barem88k)
 {
 	machine->machine_name = strdup("Generic \"bare\" M88K machine");

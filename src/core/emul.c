@@ -601,6 +601,14 @@ bool emul_machine_setup(struct machine *m, int n_load, char **load_names,
 				cpu->cd.arm.cpsr |= ARM_FLAG_T;
 			break;
 
+		case ARCH_I960:
+			if (cpu->pc & 3) {
+				fatal("i960: lowest bits of pc set: TODO\n");
+				return false;
+			}
+			cpu->pc &= 0xfffffffc;
+			break;
+
 		case ARCH_M88K:
 			if (cpu->pc & 3) {
 				fatal("M88K: lowest bits of pc set: TODO\n");
@@ -637,8 +645,8 @@ bool emul_machine_setup(struct machine *m, int n_load, char **load_names,
 			break;
 
 		default:
-			fatal("emul_machine_setup(): Internal error: "
-			    "Unimplemented arch %i\n", m->arch);
+			debugmsg(SUBSYS_EMUL, "emul_machine_setup()", VERBOSITY_ERROR,
+			    "Internal error: Unimplemented arch %i", m->arch);
 			return false;
 		}
 
