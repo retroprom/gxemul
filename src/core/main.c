@@ -198,7 +198,6 @@ static void usage(bool longusage)
 	printf("                o    overwrite instead of append\n");
 	printf("  -T        halt on non-existant memory accesses\n");
 	printf("  -t        show function trace tree\n");
-	printf("  -U        enable slow_serial_interrupts_hack_for_linux\n");
 #ifdef WITH_X11
 	printf("  -X        use X11\n");
 	printf("  -Y n      scale down framebuffer windows by n x n times\n");
@@ -269,7 +268,7 @@ int get_cmd_args(int argc, char *argv[], struct emul *emul,
 	struct machine *m = emul_add_machine(emul, NULL);
 
 	const char *opts =
-	    "AC:c:Dd:E:e:GHhI:iJj:k:KL:M:Nn:Oo:p:QqRrSs:TtUVvW:"
+	    "AC:c:Dd:E:e:GHhI:iJj:k:KL:M:Nn:Oo:p:QqRrSs:TtVvW:"
 #ifdef WITH_X11
 	    "XxY:"
 #endif
@@ -414,10 +413,6 @@ int get_cmd_args(int argc, char *argv[], struct emul *emul,
 			break;
 		case 't':
 			m->show_trace_tree = 1;
-			machine_specific_options_used = true;
-			break;
-		case 'U':
-			m->slow_serial_interrupts_hack_for_linux = 1;
 			machine_specific_options_used = true;
 			break;
 		case 'V':

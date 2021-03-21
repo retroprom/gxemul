@@ -472,12 +472,6 @@ static void parse__machine(struct emul *e, FILE *f, int *in_emul, int *line,
 			    sizeof(cur_machine_use_x11));
 		m->x11_md.in_use = parse_on_off(cur_machine_use_x11);
 
-		if (!cur_machine_slowsi[0])
-			strlcpy(cur_machine_slowsi, "no",
-			    sizeof(cur_machine_slowsi));
-		m->slow_serial_interrupts_hack_for_linux =
-		    parse_on_off(cur_machine_slowsi);
-
 		if (!cur_machine_prom_emulation[0])
 			strlcpy(cur_machine_prom_emulation, "yes",
 			    sizeof(cur_machine_prom_emulation));
@@ -606,7 +600,6 @@ static void parse__machine(struct emul *e, FILE *f, int *in_emul, int *line,
 	WORD("subtype", cur_machine_subtype);
 	WORD("bootname", cur_machine_bootname);
 	WORD("bootarg", cur_machine_bootarg);
-	WORD("slow_serial_interrupts_hack_for_linux", cur_machine_slowsi);
 	WORD("prom_emulation", cur_machine_prom_emulation);
 	WORD("use_x11", cur_machine_use_x11);
 	WORD("x11_scaledown", cur_machine_x11_scaledown);

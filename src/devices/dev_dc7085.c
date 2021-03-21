@@ -51,9 +51,6 @@ struct dc_data {
 
 	int			console_handle;
 
-	/*  For slow_serial_interrupts_hack_for_linux:  */
-	int			just_transmitted_something;
-
 	unsigned char		rx_queue_char[MAX_QUEUE_LEN];
 	char			rx_queue_lineno[MAX_QUEUE_LEN];
 	int			cur_rx_queue_pos_write;
@@ -122,17 +119,6 @@ DEVICE_TICK(dc7085)
 	 */
 	struct dc_data *d = (struct dc_data *) extra;
 	int avail;
-
-	if (cpu->machine->slow_serial_interrupts_hack_for_linux) {
-		/*
-		 *  Special hack to prevent Linux from Oopsing. (This makes
-		 *  interrupts not come as fast as possible.)
-		 */
-		if (d->just_transmitted_something) {
-			d->just_transmitted_something --;
-			return;
-		}
-	}
 
 	d->regs.dc_csr &= ~CSR_RDONE;
 
@@ -241,8 +227,6 @@ DEVICE_ACCESS(dc7085)
 
 			d->regs.dc_csr &= ~CSR_RDONE;
 			INTERRUPT_DEASSERT(d->irq);
-
-			d->just_transmitted_something = 4;
 		}
 		break;
 
@@ -272,8 +256,6 @@ DEVICE_ACCESS(dc7085)
 
 			d->regs.dc_csr &= ~CSR_TRDY;
 			INTERRUPT_DEASSERT(d->irq);
-
-			d->just_transmitted_something = 4;
 		} else {
 			/*  read:  */
 			d->regs.dc_msr_tdr |= MSR_DSR2 | MSR_CD2 |

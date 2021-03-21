@@ -418,9 +418,6 @@ void machine_dumpinfo(struct machine *m)
 	if (m->ncpus > 1)
 		debug("Bootstrap cpu is nr %i\n", m->bootstrap_cpu);
 
-	if (m->slow_serial_interrupts_hack_for_linux)
-		debug("Using slow_serial_interrupts_hack_for_linux\n");
-
 	if (m->x11_md.in_use) {
 		debug("Using X11");
 		if (m->x11_md.scaledown > 1)

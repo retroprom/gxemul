@@ -163,7 +163,6 @@ struct machine {
 	int	emulated_hz;
 	int	allow_instruction_combinations;
 	int	force_netboot;
-	int	slow_serial_interrupts_hack_for_linux;
 	uint64_t file_loaded_end_addr;
 	char	*boot_kernel_filename;
 	char	*boot_string_argument;

@@ -5006,3 +5006,6 @@ Changelog for GXemul:
 		Moving 'arch' from struct machine to struct cpu; in the future,
 		perhaps this would allow a machine to have heterogenous CPU
 		sets (such as the Dreamcast with both SuperH and ARM).
+		Removing "slow_serial_interrupts_hack_for_linux" (-U) command
+		line option, since it is not used for most guest OSes, and
+		occupied a command line option char.
