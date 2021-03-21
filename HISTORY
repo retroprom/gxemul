@@ -5002,3 +5002,4 @@ Changelog for GXemul:
 		Fixing a bug for MIPS R2000/R3000 when writing to coprocessor 0
 		"entrylo" register (if the lowest 8 bits were 0, the code took
 		the non-R2000/R3000 code path).
+20210321	Adding an empty i960 CPU skeleton [again].
