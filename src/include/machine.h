@@ -108,7 +108,6 @@ struct machine {
 	/*  Full "path" to the machine, e.g. "machine[0]":  */
 	char	*path;
 
-	int	arch;			/*  ARCH_MIPS, ARCH_PPC, ..  */
 	int	machine_type;		/*  MACHINE_PMAX, ..  */
 	int	machine_subtype;	/*  MACHINE_DEC_3MAX_5000, ..  */
 
@@ -121,9 +120,7 @@ struct machine {
 	int	serial_nr;
 	int	nr_of_nics;
 
-	/*  TODO: How about multiple cpu familys in one machine?  */
-	struct cpu_family *cpu_family;
-
+	/*  Main memory:  */
 	struct memory *memory;
 
 	int	main_console_handle;
@@ -198,15 +195,6 @@ struct machine {
 /*
  *  Machine emulation types:
  */
-
-#define	ARCH_NOARCH		0
-#define	ARCH_MIPS		1
-#define	ARCH_PPC		2
-#define	ARCH_ALPHA		4
-#define	ARCH_ARM		5
-#define	ARCH_SH			6
-#define	ARCH_M88K		7
-#define	ARCH_I960		8
 
 /*  MIPS:  */
 #define	MACHINE_BAREMIPS	1000
@@ -353,7 +341,6 @@ struct machine_entry {
 	struct machine_entry	*next;
 
 	/*  Machine type:  */
-	int			arch;
 	int			machine_type;	/*  Old-style type  */
 	const char		*name;		/*  Official name  */
 	int			n_aliases;
@@ -374,19 +361,18 @@ struct machine_entry {
 #define	MACHINE_DEFAULT_CPU(x)	void machine_default_cpu_ ## x(struct machine *machine)
 #define	MACHINE_DEFAULT_RAM(x)	void machine_default_ram_ ## x(struct machine *machine)
 #define	MACHINE_REGISTER(x)	void machine_register_ ## x(void)
-#define	MR_DEFAULT(x,name,arch,type) struct machine_entry 		\
-	    *me = machine_entry_new(name,arch,type);			\
-	me->setup = machine_setup_ ## x;				\
-	me->set_default_cpu = machine_default_cpu_ ## x;		\
-	machine_entry_register(me, arch);
+#define	MR_DEFAULT(x,name,type) struct machine_entry 		\
+	    *me = machine_entry_new(name,type);			\
+	me->setup = machine_setup_ ## x;			\
+	me->set_default_cpu = machine_default_cpu_ ## x;	\
+	machine_entry_register(me);
 void automachine_init(void);
 
 
 /*  machine.c:  */
 struct machine *machine_new(char *name, struct emul *emul, int id);
 void machine_destroy(struct machine *machine);
-int machine_name_to_type(char *stype, char *ssubtype,
-	int *type, int *subtype, int *arch);
+int machine_name_to_type(char *stype, char *ssubtype, int *type, int *subtype);
 void machine_add_breakpoint_string(struct machine *machine, char *str);
 void machine_add_tickfunction(struct machine *machine,
 	void (*func)(struct cpu *, void *), void *extra, int clockshift);
@@ -399,12 +385,11 @@ void machine_default_cputype(struct machine *);
 void machine_dumpinfo(struct machine *);
 bool machine_run(struct machine *machine);
 void machine_list_available_types_and_cpus(void);
-struct machine_entry *machine_entry_new(const char *name, 
-	int arch, int oldstyle_type);
+struct machine_entry *machine_entry_new(const char *name, int oldstyle_type);
 void machine_entry_add_alias(struct machine_entry *me, const char *name);
 void machine_entry_add_subtype(struct machine_entry *me, const char *name,
 	int oldstyle_subtype, ...);
-void machine_entry_register(struct machine_entry *me, int arch);
+void machine_entry_register(struct machine_entry *me);
 void machine_init(void);
 
 

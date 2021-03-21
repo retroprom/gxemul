@@ -2,7 +2,7 @@
 #define	CPU_SH_H
 
 /*
- *  Copyright (C) 2005-2011  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -235,7 +235,7 @@ void sh_invalidate_code_translation(struct cpu *cpu, uint64_t, int);
 void sh_init_64bit_dummy_tables(struct cpu *cpu);
 int sh_memory_rw(struct cpu *cpu, struct memory *mem, uint64_t vaddr,
 	unsigned char *data, size_t len, int writeflag, int cache_flags);
-int sh_cpu_family_init(struct cpu_family *);
+void sh_cpu_family_init(struct cpu_family *);
 
 void sh_update_interrupt_priorities(struct cpu *cpu);
 void sh_update_sr(struct cpu *cpu, uint32_t new_sr);

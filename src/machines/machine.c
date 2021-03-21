@@ -156,7 +156,7 @@ void machine_destroy(struct machine *machine)
  *  Also, any errors/warnings are printed using fatal()/debug().
  */
 int machine_name_to_type(char *stype, char *ssubtype,
-	int *type, int *subtype, int *arch)
+	int *type, int *subtype)
 {
 	struct machine_entry *me;
 	int i, j, k, nmatches = 0;
@@ -171,7 +171,6 @@ int machine_name_to_type(char *stype, char *ssubtype,
 			if (strcasecmp(me->aliases[i], stype) == 0) {
 				/*  Found a type:  */
 				*type = me->machine_type;
-				*arch = me->arch;
 
 				if (me->n_subtypes == 0)
 					return 1;
@@ -213,9 +212,7 @@ int machine_name_to_type(char *stype, char *ssubtype,
 				if (strcasecmp(ssubtype, me->subtype[j]->
 				    aliases[k]) == 0) {
 					*type = me->machine_type;
-					*arch = me->arch;
-					*subtype = me->subtype[j]->
-					    machine_subtype;
+					*subtype = me->subtype[j]->machine_subtype;
 					nmatches ++;
 				}
 
@@ -496,7 +493,7 @@ void machine_setup(struct machine *machine)
 		exit(1);
 	}
 
-	switch (machine->arch) {
+	switch (cpu->cpu_family->arch) {
 	case ARCH_MIPS:
 		// Register devices at the "typical" kseg1 base:
 		// 0xffffffff80000000 (kseg0) could work too but it is more
@@ -715,8 +712,7 @@ bool machine_run(struct machine *machine)
  *  passed as arguments to this function, such as alias names and machine
  *  subtypes.
  */
-struct machine_entry *machine_entry_new(const char *name, int arch,
-	int oldstyle_type)
+struct machine_entry *machine_entry_new(const char *name, int oldstyle_type)
 {
 	struct machine_entry *me;
 
@@ -724,7 +720,6 @@ struct machine_entry *machine_entry_new(const char *name, int arch,
 	memset(me, 0, sizeof(struct machine_entry));
 
 	me->name = name;
-	me->arch = arch;
 	me->machine_type = oldstyle_type;
 	me->n_aliases = 0;
 	me->aliases = NULL;
@@ -809,14 +804,9 @@ void machine_entry_add_subtype(struct machine_entry *me, const char *name,
  *
  *  Inserts a new machine_entry into the machine entries list.
  */
-void machine_entry_register(struct machine_entry *me, int arch)
+void machine_entry_register(struct machine_entry *me)
 {
 	struct machine_entry *prev, *next;
-
-	/*  Only insert it if the architecture is implemented in this
-	    emulator configuration:  */
-	if (cpu_family_ptr_by_number(arch) == NULL)
-		return;
 
 	prev = NULL;
 	next = first_machine_entry;
@@ -870,8 +860,7 @@ void machine_list_available_types_and_cpus(void)
 	while (me != NULL) {
 		int i, j, iadd2 = 1;
 
-		debug("%s [%s] (", me->name,
-		    cpu_family_ptr_by_number(me->arch)->name);
+		debug("%s (", me->name);
 		for (i=0; i<me->n_aliases; i++)
 			debug("%s\"%s\"", i? ", " : "", me->aliases[i]);
 		debug(")\n");

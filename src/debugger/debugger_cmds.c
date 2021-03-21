@@ -958,11 +958,11 @@ static void debugger_cmd_step(struct machine *m, char *args)
 /*
  *  debugger_cmd_tlbdump():
  *
- *  Dump each CPU's TLB contents.
+ *  Dumps a CPU's TLB content.
  */
 static void debugger_cmd_tlbdump(struct machine *m, char *args)
 {
-	int x = -1;
+	int x = 0;
 	int rawflag = 0;
 
 	if (args[0] != '\0') {
@@ -989,7 +989,7 @@ static void debugger_cmd_tlbdump(struct machine *m, char *args)
 		}
 	}
 
-	cpu_tlbdump(m, x, rawflag);
+	cpu_tlbdump(m->cpus[x], rawflag);
 }
 
 
@@ -1124,7 +1124,7 @@ static void debugger_cmd_unassemble(struct machine *m, char *args)
 			uint64_t actualaddr = addr;
 
 			// Hack for ARM (THUMB): (Lowest bit = 1 means 16-bit encoding)
-			if (m->arch == ARCH_ARM)
+			if (c->cpu_family->arch == ARCH_ARM)
 				actualaddr &= ~1;
 
 			if (c->memory_rw(c, mem, actualaddr+i, buf+i, 1, MEM_READ,

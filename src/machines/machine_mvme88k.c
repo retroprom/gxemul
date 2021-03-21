@@ -199,7 +199,7 @@ MACHINE_DEFAULT_RAM(mvme88k)
 
 MACHINE_REGISTER(mvme88k)
 {
-	MR_DEFAULT(mvme88k, "MVME88K", ARCH_M88K, MACHINE_MVME88K);
+	MR_DEFAULT(mvme88k, "MVME88K", MACHINE_MVME88K);
 
 	machine_entry_add_alias(me, "mvme88k");
 

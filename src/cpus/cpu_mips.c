@@ -479,23 +479,23 @@ int mips_cpu_instruction_has_delayslot(struct cpu *cpu, unsigned char *ib)
  *  mips_cpu_tlbdump():
  *
  *  Called from the debugger to dump the TLB in a readable format.
- *  x is the cpu number to dump, or -1 to dump all CPUs.
  *
  *  If rawflag is nonzero, then the TLB contents isn't formated nicely,
  *  just dumped.
  */
-void mips_cpu_tlbdump(struct machine *m, int x, int rawflag)
+void mips_cpu_tlbdump(struct cpu *cpu, int rawflag)
 {
 	int i, j;
+	struct machine* m = cpu->machine;
 
 	/*  Raw output:  */
 	if (rawflag) {
 		for (i=0; i<m->ncpus; i++) {
+			if (cpu != m->cpus[i])
+				continue;
+
 			struct mips_coproc *cop0 =
 			    m->cpus[i]->cd.mips.coproc[0];
-
-			if (x >= 0 && i != x)
-				continue;
 
 			/*  Print index, random, and wired:  */
 			printf("cpu%i: (", i);
@@ -548,11 +548,12 @@ void mips_cpu_tlbdump(struct machine *m, int x, int rawflag)
 
 	/*  Nicely formatted output:  */
 	for (i=0; i<m->ncpus; i++) {
+		if (cpu != m->cpus[i])
+			continue;
+
 		int pageshift = 12;
 		struct mips_coproc *cop0 = m->cpus[i]->cd.mips.coproc[0];
 
-		if (x >= 0 && i != x)
-			continue;
 
 		if (m->cpus[i]->cd.mips.cpu_type.rev == MIPS_R4100)
 			pageshift = 10;

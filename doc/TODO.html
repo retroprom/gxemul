@@ -23,7 +23,6 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 <p><pre>
 <b>Current "short-list":</b>
 
-o) Figure out in which release DECstation Sprite's xinit stopped working.
 o) "verb all 3" output does not look nice. prints headers multiple times.
 o) src/net/:
 	o) debugmsg:ify all src/net/.
@@ -118,6 +117,8 @@ o) O(n) -> O(1) 64-bit translation invalidation, _IF_ it is possible to
 	translation arrays. Would be nice.
 o) GXsatellite -- Gavare's eXperimental Stand-Alone Test Environment
    for Low-Level Interactive Testing of Emulators. base on YCX5; start with testmips.
+o) Why indirection via 		cpu->cpu_family->dumpinfo(cpu, verbose);
+	why not just cpu->dumpinfo?
 
 
 

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2014  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -306,7 +306,7 @@ static void file_load_elf(struct machine *m, struct memory *mem,
 		}
 		break;  */
 	default:
-		fatal("file.c: INTERNAL ERROR: Unimplemented arch!\n");
+		fatal("file.c: INTERNAL ERROR: Unimplemented arch %i!\n", arch);
 	}
 	if (!ok) {
 		fprintf(stderr, "%s: this is a ", filename);

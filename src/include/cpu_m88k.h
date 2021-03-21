@@ -285,7 +285,7 @@ void m88k_invalidate_translation_caches(struct cpu *cpu, uint64_t, int);
 void m88k_invalidate_code_translation(struct cpu *cpu, uint64_t, int);
 int m88k_memory_rw(struct cpu *cpu, struct memory *mem, uint64_t vaddr,
 	unsigned char *data, size_t len, int writeflag, int cache_flags);
-int m88k_cpu_family_init(struct cpu_family *);
+void m88k_cpu_family_init(struct cpu_family *);
 void m88k_ldcr(struct cpu *cpu, uint32_t *r32ptr, int cr);
 void m88k_stcr(struct cpu *cpu, uint32_t value, int cr, int rte);
 void m88k_fstcr(struct cpu *cpu, uint32_t value, int fcr);

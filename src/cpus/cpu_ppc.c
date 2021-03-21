@@ -558,7 +558,7 @@ void ppc_cpu_register_dump(struct cpu *cpu, int gprs, int coprocs)
  *
  *  Not currently used for PPC.
  */
-void ppc_cpu_tlbdump(struct machine *m, int x, int rawflag)
+void ppc_cpu_tlbdump(struct cpu* cpu, int rawflag)
 {
 }
 

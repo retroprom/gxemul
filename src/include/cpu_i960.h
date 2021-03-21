@@ -85,7 +85,7 @@ void i960_invalidate_translation_caches(struct cpu *cpu, uint64_t, int);
 void i960_invalidate_code_translation(struct cpu *cpu, uint64_t, int);
 int i960_memory_rw(struct cpu *cpu, struct memory *mem, uint64_t vaddr,
 	unsigned char *data, size_t len, int writeflag, int cache_flags);
-int i960_cpu_family_init(struct cpu_family *);
+void i960_cpu_family_init(struct cpu_family *);
 void i960_exception(struct cpu *cpu, int vector, int is_trap);
 
 /*  memory_i960.c:  */

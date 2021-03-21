@@ -229,7 +229,20 @@ struct physpage_ranges {
 	struct arch ## _l2_64_table	*l1_64[1 << DYNTRANS_L1N];
 
 
-/*  Include all CPUs' header files here:  */
+/*  CPU architectures:  */
+#define	ARCH_ALPHA		1
+#define	ARCH_ARM		2
+#define	ARCH_I960		3
+#define	ARCH_M88K		4
+#define	ARCH_MIPS		5
+#define	ARCH_PPC		6
+#define	ARCH_SH			7
+
+/*
+ *  Include all CPUs' header files here. At the end of the
+ *  cpu struct there is a union of the architecture-specific
+ *  parts (cd).
+ */
 #include "cpu_alpha.h"
 #include "cpu_arm.h"
 #include "cpu_i960.h"
@@ -253,10 +266,12 @@ struct settings;
  *  architecture-specific functions.
  *
  *  Except for the next and arch fields at the top, all fields in the
- *  cpu_family struct are filled in by ecah CPU family's init function.
+ *  cpu_family struct are filled in by each CPU family's init function.
  */
 struct cpu_family {
 	struct cpu_family	*next;
+
+	/*  E.g. ARCH_MIPS:  */
 	int			arch;
 
 	/*  Familty name, e.g. "MIPS", "Alpha" etc.  */
@@ -285,9 +300,8 @@ struct cpu_family {
 	/*  Dump generic CPU info in readable format.  */
 	void			(*dumpinfo)(struct cpu *cpu, bool verbose);
 
-	/*  Dump TLB data for CPU id x.  */
-	void			(*tlbdump)(struct machine *m, int x,
-				    int rawflag);
+	/*  Dump TLB data for a CPU.  */
+	void			(*tlbdump)(struct cpu *cpu, int rawflag);
 
 	/*  Print architecture-specific function call arguments.
 	    (This is called for each function call, if running with -t.)  */
@@ -331,6 +345,9 @@ struct cpu {
 
 	/*  Settings:  */
 	struct settings *settings;
+
+	/*  Contains the arch (e.g. ARCH_MIPS), and some function pointers.  */
+	struct cpu_family* cpu_family;
 
 	/*  CPU-specific name, e.g. "R2000", "21164PC", etc.  */
 	char		*name;
@@ -458,7 +475,7 @@ struct cpu *cpu_new(struct memory *mem, struct machine *machine,
         int cpu_id, char *cpu_type_name);
 void cpu_destroy(struct cpu *cpu);
 
-void cpu_tlbdump(struct machine *m, int x, int rawflag);
+void cpu_tlbdump(struct cpu *cpu, int rawflag);
 void cpu_register_dump(struct machine *m, struct cpu *cpu,
 	int gprs, int coprocs);
 int cpu_disassemble_instr(struct machine *m, struct cpu *cpu,
@@ -476,7 +493,6 @@ void cpu_dumpinfo(struct machine *m, struct cpu *cpu, bool verbose);
 void cpu_list_available_types(void);
 void cpu_show_cycles(struct machine *machine, bool forced);
 
-struct cpu_family *cpu_family_ptr_by_number(int arch);
 void cpu_init(void);
 
 
@@ -504,7 +520,7 @@ void cpu_init(void);
 	    SETTINGS_FORMAT_HEX8, (void *) &(var));
 
 
-#define CPU_FAMILY_INIT(n,s)	int n ## _cpu_family_init(		\
+#define CPU_FAMILY_INIT(n,s)	void n ## _cpu_family_init(		\
 	struct cpu_family *fp) {					\
 	/*  Fill in the cpu_family struct with valid data for this arch.  */ \
 	fp->name = strdup(s);						\
@@ -516,7 +532,6 @@ void cpu_init(void);
 	fp->functioncall_trace = n ## _cpu_functioncall_trace;		\
 	fp->tlbdump = n ## _cpu_tlbdump;				\
 	fp->init_tables = n ## _cpu_init_tables;			\
-	return 1;							\
 	}
 
 

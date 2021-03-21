@@ -92,7 +92,7 @@ DEVICE_ACCESS(mp)
 	case DEV_MP_STARTUPCPU:
 		which_cpu = idata;
 		d->cpus[which_cpu]->pc = d->startup_addr;
-		switch (cpu->machine->arch) {
+		switch (cpu->cpu_family->arch) {
 		case ARCH_MIPS:
 			d->cpus[which_cpu]->cd.mips.gpr[MIPS_GPR_SP] =
 			    d->stack_addr;

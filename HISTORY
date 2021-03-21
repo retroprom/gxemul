@@ -5003,3 +5003,6 @@ Changelog for GXemul:
 		"entrylo" register (if the lowest 8 bits were 0, the code took
 		the non-R2000/R3000 code path).
 20210321	Adding an empty i960 CPU skeleton [again].
+		Moving 'arch' from struct machine to struct cpu; in the future,
+		perhaps this would allow a machine to have heterogenous CPU
+		sets (such as the Dreamcast with both SuperH and ARM).

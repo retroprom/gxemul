@@ -136,7 +136,7 @@ void file_load(struct machine *machine, struct memory *mem,
 		exit(1);
 	}
 
-	if (arch == ARCH_NOARCH) {
+	if (!arch) {
 		fprintf(stderr, "file_load(): FATAL ERROR: no arch?\n");
 		exit(1);
 	}

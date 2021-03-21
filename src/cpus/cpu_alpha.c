@@ -202,7 +202,7 @@ void alpha_cpu_register_dump(struct cpu *cpu, int gprs, int coprocs)
  *  If rawflag is nonzero, then the TLB contents isn't formated nicely,
  *  just dumped.
  */
-void alpha_cpu_tlbdump(struct machine *m, int x, int rawflag)
+void alpha_cpu_tlbdump(struct cpu* cpu, int rawflag)
 {
 }
 

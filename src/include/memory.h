@@ -102,7 +102,7 @@ void memory_writemax64(struct cpu *cpu, unsigned char *buf, int len,
 
 void *zeroed_alloc(size_t s);
 
-struct memory *memory_new(uint64_t physical_max, int arch);
+struct memory *memory_new(uint64_t physical_max);
 
 int memory_points_to_string(struct cpu *cpu, struct memory *mem,
 	uint64_t addr, int min_string_length);

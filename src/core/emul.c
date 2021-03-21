@@ -108,7 +108,7 @@ static void add_breakpoints(struct machine *m)
 		 *  were automatically converted into the correct address.
 		 */
 
-		if (m->arch == ARCH_MIPS) {
+		if (m->cpus[0]->cpu_family->arch == ARCH_MIPS) {
 			if ((dp >> 32) == 0 && ((dp >> 31) & 1))
 				dp |= 0xffffffff00000000ULL;
 		}
@@ -376,9 +376,8 @@ bool emul_machine_setup(struct machine *m, int n_load, char **load_names,
 		return false;
 	}
 
-	m->cpu_family = cpu_family_ptr_by_number(m->arch);
-
-	if (m->arch == ARCH_ALPHA)
+	// Hack for Alpha.
+	if (m->machine_type == MACHINE_ALPHA)
 		m->arch_pagesize = 8192;
 
 	machine_memsize_fix(m);
@@ -414,7 +413,7 @@ bool emul_machine_setup(struct machine *m, int n_load, char **load_names,
 		snprintf(meminfo + strlen(meminfo), sizeof(meminfo) - strlen(meminfo),
 		    ", randomized content");
 
-	m->memory = memory_new(memory_amount, m->arch);
+	m->memory = memory_new(memory_amount);
 
 	/*  Create CPUs:  */
 	if (m->cpu_name == NULL)
@@ -569,7 +568,7 @@ bool emul_machine_setup(struct machine *m, int n_load, char **load_names,
 		 *  Load the file:  :-)
 		 */
 		file_load(m, m->memory, name_to_load, &entrypoint,
-		    m->arch, &gp, &byte_order, &toc);
+		    cpu->cpu_family->arch, &gp, &byte_order, &toc);
 
 		if (remove_after_load) {
 			debug("removing %s\n", name_to_load);
@@ -581,7 +580,7 @@ bool emul_machine_setup(struct machine *m, int n_load, char **load_names,
 
 		cpu->pc = entrypoint;
 
-		switch (m->arch) {
+		switch (cpu->cpu_family->arch) {
 
 		case ARCH_ALPHA:
 			/*  For position-independent code:  */
@@ -646,7 +645,7 @@ bool emul_machine_setup(struct machine *m, int n_load, char **load_names,
 
 		default:
 			debugmsg(SUBSYS_EMUL, "emul_machine_setup()", VERBOSITY_ERROR,
-			    "Internal error: Unimplemented arch %i", m->arch);
+			    "Internal error: Unimplemented CPU arch %i", cpu->cpu_family->arch);
 			return false;
 		}
 
@@ -705,7 +704,7 @@ bool emul_machine_setup(struct machine *m, int n_load, char **load_names,
 		    " <%s>", bootaddr_symbol);
 
 	/*  Also show the GP (or equivalent):  */
-	switch (m->arch) {
+	switch (cpu->cpu_family->arch) {
 
 	case ARCH_MIPS:
 		if (cpu->cd.mips.gpr[MIPS_GPR_GP] != 0) {

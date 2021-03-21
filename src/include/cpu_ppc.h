@@ -2,7 +2,7 @@
 #define	CPU_PPC_H
 
 /*
- *  Copyright (C) 2005-2012  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -214,7 +214,7 @@ void ppc32_invalidate_code_translation(struct cpu *cpu, uint64_t, int);
 void ppc_init_64bit_dummy_tables(struct cpu *cpu);
 int ppc_memory_rw(struct cpu *cpu, struct memory *mem, uint64_t vaddr,
 	unsigned char *data, size_t len, int writeflag, int cache_flags);
-int ppc_cpu_family_init(struct cpu_family *);
+void ppc_cpu_family_init(struct cpu_family *);
 
 /*  memory_ppc.c:  */
 int ppc_translate_v2p(struct cpu *cpu, uint64_t vaddr,

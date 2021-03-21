@@ -176,7 +176,7 @@ MACHINE_DEFAULT_RAM(dreamcast)
 
 MACHINE_REGISTER(dreamcast)
 {
-	MR_DEFAULT(dreamcast, "Dreamcast", ARCH_SH, MACHINE_DREAMCAST);
+	MR_DEFAULT(dreamcast, "Dreamcast", MACHINE_DREAMCAST);
 	me->set_default_ram = machine_default_ram_dreamcast;
 	machine_entry_add_alias(me, "dreamcast");
 }

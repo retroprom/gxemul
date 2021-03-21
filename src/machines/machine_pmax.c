@@ -980,7 +980,7 @@ MACHINE_DEFAULT_RAM(pmax)
 
 MACHINE_REGISTER(pmax)
 {
-	MR_DEFAULT(pmax, "DECstation/DECsystem", ARCH_MIPS, MACHINE_PMAX);
+	MR_DEFAULT(pmax, "DECstation/DECsystem", MACHINE_PMAX);
 
 	machine_entry_add_alias(me, "decstation");
 	machine_entry_add_alias(me, "decsystem");

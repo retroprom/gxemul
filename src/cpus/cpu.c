@@ -58,8 +58,6 @@ static struct cpu_family *first_cpu_family = NULL;
 struct cpu *cpu_new(struct memory *mem, struct machine *machine,
         int cpu_id, char *name)
 {
-	struct cpu *cpu;
-	struct cpu_family *fp;
 	char *cpu_type_name;
 	char tmpstr[30];
 
@@ -70,7 +68,7 @@ struct cpu *cpu_new(struct memory *mem, struct machine *machine,
 
 	CHECK_ALLOCATION(cpu_type_name = strdup(name));
 
-	cpu = (struct cpu *) zeroed_alloc(sizeof(struct cpu));
+	struct cpu *cpu = (struct cpu *) zeroed_alloc(sizeof(struct cpu));
 
 	CHECK_ALLOCATION(cpu->path = (char *) malloc(strlen(machine->path) + 15));
 	snprintf(cpu->path, strlen(machine->path) + 15,
@@ -97,7 +95,7 @@ struct cpu *cpu_new(struct memory *mem, struct machine *machine,
 
 	cpu_create_or_reset_tc(cpu);
 
-	fp = first_cpu_family;
+	struct cpu_family *fp = first_cpu_family;
 
 	while (fp != NULL) {
 		if (fp->cpu_new != NULL) {
@@ -109,11 +107,13 @@ struct cpu *cpu_new(struct memory *mem, struct machine *machine,
 	}
 
 	if (fp == NULL) {
-		debugmsg_cpu(cpu, SUBSYS_CPU, "", VERBOSITY_ERROR,
+		debugmsg(SUBSYS_CPU, "", VERBOSITY_ERROR,
 		    "unknown cpu type '%s'", cpu_type_name);
 		free(cpu);
 		return NULL;
 	}
+
+	cpu->cpu_family = fp;
 
 	if (cpu->memory_rw == NULL) {
 		debugmsg_cpu(cpu, SUBSYS_CPU, "", VERBOSITY_ERROR,
@@ -179,12 +179,12 @@ void cpu_destroy(struct cpu *cpu)
  *  If rawflag is nonzero, then the TLB contents isn't formated nicely,
  *  just dumped.
  */
-void cpu_tlbdump(struct machine *m, int x, int rawflag)
+void cpu_tlbdump(struct cpu *cpu, int rawflag)
 {
-	if (m->cpu_family == NULL || m->cpu_family->tlbdump == NULL)
+	if (cpu->cpu_family == NULL || cpu->cpu_family->tlbdump == NULL)
 		fatal("cpu_tlbdump(): NULL\n");
 	else
-		m->cpu_family->tlbdump(m, x, rawflag);
+		cpu->cpu_family->tlbdump(cpu, rawflag);
 }
 
 
@@ -197,11 +197,11 @@ void cpu_tlbdump(struct machine *m, int x, int rawflag)
 int cpu_disassemble_instr(struct machine *m, struct cpu *cpu,
 	unsigned char *instr, int running, uint64_t addr)
 {
-	if (m->cpu_family == NULL || m->cpu_family->disassemble_instr == NULL) {
+	if (cpu->cpu_family == NULL || cpu->cpu_family->disassemble_instr == NULL) {
 		fatal("cpu_disassemble_instr(): NULL\n");
 		return 0;
 	} else
-		return m->cpu_family->disassemble_instr(cpu, instr,
+		return cpu->cpu_family->disassemble_instr(cpu, instr,
 		    running, addr);
 }
 
@@ -217,10 +217,10 @@ int cpu_disassemble_instr(struct machine *m, struct cpu *cpu,
 void cpu_register_dump(struct machine *m, struct cpu *cpu,
 	int gprs, int coprocs)
 {
-	if (m->cpu_family == NULL || m->cpu_family->register_dump == NULL)
+	if (cpu->cpu_family == NULL || cpu->cpu_family->register_dump == NULL)
 		fatal("cpu_register_dump(): NULL\n");
 	else
-		m->cpu_family->register_dump(cpu, gprs, coprocs);
+		cpu->cpu_family->register_dump(cpu, gprs, coprocs);
 }
 
 
@@ -238,7 +238,7 @@ void cpu_functioncall_trace(struct cpu *cpu, uint64_t f)
 	uint64_t offset;
 
 	/*  Special hack for M88K userspace:  */
-	if (cpu->machine->arch == ARCH_M88K &&
+	if (cpu->cpu_family->arch == ARCH_M88K &&
 	    !(cpu->cd.m88k.cr[M88K_CR_PSR] & M88K_PSR_MODE))
 		show_symbolic_function_name = 0;
 
@@ -265,8 +265,8 @@ void cpu_functioncall_trace(struct cpu *cpu, uint64_t f)
 	}
 	fatal("(");
 
-	if (cpu->machine->cpu_family->functioncall_trace != NULL)
-		cpu->machine->cpu_family->functioncall_trace(cpu, n_args);
+	if (cpu->cpu_family->functioncall_trace != NULL)
+		cpu->cpu_family->functioncall_trace(cpu, n_args);
 
 	fatal(")>\n");
 }
@@ -333,14 +333,14 @@ void cpu_dumpinfo(struct machine *m, struct cpu *cpu, bool verbose)
 		debugmsg(SUBSYS_MACHINE, cpuname, VERBOSITY_INFO,
 		    "%s", cpu->running? "running" : "stopped");
 
-	if (m->cpu_family == NULL || m->cpu_family->dumpinfo == NULL) {
+	if (cpu->cpu_family == NULL || cpu->cpu_family->dumpinfo == NULL) {
 		debugmsg(SUBSYS_MACHINE, cpuname, VERBOSITY_ERROR,
 		    "cpu_dumpinfo(): NULL");
 	} else {
 		if (verbose)
 			debug_indentation(1);
 
-		m->cpu_family->dumpinfo(cpu, verbose);
+		cpu->cpu_family->dumpinfo(cpu, verbose);
 
 		if (verbose)
 			debug_indentation(-1);
@@ -469,7 +469,7 @@ void cpu_show_cycles(struct machine *machine, bool forced)
 	}
 
 	/*  Special hack for M88K userland:  (Don't show symbols.)  */
-	if (cpu->machine->arch == ARCH_M88K &&
+	if (cpu->cpu_family->arch == ARCH_M88K &&
 	    !(cpu->cd.m88k.cr[M88K_CR_PSR] & M88K_PSR_MODE))
 		symbol = NULL;
 
@@ -518,29 +518,20 @@ void cpu_run_init(struct machine *machine)
  *  Allocates a cpu_family struct and calls an init function for the
  *  family to fill in reasonable data and pointers.
  */
-static void add_cpu_family(int (*family_init)(struct cpu_family *), int arch)
+static void add_cpu_family(void (*family_init)(struct cpu_family *), int arch)
 {
-	struct cpu_family *fp, *tmp;
-	int res;
+	struct cpu_family *fp;
 
 	CHECK_ALLOCATION(fp = (struct cpu_family *) malloc(sizeof(struct cpu_family)));
 	memset(fp, 0, sizeof(struct cpu_family));
 
-	/*
-	 *  family_init() returns 1 if the struct has been filled with
-	 *  valid data, 0 if suppor for the cpu family isn't compiled
-	 *  into the emulator.
-	 */
-	res = family_init(fp);
-	if (!res) {
-		free(fp);
-		return;
-	}
+	family_init(fp);
+
 	fp->arch = arch;
 	fp->next = NULL;
 
 	/*  Add last in family chain:  */
-	tmp = first_cpu_family;
+	struct cpu_family* tmp = first_cpu_family;
 	if (tmp == NULL) {
 		first_cpu_family = fp;
 	} else {
@@ -548,28 +539,6 @@ static void add_cpu_family(int (*family_init)(struct cpu_family *), int arch)
 			tmp = tmp->next;
 		tmp->next = fp;
 	}
-}
-
-
-/*
- *  cpu_family_ptr_by_number():
- *
- *  Returns a pointer to a CPU family based on the ARCH_* integers.
- */
-struct cpu_family *cpu_family_ptr_by_number(int arch)
-{
-	struct cpu_family *fp;
-	fp = first_cpu_family;
-
-	/*  YUCK! This is too hardcoded! TODO  */
-
-	while (fp != NULL) {
-		if (arch == fp->arch)
-			return fp;
-		fp = fp->next;
-	}
-
-	return NULL;
 }
 
 

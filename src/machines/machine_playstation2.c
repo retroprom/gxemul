@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -175,7 +175,7 @@ MACHINE_DEFAULT_RAM(playstation2)
 
 MACHINE_REGISTER(playstation2)
 {
-	MR_DEFAULT(playstation2, "Playstation 2", ARCH_MIPS, MACHINE_PS2);
+	MR_DEFAULT(playstation2, "Playstation 2", MACHINE_PS2);
 
 	machine_entry_add_alias(me, "playstation2");
 	machine_entry_add_alias(me, "ps2");

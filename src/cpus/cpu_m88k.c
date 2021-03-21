@@ -325,71 +325,67 @@ void m88k_cpu_register_dump(struct cpu *cpu, int gprs, int coprocs)
  *  m88k_cpu_tlbdump():
  *
  *  Called from the debugger to dump the TLB in a readable format.
- *  x is the cpu number to dump, or -1 to dump all CPUs.
  *
  *  If rawflag is nonzero, then the TLB contents isn't formated nicely,
  *  just dumped.
  */
-void m88k_cpu_tlbdump(struct machine *m, int x, int rawflag)
+void m88k_cpu_tlbdump(struct cpu* cpu, int rawflag)
 {
-	int cpu_nr, cmmu_nr, i;
+	int cpu_nr = -1, cmmu_nr, i;
 
-	for (cpu_nr = 0; cpu_nr < m->ncpus; cpu_nr++) {
-		struct cpu *cpu = m->cpus[cpu_nr];
+	for (i = 0; i < cpu->machine->ncpus; ++i)
+		if (cpu == cpu->machine->cpus[i])
+			cpu_nr = i;
 
-		if (x != -1 && cpu_nr != x)
+	for (cmmu_nr = 0; cmmu_nr < MAX_M8820X_CMMUS; cmmu_nr++) {
+		struct m8820x_cmmu *cmmu = cpu->cd.m88k.cmmu[cmmu_nr];
+		if (cmmu == NULL)
 			continue;
 
-		for (cmmu_nr = 0; cmmu_nr < MAX_M8820X_CMMUS; cmmu_nr++) {
-			struct m8820x_cmmu *cmmu = cpu->cd.m88k.cmmu[cmmu_nr];
-			if (cmmu == NULL)
-				continue;
+		printf("cpu%i: CMMU %i (%s)\n", cpu_nr, cmmu_nr,
+		    cmmu_nr & 1? "data" : "instruction");
 
-			printf("cpu%i: CMMU %i (%s)\n", cpu_nr, cmmu_nr,
-			    cmmu_nr & 1? "data" : "instruction");
+		/*  BATC:  */
+		for (i = 0; i < N_M88200_BATC_REGS; i++) {
+			uint32_t b = cmmu->batc[i];
+			printf("cpu%i: BATC[%2i]: ", cpu_nr, i);
+			printf("v=0x%08" PRIx32, b & 0xfff80000);
+			printf(", p=0x%08" PRIx32,
+			    (b << 13) & 0xfff80000);
+			printf(", %s %s %s %s %s %s\n",
+			    b & BATC_SO? "SP " : "!sp",
+			    b & BATC_WT? "WT " : "!wt",
+			    b & BATC_GLOBAL? "G  " : "!g ",
+			    b & BATC_INH? "CI " : "!ci",
+			    b & BATC_PROT? "WP " : "!wp",
+			    b & BATC_SO? "V " : "!v");
+		}
 
-			/*  BATC:  */
-			for (i = 0; i < N_M88200_BATC_REGS; i++) {
-				uint32_t b = cmmu->batc[i];
-				printf("cpu%i: BATC[%2i]: ", cpu_nr, i);
-				printf("v=0x%08" PRIx32, b & 0xfff80000);
-				printf(", p=0x%08" PRIx32,
-				    (b << 13) & 0xfff80000);
-				printf(", %s %s %s %s %s %s\n",
-				    b & BATC_SO? "SP " : "!sp",
-				    b & BATC_WT? "WT " : "!wt",
-				    b & BATC_GLOBAL? "G  " : "!g ",
-				    b & BATC_INH? "CI " : "!ci",
-				    b & BATC_PROT? "WP " : "!wp",
-				    b & BATC_SO? "V " : "!v");
-			}
+		/*  PATC:  */
+		for (i = 0; i < N_M88200_PATC_ENTRIES; i++) {
+			uint32_t v = cmmu->patc_v_and_control[i];
+			uint32_t p = cmmu->patc_p_and_supervisorbit[i];
 
-			/*  PATC:  */
-			for (i = 0; i < N_M88200_PATC_ENTRIES; i++) {
-				uint32_t v = cmmu->patc_v_and_control[i];
-				uint32_t p = cmmu->patc_p_and_supervisorbit[i];
+			printf("cpu%i: patc[%2i]: ", cpu_nr, i);
+			if (p & M8820X_PATC_SUPERVISOR_BIT)
+				printf("superv");
+			else
+				printf("user  ");
+			printf(" v=0x%08" PRIx32, v & 0xfffff000);
+			printf(", p=0x%08" PRIx32, p & 0xfffff000);
 
-				printf("cpu%i: patc[%2i]: ", cpu_nr, i);
-				if (p & M8820X_PATC_SUPERVISOR_BIT)
-					printf("superv");
-				else
-					printf("user  ");
-				printf(" v=0x%08" PRIx32, v & 0xfffff000);
-				printf(", p=0x%08" PRIx32, p & 0xfffff000);
+			printf("  %s %s %s %s %s %s %s",
+			    v & PG_U1?   "U1 " : "!u1",
+			    v & PG_U0?   "U0 " : "!u0",
+			    v & PG_SO?   "SP " : "!sp",
+			    v & PG_M?    "M "  : "!m",
+			    v & PG_U?    "U "  : "!u",
+			    v & PG_PROT? "WP " : "!wp",
+			    v & PG_V?    "V "  : "!v");
 
-				printf("  %s %s %s %s %s %s %s",
-				    v & PG_U1?   "U1 " : "!u1",
-				    v & PG_U0?   "U0 " : "!u0",
-				    v & PG_SO?   "SP " : "!sp",
-				    v & PG_M?    "M "  : "!m",
-				    v & PG_U?    "U "  : "!u",
-				    v & PG_PROT? "WP " : "!wp",
-				    v & PG_V?    "V "  : "!v");
-
-				if (i == cmmu->patc_update_index)
-					printf(" <--");
-				printf("\n");
-			}
+			if (i == cmmu->patc_update_index)
+				printf(" <--");
+			printf("\n");
 		}
 	}
 }

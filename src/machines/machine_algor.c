@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2020  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -124,7 +124,7 @@ MACHINE_DEFAULT_CPU(algor)
 
 MACHINE_REGISTER(algor)
 {
-	MR_DEFAULT(algor, "Algor evaluation board", ARCH_MIPS, MACHINE_ALGOR);
+	MR_DEFAULT(algor, "Algor evaluation board", MACHINE_ALGOR);
 
 	machine_entry_add_alias(me, "algor");
 

@@ -127,7 +127,7 @@ MACHINE_DEFAULT_RAM(luna88k)
 
 MACHINE_REGISTER(luna88k)
 {
-	MR_DEFAULT(luna88k, "LUNA88K", ARCH_M88K, MACHINE_LUNA88K);
+	MR_DEFAULT(luna88k, "LUNA88K", MACHINE_LUNA88K);
 
 	machine_entry_add_alias(me, "luna88k");
 

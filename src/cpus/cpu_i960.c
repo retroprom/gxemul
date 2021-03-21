@@ -66,7 +66,9 @@ int i960_cpu_new(struct cpu *cpu, struct memory *mem,
 {
 	int i;
 
-	/*  TODO: Check cpu_type_name.  */
+	/*  TODO: Check cpu_type_name in a better way.  */
+	if (strcmp(cpu_type_name, "i960") != 0)
+		return 0;
 
 	cpu->run_instr = i960_run_instr;
 	cpu->memory_rw = i960_memory_rw;
@@ -173,12 +175,11 @@ void i960_cpu_register_dump(struct cpu *cpu, int gprs, int coprocs)
  *  i960_cpu_tlbdump():
  *
  *  Called from the debugger to dump the TLB in a readable format.
- *  x is the cpu number to dump, or -1 to dump all CPUs.
  *
  *  If rawflag is nonzero, then the TLB contents isn't formated nicely,
  *  just dumped.
  */
-void i960_cpu_tlbdump(struct machine *m, int x, int rawflag)
+void i960_cpu_tlbdump(struct cpu* cpu, int rawflag)
 {
 }
 

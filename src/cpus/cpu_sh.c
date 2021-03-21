@@ -545,19 +545,17 @@ void sh_cpu_register_dump(struct cpu *cpu, int gprs, int coprocs)
  *  sh_cpu_tlbdump():
  *
  *  Called from the debugger to dump the TLB in a readable format.
- *  x is the cpu number to dump, or -1 to dump all CPUs.
  *
  *  If rawflag is nonzero, then the TLB contents isn't formated nicely,
  *  just dumped.
  */
-void sh_cpu_tlbdump(struct machine *m, int x, int rawflag)
+void sh_cpu_tlbdump(struct cpu* cpu, int rawflag)
 {
 	int i, j;
+	struct machine* m = cpu->machine;
 
 	for (j=0; j<m->ncpus; j++) {
-		struct cpu *cpu = m->cpus[j];
-
-		if (x >= 0 && j != x)
+		if (cpu != m->cpus[j])
 			continue;
 
 		for (i=0; i<SH_N_ITLB_ENTRIES; i++)

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -102,7 +102,7 @@ MACHINE_DEFAULT_CPU(iq80321)
 
 MACHINE_REGISTER(iq80321)
 {
-	MR_DEFAULT(iq80321, "Intel IQ80321", ARCH_ARM, MACHINE_IQ80321);
+	MR_DEFAULT(iq80321, "Intel IQ80321", MACHINE_IQ80321);
 
 	machine_entry_add_alias(me, "iq80321");
 }

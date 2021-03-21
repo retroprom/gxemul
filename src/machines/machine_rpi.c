@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2013  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2013-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -72,7 +72,7 @@ MACHINE_DEFAULT_RAM(rpi)
 
 MACHINE_REGISTER(rpi)
 {
-	MR_DEFAULT(rpi, "Raspberry Pi", ARCH_ARM, MACHINE_RPI);
+	MR_DEFAULT(rpi, "Raspberry Pi", MACHINE_RPI);
 
 	machine_entry_add_alias(me, "rpi");
 

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2020  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -248,7 +248,7 @@ MACHINE_DEFAULT_RAM(arc)
 
 MACHINE_REGISTER(arc)
 {
-	MR_DEFAULT(arc, "ARC", ARCH_MIPS, MACHINE_ARC);
+	MR_DEFAULT(arc, "ARC", MACHINE_ARC);
 
 	me->set_default_ram = machine_default_ram_arc;
 

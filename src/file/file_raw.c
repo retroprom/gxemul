@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -52,7 +52,7 @@ static void file_load_raw(struct machine *m, struct memory *mem,
 
 	/*  Special case for 32-bit MIPS:  */
 	sign3264 = 0;
-	if (m->arch == ARCH_MIPS && m->cpus[0]->is_32bit)
+	if (m->cpus[0]->cpu_family->arch == ARCH_MIPS && m->cpus[0]->is_32bit)
 		sign3264 = 1;
 
 	p = strchr(filename, ':');

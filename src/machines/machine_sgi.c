@@ -670,7 +670,7 @@ MACHINE_DEFAULT_RAM(sgi)
 
 MACHINE_REGISTER(sgi)
 {
-	MR_DEFAULT(sgi, "SGI", ARCH_MIPS, MACHINE_SGI);
+	MR_DEFAULT(sgi, "SGI", MACHINE_SGI);
 
 	me->set_default_ram = machine_default_ram_sgi;
 

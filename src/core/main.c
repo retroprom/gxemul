@@ -489,7 +489,7 @@ int get_cmd_args(int argc, char *argv[], struct emul *emul,
 			subtype = strdup("");
 
 		res = machine_name_to_type(type, subtype,
-		    &m->machine_type, &m->machine_subtype, &m->arch);
+		    &m->machine_type, &m->machine_subtype);
 		if (!res)
 			exit(1);
 	}

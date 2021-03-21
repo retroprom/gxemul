@@ -88,7 +88,7 @@ static void default_test(struct machine *machine, struct cpu *cpu)
 	 *  ARM and SH are dealt with here.
 	 */
 
-	switch (machine->arch) {
+	switch (cpu->cpu_family->arch) {
 
 	case ARCH_ARM:
 		snprintf(end_of_base_irq, sizeof(end_of_base_irq), ".irq");
@@ -115,7 +115,7 @@ static void default_test(struct machine *machine, struct cpu *cpu)
 
 	snprintf(tmpstr, sizeof(tmpstr), "cons addr=0x%" PRIx64
 	    " irq=%s.irqc.2 in_use=%i",
-	    (uint64_t) DEV_CONS_ADDRESS, base_irq, machine->arch != ARCH_SH);
+	    (uint64_t) DEV_CONS_ADDRESS, base_irq, cpu->cpu_family->arch != ARCH_SH);
 	machine->main_console_handle = (size_t)device_add(machine, tmpstr);
 
 	snprintf(tmpstr, sizeof(tmpstr), "mp addr=0x%" PRIx64" irq=%s%sirqc.6",
@@ -190,8 +190,7 @@ MACHINE_DEFAULT_CPU(testarm)
 
 MACHINE_REGISTER(barearm)
 {
-	MR_DEFAULT(barearm, "Generic \"bare\" ARM machine",
-	    ARCH_ARM, MACHINE_BAREARM);
+	MR_DEFAULT(barearm, "Generic \"bare\" ARM machine", MACHINE_BAREARM);
 
 	machine_entry_add_alias(me, "barearm");
 }
@@ -199,7 +198,7 @@ MACHINE_REGISTER(barearm)
 
 MACHINE_REGISTER(testarm)
 {
-	MR_DEFAULT(testarm, "Test-machine for ARM", ARCH_ARM, MACHINE_TESTARM);
+	MR_DEFAULT(testarm, "Test-machine for ARM", MACHINE_TESTARM);
 
 	machine_entry_add_alias(me, "testarm");
 }
@@ -220,8 +219,7 @@ MACHINE_DEFAULT_CPU(barei960)
 
 MACHINE_REGISTER(barei960)
 {
-	MR_DEFAULT(barei960, "Generic \"bare\" i960 machine",
-	    ARCH_I960, MACHINE_BAREI960);
+	MR_DEFAULT(barei960, "Generic \"bare\" i960 machine", MACHINE_BAREI960);
 
 	machine_entry_add_alias(me, "barei960");
 }
@@ -256,7 +254,7 @@ MACHINE_DEFAULT_CPU(testm88k)
 MACHINE_REGISTER(barem88k)
 {
 	MR_DEFAULT(barem88k, "Generic \"bare\" M88K machine",
-	    ARCH_M88K, MACHINE_BAREM88K);
+	    MACHINE_BAREM88K);
 
 	machine_entry_add_alias(me, "barem88k");
 }
@@ -265,7 +263,7 @@ MACHINE_REGISTER(barem88k)
 MACHINE_REGISTER(testm88k)
 {
 	MR_DEFAULT(testm88k, "Test-machine for M88K",
-	    ARCH_M88K, MACHINE_TESTM88K);
+	    MACHINE_TESTM88K);
 
 	machine_entry_add_alias(me, "testm88k");
 }
@@ -344,7 +342,7 @@ MACHINE_DEFAULT_CPU(testmips)
 MACHINE_REGISTER(baremips)
 {
 	MR_DEFAULT(baremips, "Generic \"bare\" MIPS machine",
-	    ARCH_MIPS, MACHINE_BAREMIPS);
+	    MACHINE_BAREMIPS);
 
 	machine_entry_add_alias(me, "baremips");
 }
@@ -353,7 +351,7 @@ MACHINE_REGISTER(baremips)
 MACHINE_REGISTER(testmips)
 {
 	MR_DEFAULT(testmips, "Test-machine for MIPS",
-	    ARCH_MIPS, MACHINE_TESTMIPS);
+	    MACHINE_TESTMIPS);
 
 	machine_entry_add_alias(me, "testmips");
 }
@@ -388,7 +386,7 @@ MACHINE_DEFAULT_CPU(testppc)
 MACHINE_REGISTER(bareppc)
 {
 	MR_DEFAULT(bareppc, "Generic \"bare\" PPC machine",
-	    ARCH_PPC, MACHINE_BAREPPC);
+	    MACHINE_BAREPPC);
 
 	machine_entry_add_alias(me, "bareppc");
 }
@@ -396,7 +394,7 @@ MACHINE_REGISTER(bareppc)
 
 MACHINE_REGISTER(testppc)
 {
-	MR_DEFAULT(testppc, "Test-machine for PPC", ARCH_PPC, MACHINE_TESTPPC);
+	MR_DEFAULT(testppc, "Test-machine for PPC", MACHINE_TESTPPC);
 
 	machine_entry_add_alias(me, "testppc");
 }
@@ -431,7 +429,7 @@ MACHINE_DEFAULT_CPU(testsh)
 MACHINE_REGISTER(baresh)
 {
 	MR_DEFAULT(baresh, "Generic \"bare\" SH machine",
-	    ARCH_SH, MACHINE_BARESH);
+	    MACHINE_BARESH);
 
 	machine_entry_add_alias(me, "baresh");
 }
@@ -439,7 +437,7 @@ MACHINE_REGISTER(baresh)
 
 MACHINE_REGISTER(testsh)
 {
-	MR_DEFAULT(testsh, "Test-machine for SH", ARCH_SH, MACHINE_TESTSH);
+	MR_DEFAULT(testsh, "Test-machine for SH", MACHINE_TESTSH);
 
 	machine_entry_add_alias(me, "testsh");
 }

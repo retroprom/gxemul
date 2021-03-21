@@ -717,12 +717,11 @@ void arm_exception(struct cpu *cpu, int exception_nr)
  *  arm_cpu_tlbdump():
  *
  *  Called from the debugger to dump the TLB in a readable format.
- *  x is the cpu number to dump, or -1 to dump all CPUs.
  *
  *  If rawflag is nonzero, then the TLB contents isn't formated nicely,
  *  just dumped.
  */
-void arm_cpu_tlbdump(struct machine *m, int x, int rawflag)
+void arm_cpu_tlbdump(struct cpu *cpu, int rawflag)
 {
 }
 

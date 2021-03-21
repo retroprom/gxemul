@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2006-2010  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2006-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -190,7 +190,7 @@ MACHINE_DEFAULT_RAM(mvmeppc)
 
 MACHINE_REGISTER(mvmeppc)
 {
-	MR_DEFAULT(mvmeppc, "MVMEPPC", ARCH_PPC, MACHINE_MVMEPPC);
+	MR_DEFAULT(mvmeppc, "MVMEPPC", MACHINE_MVMEPPC);
 
 	machine_entry_add_alias(me, "mvmeppc");
 

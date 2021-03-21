@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2018-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -88,7 +88,7 @@ MACHINE_DEFAULT_RAM(vocore)
 
 MACHINE_REGISTER(vocore)
 {
-	MR_DEFAULT(vocore, "VoCore", ARCH_MIPS, MACHINE_VOCORE);
+	MR_DEFAULT(vocore, "VoCore", MACHINE_VOCORE);
 
 	machine_entry_add_alias(me, "vocore");
 

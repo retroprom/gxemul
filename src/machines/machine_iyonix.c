@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -127,7 +127,7 @@ MACHINE_DEFAULT_RAM(iyonix)
 
 MACHINE_REGISTER(iyonix)
 {
-	MR_DEFAULT(iyonix, "Iyonix", ARCH_ARM, MACHINE_IYONIX);
+	MR_DEFAULT(iyonix, "Iyonix", MACHINE_IYONIX);
 
 	machine_entry_add_alias(me, "iyonix");
 

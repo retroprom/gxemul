@@ -143,7 +143,7 @@ void *zeroed_alloc(size_t s)
  *  This function creates a new memory object. An emulated machine needs one
  *  of these.
  */
-struct memory *memory_new(uint64_t physical_max, int arch)
+struct memory *memory_new(uint64_t physical_max)
 {
 	struct memory *mem;
 	int bits_per_pagetable = BITS_PER_PAGETABLE;

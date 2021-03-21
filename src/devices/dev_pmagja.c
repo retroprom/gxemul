@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2020  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2004-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -34,6 +34,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "cpu.h"
 #include "devices.h"
 #include "machine.h"
 #include "memory.h"
@@ -204,7 +205,7 @@ void dev_pmagja_init(struct machine *machine, struct memory *mem,
 
 	INTERRUPT_CONNECT(irq_path, d->irq);
 
-	d->fb_mem = memory_new(XSIZE * YSIZE * 3, machine->arch);
+	d->fb_mem = memory_new(XSIZE * YSIZE * 3);
 	if (d->fb_mem == NULL) {
 		fprintf(stderr, "dev_pmagja_init(): out of memory (1)\n");
 		exit(1);

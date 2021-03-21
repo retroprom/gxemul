@@ -460,7 +460,7 @@ static void parse__machine(struct emul *e, FILE *f, int *in_emul, int *line,
 		m = emul_add_machine(e, cur_machine_name);
 
 		r = machine_name_to_type(cur_machine_type, cur_machine_subtype,
-		    &m->machine_type, &m->machine_subtype, &m->arch);
+		    &m->machine_type, &m->machine_subtype);
 		if (!r)
 			exit(1);
 

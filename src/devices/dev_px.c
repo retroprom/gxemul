@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2020  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2004-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -782,8 +782,7 @@ void dev_px_init(struct machine *machine, struct memory *mem,
 		fatal("dev_px_init(): unimplemented px_type\n");
 	}
 
-	d->fb_mem = memory_new(PX_XSIZE * PX_YSIZE * d->bitdepth / 8,
-	    machine->arch);
+	d->fb_mem = memory_new(PX_XSIZE * PX_YSIZE * d->bitdepth / 8);
 	if (d->fb_mem == NULL) {
 		fprintf(stderr, "dev_px_init(): out of memory (1)\n");
 		exit(1);

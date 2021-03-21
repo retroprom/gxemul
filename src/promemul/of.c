@@ -1101,7 +1101,7 @@ int of_emul(struct cpu *cpu)
 	 *	char *args[10];
 	 */
 
-	switch (cpu->machine->arch) {
+	switch (cpu->cpu_family->arch) {
 	case ARCH_ARM:
 		base = cpu->cd.arm.r[0];
 		break;
@@ -1175,7 +1175,7 @@ int of_emul(struct cpu *cpu)
 		free(arg[i]);
 
 	/*  Return:  */
-	switch (cpu->machine->arch) {
+	switch (cpu->cpu_family->arch) {
 	case ARCH_ARM:
 		cpu->cd.arm.r[0] = retval;
 		break;

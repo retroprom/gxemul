@@ -2,7 +2,7 @@
 #define	CPU_ARM_H
 
 /*
- *  Copyright (C) 2005-2019  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -311,7 +311,7 @@ void arm_load_register_bank(struct cpu *cpu);
 void arm_save_register_bank(struct cpu *cpu);
 int arm_memory_rw(struct cpu *cpu, struct memory *mem, uint64_t vaddr,
 	unsigned char *data, size_t len, int writeflag, int cache_flags);
-int arm_cpu_family_init(struct cpu_family *);
+void arm_cpu_family_init(struct cpu_family *);
 
 /*  cpu_arm_coproc.c:  */
 void arm_coproc_15(struct cpu *cpu, int opcode1, int opcode2, int l_bit,

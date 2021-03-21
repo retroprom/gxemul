@@ -287,7 +287,7 @@ struct mips_cpu {
 void mips_cpu_interrupt_assert(struct interrupt *interrupt);
 void mips_cpu_interrupt_deassert(struct interrupt *interrupt);
 int mips_cpu_instruction_has_delayslot(struct cpu *cpu, unsigned char *ib);
-void mips_cpu_tlbdump(struct machine *m, int x, int rawflag);
+void mips_cpu_tlbdump(struct cpu* cpu, int rawflag);
 void mips_cpu_register_match(struct machine *m, char *name, 
 	int writeflag, uint64_t *valuep, int *match_register);
 void mips_cpu_register_dump(struct cpu *cpu, int gprs, int coprocs);
@@ -299,7 +299,7 @@ void mips_cpu_exception(struct cpu *cpu, int exccode, int tlb, uint64_t vaddr,
 int mips_cpu_run(struct emul *emul, struct machine *machine);
 void mips_cpu_dumpinfo(struct cpu *cpu, bool verbose);
 void mips_cpu_list_available_types(void);
-int mips_cpu_family_init(struct cpu_family *);
+void mips_cpu_family_init(struct cpu_family *);
 
 
 /*  cpu_mips_coproc.c:  */

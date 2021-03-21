@@ -184,7 +184,7 @@ MACHINE_DEFAULT_RAM(androidarm)
 
 MACHINE_REGISTER(androidarm)
 {
-	MR_DEFAULT(androidarm, "ARM-based \"Android\" machines", ARCH_ARM, MACHINE_ANDROIDARM);
+	MR_DEFAULT(androidarm, "ARM-based \"Android\" machines", MACHINE_ANDROIDARM);
 
 	machine_entry_add_alias(me, "android-arm");
 
