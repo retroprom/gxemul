@@ -74,7 +74,7 @@
 #define	LUNA88K_PSEUDO_TIMER_HZ	100.0
 
 #define	LUNA88K_REGISTERS_BASE		0x3ffffff0UL
-#define	LUNA88K_REGISTERS_END		0xf0800000UL
+#define	LUNA88K_REGISTERS_END		0xd2000000UL
 #define	LUNA88K_REGISTERS_LENGTH	(LUNA88K_REGISTERS_END - LUNA88K_REGISTERS_BASE)
 
 #define	MAX_CPUS	4
@@ -824,40 +824,22 @@ DEVICE_ACCESS(luna88k)
 		}
 		break;
 
-	case SCSI_ADDR + 0x00:	/*  0xe1000000: SCSI ..  */
-	case SCSI_ADDR + 0x04:	/*  0xe1000004: SCSI ..  */
-	case SCSI_ADDR + 0x08:	/*  0xe1000008: SCSI ..  */
-	case SCSI_ADDR + 0x0C:	/*  0xe100000C: SCSI ..  */
-	case SCSI_ADDR + 0x20:	/*  0xe1000020: SCSI ..  */
-	case SCSI_ADDR + 0x2c:	/*  0xe100002c: SCSI ..  */
-	case SCSI_ADDR + 0x30:	/*  0xe1000030: SCSI ..  */
-	case SCSI_ADDR + 0x34:	/*  0xe1000034: SCSI ..  */
-	case SCSI_ADDR + 0x38:	/*  0xe1000038: SCSI ..  */
-	case SCSI_ADDR + 0x40:	/*  0xe1000040: SCSI ..  */
-	case SCSI_ADDR + 0x44:	/*  0xe1000044: SCSI ..  */
-	case SCSI_ADDR + 0x48:	/*  0xe1000048: SCSI ..  */
-	case SCSI_ADDR + 0x4c:	/*  0xe100004c: SCSI ..  */
-	case SCSI_ADDR + 0x50:	/*  0xe1000050: SCSI ..  */
-	case SCSI_ADDR + 0x60:	/*  0xe1000060: SCSI ..  */
-	case SCSI_ADDR + 0x6c:	/*  0xe100006c: SCSI ..  */
-	case SCSI_ADDR + 0x70:	/*  0xe1000070: SCSI ..  */
-	case SCSI_ADDR + 0x74:	/*  0xe1000074: SCSI ..  */
-	case SCSI_ADDR + 0x78:	/*  0xe1000078: SCSI ..  */
-		/*  MB89352 SCSI Protocol Controller  */
-		/*  Ignore for now. (?)  */
-		break;
-
-	case SCSI_ADDR + 0x10:	/*  0xe1000010: SCSI INTS  */
-		odata = 0xffffffff;
-		break;
-
-	default:fatal("[ luna88k: unimplemented %s address 0x%x",
-		    writeflag == MEM_WRITE? "write to" : "read from",
-		    (int) addr);
+	default:
 		if (writeflag == MEM_WRITE)
-			fatal(": 0x%x", (int)idata);
-		fatal(" (%i bits) ]\n", len * 8);
-		exit(1);
+			debugmsg_cpu(cpu, SUBSYS_DEVICE, "luna88k", VERBOSITY_ERROR,
+		    	    "unimplemented %i-bit WRITE to address 0x%x: 0x%x",
+		    	    len * 8,
+			    (int) addr,
+			    (int) idata);
+		else
+			debugmsg_cpu(cpu, SUBSYS_DEVICE, "luna88k", VERBOSITY_ERROR,
+		    	    "unimplemented %i-bit READ from address 0x%x",
+		    	    len * 8,
+			    (int) addr);
+
+		// Stop the emulation immediately.
+		cpu->running = 0;
+		return 0;
 	}
 
 	if (writeflag == MEM_READ)
@@ -995,6 +977,9 @@ DEVINIT(luna88k)
 		d->fuse_rom[i*2+1] = (enaddr[i] & 0x0f) << 28;
 		++i;
 	}
+
+	snprintf(n, sizeof(n), "mb89352 addr=0xE1000000 irq=%s.luna88k.3", devinit->interrupt_path);
+	device_add(devinit->machine, n);
 
 	return 1;
 }
