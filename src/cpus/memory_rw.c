@@ -336,10 +336,15 @@ not just the device in question.
 
 				res = 0;
 				if (!no_exceptions || (mem->devices[i].flags &
-				    DM_READS_HAVE_NO_SIDE_EFFECTS))
+				    DM_READS_HAVE_NO_SIDE_EFFECTS)) {
+					bool running_before_device_access = cpu->running;
 					res = mem->devices[i].f(cpu, mem, paddr,
 					    data, len, writeflag,
 					    mem->devices[i].extra);
+
+					if (running_before_device_access && !cpu->running)
+						return MEMORY_ACCESS_FAILED;
+				}
 
 				if (res == 0)
 					res = -1;
