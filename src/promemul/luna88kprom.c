@@ -94,6 +94,7 @@ int luna88kprom_emul(struct cpu *cpu)
 	switch (func) {
 
 	case 4:
+		debugmsg(SUBSYS_PROMEMUL, "luna88k", VERBOSITY_DEBUG, "putchar 0x%02x", cpu->cd.m88k.r[2]);
 		console_putchar(cpu->machine->main_console_handle, cpu->cd.m88k.r[2]);
 		break;
 
