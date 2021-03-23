@@ -160,6 +160,54 @@ int load_bootblock(struct machine *m, struct cpu *cpu,
 
 		break;
 
+	case MACHINE_LUNA88K:
+		{
+			const int disklabel_size = 512;
+			uint8_t disklabel[disklabel_size];
+
+			res = diskimage_access(m, boot_disk_id, boot_disk_type,
+			    0, 0x0, disklabel, disklabel_size);
+			if (!res) {
+				debugmsg(SUBSYS_STARTUP, "bootblock", VERBOSITY_ERROR,
+				    "ERROR: could not load disklabel");
+				return 0;
+			}
+
+			debugmsg(SUBSYS_STARTUP, "bootblock", VERBOSITY_INFO, "LUNA88K disklabel");
+			debug_indentation(1);
+
+			for (int i = 0; i < 8; ++i) {
+				int ofs = 0x1bc + 8 * i;
+				uint32_t offset = (disklabel[ofs] << 24) +
+				    (disklabel[ofs+1] << 16) +
+				    (disklabel[ofs+2] << 8) +
+				    (disklabel[ofs+3]);
+				uint32_t nsectors = (disklabel[ofs+4] << 24) +
+				    (disklabel[ofs+5] << 16) +
+				    (disklabel[ofs+6] << 8) +
+				    (disklabel[ofs+7]);
+				if (nsectors > 0) {
+					debug("%c: %i sectors at offset %i\n",
+					    'a' + i, nsectors, offset);
+				}
+			}
+
+			/*
+			 *  It seems that the LUNA88K PROM is able to load
+			 *  boot programs from (old-style) UFS partitions.
+			 *
+			 *  Try:
+			 *	unix	(OMRON UniOS?)
+			 *	boot	(OpenBSD/luna88k)
+			 */
+
+			// TODO.
+			debugmsg(SUBSYS_STARTUP, "", VERBOSITY_INFO, "TODO: load boot program");
+
+			debug_indentation(-1);
+		}
+		return 1;
+
 	case MACHINE_PMAX:
 		/*
 		 *  The first few bytes of a disk contains information about
