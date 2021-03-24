@@ -696,6 +696,7 @@ int get_default_disk_type_for_machine(struct machine *machine)
 	if (machine->machine_type == MACHINE_PMAX ||
 	    machine->machine_type == MACHINE_ARC ||
 	    machine->machine_type == MACHINE_SGI ||
+	    machine->machine_type == MACHINE_LUNA88K ||
 	    machine->machine_type == MACHINE_MVME88K)
 		return DISKIMAGE_SCSI;
 
@@ -974,10 +975,20 @@ int diskimage_add(struct machine *machine, char *fname)
 
 	/*  Calculate which ID to use:  */
 	if (prefix_id == -1) {
-		int free = 0, collision = 1;
+		int start = 0;
+		int delta = 1;
+		
+		if (machine->machine_type == MACHINE_LUNA88K) {
+			start = 6;
+			delta = -1;
+		}
+		
+		int free = start;
+		
+		bool collision = true;
 
 		while (collision) {
-			collision = 0;
+			collision = false;
 			d2 = machine->first_diskimage;
 			while (d2 != NULL) {
 				/*  (don't compare against ourselves :)  */
@@ -986,7 +997,7 @@ int diskimage_add(struct machine *machine, char *fname)
 					continue;
 				}
 				if (d2->id == free && d2->type == d->type) {
-					collision = 1;
+					collision = true;
 					break;
 				}
 				d2 = d2->next;
@@ -994,7 +1005,12 @@ int diskimage_add(struct machine *machine, char *fname)
 			if (!collision)
 				id = free;
 			else
-				free ++;
+				free += delta;
+		}
+		
+		if (id < 0) {
+			fprintf(stderr, "Too many IDs used?\n");
+			exit(1);
 		}
 	} else {
 		id = prefix_id;
