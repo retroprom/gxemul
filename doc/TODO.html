@@ -23,6 +23,13 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 <p><pre>
 <b>Current "short-list":</b>
 
+o) LUNA SCSI:
+	o) crash when running with nonexistant disk, e.g.
+		./gxemul -VXG -eluna-88k -d 4:liveimage-luna88k-raw-20201206.img 0x700000:0x20:0x700000:boot
+		[ diskimage_scsicommand(): SCSI  id 6 not connected? ]
+		Segmentation fault (core dumped)
+	o) Make it pass bsd bootup! :-)
+
 o) luna88k bootblock loader:
 	perhaps needs to parse UFS filesystem?
 o) update man page about disk boot block loading to not explicitly list the

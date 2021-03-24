@@ -5009,3 +5009,7 @@ Changelog for GXemul:
 		Removing "slow_serial_interrupts_hack_for_linux" (-U) command
 		line option, since it is not used for most guest OSes, and
 		occupied a command line option char.
+20210323	Breaking out the mb89352 SCSI Protocol Controller from the
+		luna88k device, and beginning to implement it. Works well
+		enough for OpenBSD's "boot" to read the disk and load the
+		kernel, but not well enough for the kernel like it.
