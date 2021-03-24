@@ -207,6 +207,12 @@ void file_load(struct machine *machine, struct memory *mem,
 		    entrypointp, arch, byte_orderp);
 		goto ret;
 	}
+	if (buf[0]==0x00 && buf[1]==0x99 && buf[2]==0x01 && buf[3]==0x07) {
+		/*  OpenBSD/M88K a.out  */
+		file_load_aout(machine, mem, filename, AOUT_FLAG_DATA_AT_END_MAY_BE_OMITTED,
+		    entrypointp, arch, byte_orderp);
+		goto ret;
+	}
 	if (buf[0]==0x00 && buf[1]==0x99 && buf[2]==0x01 && buf[3]==0x0b) {
 		/*  OpenBSD/M88K a.out  */
 		file_load_aout(machine, mem, filename, AOUT_FLAG_FROM_BEGINNING,
@@ -233,7 +239,8 @@ void file_load(struct machine *machine, struct memory *mem,
 	}
 	if (buf[0]==0x00 && buf[2]==0x00 && buf[8]==0x7a && buf[9]==0x75) {
 		/*  DEC OSF1 on MIPS:  */
-		file_load_aout(machine, mem, filename, AOUT_FLAG_DECOSF1,
+		file_load_aout(machine, mem, filename,
+		    AOUT_FLAG_DECOSF1 | AOUT_FLAG_DATA_AT_END_MAY_BE_OMITTED,
 		    entrypointp, arch, byte_orderp);
 		goto ret;
 	}

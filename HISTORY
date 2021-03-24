@@ -5012,4 +5012,5 @@ Changelog for GXemul:
 20210323	Breaking out the mb89352 SCSI Protocol Controller from the
 		luna88k device, and beginning to implement it. Works well
 		enough for OpenBSD's "boot" to read the disk and load the
-		kernel, but not well enough for the kernel like it.
+		kernel, but not well enough for the kernel to like it.
+20210324	Adding support for 00 99 01 07 variant of luna88k a.out.

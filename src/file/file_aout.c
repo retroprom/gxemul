@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -34,10 +34,11 @@
 #include "thirdparty/exec_aout.h"
 
 
-#define	AOUT_FLAG_DECOSF1		1
-#define	AOUT_FLAG_FROM_BEGINNING	2
-#define	AOUT_FLAG_VADDR_ZERO_HACK	4
-#define	AOUT_FLAG_NO_SIZES		8
+#define	AOUT_FLAG_DECOSF1				1
+#define	AOUT_FLAG_FROM_BEGINNING			2
+#define	AOUT_FLAG_VADDR_ZERO_HACK			4
+#define	AOUT_FLAG_NO_SIZES				8
+#define	AOUT_FLAG_DATA_AT_END_MAY_BE_OMITTED		16
 
 struct aout_symbol {
 	uint32_t	strindex;
@@ -151,7 +152,7 @@ static void file_load_aout(struct machine *m, struct memory *mem,
 			m->cpus[0]->memory_rw(m->cpus[0], mem, vaddr + len2,
 			    &buf[len2], len-len2, MEM_WRITE, NO_EXCEPTIONS);
 		} else {
-			if (flags & AOUT_FLAG_DECOSF1)
+			if (flags & AOUT_FLAG_DATA_AT_END_MAY_BE_OMITTED)
 				break;
 			else {
 				fprintf(stderr, "could not read from %s,"
