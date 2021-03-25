@@ -31,7 +31,7 @@
  *  loader), and matching its expectations.
  *
  *  TODO: Almost everything.
- *  TODO IN PARTICULAR: Make it work also with the OpenBSD kernel!
+ *  TODO IN PARTICULAR: Make it work also with the OpenBSD _kernel_!
  */
 
 #include <stdio.h>
@@ -51,10 +51,17 @@
 const int MB89352_NREGS = 0x10;
 const int MB89352_REGISTERS_LENGTH = MB89352_NREGS * 4;
 
-const bool mb89352_abort_on_unimplemented_stuff = false;
+const bool mb89352_abort_on_unimplemented_stuff = true;
+
+static char *regname[16] = {
+	"BDID", "SCTL", "SCMD", "TMOD", "INTS", "PSNS", "SSTS", "SERR",
+	"PCTL", "MBC",  "DREG", "TEMP", "TCH",  "TCM",  "TCL",  "EXBF"
+};
 
 
 struct mb89352_data {
+	int			subsys;
+
 	struct interrupt	irq;
 	bool			irq_asserted;
 
@@ -71,9 +78,25 @@ struct mb89352_data {
 };
 
 
+void reg_debug(struct cpu* cpu, struct mb89352_data *d, int writeflag, int regnr, int data)
+{
+	if (!ENOUGH_VERBOSITY(d->subsys, VERBOSITY_DEBUG))
+		return;
+
+	if (writeflag == MEM_WRITE)
+		debugmsg_cpu(cpu, d->subsys, "",
+		    VERBOSITY_DEBUG, "WRITE to %s: 0x%02x", regname[regnr], data);
+	else
+		debugmsg_cpu(cpu, d->subsys, "",
+		    VERBOSITY_DEBUG, "read from %s", regname[regnr]);
+}			    
+
+
 static void reassert_interrupts(struct mb89352_data *d)
 {
 	bool assert = d->reg[INTS] != 0;
+
+	// TODO: BUS FREE interrupt enable: PCTL_BFINT_ENAB
 
 	if (!(d->reg[SCTL] & SCTL_INTR_ENAB))
 		assert = false;
@@ -91,8 +114,6 @@ static void reassert_interrupts(struct mb89352_data *d)
 
 static void reset_controller(struct mb89352_data *d)
 {
-	debugmsg(SUBSYS_DEVICE, "mb89352", VERBOSITY_INFO, "resetting controller");
-
 	memset(d->reg, 0, sizeof(d->reg));
 
 	d->reg[BDID] = 7;
@@ -113,7 +134,7 @@ DEVICE_ACCESS(mb89352)
 	uint64_t idata = 0, odata = 0;
 
 	if (len != 1) {
-		debugmsg_cpu(cpu, SUBSYS_DEVICE, "mb89352",
+		debugmsg_cpu(cpu, d->subsys, "",
 		    mb89352_abort_on_unimplemented_stuff ? VERBOSITY_ERROR : VERBOSITY_WARNING,
 	    	    "unimplemented LEN: %i-bit access, address 0x%x: 0x%x",
 	    	    len * 8,
@@ -125,20 +146,26 @@ DEVICE_ACCESS(mb89352)
 		}
 	}
 
+	int regnr = (relative_addr >> 2) & (MB89352_NREGS - 1);
+
 	if (writeflag == MEM_WRITE)
 		idata = memory_readmax64(cpu, data, len);
 	else
-		odata = d->reg[relative_addr / 4];
+		odata = d->reg[regnr];
 
-	switch (relative_addr / 4) {
+	reg_debug(cpu, d, writeflag, regnr, idata);
+
+	switch (regnr) {
 
 	case BDID:
 		if (writeflag == MEM_WRITE) {
 			d->reg[BDID] = idata;
 			if (idata != 7)
-				debugmsg_cpu(cpu, SUBSYS_DEVICE, "mb89352",
+				debugmsg_cpu(cpu, d->subsys, "",
 				    VERBOSITY_INFO, "unimplemented BDID value: 0x%x",
 			    	    (int) idata);
+		} else {
+			odata = (1 << d->reg[BDID]);
 		}
 		break;
 
@@ -146,14 +173,25 @@ DEVICE_ACCESS(mb89352)
 		if (writeflag == MEM_WRITE) {
 			d->reg[SCTL] = idata;
 
-			if (idata & SCTL_CTRLRST)
+			if (idata & SCTL_DIAG)
+				debugmsg_cpu(cpu, d->subsys, "",
+				    VERBOSITY_ERROR,
+			    	    "Diagnostics mode NOT IMPLEMENTED");
+
+			if (idata & SCTL_CTRLRST) {
+				debugmsg(d->subsys, "", VERBOSITY_INFO, "resetting controller");
 				reset_controller(d);
+			}
 		}
 		break;
 
 	case SCMD:
 		if (writeflag == MEM_WRITE) {
 			d->reg[SCMD] = idata;
+			
+			// RST = Reset ?
+			if (idata & SCMD_RST)
+				idata = SCMD_BUS_REL;
 			
 			switch (idata) {
 
@@ -172,11 +210,11 @@ DEVICE_ACCESS(mb89352)
 					}
 
 					if (target < 8)
-						debugmsg_cpu(cpu, SUBSYS_DEVICE, "mb89352",
+						debugmsg_cpu(cpu, d->subsys, "",
 						    VERBOSITY_DEBUG,
 					    	    "SCMD_SELECT target %i", target);
 					else
-						debugmsg_cpu(cpu, SUBSYS_DEVICE, "mb89352",
+						debugmsg_cpu(cpu, d->subsys, "",
 						    VERBOSITY_WARNING,
 					    	    "SCMD_SELECT with no target?");
 
@@ -194,26 +232,29 @@ DEVICE_ACCESS(mb89352)
 				break;
 
 			case SCMD_XFR | SCMD_PROG_XFR:
+			case SCMD_XFR | SCMD_PROG_XFR | SCMD_ICPT_XFR:
 				{
 					d->phase = d->reg[PCTL] & 7;
 					d->xlen = (d->reg[TCH] << 16) + (d->reg[TCM] << 8)
 						+ d->reg[TCL];
 
-					if (d->buf == NULL)
-						d->buf = malloc(d->xlen);
+					if (d->buf != NULL)
+						free(d->buf);
 
+					d->buf = malloc(d->xlen);
 					d->bufpos = 0;
 
-					debugmsg_cpu(cpu, SUBSYS_DEVICE, "mb89352",
-					    VERBOSITY_WARNING,
+					debugmsg_cpu(cpu, d->subsys, "",
+					    VERBOSITY_DEBUG,
 				    	    "SCMD_XFR | SCMD_PROG_XFR, phase %i, len %i", d->phase, d->xlen);
 
-					d->reg[INTS] |= INTS_CMD_DONE;
+					if (d->phase == 2)
+						d->reg[INTS] |= INTS_CMD_DONE;
 				}
 				break;
 
 			default:
-				debugmsg_cpu(cpu, SUBSYS_DEVICE, "mb89352",
+				debugmsg_cpu(cpu, d->subsys, "",
 				    mb89352_abort_on_unimplemented_stuff ? VERBOSITY_ERROR : VERBOSITY_WARNING,
 			    	    "unimplemented SCMD: 0x%x", (int) idata);
 
@@ -225,38 +266,84 @@ DEVICE_ACCESS(mb89352)
 		}
 		break;
 
+	case TMOD:
+		if (writeflag == MEM_WRITE) {
+			d->reg[regnr] = idata;
+			if (idata != 0)
+				debugmsg_cpu(cpu, d->subsys, "",
+				    VERBOSITY_WARNING,
+				    "unimplemented write to TMOD: 0x%02x",
+			    	    (int) idata);
+		}
+		break;	
+
 	case INTS:
 		if (writeflag == MEM_WRITE) {
+			int old = d->reg[INTS];
 			d->reg[INTS] &= ~idata;
-			debugmsg_cpu(cpu, SUBSYS_DEVICE, "mb89352",
-			    VERBOSITY_INFO, "write to INTS: 0x%x",
-		    	    (int) idata);
+			if (old != d->reg[INTS])
+				debugmsg_cpu(cpu, d->subsys, "",
+				    VERBOSITY_INFO, "INTS: 0x%02x -> 0x%02x",
+			    	    old, d->reg[INTS]);
 		}
 		break;	
 
 	case PSNS:
 		if (writeflag == MEM_WRITE) {
-			d->reg[relative_addr / 4] = idata;
-			debugmsg_cpu(cpu, SUBSYS_DEVICE, "mb89352",
+			d->reg[regnr] = idata;
+			debugmsg_cpu(cpu, d->subsys, "",
 			    VERBOSITY_WARNING,
-		    	    "unimplemented write to PSNS: 0x%x",
+		    	    "unimplemented write to PSNS/SDGC: 0x%x",
 			    (int) idata);
 		}
 		break;
 
 	case SSTS:
 		if (writeflag == MEM_WRITE) {
-			d->reg[relative_addr / 4] = idata;
-			debugmsg_cpu(cpu, SUBSYS_DEVICE, "mb89352",
+			d->reg[regnr] = idata;
+			debugmsg_cpu(cpu, d->subsys, "",
 			    VERBOSITY_WARNING,
 		    	    "unimplemented write to SSTS: 0x%x",
+			    (int) idata);
+		}
+		
+		odata &= ~(SSTS_DREG_FULL | SSTS_DREG_EMPTY | SSTS_BUSY);
+		if (d->phase & 1)
+			odata |= SSTS_DREG_FULL;
+		else
+			odata |= SSTS_DREG_EMPTY;
+		if (d->xferp != NULL)
+			odata |= SSTS_BUSY;
+		break;
+
+	case SERR:
+		if (writeflag == MEM_WRITE) {
+			d->reg[regnr] = idata;
+			debugmsg_cpu(cpu, d->subsys, "",
+			    VERBOSITY_WARNING,
+		    	    "unimplemented write to SERR: 0x%x",
 			    (int) idata);
 		}
 		break;
 
 	case PCTL:
 		if (writeflag == MEM_WRITE) {
-			d->reg[relative_addr / 4] = idata;
+			d->reg[regnr] = idata;
+			if (idata & 0x78)
+				debugmsg_cpu(cpu, d->subsys, "",
+				    VERBOSITY_WARNING,
+			    	    "write to read-only bits of PCTL ignored: 0x%x",
+				    (int) idata);
+			d->reg[regnr] &= 0x87;
+		}
+		break;
+
+	case MBC:
+		if (writeflag == MEM_WRITE) {
+			debugmsg_cpu(cpu, d->subsys, "",
+			    VERBOSITY_WARNING,
+		    	    "write to read-only MBC ignored: 0x%x",
+			    (int) idata);
 		}
 		break;
 
@@ -265,8 +352,8 @@ DEVICE_ACCESS(mb89352)
 			d->buf[d->bufpos++] = idata;
 			
 			if (d->bufpos == d->xlen) {
-				debugmsg_cpu(cpu, SUBSYS_DEVICE, "mb89352",
-				    VERBOSITY_WARNING,
+				debugmsg_cpu(cpu, d->subsys, "",
+				    VERBOSITY_DEBUG,
 			    	    "%i bytes written to buffer", d->xlen);
 
 				switch (d->phase) {
@@ -277,7 +364,7 @@ DEVICE_ACCESS(mb89352)
 					d->bufpos = 0;
 					break;
 				default:
-					debugmsg_cpu(cpu, SUBSYS_DEVICE, "mb89352",
+					debugmsg_cpu(cpu, d->subsys, "",
 					    VERBOSITY_ERROR,
 				    	    "DREG write: UNIMPLEMENTED PHASE %i", d->phase);
 				    	cpu->running = 0;
@@ -308,16 +395,16 @@ DEVICE_ACCESS(mb89352)
 			}
 		} else {
 			if (d->buf == NULL) {
-				debugmsg_cpu(cpu, SUBSYS_DEVICE, "mb89352",
+				debugmsg_cpu(cpu, d->subsys, "",
 				    mb89352_abort_on_unimplemented_stuff ? VERBOSITY_ERROR : VERBOSITY_WARNING,
 			    	    "DREG: no buffer to read from?");
 			} else if (d->bufpos >= d->xlen) {
-				debugmsg_cpu(cpu, SUBSYS_DEVICE, "mb89352",
+				debugmsg_cpu(cpu, d->subsys, "",
 				    mb89352_abort_on_unimplemented_stuff ? VERBOSITY_ERROR : VERBOSITY_WARNING,
 			    	    "DREG: read longer than buffer?");
 			} else {
 				odata = d->buf[d->bufpos ++];
-				debugmsg_cpu(cpu, SUBSYS_DEVICE, "mb89352",
+				debugmsg_cpu(cpu, d->subsys, "",
 				    VERBOSITY_DEBUG,
 			    	    "DREG: read from buffer: 0x%02x", (int)odata);
 
@@ -327,6 +414,8 @@ DEVICE_ACCESS(mb89352)
 					d->reg[PSNS] &= ~7;
 					d->reg[PSNS] |= d->phase;
 					d->reg[PSNS] |= PSNS_REQ;
+					scsi_transfer_free(d->xferp);
+					d->xferp = NULL;
 				}
 			}
 			
@@ -338,19 +427,19 @@ DEVICE_ACCESS(mb89352)
 	case TCM:
 	case TCL:
 		if (writeflag == MEM_WRITE)
-			d->reg[relative_addr / 4] = idata;
+			d->reg[regnr] = idata;
 		break;
 
 	default:
 		if (writeflag == MEM_WRITE)
-			debugmsg_cpu(cpu, SUBSYS_DEVICE, "mb89352",
+			debugmsg_cpu(cpu, d->subsys, "",
 			    mb89352_abort_on_unimplemented_stuff ? VERBOSITY_ERROR : VERBOSITY_WARNING,
 		    	    "unimplemented %i-bit WRITE to address 0x%x: 0x%x",
 		    	    len * 8,
 			    (int) relative_addr,
 			    (int) idata);
 		else
-			debugmsg_cpu(cpu, SUBSYS_DEVICE, "mb89352",
+			debugmsg_cpu(cpu, d->subsys, "",
 			    mb89352_abort_on_unimplemented_stuff ? VERBOSITY_ERROR : VERBOSITY_WARNING,
 		    	    "unimplemented %i-bit READ from address 0x%x",
 		    	    len * 8,
@@ -381,6 +470,8 @@ DEVINIT(mb89352)
 	memory_device_register(devinit->machine->memory, devinit->name,
 	    devinit->addr, MB89352_REGISTERS_LENGTH, dev_mb89352_access, (void *)d,
 	    DM_DEFAULT, NULL);
+
+	d->subsys = debugmsg_register_subsystem("mb89352");
 
 	INTERRUPT_CONNECT(devinit->interrupt_path, d->irq);
 

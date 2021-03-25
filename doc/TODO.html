@@ -23,18 +23,26 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 <p><pre>
 <b>Current "short-list":</b>
 
-o) LUNA SCSI:
-	o) crash when running with nonexistant disk, e.g.
-		./gxemul -VXG -eluna-88k -d 4:liveimage-luna88k-raw-20201206.img 0x700000:0x20:0x700000:boot
-		[ diskimage_scsicommand(): SCSI  id 6 not connected? ]
-		Segmentation fault (core dumped)
-	o) Make it pass bsd bootup! :-)
-
+o) LUNA88K SCSI:
+	o) Implement everything else, to make it pass bsd bootup! :-)
+	o) debugmsg:ify diskimage* stuff?
+	o) Try a full OpenBSD install, and if it works, update the documentation.
+o) Try running multiple Sprite machines in one big simulation and see if they
+	talk to each other?
 o) luna88k bootblock loader:
-	perhaps needs to parse UFS filesystem?
+	o) load binary from UFS filesystem (i.e. a partition given by an
+		offset into a disk image).
+	o) if no bootstring (boot file) is specified, then perhaps try a few
+		from a list? "vmunix", "boot".
 o) update man page about disk boot block loading to not explicitly list the
 	supported machine types.
 o) "verb all 3" output does not look nice. prints headers multiple times.
+o) "step call" ? running like single-step, but instead of one instruction, it
+	runs until the next function call (or function return)? (with implicit
+	function trace printout turned on...)
+o) src/cpu/:
+	o) debugmsg:ify at least 'cpu' and 'exception' subsystem messages.
+	o) Fix some more exit(1) calls to cpu->running = 0?
 o) src/net/:
 	o) debugmsg:ify all src/net/.
 	o) Apply Chris Berry's patch for tap device use on Linux.
