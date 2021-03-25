@@ -193,11 +193,14 @@ int load_bootblock(struct machine *m, struct cpu *cpu,
 			}
 
 			/*
-			 *  It seems that the LUNA88K PROM is able to load
-			 *  boot programs from (old-style) UFS partitions.
+			 *  It seems that the real LUNA88K PROM is able to load
+			 *  boot programs from (old-style) UFS partitions, thus
+			 *  it does not really have the concept of "boot
+			 *  blocks" or second stage boot loader as on some
+			 *  other machines.
 			 *
-			 *  Try:
-			 *	unix	(OMRON UniOS?)
+			 *  Try these in order (typically from partition 'a'):
+			 *	vmunix	(OMRON UniOS?)
 			 *	boot	(OpenBSD/luna88k)
 			 */
 
