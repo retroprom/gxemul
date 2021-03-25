@@ -627,7 +627,9 @@ static char *debugger_readline(void)
 				}
 				if (j != 0)
 					printf("\n");
+				color_prompt();
 				printf("GXemul> ");
+				color_normal();
 				for (i=0; i<cmd_len; i++)
 					printf("%c", cmd[i]);
 			}
