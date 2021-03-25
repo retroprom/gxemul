@@ -32,6 +32,13 @@ controllers.
 		tap devices could only be enabled when using configuration files.
 
 	<p>
+	<li>A bug has been fixed for MIPS R2000/R3000 when writing to
+		coprocessor 0's ENTRY LO register. This fixes a regression
+		introduced between 0.6.1 and 0.6.2
+		where running <tt>xinit</tt> inside Sprite (on an emulated
+		DECstation) suddenly failed.
+
+	<p>
 	<li>Previously, the behavior when using configuration files was to
 		always start new terminal windows (xterms) for emulated serial
 		I/O ports, similar to the <tt>-x</tt> command line option. This
