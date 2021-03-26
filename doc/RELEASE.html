@@ -80,8 +80,10 @@ controllers.
 		<i>subsystems</i>, which can have their verbosity levels be
 		individually controlled using the new <tt>verbosity</tt>
 		debugger command. This also standardizes the way debug messages
-		are formatted:<pre>
-[ machine-and-cpu-path: <font color="brown">subsystem-name</font> <font color="#4040ff">component-or-function-name</font>: text ]</pre>
+		are formatted:
+		
+		<p><pre>[ machine-and-cpu-path: <font color="brown">subsystem-name</font> <font color="#4040ff">component-or-function-name</font>: text ]</pre>
+
 		<p>Most of the time, not all of these are shown.
 		machine-and-cpu-path, for example, is only shown if the message comes
 		from a context where a CPU is known to cause the message,
@@ -106,13 +108,17 @@ controllers.
 		it is also disabled when outputting to a non-tty.
 </ul>
 
-<p>The source code is also switched back from C++ to plain C:
+<p>The source code has been switched back from C++ to plain C:
 <ul>
 	<li>The "new" framework was removed. Instead of two different emulators
 		in the same program, there's just the traditional emulation
 		framework.
+
+	<p>
 	<li>A C compiler supporting the C99 standard is needed in
 		order to build GXemul.
+
+	<p>
 	<li>For third parties that package GXemul (e.g. for package managing
 		systems used by operating systems or distributions),
 		build scripts may need to be modified:
@@ -121,7 +127,7 @@ controllers.
 		<li>The (optional) dependency on Valgrind is gone. It was used for
 			running leak detection during unit test execution, but
 			the unit tests were for the C++ framework.
-		<li>The (optional) dependency on doxygen is gone. It was used for
+		<li>The (optional) dependency on Doxygen is gone. It was used for
 			building documentation of the source code in the
 			C++ framework.
 		<li>Automatic generation of machine and component documentation
