@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2019  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -129,15 +129,17 @@ void scsi_transfer_allocbuf(size_t *lenp, unsigned char **pp, size_t want_len,
 	unsigned char *p = (*pp);
 
 	if (p != NULL) {
-		printf("WARNING! scsi_transfer_allocbuf(): old pointer "
-		    "was not NULL, freeing it now\n");
+		debugmsg(SUBSYS_DISK, "scsi", VERBOSITY_WARNING,
+		    "WARNING! scsi_transfer_allocbuf(): old pointer "
+		    "was not NULL, freeing it now");
 		free(p);
 	}
 
 	(*lenp) = want_len;
 	if ((p = (unsigned char *) malloc(want_len)) == NULL) {
-		fprintf(stderr, "scsi_transfer_allocbuf(): out of "
-		    "memory trying to allocate %li bytes\n", (long)want_len);
+		debugmsg(SUBSYS_DISK, "scsi", VERBOSITY_ERROR,
+		    "scsi_transfer_allocbuf(): out of "
+		    "memory trying to allocate %li bytes", (long)want_len);
 		exit(1);
 	}
 
@@ -185,8 +187,10 @@ static void diskimage__switch_tape(struct diskimage *d)
 
 	d->f = fopen(tmpfname, d->writable? "r+" : "r");
 	if (d->f == NULL) {
-		fprintf(stderr, "[ diskimage__switch_tape(): could not "
-		    "(re)open '%s' ]\n", tmpfname);
+		debugmsg(SUBSYS_DISK, "scsi", VERBOSITY_ERROR,
+		    "diskimage__switch_tape(): could not "
+		    "(re)open '%s'", tmpfname);
+
 		/*  TODO: return error  */
 	}
 	d->tape_offset = 0;
@@ -223,7 +227,8 @@ int diskimage_scsicommand(struct cpu *cpu, int id, int type,
 	struct diskimage *d;
 
 	if (machine == NULL) {
-		fatal("[ diskimage_scsicommand(): machine == NULL ]\n");
+		debugmsg_cpu(cpu, SUBSYS_DISK, "scsi",
+		    VERBOSITY_ERROR, "machine == NULL");
 		return 0;
 	}
 
@@ -233,24 +238,33 @@ int diskimage_scsicommand(struct cpu *cpu, int id, int type,
 			break;
 		d = d->next;
 	}
-	if (d == NULL) {
-		fprintf(stderr, "[ diskimage_scsicommand(): %s "
-		    " id %i not connected? ]\n", diskimage_types[type], id);
-	}
 
 	if (xferp->cmd == NULL) {
-		fatal("[ diskimage_scsicommand(): cmd == NULL ]\n");
+		debugmsg_cpu(cpu, SUBSYS_DISK, "scsi",
+		    VERBOSITY_ERROR, "cmd == NULL");
 		return 0;
 	}
 
 	if (xferp->cmd_len < 1) {
-		fatal("[ diskimage_scsicommand(): cmd_len == %i ]\n",
+		debugmsg_cpu(cpu, SUBSYS_DISK, "scsi",
+		    VERBOSITY_ERROR, "cmd_len = %i",
 		    xferp->cmd_len);
 		return 0;
 	}
 
-	debug("[ diskimage_scsicommand(id=%i) cmd=0x%02x: ",
-	    id, xferp->cmd[0]);
+	if (d == NULL) {
+		debugmsg_cpu(cpu, SUBSYS_DISK, "scsi",
+		    VERBOSITY_INFO, "%s id %i not connected!",
+		    diskimage_types[type], id);
+
+		// TODO: How to return suitable error?
+		diskimage__return_default_status_and_message(xferp);
+		xferp->status[0] = 0x02;	// ?
+		return 0;
+	}
+
+	// TODO: debugmsg:ify the rest of the debug messages...
+	debug("[ diskimage_scsicommand(id=%i) cmd=0x%02x: ", id, xferp->cmd[0]);
 
 #if 0
 	fatal("[ diskimage_scsicommand(id=%i) cmd=0x%02x len=%i:",
@@ -260,22 +274,6 @@ int diskimage_scsicommand(struct cpu *cpu, int id, int type,
 	fatal("\n");
 if (xferp->cmd_len > 7 && xferp->cmd[5] == 0x11)
 	single_step = true;
-#endif
-
-#if 0
-{
-	static FILE *f = NULL;
-	if (f == NULL)
-		f = fopen("scsi_log.txt", "w"); 
-	if (f != NULL) {
-		int i;
-		fprintf(f, "id=%i cmd =", id);
-		for (i=0; i<xferp->cmd_len; i++)
-			fprintf(f, " %02x", xferp->cmd[i]);
-		fprintf(f, "\n");
-		fflush(f);
-	}
-}
 #endif
 
 	switch (xferp->cmd[0]) {
@@ -981,7 +979,7 @@ xferp->data_in[4] = 0x2c - 4;	/*  Additional length  */
 		break;
 
 	case SCSICDROM_READ_DISCINFO:
-		/*  (Patch from Håvard Eidnes.)  */
+		/*  (Patch from Haavard Eidnes.)  */
 		debug("CDROM_READ_DISCINFO, cmd[1]=0x%02x", xferp->cmd[1]);
 		retlen = 34;
 		scsi_transfer_allocbuf(&xferp->data_in_len,
@@ -1009,7 +1007,7 @@ xferp->data_in[4] = 0x2c - 4;	/*  Additional length  */
 		break;
 
 	case SCSICDROM_READ_TRACKINFO:
-		/*  (Patch from Håvard Eidnes.)  */
+		/*  (Patch from Haavard Eidnes.)  */
 		debug("CDROM_READ_TRACKINFO");
 		retlen = 36;
 		scsi_transfer_allocbuf(&xferp->data_in_len,
@@ -1148,5 +1146,4 @@ xferp->data_in[4] = 0x2c - 4;	/*  Additional length  */
 
 	return 1;
 }
-
 
