@@ -250,6 +250,7 @@ int main(int argc, char* argv[])
 	bool c = a + b;
 	int d = a + b;
 	printf("%i,%i,%i,%i,%i", s, a, b, c, d);
+	for (int i = 0; i < 10; ++i) ;
 	return 0;
 }
 ' > _testprog.c
@@ -293,7 +294,7 @@ if [ z$OK != z2 ]; then
 	printf "\nPlease set the CC environment variable to a working C "
 	printf "compiler before running\nthe configure script, and make"
 	printf " sure that the CFLAGS environment variable is\nalso valid"
-	printf " for that compiler.\n"
+	printf " for that compiler (e.g. -std=c99 if needed).\n"
 	exit
 fi
 
