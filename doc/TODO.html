@@ -27,6 +27,25 @@ o) LUNA88K SCSI:
 	o) Implement everything else, to make it pass bsd bootup! :-)
 	o) debugmsg:ify diskimage* stuff?
 	o) Try a full OpenBSD install, and if it works, update the documentation.
+o) Breakpoints on subsystem messages?
+	breakpoint subsystem		<- show any subsystem breakpoints
+	breakpoint subsystem disk warn	<- break on warnings and errors, but
+						not on info and debug.
+	breakpoint subsystem disk off	<- turn off breakpoint
+	Effect: enter single stepping when such a message is printed.
+		NOTE: Only check breakpoint AFTER check for "is enough"? Because
+			there may be if("is enough") spread out through the
+			code anyway.
+			In other words: when doing
+				breakpoing subsystem disk info
+			if the current verbosity level of disk is 'warn', then
+			implicitly raise it to 'info' and tell the user about it.
+	NEED TO CHECK about-to-enter-single-step and/or single-step after
+		memory_rw calls, to break out of the dyntrans loop.
+		Implement helper for these cases? cpu->running == 0 is just
+		one reason to break then.
+o) Potentially break out of dyntrans after:
+	m88k_stcr		if it stops the CPU/machine
 o) Try running multiple Sprite machines in one big simulation and see if they
 	talk to each other?
 o) luna88k bootblock loader:
@@ -53,6 +72,12 @@ o) When using e.g. "-E alpha" and there was more than one subtype, then _list_
    them instead of just complaining "Maybe you forgot the -e command line option".
 o) Add an Example in the documentation for a config file with multiple machines (and a plain net()).
 o) Add an example of the "verbosity" command to the Debugger section of the documentation?
+o) Debugger:
+	Helpers for splitting up into arguments/words.
+	Helpers for using abbreviations/tab completion for arguments? Allow
+		e.g. "b sh" to mean "breakpoint show". Right now, "show" needs
+		to be written out in full.
+	More complex expressions, and Unit tests for them.
 o) Try all guest OSes in the documentation, cleaning up debugmsg related stuff as I go along.
 o) Building a default build on my Linux machine currently fails with duplicate definitions from
 	Linux' bits/socket.h being "extern inlined" twice? (configure --debug works fine though)
