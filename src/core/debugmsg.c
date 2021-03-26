@@ -50,15 +50,14 @@
  *
  *
  *  TODO:
- *	Debugger commands:
- *		"quiet"
- *		new command "verbosity"
+ *	New debugger commands:
  *		command for showing debug output in new xterms?
+ *		command for enabling breakpoints for subsystem output?
  *
  *	Convert existing debug() and fatal() calls to the new debugmsg() call.
  *
  *	Make sure that all the hardcoded subsystems are actually used, and/or
- *		move registering to individual subsystems.
+ *	move registering to individual subsystems.
  */
 
 #include <stdarg.h>
@@ -139,7 +138,7 @@ static void debugmsg_va(struct cpu* cpu, int subsystem,
 	vsnprintf(buf, DEBUG_BUFSIZE, fmt, argp);
 
 	char* s = buf;
-	bool ss = single_step || about_to_enter_single_step;
+	bool ss = single_step; // || about_to_enter_single_step;
 	bool debug_currently_at_start_of_line = true;
 	bool show_decorations = emul_executing && !ss;
 
@@ -203,6 +202,9 @@ static void debugmsg_va(struct cpu* cpu, int subsystem,
 
 				print_colon = true;
 			}
+
+			if (!*s)
+				print_colon = false;
 
 			if (print_colon)
 				printf(": ");
@@ -295,11 +297,11 @@ void debugmsg_cpu(struct cpu* cpu, int subsystem, const char *name,
  */
 void debug_indentation(int diff)
 {
-	if (debug_indent == 0 && diff < 0) {
+	debug_indent += diff;
+
+	if ((ssize_t)debug_indent < 0) {
 		fprintf(stderr, "WARNING: debug_indent too low!\n");
 		debug_indent = 0;
-	} else {
-		debug_indent += diff;
 	}
 }
 
@@ -316,7 +318,7 @@ void debug_indentation(int diff)
 void debug(const char *fmt, ...)
 {
 	va_list argp;
-	bool ss = single_step || about_to_enter_single_step;
+	bool ss = single_step; // || about_to_enter_single_step;
 	int v = verbose;
 	if (emul_executing)
 		v--;
