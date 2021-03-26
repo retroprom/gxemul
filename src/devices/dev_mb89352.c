@@ -153,6 +153,14 @@ DEVICE_ACCESS(mb89352)
 	else
 		odata = d->reg[regnr];
 
+	// Hack for now, to allow OpenBSD's kernel to boot:
+	if (true) {
+		odata = regnr == INTS ? 0xff : 0x00;
+		if (writeflag == MEM_READ)
+			memory_writemax64(cpu, data, len, odata);
+		return 1;
+	}
+
 	reg_debug(cpu, d, writeflag, regnr, idata);
 
 	switch (regnr) {
@@ -212,7 +220,7 @@ DEVICE_ACCESS(mb89352)
 					if (target < 8)
 						debugmsg_cpu(cpu, d->subsys, "",
 						    VERBOSITY_DEBUG,
-					    	    "SCMD_SELECT target %i", target);
+					    	    "selecting target %i", target);
 					else
 						debugmsg_cpu(cpu, d->subsys, "",
 						    VERBOSITY_WARNING,
@@ -246,7 +254,7 @@ DEVICE_ACCESS(mb89352)
 
 					debugmsg_cpu(cpu, d->subsys, "",
 					    VERBOSITY_DEBUG,
-				    	    "SCMD_XFR | SCMD_PROG_XFR, phase %i, len %i", d->phase, d->xlen);
+				    	    "Transfer command: phase %i, len %i", d->phase, d->xlen);
 
 					if (d->phase == 2)
 						d->reg[INTS] |= INTS_CMD_DONE;

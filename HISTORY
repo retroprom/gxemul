@@ -5014,3 +5014,5 @@ Changelog for GXemul:
 		enough for OpenBSD's "boot" to read the disk and load the
 		kernel, but not well enough for the kernel to like it.
 20210324	Adding support for 00 99 01 07 variant of luna88k a.out.
+20210325	The mb89352 SCSI controller uses its own subsystem for debug
+		messages.
