@@ -30,6 +30,9 @@
  *  TODO:  There are LOTS of ugly magic values in this module. These should
  *         be replaced by proper defines.
  *
+ *  TODO:  scsi_transfer_free could save away previous allocations, and
+ *         scsi_transfer_allocbuf could reuse them (for given sizes).
+ *
  *  TODO:  There's probably a bug in the tape support:
  *         Let's say there are 10240 bytes left in a file, and 10240
  *         bytes are read. Then feof() is not true yet (?), so the next
@@ -285,8 +288,9 @@ if (xferp->cmd_len > 7 && xferp->cmd[5] == 0x11)
 
 		/*  TODO: bits 765 of buf[1] contains the LUN  */
 		if (xferp->cmd[1] != 0x00)
-			fatal("WARNING: TEST_UNIT_READY with cmd[1]=0x%02x"
-			    " not yet implemented\n", (int)xferp->cmd[1]);
+			debugmsg(SUBSYS_DISK, "scsi", VERBOSITY_WARNING,
+			    "WARNING: TEST_UNIT_READY with cmd[1]=0x%02x"
+			    " not yet implemented", (int)xferp->cmd[1]);
 
 		diskimage__return_default_status_and_message(xferp);
 		break;
@@ -296,16 +300,16 @@ if (xferp->cmd_len > 7 && xferp->cmd[5] == 0x11)
 		if (xferp->cmd_len != 6)
 			debug(" (weird len=%i)", xferp->cmd_len);
 		if (xferp->cmd[1] != 0x00) {
-			debug("WARNING: INQUIRY with cmd[1]=0x%02x not yet "
-			    "implemented\n", (int)xferp->cmd[1]);
-
-			break;
+			debugmsg(SUBSYS_DISK, "scsi", VERBOSITY_WARNING,
+			    "WARNING: INQUIRY with cmd[1]=0x%02x not yet "
+			    "implemented", (int)xferp->cmd[1]);
 		}
 
 		/*  Return values:  */
 		retlen = xferp->cmd[4];
 		if (retlen < 36) {
-			fatal("WARNING: SCSI inquiry len=%i, <36!\n", retlen);
+			debugmsg(SUBSYS_DISK, "scsi", VERBOSITY_WARNING,
+			    "WARNING: SCSI inquiry len=%i, <36!", retlen);
 			retlen = 36;
 		}
 
@@ -553,8 +557,9 @@ xferp->data_in[4] = 0x2c - 4;	/*  Additional length  */
 			xferp->data_in[q + 29] = d->rpms & 255;
 			break;
 		default:
-			fatal("[ MODE_SENSE for page %i is not yet "
-			    "implemented! ]\n", pagecode);
+			debugmsg(SUBSYS_DISK, "scsi", VERBOSITY_WARNING,
+			    "MODE_SENSE for page %i is not yet "
+			    "implemented!", pagecode);
 		}
 
 		break;
@@ -721,8 +726,6 @@ xferp->data_in[4] = 0x2c - 4;	/*  Additional length  */
 			xferp->data_out_len = size;
 			return 2;
 		}
-
-		debug(", data_out != NULL, OK :-)");
 
 		debug("WRITE ofs=%i size=%i offset=%i\n", (int)ofs,
 		    (int)size, (int)xferp->data_out_offset);
