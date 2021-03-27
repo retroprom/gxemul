@@ -638,49 +638,100 @@ static void m88k_memory_transaction_debug_dump(struct cpu *cpu, int n)
  */
 void m88k_exception(struct cpu *cpu, int vector, int is_trap)
 {
-	int update_shadow_regs = 1;
+	bool update_shadow_regs = true;
+	bool implemented = false;
 
-	debug("[ EXCEPTION 0x%03x: ", vector);
+	// TODO: Use a const char * instead or something like that, inside the switch...
+
 	switch (vector) {
+
 	case M88K_EXCEPTION_RESET:
-		debug("RESET"); break;
+		debugmsg_cpu(cpu, SUBSYS_EXCEPTION, "RESET", VERBOSITY_INFO, "");
+		implemented = true;
+		break;
+
 	case M88K_EXCEPTION_INTERRUPT:
-		debug("INTERRUPT"); break;
+		debugmsg_cpu(cpu, SUBSYS_EXCEPTION, "INTERRUPT", VERBOSITY_INFO, "");
+		implemented = true;
+		break;
+
 	case M88K_EXCEPTION_INSTRUCTION_ACCESS:
-		debug("INSTRUCTION_ACCESS"); break;
+		debugmsg_cpu(cpu, SUBSYS_EXCEPTION, "INSTRUCTION_ACCESS", VERBOSITY_INFO, "");
+		implemented = true;
+		break;
+
 	case M88K_EXCEPTION_DATA_ACCESS:
-		debug("DATA_ACCESS"); break;
+		debugmsg_cpu(cpu, SUBSYS_EXCEPTION, "DATA_ACCESS", VERBOSITY_INFO, "");
+		implemented = true;
+		break;
+
 	case M88K_EXCEPTION_MISALIGNED_ACCESS:
-		debug("MISALIGNED_ACCESS"); break;
+		debugmsg_cpu(cpu, SUBSYS_EXCEPTION, "MISALIGNED_ACCESS", VERBOSITY_ERROR, "");
+		break;
+
 	case M88K_EXCEPTION_UNIMPLEMENTED_OPCODE:
-		debug("UNIMPLEMENTED_OPCODE"); break;
+		debugmsg_cpu(cpu, SUBSYS_EXCEPTION, "UNIMPLEMENTED_OPCODE", VERBOSITY_ERROR, "");
+		break;
+
 	case M88K_EXCEPTION_PRIVILEGE_VIOLATION:
-		debug("PRIVILEGE_VIOLATION"); break;
+		debugmsg_cpu(cpu, SUBSYS_EXCEPTION, "PRIVILEGE_VIOLATION", VERBOSITY_ERROR, "");
+		break;
+
 	case M88K_EXCEPTION_BOUNDS_CHECK_VIOLATION:
-		debug("BOUNDS_CHECK_VIOLATION"); break;
+		debugmsg_cpu(cpu, SUBSYS_EXCEPTION, "BOUNDS_CHECK_VIOLATION", VERBOSITY_ERROR, "");
+		break;
+
 	case M88K_EXCEPTION_ILLEGAL_INTEGER_DIVIDE:
-		debug("ILLEGAL_INTEGER_DIVIDE"); break;
+		debugmsg_cpu(cpu, SUBSYS_EXCEPTION, "ILLEGAL_INTEGER_DIVIDE", VERBOSITY_ERROR, "");
+		break;
+
 	case M88K_EXCEPTION_INTEGER_OVERFLOW:
-		debug("INTEGER_OVERFLOW"); break;
+		debugmsg_cpu(cpu, SUBSYS_EXCEPTION, "INTEGER_OVERFLOW", VERBOSITY_ERROR, "");
+		break;
+
 	case M88K_EXCEPTION_ERROR:
-		debug("ERROR"); break;
+		debugmsg_cpu(cpu, SUBSYS_EXCEPTION, "ERROR", VERBOSITY_ERROR, "");
+		break;
+
 	case M88K_EXCEPTION_SFU1_PRECISE:
-		debug("SFU1_PRECISE"); break;
+		debugmsg_cpu(cpu, SUBSYS_EXCEPTION, "SFU1_PRECISE", VERBOSITY_ERROR, "");
+		break;
+
 	case M88K_EXCEPTION_SFU1_IMPRECISE:
-		debug("SFU1_IMPRECISE"); break;
+		debugmsg_cpu(cpu, SUBSYS_EXCEPTION, "SFU1_IMPRECISE", VERBOSITY_ERROR, "");
+		break;
+
 	case 0x80:	/*  up to OpenBSD 5.2  */
 	case 0x1c2:	/*  from OpenBSD 5.3 and forward...  */
+		debugmsg_cpu(cpu, SUBSYS_EXCEPTION, "syscall", VERBOSITY_INFO,
+		    "r13=%i", cpu->cd.m88k.r[13]);
 #if 0
 		fatal("[ syscall %i(", cpu->cd.m88k.r[13]);
 		m88k_cpu_functioncall_trace(cpu, 8);
 		fatal(") ]\n");
 #endif
-		debug("syscall, r13=%i", cpu->cd.m88k.r[13]); break;
+		break;
+
 	case MVMEPROM_VECTOR:
-		debug("MVMEPROM_VECTOR"); break;
-	default:debug("unknown"); break;
+		debugmsg_cpu(cpu, SUBSYS_EXCEPTION, "MVMEPROM_VECTOR", VERBOSITY_INFO, "");
+		break;
+
+	default:
+		debugmsg_cpu(cpu, SUBSYS_EXCEPTION, "unknown vector",
+		    vector < M88K_EXCEPTION_USER_TRAPS_START ? VERBOSITY_ERROR
+		    : VERBOSITY_INFO, "0x%03x", vector);
 	}
-	debug(" ]\n");
+
+	if (vector < M88K_EXCEPTION_USER_TRAPS_START && !implemented) {
+		debugmsg_cpu(cpu, SUBSYS_EXCEPTION, "unimplemented",
+		    VERBOSITY_ERROR, "vector=0x%03x pc=0x%08x",
+			vector,
+			(int)cpu->pc);
+		for (int j = 0; j < cpu->machine->ncpus; ++j)
+			cpu->machine->cpus[j]->running = 0;
+		m88k_pc_to_pointers(cpu);
+		return;
+	}
 
 	/*  Stuff common for all exceptions:  */
 	if (cpu->cd.m88k.cr[M88K_CR_PSR] & M88K_PSR_SFRZ) {
@@ -693,7 +744,7 @@ void m88k_exception(struct cpu *cpu, int vector, int is_trap)
 			fatal("[ SFRZ already set in PSR => ERROR ]\n");
 		}
 
-		update_shadow_regs = 0;
+		update_shadow_regs = false;
 	} else {
 		/*  Freeze shadow registers, and save the PSR:  */
 		cpu->cd.m88k.cr[M88K_CR_EPSR] = cpu->cd.m88k.cr[M88K_CR_PSR];
@@ -759,7 +810,9 @@ void m88k_exception(struct cpu *cpu, int vector, int is_trap)
 
 		case M88K_EXCEPTION_RESET:
 			fatal("[ m88k_exception: reset ]\n");
-			exit(1);
+			for (int j = 0; j < cpu->machine->ncpus; ++j)
+				cpu->machine->cpus[j]->running = 0;
+			break;
 
 		case M88K_EXCEPTION_INTERRUPT:
 			/*  When returning with rte, we want to re-  */
@@ -812,11 +865,7 @@ void m88k_exception(struct cpu *cpu, int vector, int is_trap)
 			break;
 #endif
 
-		default:fatal("m88k_exception(): 0x%x: SXIP=0x%08x pc=0x%08x TODO\n",
-			vector,
-			cpu->cd.m88k.cr[M88K_CR_SXIP],
-			(int)cpu->pc);
-			fflush(stdout);
+		default:fatal("m88k_exception(): not reached\n");
 			exit(1);
 		}
 	}
