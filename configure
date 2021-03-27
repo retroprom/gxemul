@@ -210,6 +210,10 @@ printf " add_cpu_family(ppc_cpu_family_init, ARCH_PPC);" >> config.h
 CPU_ARCHS="$CPU_ARCHS cpu_ppc.o"
 CPU_TOOLS="$CPU_TOOLS generate_ppc_loadstore"
 
+#  RISC-V
+printf " add_cpu_family(riscv_cpu_family_init, ARCH_RISCV);" >> config.h
+CPU_ARCHS="$CPU_ARCHS cpu_riscv.o memory_riscv.o"
+
 #  SuperH
 printf " add_cpu_family(sh_cpu_family_init, ARCH_SH);" >> config.h
 CPU_ARCHS="$CPU_ARCHS cpu_sh.o memory_sh.o"

@@ -25,7 +25,7 @@
  *  SUCH DAMAGE.
  *
  *
- *  Intel 80960 (i960) CPU emulation.
+ *  RISC-V CPU emulation.
  */
 
 #include <stdio.h>
@@ -44,43 +44,49 @@
 #include "symbol.h"
 
 
-#define DYNTRANS_32
-#include "tmp_i960_head.c"
+#define DYNTRANS_DUALMODE_32
 
+#include "tmp_riscv_head.c"
 
-void i960_pc_to_pointers(struct cpu *);
-void i960_cpu_functioncall_trace(struct cpu *cpu, int n_args);
+void riscv_pc_to_pointers(struct cpu *);
+void riscv32_pc_to_pointers(struct cpu *);
+void riscv_cpu_functioncall_trace(struct cpu *cpu, int n_args);
 
-void i960_irq_interrupt_assert(struct interrupt *interrupt);
-void i960_irq_interrupt_deassert(struct interrupt *interrupt);
+void riscv_irq_interrupt_assert(struct interrupt *interrupt);
+void riscv_irq_interrupt_deassert(struct interrupt *interrupt);
 
 
 /*
- *  i960_cpu_new():
+ *  riscv_cpu_new():
  *
- *  Create a new 80960 cpu object by filling the CPU struct.
- *  Return 1 on success, 0 if cpu_type_name isn't a valid i960 processor model.
+ *  Create a new RISC-V cpu object by filling the CPU struct.
+ *  Return 1 on success, 0 if cpu_type_name isn't a valid processor model.
  */
-int i960_cpu_new(struct cpu *cpu, struct memory *mem,
+int riscv_cpu_new(struct cpu *cpu, struct memory *mem,
 	struct machine *machine, int cpu_id, char *cpu_type_name)
 {
 	int i;
 
 	/*  TODO: Check cpu_type_name in a better way.  */
-	if (strcmp(cpu_type_name, "i960") != 0)
+	if (strcmp(cpu_type_name, "riscv") != 0)
 		return 0;
 
-	cpu->run_instr = i960_run_instr;
-	cpu->memory_rw = i960_memory_rw;
-	cpu->update_translation_table = i960_update_translation_table;
-	cpu->invalidate_translation_caches = i960_invalidate_translation_caches;
-	cpu->invalidate_code_translation = i960_invalidate_code_translation;
+	cpu->run_instr = riscv_run_instr;
+	cpu->memory_rw = riscv_memory_rw;
+	cpu->update_translation_table = riscv_update_translation_table;
+	cpu->invalidate_translation_caches = riscv_invalidate_translation_caches;
+	cpu->invalidate_code_translation = riscv_invalidate_code_translation;
 
 	cpu->name            = strdup(cpu_type_name);
-	cpu->is_32bit        = 1;
+
 	cpu->byte_order      = EMUL_BIG_ENDIAN;
 
+	// TODO
+	cpu->is_32bit        = 1;
 	cpu->vaddr_mask = 0x00000000ffffffffULL;
+
+	cpu->is_32bit        = 0;
+	cpu->vaddr_mask = 0xffffffffffffffffULL;
 
 
 	/*
@@ -89,10 +95,12 @@ int i960_cpu_new(struct cpu *cpu, struct memory *mem,
 
 	CPU_SETTINGS_ADD_REGISTER64("pc", cpu->pc);
 
-	for (i=0; i<N_I960_REGS; i++) {
+	for (i=0; i<N_RISCV_REGS; i++) {
 		char name[10];
-		snprintf(name, sizeof(name), "r%i", i);
-		CPU_SETTINGS_ADD_REGISTER32(name, cpu->cd.i960.r[i]);
+		snprintf(name, sizeof(name), "x%i", i);
+
+		// TODO: skip x0 and add using the symbolic API names?
+		CPU_SETTINGS_ADD_REGISTER64(name, cpu->cd.riscv.x[i]);
 	}
 
 
@@ -106,8 +114,8 @@ int i960_cpu_new(struct cpu *cpu, struct memory *mem,
 		templ.line = 0;
 		templ.name = name;
 		templ.extra = cpu;
-		templ.interrupt_assert = i960_irq_interrupt_assert;
-		templ.interrupt_deassert = i960_irq_interrupt_deassert;
+		templ.interrupt_assert = riscv_irq_interrupt_assert;
+		templ.interrupt_deassert = riscv_irq_interrupt_deassert;
 		interrupt_handler_register(&templ);
 	}
 
@@ -116,9 +124,9 @@ int i960_cpu_new(struct cpu *cpu, struct memory *mem,
 
 
 /*
- *  i960_cpu_dumpinfo():
+ *  riscv_cpu_dumpinfo():
  */
-void i960_cpu_dumpinfo(struct cpu *cpu, bool verbose)
+void riscv_cpu_dumpinfo(struct cpu *cpu, bool verbose)
 {
 	debugmsg(SUBSYS_MACHINE, "cpu", VERBOSITY_INFO,
 	    "%s",
@@ -127,25 +135,25 @@ void i960_cpu_dumpinfo(struct cpu *cpu, bool verbose)
 
 
 /*
- *  i960_cpu_list_available_types():
+ *  riscv_cpu_list_available_types():
  *
- *  Print a list of available i960 CPU types.
+ *  Print a list of available riscv CPU types.
  */
-void i960_cpu_list_available_types(void)
+void riscv_cpu_list_available_types(void)
 {
-	debug("i960\n");
+	debug("riscv\n");
 }
 
 
 /*
- *  i960_cpu_register_dump():
+ *  riscv_cpu_register_dump():
  *
  *  Dump cpu registers in a relatively readable format.
  *  
  *  gprs: set to non-zero to dump GPRs and some special-purpose registers.
  *  coprocs: set bit 0..3 to dump registers in coproc 0..3.
  */
-void i960_cpu_register_dump(struct cpu *cpu, int gprs, int coprocs)
+void riscv_cpu_register_dump(struct cpu *cpu, int gprs, int coprocs)
 {
 	char *symbol;
 	uint64_t offset;
@@ -157,14 +165,14 @@ void i960_cpu_register_dump(struct cpu *cpu, int gprs, int coprocs)
 		debug("cpu%i:  pc  = 0x%08" PRIx32, x, (uint32_t)cpu->pc);
 		debug("  <%s>\n", symbol != NULL? symbol : " no symbol ");
 
-		for (i=0; i<N_I960_REGS; i++) {
+		for (i=0; i<N_RISCV_REGS; i++) {
 			if ((i % 4) == 0)
 				debug("cpu%i:", x);
 			if (i == 0)
 				debug("                  ");
 			else
-				debug("  r%-2i = 0x%08" PRIx32,
-				    i, cpu->cd.i960.r[i]);
+				debug("  x%-2i = 0x%08" PRIx32,
+				    i, cpu->cd.riscv.x[i]);
 			if ((i % 4) == 3)
 				debug("\n");
 		}
@@ -173,52 +181,52 @@ void i960_cpu_register_dump(struct cpu *cpu, int gprs, int coprocs)
 
 
 /*
- *  i960_cpu_tlbdump():
+ *  riscv_cpu_tlbdump():
  *
  *  Called from the debugger to dump the TLB in a readable format.
  *
  *  If rawflag is nonzero, then the TLB contents isn't formated nicely,
  *  just dumped.
  */
-void i960_cpu_tlbdump(struct cpu* cpu, int rawflag)
+void riscv_cpu_tlbdump(struct cpu* cpu, int rawflag)
 {
 }
 
 
 /*
- *  i960_irq_interrupt_assert():
- *  i960_irq_interrupt_deassert():
+ *  riscv_irq_interrupt_assert():
+ *  riscv_irq_interrupt_deassert():
  */
-void i960_irq_interrupt_assert(struct interrupt *interrupt)
+void riscv_irq_interrupt_assert(struct interrupt *interrupt)
 {
 	struct cpu *cpu = (struct cpu *) interrupt->extra;
-	cpu->cd.i960.irq_asserted = 1;
+	cpu->cd.riscv.irq_asserted = 1;
 }
-void i960_irq_interrupt_deassert(struct interrupt *interrupt)
+void riscv_irq_interrupt_deassert(struct interrupt *interrupt)
 {
 	struct cpu *cpu = (struct cpu *) interrupt->extra;
-	cpu->cd.i960.irq_asserted = 0;
+	cpu->cd.riscv.irq_asserted = 0;
 }
 
 
 /*
- *  i960_exception():
+ *  riscv_exception():
  *
  *  Cause an exception.
  */
-void i960_exception(struct cpu *cpu, int vector, int is_trap)
+void riscv_exception(struct cpu *cpu, int vector, int is_trap)
 {
 	debugmsg_cpu(cpu, SUBSYS_EXCEPTION, "", VERBOSITY_ERROR,
-	    "i960_exception(): TODO");
+	    "riscv_exception(): TODO");
 
 	cpu->running = 0;
 
-	i960_pc_to_pointers(cpu);
+	riscv_pc_to_pointers(cpu);
 }
 
 
 /*
- *  i960_cpu_disassemble_instr():
+ *  riscv_cpu_disassemble_instr():
  *
  *  Convert an instruction word into human readable format, for instruction
  *  tracing.
@@ -229,16 +237,16 @@ void i960_exception(struct cpu *cpu, int vector, int is_trap)
  *  register contents) will not be shown, and dumpaddr will be used instead of
  *  cpu->pc for relative addresses.
  */                     
-int i960_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
+int riscv_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
         int running, uint64_t dumpaddr)
 {
 	debugmsg_cpu(cpu, SUBSYS_CPU, "", VERBOSITY_ERROR,
-	    "i960_cpu_disassemble_instr(): TODO");
+	    "riscv_cpu_disassemble_instr(): TODO");
 
-	return sizeof(uint32_t);
+	return sizeof(uint16_t);
 }
 
 
-#include "tmp_i960_tail.c"
+#include "tmp_riscv_tail.c"
 
 

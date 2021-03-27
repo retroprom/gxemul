@@ -179,6 +179,18 @@ tmp_ppc_tail.c: generate_tail
 
 ###############################################################################
 
+cpu_riscv.o: cpu_riscv.c cpu_riscv_instr.c cpu_dyntrans.c memory_rw.c \
+	tmp_riscv_head.c tmp_riscv_tail.c
+
+tmp_riscv_head.c: generate_head
+	./generate_head riscv RISCV > tmp_riscv_head.c
+
+tmp_riscv_tail.c: generate_tail
+	./generate_tail riscv RISCV > tmp_riscv_tail.c
+
+
+###############################################################################
+
 cpu_sh.o: cpu_sh.c cpu_sh_instr.c cpu_dyntrans.c memory_rw.c \
 	tmp_sh_head.c tmp_sh_tail.c
 

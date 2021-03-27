@@ -236,7 +236,8 @@ struct physpage_ranges {
 #define	ARCH_M88K		4
 #define	ARCH_MIPS		5
 #define	ARCH_PPC		6
-#define	ARCH_SH			7
+#define	ARCH_RISCV		7
+#define	ARCH_SH			8
 
 /*
  *  Include all CPUs' header files here. At the end of the
@@ -249,6 +250,7 @@ struct physpage_ranges {
 #include "cpu_m88k.h"
 #include "cpu_mips.h"
 #include "cpu_ppc.h"
+#include "cpu_riscv.h"
 #include "cpu_sh.h"
 
 struct cpu;
@@ -465,6 +467,7 @@ struct cpu {
 		struct m88k_cpu       m88k;
 		struct mips_cpu       mips;
 		struct ppc_cpu        ppc;
+		struct riscv_cpu      riscv;
 		struct sh_cpu         sh;
 	} cd;
 };

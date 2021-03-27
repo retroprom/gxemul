@@ -470,8 +470,8 @@ void DYNTRANS_FUNCTION_TRACE_DEF(struct cpu *cpu, int n_args)
 #if defined(DYNTRANS_ALPHA)
 	    6
 #else
-#if defined(DYNTRANS_SH) || defined(DYNTRANS_M88K)
-	    8	/*  Both for 32-bit and 64-bit SuperH, and M88K  */
+#if defined(DYNTRANS_SH) || defined(DYNTRANS_M88K) || defined(DYNTRANS_RISCV)
+	    8	/*  Both for 32-bit and 64-bit SuperH, and M88K, and RISC-V  */
 #else
 	    4	/*  Default value for most archs  */
 #endif
@@ -520,6 +520,9 @@ void DYNTRANS_FUNCTION_TRACE_DEF(struct cpu *cpu, int n_args)
 #endif
 #ifdef DYNTRANS_PPC
 		    gpr[3
+#endif
+#ifdef DYNTRANS_RISCV
+		    x[10
 #endif
 #ifdef DYNTRANS_SH
 		    r[4		/*  NetBSD seems to use 4? But 2 seems
