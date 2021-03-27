@@ -28,10 +28,16 @@
  *  COMMENT: Fujitsu MB89352 SCSI Protocol Controller (SPC)
  *
  *  Based on looking at openbsd/sys/arch/luna88k/stand/boot (the OpenBSD boot
- *  loader), and matching its expectations.
+ *  loader), and openbsd/sys/arch/luna88k/dev/mb89352* (the kernel), and
+ *  matching their expectations.
  *
- *  TODO: Almost everything.
- *  TODO IN PARTICULAR: Make it work also with the OpenBSD _kernel_!
+ *  TODO: Probably lots of details. Most likely, running anything other than
+ *        OpenBSD/luna88k as a guest OS will trigger unimplemented code
+ *        paths.
+ *
+ *  TODO: OpenBSD complains about
+ *        probe(spc0:0:0): Check Condition (error 0) on opcode 0x0
+ *        during bootup.
  */
 
 #include <stdio.h>
@@ -59,6 +65,9 @@ static char *regname[16] = {
 };
 
 
+#define PH_BUS_FREE		4
+
+
 struct mb89352_data {
 	int			subsys;
 
@@ -69,12 +78,10 @@ struct mb89352_data {
 	
 	int			target;		// target SCSI ID, e.g. 6
 	int			phase;
-	size_t			xlen;
 
 	struct scsi_transfer	*xferp;
-
-	size_t			bufpos;
-	uint8_t			*buf;
+	size_t			transfer_count;
+	size_t			transfer_bufpos;
 };
 
 
@@ -128,6 +135,158 @@ DEVICE_TICK(mb89352)
 }
 
 
+int mb89352_dreg_read(struct cpu* cpu, struct mb89352_data *d, int writeflag)
+{
+	int odata;
+
+	if (d->xferp == NULL) {
+		debugmsg_cpu(cpu, d->subsys, "", VERBOSITY_ERROR,
+	    	    "DREG: no ongoing transfer to read from?");
+	    	cpu->running = 0;
+	    	return 0;
+	}
+	
+	uint8_t *p = d->xferp->data_in;
+	size_t len = d->xferp->data_in_len;
+	
+	switch (d->phase) {
+	case PH_DATAIN:
+		p = d->xferp->data_in;
+		len = d->xferp->data_in_len;
+		break;
+	case PH_STAT:
+		p = d->xferp->status;
+		len = d->xferp->status_len;
+		break;
+	case PH_MSGIN:
+		p = d->xferp->msg_in;
+		len = d->xferp->msg_in_len;
+		break;
+	default:
+		debugmsg_cpu(cpu, d->subsys, "", VERBOSITY_ERROR,
+	    	    "DREG: read in unimplemented phase %i", d->phase);
+	    	cpu->running = 0;
+	    	return 0;
+	}
+
+	if (d->transfer_bufpos >= len) {
+		debugmsg_cpu(cpu, d->subsys, "", VERBOSITY_ERROR,
+	    	    "DREG: read longer than buffer?");
+	    	cpu->running = 0;
+	    	return 0;
+	}
+
+	odata = p[d->transfer_bufpos ++];
+
+	debugmsg_cpu(cpu, d->subsys, "", VERBOSITY_DEBUG,
+    	    "DREG read: 0x%02x", (int)odata);
+
+	if (d->transfer_bufpos < len)
+		return odata;
+
+	debugmsg_cpu(cpu, d->subsys, "", VERBOSITY_DEBUG,
+    	    "DREG read entire result completed.");
+
+	d->reg[SSTS] &= ~SSTS_XFR;
+
+	if (d->phase == PH_DATAIN)
+		d->phase = PH_STAT;
+	else if (d->phase == PH_STAT)
+		d->phase = PH_MSGIN;
+	else if (d->phase == PH_MSGIN)
+		d->phase = PH_BUS_FREE;
+
+	d->reg[PSNS] |= PSNS_REQ;
+
+	if (d->phase == PH_BUS_FREE)
+		d->reg[INTS] |= INTS_DISCON;
+	else
+		d->reg[INTS] |= INTS_CMD_DONE;
+
+	return odata;
+}
+
+
+void mb89352_dreg_write(struct cpu* cpu, struct mb89352_data *d, int writeflag, int idata)
+{
+	if (d->xferp == NULL) {
+		debugmsg_cpu(cpu, d->subsys, "",
+		    mb89352_abort_on_unimplemented_stuff ? VERBOSITY_ERROR : VERBOSITY_WARNING,
+	    	    "DREG: no ongoing transfer to write to?");
+	    	return;
+	}
+	
+	uint8_t *p = d->xferp->data_in;
+	size_t len = d->xferp->data_in_len;
+	
+	switch (d->phase) {
+	case PH_DATAOUT:
+		p = d->xferp->data_out;
+		len = d->xferp->data_out_len;
+		break;
+	case PH_CMD:
+		p = d->xferp->cmd;
+		len = d->xferp->cmd_len;
+		break;
+	default:
+		debugmsg_cpu(cpu, d->subsys, "", VERBOSITY_ERROR,
+	    	    "DREG: write in unimplemented phase %i", d->phase);
+	    	cpu->running = 0;
+	    	return;
+	}
+
+	if (d->transfer_bufpos >= len) {
+		debugmsg_cpu(cpu, d->subsys, "", VERBOSITY_ERROR,
+	    	    "DREG: write longer than buffer?");
+	    	cpu->running = 0;
+	    	return;
+	}
+
+	p[d->transfer_bufpos ++] = idata;
+
+	if (d->transfer_bufpos < len)
+		return;
+
+	debugmsg_cpu(cpu, d->subsys, "",
+	    VERBOSITY_DEBUG,
+    	    "%i bytes written", d->transfer_bufpos);
+
+	int res;
+
+	switch (d->phase) {
+
+	case PH_DATAOUT:
+		res = diskimage_scsicommand(cpu,
+	    	    d->target, DISKIMAGE_SCSI, d->xferp);
+
+		// TODO: How about failure results?
+		d->phase = PH_STAT;
+		break;
+
+	case PH_CMD:
+		res = diskimage_scsicommand(cpu,
+	    	    d->target, DISKIMAGE_SCSI, d->xferp);
+
+		if (res == 2)
+			d->phase = PH_DATAOUT;
+		else if (d->xferp->data_in != NULL)
+			d->phase = PH_DATAIN;
+		else
+			d->phase = PH_STAT;
+		break;
+
+	default:
+		debugmsg_cpu(cpu, d->subsys, "", VERBOSITY_ERROR,
+	    	    "DREG write: UNIMPLEMENTED PHASE %i", d->phase);
+	    	cpu->running = 0;
+	}
+	
+	d->reg[PSNS] |= PSNS_REQ;
+	d->reg[SSTS] &= ~SSTS_XFR;
+	d->reg[INTS] |= INTS_CMD_DONE;
+}
+
+
 DEVICE_ACCESS(mb89352)
 {
 	struct mb89352_data *d = (struct mb89352_data *) extra;
@@ -152,14 +311,6 @@ DEVICE_ACCESS(mb89352)
 		idata = memory_readmax64(cpu, data, len);
 	else
 		odata = d->reg[regnr];
-
-	// Hack for now, to allow OpenBSD's kernel to boot:
-	if (true) {
-		odata = regnr == INTS ? 0xff : 0x00;
-		if (writeflag == MEM_READ)
-			memory_writemax64(cpu, data, len, odata);
-		return 1;
-	}
 
 	reg_debug(cpu, d, writeflag, regnr, idata);
 
@@ -204,6 +355,9 @@ DEVICE_ACCESS(mb89352)
 			switch (idata) {
 
 			case SCMD_BUS_REL:	// 0x00
+				d->reg[SSTS] &= ~(SSTS_TARGET | SSTS_INITIATOR | SSTS_XFR);
+				d->phase = PH_BUS_FREE;
+				// TODO: BUS FREE interrupt enable: PCTL_BFINT_ENAB?
 				break;
 
 			case SCMD_SELECT:
@@ -229,36 +383,65 @@ DEVICE_ACCESS(mb89352)
 					d->target = target;
 					d->reg[INTS] |= INTS_CMD_DONE;
 					d->reg[PSNS] &= ~7;
-					d->reg[PSNS] |= 2; //CMD_PHASE;
+					d->phase = PH_CMD;
 					d->reg[PSNS] |= PSNS_REQ;
 
 					if (d->xferp != NULL)
 						scsi_transfer_free(d->xferp);
 
 					d->xferp = scsi_transfer_alloc();
+					d->transfer_bufpos = 0;
+
+					d->reg[SSTS] &= ~SSTS_TARGET;
+					d->reg[SSTS] |= SSTS_BUSY;
 				}
 				break;
 
 			case SCMD_XFR | SCMD_PROG_XFR:
 			case SCMD_XFR | SCMD_PROG_XFR | SCMD_ICPT_XFR:
 				{
+					d->reg[SSTS] |= SSTS_XFR;
 					d->phase = d->reg[PCTL] & 7;
-					d->xlen = (d->reg[TCH] << 16) + (d->reg[TCM] << 8)
-						+ d->reg[TCL];
 
-					if (d->buf != NULL)
-						free(d->buf);
-
-					d->buf = malloc(d->xlen);
-					d->bufpos = 0;
+					d->transfer_bufpos = 0;
 
 					debugmsg_cpu(cpu, d->subsys, "",
 					    VERBOSITY_DEBUG,
-				    	    "Transfer command: phase %i, len %i", d->phase, d->xlen);
+				    	    "Transfer command: phase %i, len %i",
+				    	    d->phase, d->transfer_count);
 
-					if (d->phase == 2)
+					switch (d->phase) {
+					case PH_DATAOUT:
+						scsi_transfer_allocbuf(&d->xferp->data_out_len,
+						    &d->xferp->data_out, d->transfer_count, 0);
+						d->xferp->data_out_offset = d->transfer_count;
+						break;
+					case PH_DATAIN:
+						break;
+					case PH_CMD:
+						scsi_transfer_allocbuf(&d->xferp->cmd_len,
+						    &d->xferp->cmd, d->transfer_count, 0);
+						break;
+					case PH_STAT:
+						break;
+					case PH_MSGIN:
+						break;
+					default:
+						debugmsg_cpu(cpu, d->subsys, "",
+						    VERBOSITY_ERROR,
+					    	    "Transfer command: unimplemented phase %i",
+					    	    d->phase);
+				    		exit(1);
+					}
+
+					if (!(d->phase & 1))
 						d->reg[INTS] |= INTS_CMD_DONE;
 				}
+				break;
+
+			case SCMD_RST_ACK:
+				d->reg[SSTS] &= ~(SSTS_INITIATOR | SSTS_TARGET);
+				d->reg[PSNS] &= ~PSNS_REQ;
 				break;
 
 			default:
@@ -304,6 +487,9 @@ DEVICE_ACCESS(mb89352)
 		    	    "unimplemented write to PSNS/SDGC: 0x%x",
 			    (int) idata);
 		}
+
+		odata &= ~7;
+		odata |= d->phase;
 		break;
 
 	case SSTS:
@@ -314,13 +500,26 @@ DEVICE_ACCESS(mb89352)
 		    	    "unimplemented write to SSTS: 0x%x",
 			    (int) idata);
 		}
-		
-		odata &= ~(SSTS_DREG_FULL | SSTS_DREG_EMPTY | SSTS_BUSY);
-		if (d->phase & 1)
-			odata |= SSTS_DREG_FULL;
+
+		if (d->transfer_count == 0)
+			odata |= SSTS_TCZERO;
 		else
+			odata &= ~SSTS_TCZERO;
+
+		odata &= ~(SSTS_DREG_FULL | SSTS_DREG_EMPTY | SSTS_BUSY);
+
+		// Inbound phase, but no more data? Then the dreg is empty.
+		if (d->phase & 1) {
+			if (d->transfer_count == 0)
+				odata |= SSTS_DREG_EMPTY;
+		}
+
+		// Outbound phase, then the dreg is always empty.
+		if (!(d->phase & 1)) {
 			odata |= SSTS_DREG_EMPTY;
-		if (d->xferp != NULL)
+		}
+
+		if (d->phase & 1 && d->transfer_count > 0)
 			odata |= SSTS_BUSY;
 		break;
 
@@ -356,86 +555,40 @@ DEVICE_ACCESS(mb89352)
 		break;
 
 	case DREG:
-		if (writeflag == MEM_WRITE) {
-			d->buf[d->bufpos++] = idata;
-			
-			if (d->bufpos == d->xlen) {
-				debugmsg_cpu(cpu, d->subsys, "",
-				    VERBOSITY_DEBUG,
-			    	    "%i bytes written to buffer", d->xlen);
-
-				switch (d->phase) {
-				case 2:	// CMD
-					d->xferp->cmd = d->buf;
-					d->buf = NULL;
-					d->xferp->cmd_len = d->bufpos;
-					d->bufpos = 0;
-					break;
-				default:
-					debugmsg_cpu(cpu, d->subsys, "",
-					    VERBOSITY_ERROR,
-				    	    "DREG write: UNIMPLEMENTED PHASE %i", d->phase);
-				    	cpu->running = 0;
-				}
-				
-				/* int res = */ diskimage_scsicommand(cpu,
-				    d->target, DISKIMAGE_SCSI, d->xferp);
-
-				if (d->xferp->data_in != NULL) {
-					d->buf = d->xferp->data_in;
-					d->xferp->data_in = NULL;
-					d->xlen = d->xferp->data_in_len;
-					d->bufpos = 0;
-					d->phase = 1;	// DATA_IN
-				} else if (d->xferp->status != NULL) {
-					d->buf = d->xferp->status;
-					d->xferp->status = NULL;
-					d->xlen = d->xferp->status_len;
-					d->bufpos = 0;
-					d->phase = 3;	// STATUS
-				}
-				
-				d->reg[PSNS] &= ~7;
-				d->reg[PSNS] |= d->phase;
-				d->reg[PSNS] |= PSNS_REQ;
-				
-				d->reg[INTS] |= INTS_CMD_DONE;	// ?
-			}
+		if (d->transfer_count == 0) {
+			debugmsg_cpu(cpu, d->subsys, "",
+			    VERBOSITY_WARNING,
+		    	    "DREG %s, but transfer count = 0!",
+		    	    writeflag == MEM_WRITE ? "WRITE" : "READ");
 		} else {
-			if (d->buf == NULL) {
-				debugmsg_cpu(cpu, d->subsys, "",
-				    mb89352_abort_on_unimplemented_stuff ? VERBOSITY_ERROR : VERBOSITY_WARNING,
-			    	    "DREG: no buffer to read from?");
-			} else if (d->bufpos >= d->xlen) {
-				debugmsg_cpu(cpu, d->subsys, "",
-				    mb89352_abort_on_unimplemented_stuff ? VERBOSITY_ERROR : VERBOSITY_WARNING,
-			    	    "DREG: read longer than buffer?");
-			} else {
-				odata = d->buf[d->bufpos ++];
-				debugmsg_cpu(cpu, d->subsys, "",
-				    VERBOSITY_DEBUG,
-			    	    "DREG: read from buffer: 0x%02x", (int)odata);
+			d->transfer_count --;
 
-				if (d->bufpos >= d->xlen) {
-					d->phase = 4;  // BUS_FREE
-					d->reg[INTS] |= INTS_DISCON;
-					d->reg[PSNS] &= ~7;
-					d->reg[PSNS] |= d->phase;
-					d->reg[PSNS] |= PSNS_REQ;
-					scsi_transfer_free(d->xferp);
-					d->xferp = NULL;
-				}
-			}
-			
+			if (writeflag == MEM_WRITE)
+				mb89352_dreg_write(cpu, d, writeflag, idata);
+			else
+				odata = mb89352_dreg_read(cpu, d, writeflag);
 		}
 		break;
 
 	case TEMP:
+		if (writeflag == MEM_WRITE)
+			d->reg[regnr] = idata;
+		break;
+
 	case TCH:
 	case TCM:
 	case TCL:
-		if (writeflag == MEM_WRITE)
+		if (writeflag == MEM_WRITE) {
 			d->reg[regnr] = idata;
+
+			// Update d->transfer_count to be in sync with the registers.
+			d->transfer_count = (d->reg[TCH] << 16) + (d->reg[TCM] << 8) + d->reg[TCL];
+		} else {
+			d->reg[TCH] = d->transfer_count >> 16;
+			d->reg[TCM] = d->transfer_count >> 8;
+			d->reg[TCL] = d->transfer_count;
+			odata = d->reg[regnr];
+		}
 		break;
 
 	default:
