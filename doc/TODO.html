@@ -93,6 +93,9 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 <b><a name="cpu">CPU related</a></b>
 <pre>
 Dyntrans / general:
+	x)  SMP: INVALIDATION should cause translations in _all_ cpus to be
+	    invalidated, e.g. on a write to a write-protected page
+	    (containing code)
 	o)  Per-arch overrides for whether to print symbols when executing in userspace?
 		e.g. MIPS is OK since symbols are at kseg0.
 		e.g. M88K is not OK, since userland and supervisor are the same numeric values.
@@ -163,9 +166,6 @@ Dyntrans / general:
 	x)  Breakpoints:
 		o) Physical vs virtual addresses!
 		o) 32-bit vs 64-bit sign extension for MIPS, and others?
-	x)  INVALIDATION should cause translations in _all_ cpus to be
-	    invalidated, e.g. on a write to a write-protected page
-	    (containing code)
 	x)  16-bit encodings? (MIPS16, ARM Thumb, etc)
 	x)  Lots of other stuff: see src/cpus/README_DYNTRANS
 	x)  Native code generation backends... think _carefully_ about this.
@@ -352,7 +352,7 @@ HPCmips:
 	x)  Mouse/pad support! :)
 	x)  A NIC? (As a PCMCIA device?)
 
-LUNA-88K machine:
+LUNA-88K:
 	luna88k bootblock loader:
 		o load binary from UFS filesystem (i.e. a partition given by an
 			offset into a disk image).
@@ -366,6 +366,7 @@ LUNA-88K machine:
 	separate out some devices into their own files? (reuse TOD clock for example)
 	Front-side LED panel
 	SMP stability
+	LUNA-88K2 machine
 
 Malta:
 	o)  Try FreeBSD/malta: https://wiki.freebsd.org/FreeBSD/MipsEmulation
