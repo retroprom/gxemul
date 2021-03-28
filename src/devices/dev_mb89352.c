@@ -54,7 +54,8 @@
 
 #define	TICK_STEPS_SHIFT	14
 
-const int MB89352_NREGS = 0x10;
+#define MB89352_NREGS		0x10
+
 const int MB89352_REGISTERS_LENGTH = MB89352_NREGS * 4;
 
 const bool mb89352_abort_on_unimplemented_stuff = true;
