@@ -5018,4 +5018,4 @@ Changelog for GXemul:
 		messages.
 20210327	Adding an empty RISC-V CPU skeleton [again].
 		Implementing enough of the mb89352 to allow OpenBSD/luna88k
-		to work (both the boot loader and the kernel)!
+		to boot with SCSI (both the boot loader and the kernel)!
