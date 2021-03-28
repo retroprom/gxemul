@@ -70,7 +70,7 @@ instructions:
 
 </pre>
   <li>Download the entire mvme88k directory from the ftp server:<pre>
-	<b>wget -np -l 0 -r <a href="ftp://ftp.se.openbsd.org/pub/OpenBSD/4.5/mvme88k/">ftp://ftp.se.openbsd.org/pub/OpenBSD/4.5/mvme88k/</a></b>
+	<b>wget -np -l 0 -r <a href="https://ftp.nluug.nl/OpenBSD/4.5/mvme88k/">https://ftp.nluug.nl/OpenBSD/4.5/mvme88k/</a></b>
 
 </pre>
 
@@ -78,13 +78,13 @@ instructions:
 	(I recommend using <tt>mkisofs</tt> for that purpose. If you don't
 	already have <tt>mkisofs</tt> installed on your system, you need
 	to install it in order to do this.)<pre>
-	<b>mkisofs -o openbsd_mvme88k_4.5.iso -U ftp.se.openbsd.org/pub/OpenBSD/</b>
+	<b>mkisofs -o openbsd_mvme88k_4.5.iso -U ftp.nluug.nl/OpenBSD/</b>
 
 </pre>
   <li>Copy away the kernel, we'll need it later. But remove the rest of the
 	downloaded tree.<pre>
-	<b>cp ftp.se.openbsd.org/pub/OpenBSD/4.5/mvme88k/bsd .
-	rm -rf ftp.se.openbsd.org</b>
+	<b>cp ftp.nluug.nl/OpenBSD/4.5/mvme88k/bsd .
+	rm -rf ftp.nluug.nl</b>
 </pre>
 
   <li>Start the emulator using this command line:<pre>
