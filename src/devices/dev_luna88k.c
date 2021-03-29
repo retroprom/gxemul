@@ -358,7 +358,7 @@ DEVICE_TICK(luna88k)
 			case '?':	sc = 0x5b; shifted = 1;	break;
 
 			case '\t':	sc = 0x09;	break;
-			case '\e':	sc = 0x10;	break;
+			case 27:	sc = 0x10;	break;
 			case '\b':	sc = 0x11;	break;
 			case '\r':	sc = 0x12;	break;
 			case ' ':	sc = 0x14;	break;
