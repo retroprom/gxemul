@@ -53,14 +53,28 @@ MACHINE_SETUP(luna88k)
 
 	device_add(machine, "luna88k");
 
+	if (machine->physical_ram_in_mb > MAXPHYSMEM / 1048576)
+		debugmsg(SUBSYS_MACHINE, "memory", VERBOSITY_WARNING,
+		    "WARNING: %i MB RAM is more than MAXPHYSMEM (%i MB)!",
+		    machine->physical_ram_in_mb,
+		    MAXPHYSMEM / 1048576);
+
 	switch (machine->machine_subtype) {
 
 	case MACHINE_LUNA_88K:
 		machine->machine_name = strdup("LUNA 88K");
+		if (machine->physical_ram_in_mb > 64)
+			debugmsg(SUBSYS_MACHINE, "memory", VERBOSITY_WARNING,
+			    "WARNING: %i MB RAM is more than 64 MB (max on a real LUNA 88K)!",
+			    machine->physical_ram_in_mb);
 		break;
 
 	case MACHINE_LUNA_88K2:
 		machine->machine_name = strdup("LUNA 88K2");
+		if (machine->physical_ram_in_mb > 112)
+			debugmsg(SUBSYS_MACHINE, "memory", VERBOSITY_WARNING,
+			    "WARNING: %i MB RAM is more than 112 MB (max on a real LUNA 88K2)!",
+			    machine->physical_ram_in_mb);
 
 		/*  According to OpenBSD source code,
 		    the string "MNAME=LUNA88K+" in FUSE_ROM_DATA
