@@ -27,6 +27,11 @@ controllers.
 
 <p><br>The changes between release 0.6.3.1 and 0.7.0 include:
 <ul>
+	<li>The LUNA-88K machine now has working SCSI emulation. This allows
+		OpenBSD/luna88k to be installed and run using a harddisk image.
+		(Previously, a more complicated root-on-nfs setup had to be used.)
+
+	<p>
 	<li>Networking using a tap device can now be enabled directly on the
 		command line using a new <tt>-L</tt> option. Previously,
 		tap devices could only be enabled when using configuration files.

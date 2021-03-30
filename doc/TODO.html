@@ -33,12 +33,6 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 <b><a name="shortlist">Current "short-list" (unsorted)</a></b>
 
 <p><pre>
-<font color="blue">LUNA88K SCSI and OpenBSD/luna88k install related:</font>
-	o) Try a full OpenBSD install, and if it works, update the documentation:
-		o) http
-		o) from a secondary disk image
-	o) expect script for automating the install (for performance tests etc)
-
 <font color="blue">debugmsg-related and non-exit(1) stuff (mostly):</font>
 	o) "verb all 3" output does not look nice. prints headers multiple times.
 	o) src/cpu/:
@@ -56,14 +50,10 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 		o) update src/net/README to mention tap support.
 	o) Add an example of the "verbosity" command to the Debugger section of the documentation?
 
-<font color="blue">Release 0.7.0 related:</font>
-	o) Try all guest OSes in the documentation, cleaning up debugmsg related stuff as I go along.
-	o) update doc/*html wherever startup messages appear to show the current message style.
-	o) update Thanks list
-
 <font color="blue">Build problems:</font>
 	o) Building a default build on my Linux machine currently fails with duplicate definitions from
 		Linux' bits/socket.h being "extern inlined" twice? (configure --debug works fine though)
+	o) Apply George Matsumura's patch for building on Linux.
 	o) Building GXemul 0.6.2 inside emulated NetBSD/hpcmips 8.1 says:
 		# date > a; ./configure && make; date > b; cat a; cat b
 		checking which C++ compiler to use... c++ -DNDEBUG 
@@ -71,6 +61,11 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 		Using NetBSD hack for X11 libs...
 		Failed to compile X11 test program. Configuring without X11.
 	   Investigate this!
+
+<font color="blue">Release 0.7.0 related:</font>
+	o) Try all guest OSes in the documentation, cleaning up debugmsg related stuff as I go along.
+	o) update doc/*html wherever startup messages appear to show the current message style.
+	o) update Thanks list
 
 <font color="blue">Misc.:</font>
 	o) Instead of doing cpu->running = 0 in some places, and foreach cpu in the machine
@@ -94,8 +89,17 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 <pre>
 Dyntrans / general:
 	x)  SMP: INVALIDATION should cause translations in _all_ cpus to be
-	    invalidated, e.g. on a write to a write-protected page
+	    invalidated in the machine, e.g. on a write to a write-protected page
 	    (containing code)
+
+	    Horrible hack:
+
+	                cpu_create_or_reset_tc(cpus[i]);
+			cpus[i]->invalidate_translation_caches(
+	                    cpus[i], 0, INVALIDATE_ALL);
+
+	    in machine_run() seems to make Luna88K run stable (?) with 4 CPUs.
+
 	o)  Per-arch overrides for whether to print symbols when executing in userspace?
 		e.g. MIPS is OK since symbols are at kseg0.
 		e.g. M88K is not OK, since userland and supervisor are the same numeric values.
@@ -353,6 +357,7 @@ HPCmips:
 	x)  A NIC? (As a PCMCIA device?)
 
 LUNA-88K:
+	autoboot of OpenBSD: requires sd0 to be manually entered. is this necessary?
 	luna88k bootblock loader:
 		o load binary from UFS filesystem (i.e. a partition given by an
 			offset into a disk image).
@@ -366,7 +371,8 @@ LUNA-88K:
 	separate out some devices into their own files? (reuse TOD clock for example)
 	Front-side LED panel
 	SMP stability
-	LUNA-88K2 machine
+	LUNA-88K2 machine: check OpenBSD source code to see where there are
+		differences in devices and registers etc.
 
 Malta:
 	o)  Try FreeBSD/malta: https://wiki.freebsd.org/FreeBSD/MipsEmulation
