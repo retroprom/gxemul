@@ -203,9 +203,6 @@ static void debugmsg_va(struct cpu* cpu, int subsystem,
 				print_colon = true;
 			}
 
-			if (!*s)
-				print_colon = false;
-
 			if (print_colon)
 				printf(": ");
 
