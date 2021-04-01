@@ -61,8 +61,8 @@ were based on <a href="https://en.wikipedia.org/wiki/Motorola_88000">Motorola
 	<li><a href="http://cap-lore.com/CapTheory/upenn/">KeyKOS</a> ran on
 		<a href="http://www.cap-lore.com/CapTheory/KK/88K.html">88K</a>,
 		and in particular
-		<a href="http://cap-lore.com/CapTheory/upenn/NanoKernel/NanoKernel.html#RTFToC21">KeyNIX</a> (a UNIX-layer on top of KeyKOS, capable
-		of running X11.		
+		<a href="http://cap-lore.com/CapTheory/upenn/NanoKernel/NanoKernel.html#RTFToC21">KeyNIX</a> (a UNIX-layer on top of KeyKOS,
+		supposedly capable of running X11).
 </ul>
 
 <p>In modern times, the only still maintained and freely available operating
@@ -79,9 +79,9 @@ system for these machines is <a href="https://www.openbsd.org/luna88k.html">Open
 	<li>SCSI
 </ul>
 
-<p>well enough to run OpenBSD. It is unknown, but highly likely, that running
-other operating systems or running the original OMRON firmware will trigger
-bugs of various kinds.
+<p>well enough to run OpenBSD. It is highly likely that running
+other operating systems (or the original OMRON firmware) will trigger
+bugs of various kinds in the device implementations.
 
 <p><b>NOT</b> emulated yet:
 <ul>
@@ -117,7 +117,9 @@ a FreeBSD/amd64 host.</small>
 <a name="openbsdluna88klive"></a>
 <h3>OpenBSD/luna88k from a "live" harddisk image:</h3>
 
-<p>Simply download the latest harddisk image and <tt>boot</tt> program from
+<p>Kenji Aoyama has made available full harddisk images from a real
+OpenBSD installation. Download the latest such harddisk image and
+<tt>boot</tt> program from
 <a href="http://www.nk-home.net/~aoyama/liveimage/">http://www.nk-home.net/~aoyama/liveimage/</a>,
 and start the emulator like this:
 
@@ -131,7 +133,7 @@ and start the emulator like this:
 
 <p>To run with a graphical framebuffer, add <tt>-X</tt> to the command line.
 
-<p>To shut down the machine, run <tt>reboot</tt> as root.
+<p>To shut down the machine gracefully, run <tt>reboot</tt> as root.
 
 
 
@@ -164,6 +166,9 @@ onto which the operating system will be installed:
 and skip IPv6 configuration. Default route and DNS nameserver should both be 10.0.0.254.
 
 <p><b>NOTE:</b> Doing a network install is currently really really slow.
+It is so slow that it will probably say "stalled" in the download progress
+reporting, but just leave it on and eventually it will have downloaded
+everything.
 
 <p>Finally, once the installation finishes, reboot the emulated machine and
 start again using either the boot loader, or using the regular kernel:
@@ -179,6 +184,9 @@ start again using either the boot loader, or using the regular kernel:
 on the luna88k. Using the regular kernel has the advantage that it includes
 symbols, which are useful when debugging the kernel.
 
+<p>To run with a graphical framebuffer, add <tt>-X</tt> to the command line.
+
+<p>To shut down the machine gracefully, run <tt>reboot</tt> as root.
 
 
 
