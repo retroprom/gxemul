@@ -5019,3 +5019,5 @@ Changelog for GXemul:
 20210327	Adding an empty RISC-V CPU skeleton [again].
 		Implementing enough of the mb89352 to allow OpenBSD/luna88k
 		to boot with SCSI (both the boot loader and the kernel)!
+20210401	Applying a patch from George Matsumura to make things build
+		better on Linux: __attribute__((__packed__));  in bootblock.h.

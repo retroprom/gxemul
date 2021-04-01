@@ -121,12 +121,18 @@
 #ifndef _SYS_BOOTBLOCK_H
 #define	_SYS_BOOTBLOCK_H
 
-#ifndef __packed
-#define __packed
+#ifdef __attribute__
+#undef __attribute__
 #endif
 
+#ifdef __noreturn__
+#undef __noreturn__
+#endif
+
+#define __attribute__(x)  /*  */
+#define __noreturn__  /*  */
+
 #if !defined(__ASSEMBLER__)
-#include <sys/cdefs.h>
 #if defined(_KERNEL) || defined(_STANDALONE)
 #include <sys/stdint.h>
 #else
@@ -630,7 +636,7 @@ struct mbr_bpbFAT12 {
 	uint16_t	bpbSecPerTrack;	/* sectors per track */
 	uint16_t	bpbHeads;	/* number of heads */
 	uint16_t	bpbHiddenSecs;	/* # of hidden sectors */
-} __packed;
+} __attribute__((__packed__));
 
 /*
  * (x86) BIOS Parameter Block for FAT16
@@ -655,7 +661,7 @@ struct mbr_bpbFAT16 {
 	uint8_t		bsVolLab[11];	/* Volume label */
 	uint8_t		bsFileSysType[8];
 					/* "FAT12   ", "FAT16   ", "FAT     " */
-} __packed;
+} __attribute__((__packed__));
 
 /*
  * (x86) BIOS Parameter Block for FAT32
@@ -689,7 +695,7 @@ struct mbr_bpbFAT32 {
 	uint8_t		bsVolID[4];	/* Volume serial number */
 	uint8_t		bsVolLab[11];	/* Volume label */
 	uint8_t		bsFileSysType[8]; /* "FAT32   " */
-} __packed;
+} __attribute__((__packed__));
 
 /*
  * (x86) MBR boot selector
@@ -699,7 +705,7 @@ struct mbr_bootsel {
 	uint8_t		mbrbs_flags;
 	uint16_t	mbrbs_timeo;
 	char		mbrbs_nametab[MBR_PART_COUNT][MBR_BS_PARTNAMESIZE + 1];
-} __packed;
+} __attribute__((__packed__));
 
 /*
  * MBR partition
@@ -715,7 +721,7 @@ struct mbr_partition {
 	uint8_t		mbrp_ecyl;	/* End cylinder */
 	uint32_t	mbrp_start;	/* Absolute starting sector number */
 	uint32_t	mbrp_size;	/* Partition size in sectors */
-} __packed;
+} __attribute__((__packed__));
 
 int xlat_mbr_fstype(int);	/* in sys/lib/libkern/xlat_mbr_fstype.c */
 
@@ -747,7 +753,7 @@ struct mbr_sector {
 	struct mbr_partition	mbr_parts[MBR_PART_COUNT];
 					/* MBR magic (0xaa55) */
 	uint16_t		mbr_magic;
-} __packed;
+} __attribute__((__packed__));
 
 #endif	/* !defined(__ASSEMBLER__) */				/* } */
 
@@ -819,7 +825,7 @@ struct apple_drvr_descriptor {
 	uint32_t	descBlock;	/* first block of driver */
 	uint16_t	descSize;	/* driver size in blocks */
 	uint16_t	descType;	/* system type */
-} __packed;
+} __attribute__((__packed__));
 
 /*
  *	system types; Apple reserves 0-15
@@ -839,7 +845,7 @@ struct apple_drvr_map {
 	uint16_t	sbDrvrCount;	/* number of driver descriptors */
 	struct apple_drvr_descriptor sb_dd[APPLE_DRVR_MAP_MAX_DESCRIPTORS];
 	uint16_t	pad[3];
-} __packed;
+} __attribute__((__packed__));
 
 /*
  *	Partition map structure from Inside Macintosh: Devices, SCSI Manager
@@ -1191,7 +1197,7 @@ struct next68k_partition {
 	int8_t	cp_automnt;		/* auto-mount when inserted */
 	char	cp_type[NEXT68K_LABEL_MAXFSTLEN]; /* file system type name */
 	char	cp_pad2;
-} __packed;
+} __attribute__((__packed__));
 
 /* The disklabel the way it is on the disk */
 struct next68k_disklabel {
@@ -1228,7 +1234,7 @@ struct next68k_disklabel {
 					/* block number that is bad */
 	} cd_un;
 	uint16_t cd_checksum;		/* label version 1 or 2 checksum */
-} __packed;
+} __attribute__((__packed__));
 
 #define	NEXT68K_LABEL_cd_checksum	cd_checksum
 #define	NEXT68K_LABEL_cd_v3_checksum	cd_un.CD_v3_checksum
@@ -1272,7 +1278,7 @@ struct pmax_boot_block {
 	uint32_t	load_addr;		/* Address to start loading. */
 	uint32_t	exec_addr;		/* Address to start execing. */
 	struct		pmax_boot_map map[61];	/* boot program section(s). */
-} __packed;
+} __attribute__((__packed__));
 
 #define	PMAX_BOOT_MAGIC			0x0002757a
 #define	PMAX_BOOTMODE_CONTIGUOUS	0
@@ -1334,7 +1340,7 @@ struct sgi_boot_devparms {
 	uint16_t	dp_xgap2;
 	uint16_t	dp_xrgate;
 	uint16_t	dp_xwcont;
-} __packed;
+} __attribute__((__packed__));
 
 struct sgi_boot_block {
 	uint32_t	magic;
@@ -1354,7 +1360,7 @@ struct sgi_boot_block {
 	}		partitions[SGI_BOOT_BLOCK_MAXPARTITIONS];
 	int32_t		checksum;
 	int32_t		_pad;
-} __packed;
+} __attribute__((__packed__));
 
 #define SGI_PTYPE_VOLHDR	0
 #define SGI_PTYPE_TRKREPL	1
@@ -1438,7 +1444,7 @@ struct vax_boot_block {
 	/* The rest is unused.
 	 */
 	uint8_t		pad2[74];
-} __packed;
+} __attribute__((__packed__));
 
 #define	VAX_BOOT_MAGIC1			0x18	/* size of BB info? */
 #define	VAX_BOOT_VOLINFO_NONE		0x00	/* no special info */
