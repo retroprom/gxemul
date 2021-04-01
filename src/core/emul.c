@@ -894,8 +894,7 @@ void emul_run(struct emul *emul)
 	/*
 	 *  MAIN LOOP:
 	 *
-	 *  Run all emulations in parallel, running instructions from each
-	 *  cpu in each machine.
+	 *  Run instructions from each cpu in each machine.
 	 *
 	 *  TODO:
 	 *	Rewrite the X11/console flush to use a timer (?).
