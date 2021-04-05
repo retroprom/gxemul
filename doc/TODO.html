@@ -44,16 +44,12 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 		   break-into-the-debugger constructs.
 	o) src/net/:
 		o) debugmsg:ify all src/net/.
-		o) Apply Chris Berry's patch for tap device use on Linux.
-		o) Try tap networking on FreeBSD host (e.g. using netbsd/pmax guest).
-			Performance better than when using simulated NAT?
 		o) update src/net/README to mention tap support.
 	o) Add an example of the "verbosity" command to the Debugger section of the documentation?
 
 <font color="blue">Build problems:</font>
 	o) Building a default build on my Linux machine currently fails with duplicate definitions from
 		Linux' bits/socket.h being "extern inlined" twice? (configure --debug works fine though)
-	o) Apply George Matsumura's patch for building on Linux.
 	o) Building GXemul 0.6.2 inside emulated NetBSD/hpcmips 8.1 says:
 		# date > a; ./configure && make; date > b; cat a; cat b
 		checking which C++ compiler to use... c++ -DNDEBUG 
@@ -73,6 +69,15 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 		cpu goes from running to non-running, and treat that as a reason to
 		halt the machine. there's really no reason to continue running the
 		other CPUs if there was an error in one of them.
+		ALSO: if about to enter single step, or single step, is true, then
+			abort too.
+		AND: if support for debugmsg breakpoints is to be added later,
+			then the break-out-of-dyntrans check needs to be done
+			not only on memory references, but potentially after
+			ALL debugmsg printouts!
+	o) Apply Chris Berry's patch for tap device use on Linux.
+	o) Try tap networking on FreeBSD host (e.g. using netbsd/pmax guest).
+		Performance better than when using simulated NAT?
 	o) When using e.g. "-E alpha" and there was more than one subtype, then _list_
    	   them instead of just complaining "Maybe you forgot the -e command line option".
 	o) Try running multiple Sprite machines in one big simulation and see if they
@@ -99,6 +104,8 @@ Dyntrans / general:
 	                    cpus[i], 0, INVALIDATE_ALL);
 
 	    in machine_run() seems to make Luna88K run stable (?) with 4 CPUs.
+	    Real solution may be to just implement a loop over all CPUs in
+	    memory_rw when storing data to pages?
 
 	o)  Per-arch overrides for whether to print symbols when executing in userspace?
 		e.g. MIPS is OK since symbols are at kseg0.
@@ -358,6 +365,7 @@ HPCmips:
 
 LUNA-88K:
 	autoboot of OpenBSD: requires sd0 to be manually entered. is this necessary?
+	OpenBSD idle loop => detect if possible and idle the host.
 	luna88k bootblock loader:
 		o load binary from UFS filesystem (i.e. a partition given by an
 			offset into a disk image).
@@ -490,22 +498,6 @@ Test machines:
 <p><br>
 <b><a name="misc">Misc.</a></b>
 <pre>
-CD Image file support:
-	x)  Support CD formats that contain more than 1 track, e.g.
-	    CDI files (?). These can then contain a mixture of e.g. sound
-	    and data tracks, and booting from an ISO filesystem path
-	    would boot from [by default] the first data track.
-	    (This would make sense for e.g. Dreamcast CD images, or
-	    possibly other live-CD formats.)
-
-Clocks and timers:
-	x)  Fix the PowerPC DECR interrupt speed! (MacPPC and PReP speed, etc.)
-	x)  DON'T HARDCODE 100 HZ IN cpu_mips_coproc.c!
-	x)  NetWinder timeofday is incorrect! Huh? grep -R for ta_rtc_read in
-	    NetBSD sources; it doesn't seem to be initialized _AT ALL_?!
-	x)  Cobalt TOD is incorrect!
-	x)  Go through all other machines, one by one, and fix them.
-
 Breakpoints with config files doesn't seem to work correctly? (luna88k?)
 
 Breakpoints on subsystem messages?
@@ -525,6 +517,34 @@ Breakpoints on subsystem messages?
 		memory_rw calls, to break out of the dyntrans loop.
 		Implement helper for these cases? cpu->running == 0 is just
 		one reason to break then.
+
+CD Image file support:
+	x)  Support CD formats that contain more than 1 track, e.g.
+	    CDI files (?). These can then contain a mixture of e.g. sound
+	    and data tracks, and booting from an ISO filesystem path
+	    would boot from [by default] the first data track.
+	    (This would make sense for e.g. Dreamcast CD images, or
+	    possibly other live-CD formats.)
+
+Clocks and timers:
+	x)  Fix the PowerPC DECR interrupt speed! (MacPPC and PReP speed, etc.)
+	x)  DON'T HARDCODE 100 HZ IN cpu_mips_coproc.c!
+	x)  NetWinder timeofday is incorrect! Huh? grep -R for ta_rtc_read in
+	    NetBSD sources; it doesn't seem to be initialized _AT ALL_?!
+	x)  Cobalt TOD is incorrect!
+	x)  Go through all other machines, one by one, and fix them.
+
+Components:
+	_MAYBE_ it would be possibly to unify the CPU and device concepts, so
+	that they are just arbitrary components in a machine... like the C++
+	framework was. machine_run currently run a) instructions from cpus, and
+	b) ticks from devices. There is no big reason why these could not be
+	made the same concept.
+	Component tree dump should then be the same during startup and
+	for the emul / machine debugger commands.
+	If there are multiple memories in a machine, a CPU searches for its
+	memory like in the C++ framework: first to a parent (e.g. a mainbus)
+	and then to a memory on that bus.
 
 Debugger:
 	Helpers for splitting up into arguments/words.
@@ -573,10 +593,14 @@ Disk image options:
 	overlay (created automatically in /tmp) which is removed when the
 	emulator exits. If this is implemented, update the misc
 	documentation, and the man page.
+	Also, show userfriendly help message if a file is readonly in the
+	filesystem: "you either need to make the file writable, OR use r: to
+	treat the file as readonly, OR use R: to treat the file as readonly but
+	allow guest OSes to write to a temporary overlay."
 
 Documentation:
-	Mention how to break out of the dyntrans loop: cpu->running = 0 and
-		the nothing instruction, and how nr of instructions is counted then.
+	Dyntrans: Mention how to break out of the dyntrans loop: cpu->running = 0
+	and the nothing instruction, and how nr of instructions is counted then.
 
 	Update the man page about disk boot block loading to not explicitly list the
 	supported machine types.

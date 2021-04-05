@@ -1,7 +1,12 @@
 Emulated (ethernet / internet) network support.
 
-NOTE:  This is just an ugly hack, and just barely enough to get some
-       Internet networking up and running for the guest OS.
+The emulated internet gateway support is just an ugly hack, just barely
+enough to get some Internet networking up and running for the guest OS.
+
+(The emulated internet support can be bypassed by using TAP networking.
+In that case, packets from the emulated network are passed to a TAP
+device, and it is up to you to make sure that any DNS hosts or other
+servers are reachable.)
 
 TODO:
 	o)  TCP: fin/ack stuff, and connection time-outs and
