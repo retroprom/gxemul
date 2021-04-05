@@ -1872,7 +1872,7 @@ X(idle)
 
 	if (v == 0) {
 		SYNCH_PC;
-		usleep(50);
+		usleep(1000);
 		cpu->has_been_idling = 1;
 		cpu->n_translated_instrs += N_SAFE_DYNTRANS_LIMIT / 2;
 		cpu->cd.m88k.next_ic = &nothing_call;
@@ -1914,7 +1914,7 @@ X(idle_with_tb1)
 
 	if (v == 0) {
 		SYNCH_PC;
-		usleep(50);
+		usleep(1000);
 		cpu->has_been_idling = 1;
 		cpu->n_translated_instrs += N_SAFE_DYNTRANS_LIMIT / 2;
 		cpu->cd.m88k.next_ic = &nothing_call;
@@ -2019,6 +2019,13 @@ X(end_of_page2)
  *  s00079d78: f020d8ff	tb1	1,r0,0xff
  *  s00079d7c: 15ac7320	ld	r13,r12,0x7320	; [<_sched_whichqs>]
  *  s00079d80: e84dfffe	bcnd	eq0,r13,0x00079d78	; <_sched_idle+0x158>
+ *
+ *  or
+ *
+ *  s00244840: f020d8ff	tb1	1,r0,0xff
+ *  s00244844: 15b80168	ld	r13,r24,0x168	; [<m88k_cpus+0x1b0>]
+ *  s00244848: ec4dfffe	bcnd.n	eq0,r13,0x00244840	; <sched_idle+0x100>
+ *  s0024484c: 5853fd80 (d)	or	r2,r19,0xfd80
  */
 void COMBINE(idle)(struct cpu *cpu, struct m88k_instr_call *ic, int low_addr)
 {
@@ -2046,6 +2053,21 @@ void COMBINE(idle)(struct cpu *cpu, struct m88k_instr_call *ic, int low_addr)
 		ic[-2].f = instr(idle_with_tb1);
 		return;
 	}
+
+#if 0
+	// TODO: bcnd_samepage_eq0 with "n" for the delay slot?
+	if (ic[0].f == instr(bcnd_n_eq0) &&
+	    ic[0].arg[2] == 2112 && // (size_t) &ic[-2] &&
+	    ic[-2].f == instr(tb1) &&
+	    ic[-2].arg[1] == (size_t) &cpu->cd.m88k.r[M88K_ZERO_REG] &&
+	    ic[-1].f == instr(ld_u_4_be) &&
+	    ic[0].arg[0] == ic[-1].arg[0] &&
+	    ic[0].arg[0] != (size_t) &cpu->cd.m88k.r[M88K_ZERO_REG]) {
+		ic[-2].f = instr(idle_with_tb1);
+		printf("NEW IDLE using bcnd.n!!!\n");
+		return;
+	}
+#endif
 }
 
 
@@ -2560,7 +2582,8 @@ X(to_be_translated)
 		}
 
 		if ((iword & 0xffe0ffff) == 0xe840ffff ||
-		    (iword & 0xffe0ffff) == 0xe840fffe)
+		    (iword & 0xffe0ffff) == 0xe840fffe ||
+		    (iword & 0xffe0ffff) == 0xec40fffe)
 			cpu->cd.m88k.combination_check = COMBINE(idle);
 
 		break;
