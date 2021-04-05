@@ -33,6 +33,7 @@
  *  TODO:  expose do_fsync as a command line option?
  */
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -164,18 +165,15 @@ void diskimage_add_overlay(struct diskimage *d, char *overlay_basename)
  *  Recalculate a disk's size by stat()-ing it.
  *  d is assumed to be non-NULL.
  */
-void diskimage_recalc_size(struct diskimage *d)
+bool diskimage_recalc_size(struct diskimage *d)
 {
 	struct stat st;
 	int res;
 	int64_t size = 0;
 
 	res = stat(d->fname, &st);
-	if (res) {
-		fprintf(stderr, "[ diskimage_recalc_size(): could not stat "
-		    "'%s' ]\n", d->fname);
-		return;
-	}
+	if (res)
+		return false;
 
 	size = st.st_size;
 
@@ -198,8 +196,8 @@ void diskimage_recalc_size(struct diskimage *d)
 	switch (d->type) {
 	case DISKIMAGE_FLOPPY:
 		if (d->total_size < 737280) {
-			fatal("\nTODO: small (non-80-cylinder) floppies?\n\n");
-			exit(1);
+			debugmsg(SUBSYS_DISK, "", VERBOSITY_WARNING,
+			    "TODO: small (non-80-cylinder) floppies?");
 		}
 
 		if (!d->chs_override) {
@@ -230,6 +228,8 @@ void diskimage_recalc_size(struct diskimage *d)
 	d->nr_of_logical_blocks = size / d->logical_block_size;
 	if (size & (d->logical_block_size - 1))
 		d->nr_of_logical_blocks ++;
+
+	return true;
 }
 
 
@@ -726,7 +726,9 @@ int get_default_disk_type_for_machine(struct machine *machine)
  *	0-7	force a specific SCSI ID number
  *
  *  machine is assumed to be non-NULL.
- *  Returns an integer >= 0 identifying the disk image.
+ *
+ *  Returns an integer >= 0 identifying the disk image. On error, a value less
+ *  than zero is returned.
  */
 int diskimage_add(struct machine *machine, char *fname)
 {
@@ -739,8 +741,9 @@ int diskimage_add(struct machine *machine, char *fname)
 	int prefix_o=0, prefix_V=0;
 
 	if (fname == NULL) {
-		fprintf(stderr, "diskimage_add(): NULL ptr\n");
-		return 0;
+		debugmsg(SUBSYS_DISK, "diskimage_add()", VERBOSITY_ERROR,
+		    "NULL ptr");
+		return -1;
 	}
 
 	/*  Get prefix from fname:  */
@@ -789,7 +792,7 @@ int diskimage_add(struct machine *machine, char *fname)
 					fatal("Bad geometry: heads=%i "
 					    "spt=%i\n", override_heads,
 					    override_spt);
-					exit(1);
+					return -1;
 				}
 				break;
 			case 'i':
@@ -806,7 +809,7 @@ int diskimage_add(struct machine *machine, char *fname)
 				if (override_base_offset < 0) {
 					fatal("Bad base offset: %" PRIi64
 					    "\n", override_base_offset);
-					exit(1);
+					return -1;
 				}
 				break;
 			case 'r':
@@ -826,7 +829,7 @@ int diskimage_add(struct machine *machine, char *fname)
 			default:
 				fprintf(stderr, "diskimage_add(): invalid "
 				    "prefix char '%c'\n", c);
-				exit(1);
+				return -1;
 			}
 		}
 	}
@@ -855,7 +858,7 @@ int diskimage_add(struct machine *machine, char *fname)
 		if (prefix_id < 0) {
 			fprintf(stderr, "The 'V' disk image prefix requires"
 			    " a disk ID to also be supplied.\n");
-			exit(1);
+			return -1;
 		}
 
 		if (d->type == DISKIMAGE_UNKNOWN)
@@ -869,7 +872,7 @@ int diskimage_add(struct machine *machine, char *fname)
 
 		if (dx == NULL) {
 			fprintf(stderr, "Bad ID supplied for overlay?\n");
-			exit(1);
+			return -1;
 		}
 
 		diskimage_add_overlay(dx, fname);
@@ -877,8 +880,9 @@ int diskimage_add(struct machine *machine, char *fname)
 		/*  Free the preliminary d struct:  */
 		free(d);
 
-		/*  Don't add any disk image. This is an overlay!  */
-		return -1;
+		/*  Return the ID of the disk image, even though no disk
+		    image was added.  */
+		return dx->id;
 	}
 
 	/*  Add the new disk image in the disk image chain:  */
@@ -943,7 +947,9 @@ int diskimage_add(struct machine *machine, char *fname)
 		d->sectors_per_track = override_spt;
 	}
 
-	diskimage_recalc_size(d);
+	if (!diskimage_recalc_size(d))
+		debugmsg(SUBSYS_DISK, "", VERBOSITY_WARNING,
+		    "diskimage_recalc_size() failed!");
 
 	if (d->type == DISKIMAGE_UNKNOWN)
 		d->type = get_default_disk_type_for_machine(machine);
@@ -953,24 +959,34 @@ int diskimage_add(struct machine *machine, char *fname)
 	if (prefix_b)
 		d->is_boot_device = 1;
 
+	bool readable = access(fname, R_OK) == 0? 1 : 0;
 	d->writable = access(fname, W_OK) == 0? 1 : 0;
+
+	if (!readable) {
+		debugmsg(SUBSYS_DISK, "", VERBOSITY_ERROR,
+		    "could not access '%s': %s", fname, strerror(errno));
+		return -1;
+	}
 
 	if (d->is_a_cdrom || prefix_r) {
 		d->writable = 0;
-	} else {
-		if (!d->writable) {
-			debug("NOTE: '%s' is read-only in the host file system, but 'r:' was not used.\n\n", d->fname);
-		}
+	} else if (!d->writable) {
+		debugmsg(SUBSYS_DISK, "", VERBOSITY_ERROR,
+		    "'%s' is read-only in the host file system.\n"
+		    "Use the r: prefix to indicate that the file should\n"
+		    "be treated as read-only, or make the file writable.",
+		    d->fname);
+		return -1;
 	}
 
 	d->f = fopen(fname, d->writable? "r+" : "r");
 	if (d->f == NULL) {
-		char *errmsg = (char *) malloc(200 + strlen(fname));
-		snprintf(errmsg, 200+strlen(fname),
-		    "could not fopen %s for reading%s", fname,
-		    d->writable? " and writing" : "");
-		perror(errmsg);
-		exit(1);
+		debugmsg(SUBSYS_DISK, "", VERBOSITY_ERROR,
+		    "could not open '%s' for reading%s: %s",
+		    fname,
+		    d->writable? " and writing" : "",
+		    strerror(errno));
+		return -1;
 	}
 
 	/*  Calculate which ID to use:  */

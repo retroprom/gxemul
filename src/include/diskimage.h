@@ -2,7 +2,7 @@
 #define	DISKIMAGE_H
 
 /*
- *  Copyright (C) 2003-2019  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -31,6 +31,7 @@
  *  Generic disk image functions.  (See diskimage.c for more info.)
  */
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <sys/types.h>
 
@@ -140,7 +141,7 @@ int diskimage__internal_access(struct diskimage *d, int writeflag,
 int diskimage_access(struct machine *machine, int id, int type, int writeflag,
 	off_t offset, unsigned char *buf, size_t len);
 void diskimage_add_overlay(struct diskimage *d, char *overlay_basename);
-void diskimage_recalc_size(struct diskimage *d);
+bool diskimage_recalc_size(struct diskimage *d);
 int diskimage_exist(struct machine *machine, int id, int type);
 int diskimage_bootdev(struct machine *machine, int *typep);
 int diskimage_add(struct machine *machine, char *fname);

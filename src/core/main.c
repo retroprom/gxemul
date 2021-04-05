@@ -648,8 +648,12 @@ int main(int argc, char *argv[])
 
 	/*  Simple initialization, from command line arguments:  */
 	if (emul->machines[0]->machine_type != MACHINE_NONE) {
-		for (i=0; i<n_diskimages; i++)
-			diskimage_add(emul->machines[0], diskimages[i]);
+		for (i=0; i<n_diskimages; i++) {
+			if (diskimage_add(emul->machines[0], diskimages[i]) < 0) {
+				fprintf(stderr, "Aborting.\n");
+				return 1;
+			}
+		}
 
 		/*  Make sure that there are no configuration files as well:  */
 		for (i=1; i<argc; i++)

@@ -555,7 +555,12 @@ static void parse__machine(struct emul *e, FILE *f, int *in_emul, int *line,
 		}
 
 		for (i=0; i<cur_machine_n_disk; i++) {
-			diskimage_add(m, cur_machine_disk[i]);
+			if (diskimage_add(m, cur_machine_disk[i]) < 0) {
+				debugmsg(SUBSYS_EMUL, "", VERBOSITY_ERROR,
+				    "TODO");
+				exit(1);
+			}
+
 			free(cur_machine_disk[i]);
 			cur_machine_disk[i] = NULL;
 		}
