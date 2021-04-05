@@ -356,6 +356,18 @@ overlay, e.g.:<pre>
 <p>The .map file is simply a raw bitmap telling which blocks of the 
 overlay file that are in use.
 
+<p>As a short-hand for creating overlay files, running the emulator once
+with those overlay files, and then immediately removing the overlay files,
+the disk image prefix R (uppercase) can be used instead.
+In other words, instead of typing something like:<pre>
+<font color="#4040ff"><b>touch overlay.img overlay.img.map</b>
+gxemul -e ..... -d disk.img <b>-d V0:overlay.img</b>
+<b>rm overlay.img overlay.img.map</b></font>
+</pre>
+one would type:<pre>
+<font color="#4040ff">gxemul -e ..... -d <b>R:</b>disk.img</font>
+</pre>
+
 
 
 

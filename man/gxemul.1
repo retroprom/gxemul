@@ -171,6 +171,10 @@ is 0. A suitable offset when booting from Dreamcast ISO9660 filesystem
 images, which are offset by 11702 sectors, is 23965696.
 .It r
 Read-only (don't allow changes to be written to the file).
+.It R
+Don't allow changes to the file, but add a temporary overlay for the
+disk image to allow guest operating systems to write to the disk.
+(These changes are lost when the GXemul process exits.)
 .It s
 SCSI.
 .It t

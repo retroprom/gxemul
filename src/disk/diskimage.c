@@ -125,7 +125,7 @@ int diskimage_exist(struct machine *machine, int id, int type)
  *  Opens an overlay data file and its corresponding bitmap file, and adds
  *  the overlay to a disk image.
  */
-void diskimage_add_overlay(struct diskimage *d, char *overlay_basename)
+bool diskimage_add_overlay(struct diskimage *d, char *overlay_basename, bool remove_after_open)
 {
 	struct diskimage_overlay overlay;
 	size_t bitmap_name_len = strlen(overlay_basename) + 20;
@@ -138,14 +138,29 @@ void diskimage_add_overlay(struct diskimage *d, char *overlay_basename)
 	overlay.f_data = fopen(overlay_basename, d->writable? "r+" : "r");
 	if (overlay.f_data == NULL) {
 		perror(overlay_basename);
-		exit(1);
+
+		if (remove_after_open) {
+			unlink(overlay_basename);
+			unlink(bitmap_name);
+		}
+
+		free(bitmap_name);
+		return false;
 	}
 
 	overlay.f_bitmap = fopen(bitmap_name, d->writable? "r+" : "r");
 	if (overlay.f_bitmap == NULL) {
 		perror(bitmap_name);
 		fprintf(stderr, "Please create the map file first.\n");
-		exit(1);
+		fclose(overlay.f_data);
+
+		if (remove_after_open) {
+			unlink(overlay_basename);
+			unlink(bitmap_name);
+		}
+
+		free(bitmap_name);
+		return false;
 	}
 
 	d->nr_of_overlays ++;
@@ -155,7 +170,17 @@ void diskimage_add_overlay(struct diskimage *d, char *overlay_basename)
 
 	d->overlays[d->nr_of_overlays - 1] = overlay;
 
+	if (remove_after_open) {
+		if (unlink(overlay_basename) != 0)
+			perror(overlay_basename);
+
+		if (unlink(bitmap_name) != 0)
+			perror(bitmap_name);
+	}
+
 	free(bitmap_name);
+
+	return true;
 }
 
 
@@ -739,6 +764,7 @@ int diskimage_add(struct machine *machine, char *fname)
 	int prefix_b=0, prefix_c=0, prefix_d=0, prefix_f=0, prefix_g=0;
 	int prefix_i=0, prefix_r=0, prefix_s=0, prefix_t=0, prefix_id=-1;
 	int prefix_o=0, prefix_V=0;
+	bool prefix_R = false;
 
 	if (fname == NULL) {
 		debugmsg(SUBSYS_DISK, "diskimage_add()", VERBOSITY_ERROR,
@@ -812,6 +838,9 @@ int diskimage_add(struct machine *machine, char *fname)
 					return -1;
 				}
 				break;
+			case 'R':
+				prefix_R = true;
+				break;
 			case 'r':
 				prefix_r = 1;
 				break;
@@ -851,13 +880,20 @@ int diskimage_add(struct machine *machine, char *fname)
 	if (prefix_s)
 		d->type = DISKIMAGE_SCSI;
 
+	if (prefix_V && prefix_R) {
+		debugmsg(SUBSYS_DISK, "", VERBOSITY_ERROR,
+		    "'V' and 'R' prefixes can not be combined!");
+		return -1;
+	}
+
 	/*  Special case: Add an overlay for an already added disk image:  */
 	if (prefix_V) {
 		struct diskimage *dx = machine->first_diskimage;
 
 		if (prefix_id < 0) {
-			fprintf(stderr, "The 'V' disk image prefix requires"
-			    " a disk ID to also be supplied.\n");
+			debugmsg(SUBSYS_DISK, "", VERBOSITY_ERROR,
+			    "The 'V' disk image prefix requires"
+			    " a disk ID to also be supplied.");
 			return -1;
 		}
 
@@ -870,15 +906,20 @@ int diskimage_add(struct machine *machine, char *fname)
 			dx = dx->next;
 		}
 
+		/*  Free the preliminary d struct:  */
+		free(d);
+
 		if (dx == NULL) {
 			fprintf(stderr, "Bad ID supplied for overlay?\n");
 			return -1;
 		}
 
-		diskimage_add_overlay(dx, fname);
-
-		/*  Free the preliminary d struct:  */
-		free(d);
+		if (!diskimage_add_overlay(dx, fname, false)) {
+			debugmsg(SUBSYS_DISK, "", VERBOSITY_ERROR,
+			    "could not add overlay name '%s'",
+			    fname);
+			return -1;
+		}
 
 		/*  Return the ID of the disk image, even though no disk
 		    image was added.  */
@@ -971,15 +1012,21 @@ int diskimage_add(struct machine *machine, char *fname)
 	if (d->is_a_cdrom || prefix_r) {
 		d->writable = 0;
 	} else if (!d->writable) {
-		debugmsg(SUBSYS_DISK, "", VERBOSITY_ERROR,
-		    "'%s' is read-only in the host file system.\n"
-		    "Use the r: prefix to indicate that the file should\n"
-		    "be treated as read-only, or make the file writable.",
-		    d->fname);
-		return -1;
+		if (prefix_R) {
+			d->writable = 1;
+		} else {
+			debugmsg(SUBSYS_DISK, "", VERBOSITY_ERROR,
+			    "'%s' is read-only in the host file system.\n"
+			    "Use the r: prefix to indicate that the file should be treated\n"
+			    "as read-only, the R: prefix to use a temporary overlay (allowing\n"
+			    "guest operating systems to write to that temporary overlay), or\n"
+			    "make the file writable.",
+			    d->fname);
+			return -1;
+		}
 	}
 
-	d->f = fopen(fname, d->writable? "r+" : "r");
+	d->f = fopen(fname, d->writable && !prefix_R ? "r+" : "r");
 	if (d->f == NULL) {
 		debugmsg(SUBSYS_DISK, "", VERBOSITY_ERROR,
 		    "could not open '%s' for reading%s: %s",
@@ -1047,6 +1094,39 @@ int diskimage_add(struct machine *machine, char *fname)
 	}
 
 	d->id = id;
+
+	if (prefix_R) {
+		char tmpname[1000];
+		const char* tmpdir = getenv("TMPDIR");
+		if (tmpdir == NULL)
+			tmpdir = "/tmp";
+		
+		int old_umask = umask(077);
+
+		// TODO: Not secure. Both the .img and the .img.map file
+		// need to be created by the process itself to avoid a race.
+		// NOTE/TODO: Ideally fopen mode "x" (from C11) for exclusive open.
+		snprintf(tmpname, sizeof(tmpname), "%s/gxemul.%i.temp-diskimage-overlay.%i.img.map",
+		    tmpdir, d->id, getpid());
+
+		FILE* f_img_map = fopen(tmpname, "w");
+		fclose(f_img_map);
+
+		snprintf(tmpname, sizeof(tmpname), "%s/gxemul.%i.temp-diskimage-overlay.%i.img",
+		    tmpdir, d->id, getpid());
+
+		FILE* f_img = fopen(tmpname, "w");
+		fclose(f_img);
+
+		umask(old_umask);
+
+		if (!diskimage_add_overlay(d, tmpname, true)) {
+			debugmsg(SUBSYS_DISK, "", VERBOSITY_ERROR,
+			    "could not add overlay name '%s'",
+			    fname);
+			return -1;
+		}
+	}
 
 	return id;
 }
@@ -1161,13 +1241,12 @@ int diskimage_is_a_tape(struct machine *machine, int id, int type)
  */
 void diskimage_dump_info(struct machine *machine)
 {
-	int i, iadd = 1;
 	struct diskimage *d = machine->first_diskimage;
 
 	while (d != NULL) {
 		debugmsg(SUBSYS_MACHINE, "diskimage", VERBOSITY_INFO, "%s", d->fname);
 
-		debug_indentation(iadd);
+		debug_indentation(1);
 
 		switch (d->type) {
 		case DISKIMAGE_SCSI:
@@ -1205,12 +1284,14 @@ void diskimage_dump_info(struct machine *machine)
 			debug(" (BOOT)");
 		debug("\n");
 
-		for (i=0; i<d->nr_of_overlays; i++) {
+		debug_indentation(1);
+
+		for (int i=0; i<d->nr_of_overlays; i++) {
 			debug("overlay %i: %s\n",
 			    i, d->overlays[i].overlay_basename);
 		}
 
-		debug_indentation(-iadd);
+		debug_indentation(-2);
 
 		d = d->next;
 	}

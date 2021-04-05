@@ -5024,3 +5024,5 @@ Changelog for GXemul:
 20210405	Adding hardcoded boot_unit=0 and boot_partition=0 NVRAM
 		variables to the LUNA-88K machine, allowing OpenBSD/luna88k
 		to boot from disk without asking for root and swap partitions.
+		Adding 'R' (upper-case) disk image prefix, as a shorthand for
+		creating temporary overlays.

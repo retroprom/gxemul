@@ -79,6 +79,7 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 		Performance better than when using simulated NAT?
 	o) When using e.g. "-E alpha" and there was more than one subtype, then _list_
    	   them instead of just complaining "Maybe you forgot the -e command line option".
+	o) C99 __func__ instead of __FUNCTION__?
 	o) Try using profil() for very basic runtime profiling?
 	o) GXsatellite -- Gavare's eXperimental Stand-Alone Test Environment
 	   for Low-Level Interactive Testing of Emulators. base on YCX5; start with testmips.
@@ -601,16 +602,6 @@ Debugger:
 Disk image options:
 	Command line option for forcing fsync on each disk image write; see
 	do_fsync in src/disk/diskimage.c
-
-	'R' (uppercase): don't allow writes to the disk image file, but let
-	the guest OS think that the device is writable, by using a temporary
-	overlay (created automatically in /tmp) which is removed when the
-	emulator exits. If this is implemented, update the misc
-	documentation, and the man page.
-	Also, show userfriendly help message if a file is readonly in the
-	filesystem: "you either need to make the file writable, OR use r: to
-	treat the file as readonly, OR use R: to treat the file as readonly but
-	allow guest OSes to write to a temporary overlay."
 
 Documentation:
 	Dyntrans: Mention how to break out of the dyntrans loop: cpu->running = 0

@@ -157,12 +157,14 @@ static void usage(bool longusage)
 	printf("                i      IDE\n");
 	printf("                oOFS;  set base offset to OFS (for ISO9660"
 	    " filesystems)\n");
-	printf("                r      read-only (don't allow changes to the"
-	    " file)\n");
+	printf("                r      read-only (don't allow changes to the file)\n");
+	printf("                R      don't allow changes to the file, but add a temporary\n");
+	printf("                       overlay to allow guest OS writes (which are lost when\n");
+	printf("                       the emulator exits)\n");
 	printf("                s      SCSI\n");
 	printf("                t      tape\n");
-	printf("                V      add an overlay\n");
-	printf("                0-7    force a specific ID\n");
+	printf("                V      add an overlay (also requires explicit ID)\n");
+	printf("                0-7    use a specific ID\n");
 	printf("  -I hz     set the main cpu frequency to hz (not used by "
 	    "all combinations\n            of machines and guest OSes)\n");
 	printf("  -i        display each instruction as it is executed\n");

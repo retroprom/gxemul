@@ -32,6 +32,24 @@ controllers.
 		(Previously, a more complicated root-on-nfs setup had to be used.)
 
 	<p>
+	<li>There is now a shorthand disk image prefix 'R' (uppercase), to reduce
+		the amount of typing when one wants to use a temporary throwaway
+		disk image overlay, that is when one does not want to allow
+		writes to a disk image. Previously, this would require
+		something like:<pre>
+<font color="#4040ff"><b>touch overlay.img overlay.img.map</b>
+gxemul -e ..... -d disk.img <b>-d V0:overlay.img</b>
+<b>rm overlay.img overlay.img.map</b></font>
+</pre>
+		which now becomes just:<pre>
+<font color="#4040ff">gxemul -e ..... -d <b>R:</b>disk.img</font>
+</pre>
+		The difference to using an explicit V: overlay is that the
+		temporary file is
+		removed automatically when the GXemul process exits. A guest
+		operating system will still perceive the disk as writable.
+
+	<p>
 	<li>Networking using a tap device can now be enabled directly on the
 		command line using a new <tt>-L</tt> option. Previously,
 		tap devices could only be enabled when using configuration files.

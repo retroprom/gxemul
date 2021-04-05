@@ -140,7 +140,8 @@ int diskimage__internal_access(struct diskimage *d, int writeflag,
 	off_t offset, unsigned char *buf, size_t len);
 int diskimage_access(struct machine *machine, int id, int type, int writeflag,
 	off_t offset, unsigned char *buf, size_t len);
-void diskimage_add_overlay(struct diskimage *d, char *overlay_basename);
+bool diskimage_add_overlay(struct diskimage *d, char *overlay_basename,
+	bool remove_after_open);
 bool diskimage_recalc_size(struct diskimage *d);
 int diskimage_exist(struct machine *machine, int id, int type);
 int diskimage_bootdev(struct machine *machine, int *typep);
