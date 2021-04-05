@@ -224,8 +224,8 @@ static void debugmsg_va(struct cpu* cpu, int subsystem,
 
 		switch (*s) {
 		case '\n':
+			color_normal();
 			if (show_decorations) {
-				color_normal();
 				printf(" ]");
 			}
 
