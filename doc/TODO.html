@@ -44,7 +44,6 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 		   break-into-the-debugger constructs.
 	o) src/net/:
 		o) debugmsg:ify all src/net/.
-		o) update src/net/README to mention tap support.
 	o) Add an example of the "verbosity" command to the Debugger section of the documentation?
 
 <font color="blue">Build problems:</font>
@@ -80,8 +79,6 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 		Performance better than when using simulated NAT?
 	o) When using e.g. "-E alpha" and there was more than one subtype, then _list_
    	   them instead of just complaining "Maybe you forgot the -e command line option".
-	o) Try running multiple Sprite machines in one big simulation and see if they
-		talk to each other?
 	o) Try using profil() for very basic runtime profiling?
 	o) GXsatellite -- Gavare's eXperimental Stand-Alone Test Environment
 	   for Low-Level Interactive Testing of Emulators. base on YCX5; start with testmips.
@@ -331,6 +328,22 @@ ARC:
 	    2005/11/06/0024.html suggests that.)
 	    NetBSD 4.x seems to work? :)
 
+DECstation:
+	o)  Running two Sprite machines in one emul config file fails; perhaps
+		static vars are used in the PROM emulation code. Fix this.
+		Right now, using separate config files for each machine is
+		necessary.
+	o)  Figure out how to run multiple Sprite machines and make them talk
+		to each other. Starting point for experimentation:
+
+			rm /etc/spritehosts
+			echo "1 ds5000-a a.my.domain a" >> /etc/spritehosts
+			echo "ether 10:20:30:00:00:10 10.0.0.1" >> /etc/spritehosts
+			echo "2 ds5000-b b.my.domain b" >> /etc/spritehosts
+			echo "ether 10:20:30:00:00:20 10.0.0.2" >> /etc/spritehosts
+			sync
+			shutdown -r
+
 Dreamcast:
 	x)  Try to make the ROM from my real Dreamcast boot correctly.
 	x)  PVR:  Lots of stuff. See dev_pvr.c.
@@ -364,7 +377,8 @@ HPCmips:
 	x)  A NIC? (As a PCMCIA device?)
 
 LUNA-88K:
-	autoboot of OpenBSD: requires sd0 to be manually entered. is this necessary?
+	autoboot of OpenBSD: boot_unit and boot_partition in NVRAM should be
+		set to the actual boot device; currently hardcoded to 0,0.
 	OpenBSD idle loop => detect if possible and idle the host.
 	luna88k bootblock loader:
 		o load binary from UFS filesystem (i.e. a partition given by an

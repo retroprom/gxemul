@@ -5021,3 +5021,6 @@ Changelog for GXemul:
 		to boot with SCSI (both the boot loader and the kernel)!
 20210401	Applying a patch from George Matsumura to make things build
 		better on Linux: __attribute__((__packed__));  in bootblock.h.
+20210405	Adding hardcoded boot_unit=0 and boot_partition=0 NVRAM
+		variables to the LUNA-88K machine, allowing OpenBSD/luna88k
+		to boot from disk without asking for root and swap partitions.

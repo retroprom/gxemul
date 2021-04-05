@@ -37,10 +37,10 @@
  *	Serial I/O (including Keyboard and Mouse)
  *	Monochrome framebuffer
  *	Lance ethernet
+ *	SCSI
  *
  *  Things that are NOT implemented yet:
  *	LUNA-88K2 specifics. (Some registers are at different addresses etc.)
- *	SCSI
  *	Parallel I/O
  *	Front LCD display
  *	Color framebuffer
@@ -891,6 +891,17 @@ DEVINIT(luna88k)
 	CHECK_ALLOCATION(d = (struct luna88k_data *) malloc(sizeof(struct luna88k_data)));
 	memset(d, 0, sizeof(struct luna88k_data));
 
+	// TODO: Values should correspond to the bootable disk id!
+	const int nsymbols = 2;
+	const char *s[2] = { "boot_unit", "boot_partition" };
+	const char *v[2] = { "0", "0" };
+	int base = 0x80; // 0x20 for luna-88k2
+	for (int si = 0; si < nsymbols; ++si) {
+		for (size_t i = 0; i < strlen(s[si]); ++i)
+			d->nvram[base + 4 * (32*si + i)] = s[si][i];
+		for (size_t i = 0; i < strlen(v[si]); ++i)
+			d->nvram[base + 4 * (32*si + 16 +i)] = v[si][i];
+	}
 
 	memory_device_register(devinit->machine->memory, devinit->name,
 	    LUNA88K_REGISTERS_BASE, LUNA88K_REGISTERS_LENGTH, dev_luna88k_access, (void *)d,
