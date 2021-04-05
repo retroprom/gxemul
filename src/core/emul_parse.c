@@ -337,7 +337,8 @@ static void parse__emul(struct emul *e, FILE *f, int *in_emul, int *line,
 		cur_machine_type[0] = '\0';
 		cur_machine_subtype[0] = '\0';
 		cur_machine_bootname[0] = '\0';
-		cur_machine_bootarg[0] = '\0';
+		cur_machine_bootarg[0] = '\b';	// HACK
+		cur_machine_bootarg[1] = '\0';	// HACK
 		cur_machine_n_load = 0;
 		cur_machine_n_disk = 0;
 		cur_machine_n_device = 0;
@@ -561,7 +562,9 @@ static void parse__machine(struct emul *e, FILE *f, int *in_emul, int *line,
 
 		m->boot_kernel_filename = strdup(cur_machine_bootname);
 
-		if (cur_machine_bootarg[0])
+		// HACK: This allows bootarg("") to be treated as
+		// something that is explicitly set. Needed by e.g. Sprite.
+		if (cur_machine_bootarg[0] != '\b')
 			m->boot_string_argument = strdup(cur_machine_bootarg);
 
 		for (i=0; i<cur_machine_n_x11_disp; i++) {
