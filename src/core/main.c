@@ -118,11 +118,21 @@ static void usage(bool longusage)
 {
 	print_banner();
 
-	printf("Usage: %s [machine, other, and general options] [file [...]]\n", progname);
-	printf("   or  %s [general options] @configfile\n", progname);
-
+	printf("Usage: ");
+	color_prompt();
+	printf("%s [machine, other, and general options] [file [...]]\n", progname);
+	color_normal();
+	printf("   or  ");
+	color_prompt();
+	printf("%s [general options] @configfile\n", progname);
+	color_normal();
+	
 	if (!longusage) {
-		printf("\nRun  %s -h  for help on command line options.\n", progname);
+		printf("\nRun  ");
+		color_prompt();
+		printf("%s -h", progname);
+		color_normal();
+		printf("  for help on command line options.\n");
 		return;
 	}
 
@@ -660,8 +670,8 @@ int main(int argc, char *argv[])
 			if (argv[i][0] == '@') {
 				fprintf(stderr, "You can either start one "
 				    "emulation with one machine directly from "
-				    "the command\nline, or start one or more "
-				    "emulations using configuration files."
+				    "the command\nline, or start an "
+				    "emulation using a configuration file."
 				    " Not both.\n");
 				return 1;
 			}
@@ -704,18 +714,40 @@ int main(int argc, char *argv[])
 	}
 
 	if (emul->n_machines == 0) {
-		fprintf(stderr, "No emulations defined. Maybe you forgot to "
-		    "use -E xx and/or -e yy, to specify\nthe machine type."
-		    " For example:\n\n    %s -e 3max -d disk.img\n\n"
+		printf("No machine defined. Maybe you forgot to use ");
+		color_prompt();
+		printf("-E xx");
+		color_normal();
+		printf(" and/or ");
+		color_prompt();
+		printf("-e yy");
+		color_normal();
+		printf(", to specify\nthe machine type."
+		    " For example:\n\n    ");
+		color_prompt();
+		printf("%s -e 3max -d disk.img", progname);
+		color_normal();
+		printf("\n\n"
 		    "to boot an emulated DECstation 5000/200 with a disk "
-		    "image.\n", progname);
+		    "image.\n");
 		return 1;
 	}
 
 	if (emul->machines[0]->machine_type == MACHINE_NONE) {
-		printf("No machine type specified? Run  gxemul -H  for a list\n"
-		    "of available machine types. Use the -e or -E option(s)\n"
-		    "to specify the machine type.\n");
+		printf("No machine type specified?\nRun  ");
+		color_prompt();
+		printf("gxemul -H");
+		color_normal();
+		printf("  for a list of available machine types.\n"
+		    "Then use the ");
+		color_prompt();
+		printf("-e");
+		color_normal();
+		printf(" or ");
+		color_prompt();
+		printf("-E");
+		color_normal();
+		printf(" option(s) to specify the machine type.\n");
 		return 1;
 	}
 
