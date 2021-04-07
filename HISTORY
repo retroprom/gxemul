@@ -5028,3 +5028,8 @@ Changelog for GXemul:
 		creating temporary overlays.
 20210407	Code for idling the host processor has been moved out from
 		individual CPU implementations to the main emul loop.
+		Implementing an X11 mouse pointer grab mechanism. Grab is
+		activated by clicking in a framebuffer window, and released
+		using left CTRL + ALT. When grab is active, the host mouse
+		cursor is hidden and the window caption changes to indicate
+		that grab is active.

@@ -916,8 +916,8 @@ void emul_run(struct emul *emul)
 			x11_check_event(emul);
 			console_flush();
 
-			if (false) { //console_any_input_available()) {
-				debugmsg(SUBSYS_EMUL, "idle", VERBOSITY_DEBUG, "not idling; console input");
+			if (console_any_input_available()) {
+				debugmsg(SUBSYS_EMUL, "idle", VERBOSITY_DEBUG, "not idling; console input is available");
 			} else {
 				debugmsg(SUBSYS_EMUL, "idle", VERBOSITY_DEBUG, "idling the host processor...");
 

@@ -27,7 +27,8 @@ controllers.
 
 <p><br>The changes between release 0.6.3.1 and 0.7.0 include:
 <ul>
-	<li>The LUNA-88K machine now has working SCSI emulation. This allows
+	<li>The <a href="machine_luna88k.html">LUNA-88K machine</a> now has
+		working SCSI emulation. This allows
 		OpenBSD/luna88k to be installed and run using a harddisk image.
 		(Previously, a more complicated root-on-nfs setup had to be used.)
 
@@ -36,15 +37,16 @@ controllers.
 		the amount of typing when one wants to use a temporary throwaway
 		disk image overlay, that is when one does not want to allow
 		writes to a disk image. Previously, this would require
-		something like:<pre>
-<font color="#4040ff"><b>touch overlay.img overlay.img.map</b>
-gxemul -e ..... -d disk.img <b>-d V0:overlay.img</b>
-<b>rm overlay.img overlay.img.map</b></font>
-</pre>
-		which now becomes just:<pre>
-<font color="#4040ff">gxemul -e ..... -d <b>R:</b>disk.img</font>
-</pre>
-		The difference to using an explicit V: overlay is that the
+		something like:
+<ul style="list-style: none;"><li><pre>
+<font color="#606000"><b>touch overlay.img overlay.img.map</b></font>
+<font color="#4040ff">gxemul -e ..... -d disk.img </font><font color="#606000"><b>-d V0:overlay.img</b></font>
+<font color="#606000"><b>rm overlay.img overlay.img.map</b></font>
+</pre></ul>
+		<p>which now becomes just:
+<ul style="list-style: none;"><li><pre><font color="#4040ff">gxemul -e ..... -d <font color="#008000"><b>R:</b></font>disk.img</font>
+</pre></ul>
+		<p>The difference to using an explicit V: overlay is that the
 		temporary file is
 		removed automatically when the GXemul process exits. A guest
 		operating system will still perceive the disk as writable.
@@ -60,6 +62,19 @@ gxemul -e ..... -d disk.img <b>-d V0:overlay.img</b>
 		introduced between 0.6.1 and 0.6.2
 		where running <tt>xinit</tt> inside Sprite (on an emulated
 		DECstation) suddenly failed.
+
+	<p>
+	<li>A "mouse grab" mechanism has been implemented for X11 framebuffer
+		windows. Previously,
+		mouse movements occuring inside a framebuffer window were always
+		forwarded to the guest OS. Interaction was akward, in particular
+		due to mouse acceleration being performed by the guest OS.
+		Now, instead, the framebuffer window needs to
+		be clicked in, in order to activate mouse pointer grabbing.
+		When the grab mode is active, mouse movements (and button clicks)
+		are forwarded to the guest OS, and the host's mouse cursor is
+		hidden. Grab mode is released when typing Left CTRL + ALT, or
+		when otherwise changing focus to another X11 window.
 
 	<p>
 	<li>Previously, the behavior when using configuration files was to
@@ -78,14 +93,18 @@ gxemul -e ..... -d disk.img <b>-d V0:overlay.img</b>
 		<tt>GXemul&gt;</tt> debugger prompt whenever
 		the emulated program or guest operating system ends,
 		regardless of whether it was a normal shutdown or some form
-		of error. This is useful for example if you wish to inspect
-		register or memory content.
-		Starting the emulator with <tt>-V</tt> also
+		of error. This is useful for example if you wish to disassemble
+		the code, or inspect register or memory content, at the point
+		of failure. Starting the emulator with <tt>-V</tt> also
 		implicitly sets <tt>-K</tt>. If neither <tt>-V</tt> nor <tt>-K</tt>
 		is used, and the guest OS halts with powerdown or "reboots", the emulator
 		should exit gracefully (for the machine modes where shutdown
 		functionality has been implemented via device support or
 		prom emulation support).
+
+		<p>(There are still many explicit <tt>exit()</tt> calls throughout the
+		code, which over time will need to be manually converted to work
+		with <tt>-K</tt>, but the most common ones are fixed.)
 
 	<p>
 	<li><tt>-T</tt> has been fixed to work the way it was always intended to
@@ -104,8 +123,8 @@ gxemul -e ..... -d disk.img <b>-d V0:overlay.img</b>
 		individually controlled using the new <tt>verbosity</tt>
 		debugger command. This also standardizes the way debug messages
 		are formatted:
-		
-		<p><pre>[ machine-and-cpu-path: <font color="brown">subsystem-name</font> <font color="#4040ff">component-or-function-name</font>: text ]</pre>
+
+<ul style="list-style: none;"><li><pre>[ machine-and-cpu-path: <font color="brown">subsystem-name</font> <font color="#4040ff">component-or-function-name</font>: text ]</pre></ul>
 
 		<p>Most of the time, not all of these are shown.
 		machine-and-cpu-path, for example, is only shown if the message comes
@@ -122,7 +141,7 @@ gxemul -e ..... -d disk.img <b>-d V0:overlay.img</b>
 	<li>Output from the emulator is now subtly colorized, to make it
 		easier to quickly interpret the text. This is enabled by
 		launching the emulator with the environment variable
-		CLICOLOR set, or if <tt>-G</tt> is used.
+		CLICOLOR set, or by usign the <tt>-G</tt> command line option.
 		The choice of colors was done to
 		a) be reasonably subtle, and b) work
 		with both light and dark terminal backgrounds.

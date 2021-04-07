@@ -68,6 +68,7 @@
 #include <termios.h>
 #include <unistd.h>
 #include <sys/select.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <time.h>
 
@@ -95,8 +96,9 @@ static int console_stdout_pending;
 
 #define	CONSOLE_FIFO_LEN	4096
 
-static int console_mouse_x;		/*  absolute x, 0-based  */
-static int console_mouse_y;		/*  absolute y, 0-based  */
+static struct timeval console_mouse_lastupdate;
+static int console_mouse_dx;		/*  relative since last call  */
+static int console_mouse_dy;		/*  relative since last call  */
 static int console_mouse_fb_nr;		/*  framebuffer number of
 					    host movement, 0-based  */
 static int console_mouse_buttons;	/*  left=4, middle=2, right=1  */
@@ -397,6 +399,38 @@ int console_charavail(int handle)
 
 
 /*
+ *  console_any_input_available():
+ *
+ *  Return true if keyboard or mouse input is available.
+ *
+ *  TODO: Mouse buttons are not checked yet.
+ */
+bool console_any_input_available()
+{
+	bool somethingAvailable = false;
+
+	// Any non-zero mouse delta in the last second counts as input available
+	if (console_mouse_dx != 0 || console_mouse_dy != 0) {
+		struct timeval tv;
+		gettimeofday(&tv, NULL);
+
+		uint64_t t1 = console_mouse_lastupdate.tv_sec * 1000000 +
+			console_mouse_lastupdate.tv_usec;
+		uint64_t t2 = tv.tv_sec * 1000000 + tv.tv_usec;
+		
+		if (t2 - t1 < 1000000)
+			somethingAvailable = true;
+	}
+
+	for (int i = 0; i < n_console_handles; ++i)
+		if (console_charavail(i))
+			somethingAvailable = true;
+
+	return somethingAvailable;
+}
+
+
+/*
  *  console_readchar():
  *
  *  Returns 0..255 if a char was available, -1 otherwise.
@@ -473,18 +507,17 @@ void console_flush(void)
 
 
 /*
- *  console_mouse_coordinates():
+ *  console_mouse_coordinate_update():
  *
- *  Sets mouse coordinates. Called by for example an X11 event handler.
- *  x and y are absolute coordinates, fb_nr is where the mouse movement
+ *  Updates mouse coordinates. Called by for example an X11 event handler.
+ *  dx and dy are relative coordinates, fb_nr is where the mouse movement
  *  took place.
  */
-void console_mouse_coordinates(int x, int y, int fb_nr)
+void console_mouse_coordinate_update(int dx, int dy, int fb_nr)
 {
-	/*  TODO: fb_nr isn't used yet.  */
-
-	console_mouse_x = x;
-	console_mouse_y = y;
+	gettimeofday(&console_mouse_lastupdate, NULL);
+	console_mouse_dx += dx;
+	console_mouse_dy += dy;
 	console_mouse_fb_nr = fb_nr;
 }
 
@@ -510,15 +543,18 @@ void console_mouse_button(int button, int pressed)
 /*
  *  console_getmouse():
  *
- *  Puts current mouse data into the variables pointed to by
- *  the arguments.
+ *  Gets current mouse data into the variables pointed to by the arguments.
+ *  The mouse delta x and y are then cleared.
  */
-void console_getmouse(int *x, int *y, int *buttons, int *fb_nr)
+void console_getmouse(int *dx, int *dy, int *buttons, int *fb_nr)
 {
-	*x = console_mouse_x;
-	*y = console_mouse_y;
+	*dx = console_mouse_dx;
+	*dy = console_mouse_dy;
 	*buttons = console_mouse_buttons;
 	*fb_nr = console_mouse_fb_nr;
+
+	console_mouse_dx = 0;
+	console_mouse_dy = 0;
 }
 
 
@@ -840,8 +876,8 @@ void console_init_main(struct emul *emul)
 	console_handles[MAIN_CONSOLE].fifo_head = 0;
 	console_handles[MAIN_CONSOLE].fifo_tail = 0;
 
-	console_mouse_x = 0;
-	console_mouse_y = 0;
+	console_mouse_dx = 0;
+	console_mouse_dy = 0;
 	console_mouse_buttons = 0;
 
 	console_initialized = 1;

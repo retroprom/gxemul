@@ -2,7 +2,7 @@
 #define	X11_H
 
 /*
- *  Copyright (C) 2003-2010  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -31,6 +31,7 @@
  *  Headerfile for src/x11.c.
  */
 
+#include <stdbool.h>
 #include "misc.h"
 
 struct emul;
@@ -49,6 +50,7 @@ struct emul;
 /*  Framebuffer windows:  */
 struct fb_window {
 	int		fb_number;
+	char		*name;
 
 #ifdef WITH_X11
 	/*  x11_fb_winxsize > 0 for a valid fb_window  */
@@ -93,7 +95,7 @@ void x11_putimage_fb(struct machine *, int);
 #endif
 void x11_init(struct machine *);
 void x11_fb_resize(struct fb_window *win, int new_xsize, int new_ysize);
-void x11_set_standard_properties(struct fb_window *fb_window, char *name);
+void x11_set_standard_properties(struct fb_window *fb_window);
 struct fb_window *x11_fb_init(int xsize, int ysize, char *name,
 	int scaledown, struct machine *);
 void x11_check_event(struct emul *emul);

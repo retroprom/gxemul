@@ -521,7 +521,7 @@ struct lk201_data {
                         
         int                     mouse_mode;
         int                     mouse_revision;         /*  0..15  */  
-        int                     mouse_x, mouse_y, mouse_buttons;
+        int                     mouse_buttons;
 };
 void lk201_tick(struct machine *, struct lk201_data *); 
 void lk201_tx_data(struct lk201_data *, int port, int idata);

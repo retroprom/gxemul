@@ -151,26 +151,17 @@ void lk201_convert_ascii_to_keybcode(struct lk201_data *d, unsigned char ch)
 
 /*
  *  lk201_send_mouse_update_sequence():
- *
- *  mouse_x, _y, _buttons contains the coordinates on the host's display, the
- *  "goal" of where we want to move.
- *
- *  d->mouse_x, _y, _buttons contain the last values transmitted to the
- *  emulated machine.
  */
-static int lk201_send_mouse_update_sequence(struct lk201_data *d, int mouse_x,
-	int mouse_y, int mouse_buttons, int mouse_fb_nr)
+static int lk201_send_mouse_update_sequence(struct lk201_data *d, int xdelta,
+	int ydelta, int mouse_buttons, int mouse_fb_nr)
 {
-	int xsign, xdelta, ysign, ydelta, m;
-
-	xdelta = mouse_x - d->mouse_x;
-	ydelta = mouse_y - d->mouse_y;
+	int xsign, ysign, m;
 
 	/*  If no change, then don't send any update!  */
 	if (xdelta == 0 && ydelta == 0 && d->mouse_buttons == mouse_buttons)
 		return 0;
 
-	m = 20;
+	m = 50;
 
 	if (xdelta > m)
 		xdelta = m;
@@ -181,8 +172,6 @@ static int lk201_send_mouse_update_sequence(struct lk201_data *d, int mouse_x,
 	if (ydelta < -m)
 		ydelta = -m;
 
-	d->mouse_x += xdelta;
-	d->mouse_y += ydelta;
 	d->mouse_buttons = mouse_buttons;
 
 	/*
@@ -234,8 +223,6 @@ static int lk201_send_mouse_update_sequence(struct lk201_data *d, int mouse_x,
  */
 void lk201_tick(struct machine *machine, struct lk201_data *d)
 {
-	int mouse_x, mouse_y, mouse_buttons, mouse_fb_nr, port;
-
 	/*
 	 *  Different machines seem to use different ports for their
 	 *  serial console:
@@ -244,7 +231,7 @@ void lk201_tick(struct machine *machine, struct lk201_data *d)
 	 *  DECstation 3100 (PMAX) and 5000/2000 (3MAX) use the printer port.
 	 *  Others seem to use the comm port.
 	 */
-	port = DCCOMM_PORT;
+	int port = DCCOMM_PORT;
 
 	if (machine->machine_type == MACHINE_PMAX) {
 		switch (machine->machine_subtype) {
@@ -276,10 +263,10 @@ void lk201_tick(struct machine *machine, struct lk201_data *d)
 	if (!d->use_fb)
 		return;
 
-	console_getmouse(&mouse_x, &mouse_y, &mouse_buttons, &mouse_fb_nr);
+	int dx, dy, mouse_buttons, mouse_fb_nr;
+	console_getmouse(&dx, &dy, &mouse_buttons, &mouse_fb_nr);
 
-	lk201_send_mouse_update_sequence(d, mouse_x, mouse_y,
-	    mouse_buttons, mouse_fb_nr);
+	lk201_send_mouse_update_sequence(d, dx, dy, mouse_buttons, mouse_fb_nr);
 }
 
 

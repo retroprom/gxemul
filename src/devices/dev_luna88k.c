@@ -45,8 +45,11 @@
  *	Front LCD display
  *	Color framebuffer
  *
- *  TODO: Separate out these devices to their own files, so that they can
- *  potentially be reused for a luna68k mode if necessary.
+ *  TODO: Separate out some devices to their own files:
+ *	x) so that they can potentially be reused for a luna68k mode
+ *	x) better framebuffer performance!
+ *	x) sio seems similar to scc?
+ *	x) the clock is similar to other clock chips?
  */
 
 #include <stdio.h>
@@ -109,8 +112,6 @@ struct luna88k_data {
 	int		sio_queue_head[2];
 	int		sio_queue_tail[2];
 	int		mouse_enable;
-	int		mouse_x;
-	int		mouse_y;
 	int		mouse_buttons;
 
 	/*  ROM and RAM (used by the Ethernet interface)  */
@@ -385,13 +386,12 @@ DEVICE_TICK(luna88k)
 		}
 
 		if (space_available_in_sio_queue(d, 1) > 4 && d->mouse_enable) {
-			int mouse_x, mouse_y, mouse_buttons, mouse_fb_nr;
-			console_getmouse(&mouse_x, &mouse_y, &mouse_buttons, &mouse_fb_nr);
+			int mouse_buttons, mouse_fb_nr, xdelta, ydelta;
 
-			int xdelta = mouse_x - d->mouse_x;
-			int ydelta = d->mouse_y - mouse_y;	// note: inverted
+			console_getmouse(&xdelta, &ydelta, &mouse_buttons, &mouse_fb_nr);
+			ydelta = 0 - ydelta;
 
-			const int m = 100;
+			const int m = 125;
 
 			if (xdelta > m)
 				xdelta = m;
@@ -404,8 +404,6 @@ DEVICE_TICK(luna88k)
 
 			/*  Only send update if there is an actual diff.  */
 			if (xdelta != 0 || ydelta != 0 || d->mouse_buttons != mouse_buttons) {
-				d->mouse_x = mouse_x;
-				d->mouse_y = mouse_y;
 				d->mouse_buttons = mouse_buttons;
 
 				// 3-byte protocol according to
@@ -487,9 +485,9 @@ DEVICE_ACCESS(luna88k)
 	if (addr >= NVRAM_ADDR && addr + len <= NVRAM_ADDR + NVRAM_SPACE) {
 		size_t offset = addr - NVRAM_ADDR;
 		if (writeflag == MEM_READ) {
-			memmove(data, d->nvram + offset, len);
+			memcpy(data, d->nvram + offset, len);
 		} else {
-			memmove(d->nvram + offset, data, len);
+			memcpy(d->nvram + offset, data, len);
 		}
 		return 1;
 	}
@@ -791,7 +789,8 @@ DEVICE_ACCESS(luna88k)
 		break;
 
 	case RESET_CPU_ALL:	/*  0x6d000010: Reset all CPUs  */
-		cpu->running = 0;
+		for (int i = 0; i < cpu->machine->ncpus; ++i)
+			cpu->machine->cpus[i]->running = 0;
 		break;
 
 	case BMAP_RFCNT:	/*  0xb1000000: RFCNT register  */

@@ -31,6 +31,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "console.h"
 #include "emul.h"
@@ -60,6 +61,158 @@ void x11_check_event(struct emul *emul) { }
 #include <X11/Xutil.h>
 #include <X11/cursorfont.h>
 
+static bool left_ctrl = false;
+static bool left_alt = false;
+static struct fb_window *grabbed = NULL;
+static bool mouseExplicityMoved = false;
+static int mouseXbeforeGrab = 0;
+static int mouseYbeforeGrab = 0;
+static int mouseXofLastEvent = 0;
+static int mouseYofLastEvent = 0;
+
+static bool mouseCursorHidden = false;
+
+
+static void x11_unhide_cursor()
+{
+	if (!mouseCursorHidden)
+		return;
+
+	struct fb_window *fbwin = grabbed;
+
+	/*  Remove the old X11 host cursor:  */
+	XUndefineCursor(fbwin->x11_display, fbwin->x11_fb_window);
+	XFreeCursor(fbwin->x11_display, fbwin->host_cursor);
+	fbwin->host_cursor = 0;
+
+	mouseCursorHidden = false;
+}
+
+
+static void x11_hide_cursor()
+{
+	if (mouseCursorHidden)
+		return;
+
+	struct fb_window *fbwin = grabbed;
+
+	/*  Create a new "empy" X11 host cursor:  */
+	if (fbwin->host_cursor_pixmap != 0) {
+		XFreePixmap(fbwin->x11_display, fbwin->host_cursor_pixmap);
+		fbwin->host_cursor_pixmap = 0;
+	}
+
+	fbwin->host_cursor_pixmap = XCreatePixmap(fbwin->x11_display, fbwin->x11_fb_window, 1, 1, 1);
+	XSetForeground(fbwin->x11_display, fbwin->x11_fb_gc, fbwin->x11_graycolor[0].pixel);
+
+	GC tmpgc = XCreateGC(fbwin->x11_display, fbwin->host_cursor_pixmap, 0,0);
+
+	XDrawPoint(fbwin->x11_display, fbwin->host_cursor_pixmap, tmpgc, 0, 0);
+
+	XFreeGC(fbwin->x11_display, tmpgc);
+
+	fbwin->host_cursor =
+	    XCreatePixmapCursor(fbwin->x11_display,
+	    fbwin->host_cursor_pixmap,
+	    fbwin->host_cursor_pixmap,
+	    &fbwin->x11_graycolor[N_GRAYCOLORS-1],
+	    &fbwin->x11_graycolor[N_GRAYCOLORS-1],
+	    0, 0);
+
+	// For testing:
+	// fbwin->host_cursor = XCreateFontCursor(fbwin->x11_display, XC_coffee_mug);
+
+	if (fbwin->host_cursor != 0)
+		XDefineCursor(fbwin->x11_display, fbwin->x11_fb_window, fbwin->host_cursor);
+
+	mouseCursorHidden = true;
+}
+
+
+static void setMousePointerCoordinates(struct fb_window *fbwin, int x, int y)
+{
+	XWarpPointer(fbwin->x11_display, None,
+	    DefaultRootWindow(fbwin->x11_display), 0, 0, 0, 0, x, y);
+	XFlush(fbwin->x11_display);
+
+	mouseExplicityMoved = true;
+}
+
+
+static void mouseMouseToCenterOfScreen(struct fb_window *fbwin)
+{
+	Screen *screen = XDefaultScreenOfDisplay(fbwin->x11_display);
+
+	int screenWidth = XWidthOfScreen(screen);
+	int screenHeight = XHeightOfScreen(screen);
+	setMousePointerCoordinates(fbwin, screenWidth / 2, screenHeight / 2);
+}
+
+static void grab(struct fb_window *fbwin)
+{
+	if (grabbed != NULL)
+		return;
+
+	Window xqpWindow;
+	int rootx, rooty, x, y;
+	unsigned int mask;
+	int res = XQueryPointer(fbwin->x11_display,
+	    RootWindow(fbwin->x11_display, DefaultScreen(fbwin->x11_display)),
+	    &xqpWindow,
+            &xqpWindow, &rootx, &rooty, &x, &y,
+            &mask);
+        if (res != True)
+        	return;
+
+	debugmsg(SUBSYS_X11, "grab", VERBOSITY_DEBUG, "Mouse coordinates "
+	    "before grab: %i, %i", rootx, rooty);
+	mouseXbeforeGrab = rootx;
+	mouseYbeforeGrab = rooty;
+
+	res = XGrabPointer(fbwin->x11_display, fbwin->x11_fb_window, False,
+	    ButtonPressMask | ButtonReleaseMask | PointerMotionMask | FocusChangeMask |
+	    EnterWindowMask | LeaveWindowMask,
+	    GrabModeAsync, GrabModeAsync,
+	    RootWindow(fbwin->x11_display, DefaultScreen(fbwin->x11_display)),
+	    None, CurrentTime);
+
+	if (res == GrabSuccess)
+		grabbed = fbwin;
+
+	debugmsg(SUBSYS_X11, "grab", VERBOSITY_DEBUG, "Grab mouse pointer: %s",
+	    res == GrabSuccess ? "success" : "FAILURE");
+
+	if (res != GrabSuccess)
+		return;
+
+	x11_hide_cursor();
+
+	mouseMouseToCenterOfScreen(fbwin);
+
+	x11_set_standard_properties(fbwin);
+}
+
+
+static void ungrab()
+{
+	if (grabbed == NULL)
+		return;
+
+	struct fb_window *fbwin = grabbed;
+
+	x11_unhide_cursor();
+
+	grabbed = NULL;
+
+	x11_set_standard_properties(fbwin);
+
+	debugmsg(SUBSYS_X11, "grab", VERBOSITY_DEBUG, "Releasing grab.");
+
+	XUngrabPointer(fbwin->x11_display, CurrentTime);
+
+	setMousePointerCoordinates(fbwin, mouseXbeforeGrab, mouseYbeforeGrab);
+}
+
 
 /*
  *  x11_redraw_cursor():
@@ -70,12 +223,13 @@ void x11_check_event(struct emul *emul) { }
  */
 void x11_redraw_cursor(struct machine *m, int i)
 {
-	int last_color_used = 0;
-	int n_colors_used = 0;
 	struct fb_window *fbwin = m->x11_md.fb_windows[i];
 
+	if (fbwin->x11_display == NULL)
+		return;
+
 	/*  Remove old cursor, if any:  */
-	if (fbwin->x11_display != NULL && fbwin->OLD_cursor_on) {
+	if (fbwin->OLD_cursor_on) {
 		XPutImage(fbwin->x11_display, fbwin->x11_fb_window,
 		    fbwin->x11_fb_gc, fbwin->fb_ximage,
 		    fbwin->OLD_cursor_x/fbwin->scaledown,
@@ -86,141 +240,73 @@ void x11_redraw_cursor(struct machine *m, int i)
 		    fbwin->OLD_cursor_ysize/fbwin->scaledown + 1);
 	}
 
-	if (fbwin->x11_display != NULL && fbwin->cursor_on) {
-		int x, y, subx, suby;
-		XImage *xtmp;
+	if (!fbwin->cursor_on)
+		return;
 
-		CHECK_ALLOCATION(xtmp = XSubImage(fbwin->fb_ximage,
-		    fbwin->cursor_x/fbwin->scaledown,
-		    fbwin->cursor_y/fbwin->scaledown,
-		    fbwin->cursor_xsize/fbwin->scaledown + 1,
-		    fbwin->cursor_ysize/fbwin->scaledown + 1));
+	XImage *xtmp;
+	CHECK_ALLOCATION(xtmp = XSubImage(fbwin->fb_ximage,
+	    fbwin->cursor_x/fbwin->scaledown,
+	    fbwin->cursor_y/fbwin->scaledown,
+	    fbwin->cursor_xsize/fbwin->scaledown + 1,
+	    fbwin->cursor_ysize/fbwin->scaledown + 1));
 
-		for (y=0; y<fbwin->cursor_ysize;
-		    y+=fbwin->scaledown)
-			for (x=0; x<fbwin->cursor_xsize;
-			    x+=fbwin->scaledown) {
-				int px = x/fbwin->scaledown;
-				int py = y/fbwin->scaledown;
-				int p = 0, n = 0, c = 0;
-				unsigned long oldcol;
+	for (int y = 0; y < fbwin->cursor_ysize; y += fbwin->scaledown) {
+		for (int x = 0; x < fbwin->cursor_xsize; x += fbwin->scaledown) {
+			int px = x/fbwin->scaledown;
+			int py = y/fbwin->scaledown;
+			int p = 0, n = 0, c = 0;
+			unsigned long oldcol;
 
-				for (suby=0; suby<fbwin->scaledown;
-				    suby++)
-					for (subx=0; subx<fbwin->
-					    scaledown; subx++) {
-						c = fbwin->
-						    cursor_pixels[y+suby]
-						    [x+subx];
-						if (c >= 0) {
-							p += c;
-							n++;
-						}
+			for (int suby = 0; suby < fbwin->scaledown; suby++)
+				for (int subx = 0; subx < fbwin->scaledown; subx++) {
+					c = fbwin->cursor_pixels[y+suby][x+subx];
+					if (c >= 0) {
+						p += c;
+						n++;
 					}
-				if (n > 0)
-					p /= n;
-				else
-					p = c;
-
-				if (n_colors_used == 0) {
-					last_color_used = p;
-					n_colors_used = 1;
-				} else
-					if (p != last_color_used)
-						n_colors_used = 2;
-
-				switch (p) {
-				case CURSOR_COLOR_TRANSPARENT:
-					break;
-				case CURSOR_COLOR_INVERT:
-					oldcol = XGetPixel(xtmp, px, py);
-					if (oldcol != fbwin->
-					    x11_graycolor[N_GRAYCOLORS-1].pixel)
-						oldcol = fbwin->
-						    x11_graycolor[N_GRAYCOLORS
-						    -1].pixel;
-					else
-						oldcol = fbwin->
-						    x11_graycolor[0].pixel;
-					XPutPixel(xtmp, px, py, oldcol);
-					break;
-				default:	/*  Normal grayscale:  */
-					XPutPixel(xtmp, px, py, fbwin->
-					    x11_graycolor[p].pixel);
 				}
+			if (n > 0)
+				p /= n;
+			else
+				p = c;
+
+			switch (p) {
+			case CURSOR_COLOR_TRANSPARENT:
+				break;
+
+			case CURSOR_COLOR_INVERT:
+				oldcol = XGetPixel(xtmp, px, py);
+				if (oldcol != fbwin->
+				    x11_graycolor[N_GRAYCOLORS-1].pixel)
+					oldcol = fbwin->x11_graycolor[N_GRAYCOLORS-1].pixel;
+				else
+					oldcol = fbwin->x11_graycolor[0].pixel;
+
+				XPutPixel(xtmp, px, py, oldcol);
+				break;
+
+			default:	/*  Normal grayscale:  */
+				XPutPixel(xtmp, px, py, fbwin->x11_graycolor[p].pixel);
 			}
-
-		XPutImage(fbwin->x11_display,
-		    fbwin->x11_fb_window,
-		    fbwin->x11_fb_gc,
-		    xtmp, 0, 0,
-		    fbwin->cursor_x/fbwin->scaledown,
-		    fbwin->cursor_y/fbwin->scaledown,
-		    fbwin->cursor_xsize/fbwin->scaledown,
-		    fbwin->cursor_ysize/fbwin->scaledown);
-
-		XDestroyImage(xtmp);
-
-		fbwin->OLD_cursor_on = fbwin->cursor_on;
-		fbwin->OLD_cursor_x = fbwin->cursor_x;
-		fbwin->OLD_cursor_y = fbwin->cursor_y;
-		fbwin->OLD_cursor_xsize =
-		    fbwin->cursor_xsize;
-		fbwin->OLD_cursor_ysize =
-		    fbwin->cursor_ysize;
-	}
-
-	/*  printf("n_colors_used = %i\n", n_colors_used);  */
-
-	if (fbwin->host_cursor != 0 && n_colors_used < 2) {
-		/*  Remove the old X11 host cursor:  */
-		XUndefineCursor(fbwin->x11_display,
-		    fbwin->x11_fb_window);
-		XFreeCursor(fbwin->x11_display,
-		    fbwin->host_cursor);
-		fbwin->host_cursor = 0;
-	}
-
-	if (n_colors_used >= 2 && fbwin->host_cursor == 0) {
-		GC tmpgc;
-
-		/*  Create a new X11 host cursor:  */
-		/*  cursor = XCreateFontCursor(fbwin->x11_display,
-		    XC_coffee_mug);  :-)  */
-		if (fbwin->host_cursor_pixmap != 0) {
-			XFreePixmap(fbwin->x11_display,
-			    fbwin->host_cursor_pixmap);
-			fbwin->host_cursor_pixmap = 0;
-		}
-		fbwin->host_cursor_pixmap =
-		    XCreatePixmap(fbwin->x11_display,
-		    fbwin->x11_fb_window, 1, 1, 1);
-		XSetForeground(fbwin->x11_display,
-		    fbwin->x11_fb_gc,
-		    fbwin->x11_graycolor[0].pixel);
-
-		tmpgc = XCreateGC(fbwin->x11_display,
-		    fbwin->host_cursor_pixmap, 0,0);
-
-		XDrawPoint(fbwin->x11_display,
-		    fbwin->host_cursor_pixmap,
-		    tmpgc, 0, 0);
-
-		XFreeGC(fbwin->x11_display, tmpgc);
-
-		fbwin->host_cursor =
-		    XCreatePixmapCursor(fbwin->x11_display,
-		    fbwin->host_cursor_pixmap,
-		    fbwin->host_cursor_pixmap,
-		    &fbwin->x11_graycolor[N_GRAYCOLORS-1],
-		    &fbwin->x11_graycolor[N_GRAYCOLORS-1],
-		    0, 0);
-		if (fbwin->host_cursor != 0) {
-			XDefineCursor(fbwin->x11_display,
-			    fbwin->x11_fb_window,
-			    fbwin->host_cursor);
 		}
 	}
+
+	XPutImage(fbwin->x11_display,
+	    fbwin->x11_fb_window,
+	    fbwin->x11_fb_gc,
+	    xtmp, 0, 0,
+	    fbwin->cursor_x/fbwin->scaledown,
+	    fbwin->cursor_y/fbwin->scaledown,
+	    fbwin->cursor_xsize/fbwin->scaledown,
+	    fbwin->cursor_ysize/fbwin->scaledown);
+
+	XDestroyImage(xtmp);
+
+	fbwin->OLD_cursor_on = fbwin->cursor_on;
+	fbwin->OLD_cursor_x = fbwin->cursor_x;
+	fbwin->OLD_cursor_y = fbwin->cursor_y;
+	fbwin->OLD_cursor_xsize = fbwin->cursor_xsize;
+	fbwin->OLD_cursor_ysize = fbwin->cursor_ysize;
 }
 
 
@@ -371,11 +457,20 @@ void x11_fb_resize(struct fb_window *win, int new_xsize, int new_ysize)
  *
  *  Right now, this only sets the title of a window.
  */
-void x11_set_standard_properties(struct fb_window *fb_window, char *name)
+void x11_set_standard_properties(struct fb_window *fb_window)
 {
+	size_t title_maxlen = strlen(fb_window->name) + 100;
+	char *title;
+	CHECK_ALLOCATION(title = malloc(title_maxlen));
+
+	snprintf(title, title_maxlen, "%s%s", fb_window->name,
+	    grabbed != NULL ? " (Left CTRL+ALT to ungrab)" : "");
+
 	XSetStandardProperties(fb_window->x11_display,
-	    fb_window->x11_fb_window, name, "GXemul " VERSION,
+	    fb_window->x11_fb_window, title, "GXemul " VERSION,
 	    None, NULL, 0, NULL);
+
+	free(title);
 }
 
 
@@ -506,12 +601,14 @@ struct fb_window *x11_fb_init(int xsize, int ysize, char *name,
 
 	fbwin->x11_display = x11_display;
 
-	x11_set_standard_properties(fbwin, name);
+	fbwin->name = strdup(name);
+
+	x11_set_standard_properties(fbwin);
 
 	XSelectInput(x11_display,
 	    fbwin->x11_fb_window,
-	    StructureNotifyMask | ExposureMask | ButtonPressMask |
-	    ButtonReleaseMask | PointerMotionMask | KeyPressMask);
+	    StructureNotifyMask | ExposureMask | ButtonPressMask | FocusChangeMask |
+	    ButtonReleaseMask | PointerMotionMask | KeyPressMask | KeyReleaseMask);
 	fbwin->x11_fb_gc = XCreateGC(x11_display,
 	    fbwin->x11_fb_window, 0,0);
 
@@ -577,16 +674,19 @@ static void x11_check_events_machine(struct emul *emul, struct machine *m)
 	for (fb_nr = 0; fb_nr < m->x11_md.n_fb_windows; fb_nr ++) {
 		struct fb_window *fbwin = m->x11_md.fb_windows[fb_nr];
 		XEvent event;
-		int need_redraw = 0, found, i, j;
+		bool need_redraw = false;
 
 		while (XPending(fbwin->x11_display)) {
 			XNextEvent(fbwin->x11_display, &event);
 
-			if (event.type==ConfigureNotify) {
-				need_redraw = 1;
+			if (event.type == ConfigureNotify) {
+				need_redraw = true;
 			}
 
-			if (event.type==Expose && event.xexpose.count==0) {
+			if (event.type == FocusOut)
+				ungrab();
+
+			if (event.type == Expose && event.xexpose.count == 0) {
 				/*
 				 *  TODO:  the xexpose struct has x,y,width,
 				 *  height. Those could be used to only redraw
@@ -596,41 +696,61 @@ static void x11_check_events_machine(struct emul *emul, struct machine *m)
 				 */
 				/*  x11_winxsize = event.xexpose.width;
 				    x11_winysize = event.xexpose.height;  */
-				need_redraw = 1;
+				need_redraw = true;
 			}
 
-			if (event.type == MotionNotify) {
-				/*  debug("[ X11 MotionNotify: %i,%i ]\n",
-				    event.xmotion.x, event.xmotion.y);  */
+			if (event.type == MotionNotify && mouseExplicityMoved) {
+				// debugmsg(SUBSYS_X11, "event", VERBOSITY_WARNING,
+				//    "mouse explicitly moved to screen center; ignored.");
 
-				/*  Which window in which machine in
-				    which emulation?  */
-				found = -1;
-				for (j=0; j<emul->n_machines; j++) {
-					struct machine *m2 = emul->machines[j];
-					for (i=0; i<m2->x11_md.
-					    n_fb_windows; i++)
-						if (m->x11_md.
-						    fb_windows[fb_nr]->
-						    x11_display == m2->
-						    x11_md.
-						    fb_windows[i]->
-						    x11_display &&
-						    event.xmotion.
-						    window == m2->
-						    x11_md.
-						    fb_windows[i]->
-						    x11_fb_window)
-							found = i;
+				mouseExplicityMoved = false;
+
+				mouseXofLastEvent = event.xmotion.x;
+				mouseYofLastEvent = event.xmotion.y;
+
+			} else if (event.type == MotionNotify) {
+				// debugmsg(SUBSYS_X11, "event", VERBOSITY_WARNING,
+				//    "mouse moved to %i, %i",
+				//    event.xmotion.x, event.xmotion.y);
+
+				int dx = event.xmotion.x - mouseXofLastEvent;
+				int dy = event.xmotion.y - mouseYofLastEvent;
+
+				mouseXofLastEvent = event.xmotion.x;
+				mouseYofLastEvent = event.xmotion.y;
+
+				if (grabbed == fbwin && (dx != 0 || dy != 0)) {
+					// debugmsg(SUBSYS_X11, "event", VERBOSITY_WARNING,
+					//    "mouse moved dx %i, %i", dx, dy);
+
+					dx *= fbwin->scaledown;
+					dy *= fbwin->scaledown;
+					console_mouse_coordinate_update(dx, dy, fb_nr);
+
+					// Hack for keeping the mouse pointer away
+					// from the edges of the screen.
+					Window xqpWindow;
+					int rootx, rooty, x, y;
+					unsigned int mask;
+					int res = XQueryPointer(fbwin->x11_display,
+					    RootWindow(fbwin->x11_display, DefaultScreen(fbwin->x11_display)),
+					    &xqpWindow,
+					    &xqpWindow, &rootx, &rooty, &x, &y,
+					    &mask);
+
+					Screen *screen = XDefaultScreenOfDisplay(fbwin->x11_display);
+
+					int w = XWidthOfScreen(screen);
+					int h = XHeightOfScreen(screen);
+					int x1 = w * 1 / 5;
+					int y1 = h * 1 / 5;
+					int x2 = w * 4 / 5;
+					int y2 = h * 4 / 5;
+
+					if (res == True && (rootx < x1 || rooty < y1
+					    || rootx >= x2 || rooty >= y2))
+						mouseMouseToCenterOfScreen(fbwin);
 				}
-				if (found < 0) {
-					printf("Internal error in x11.c.\n");
-					exit(1);
-				}
-				console_mouse_coordinates(event.xmotion.x *
-				    m->x11_md.fb_windows[found]->scaledown,
-				    event.xmotion.y * m->x11_md.fb_windows[
-				    found]->scaledown, found);
 			}
 
 			if (event.type == ButtonPress) {
@@ -638,7 +758,9 @@ static void x11_check_events_machine(struct emul *emul, struct machine *m)
 				    event.xbutton.button);  */
 				/*  button = 1,2,3 = left,middle,right  */
 
-				console_mouse_button(event.xbutton.button, 1);
+				// TODO: console_mouse_button with multiple machines?!
+				if (grabbed == fbwin)
+					console_mouse_button(event.xbutton.button, 1);
 			}
 
 			if (event.type == ButtonRelease) {
@@ -646,7 +768,26 @@ static void x11_check_events_machine(struct emul *emul, struct machine *m)
 				    event.xbutton.button);  */
 				/*  button = 1,2,3 = left,middle,right  */
 
-				console_mouse_button(event.xbutton.button, 0);
+				// TODO: console_mouse_button with multiple machines?!
+				if (grabbed == fbwin)
+					console_mouse_button(event.xbutton.button, 0);
+
+				grab(fbwin);
+			}
+
+			if (event.type==KeyRelease) {
+				XKeyPressedEvent *ke = &event.xkey;
+				int x = ke->keycode;
+				switch (x) {
+					case 37:left_ctrl = false;
+						break;
+					case 64:left_alt = false;
+						break;
+					//default:
+						// 37 = left CTRL, 64 = left ALT
+						//debugmsg(SUBSYS_X11, "event", VERBOSITY_DEBUG,
+						//    "RELEASE: unimplemented keycode %i", x);
+				}
 			}
 
 			if (event.type==KeyPress) {
@@ -823,9 +964,19 @@ static void x11_check_events_machine(struct emul *emul, struct machine *m)
 						console_makeavail(m->
 						    main_console_handle, '~');
 						break;
-					default:
-						debugmsg(SUBSYS_X11, "event", VERBOSITY_DEBUG,
-						    "unimplemented keycode %i", x);
+
+					case 37:left_ctrl = true;
+						if (left_ctrl && left_alt)
+							ungrab();
+						break;
+					case 64:left_alt = true;
+						if (left_ctrl && left_alt)
+							ungrab();
+						break;
+
+					//default:
+						//debugmsg(SUBSYS_X11, "event", VERBOSITY_DEBUG,
+						//    "unimplemented keycode %i", x);
 					}
 				}
 			}

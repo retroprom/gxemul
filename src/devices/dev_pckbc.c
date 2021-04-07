@@ -106,8 +106,6 @@ struct pckbc_data {
 	unsigned	key_queue[2][MAX_8042_QUEUELEN];
 	int		head[2], tail[2];
 
-	int		mouse_x;
-	int		mouse_y;
 	int		mouse_buttons;
 };
 
@@ -636,11 +634,10 @@ DEVICE_TICK(pckbc)
 	// Mouse input:
 	/*  Don't do mouse updates if we're running in serial console mode:  */
 	if (cpu->machine->x11_md.in_use && d->state[1] == STATE_NORMAL && d->scanning_enabled[1]) {
-		int mouse_x, mouse_y, mouse_buttons, mouse_fb_nr;
-		console_getmouse(&mouse_x, &mouse_y, &mouse_buttons, &mouse_fb_nr);
+		int xdelta, ydelta, mouse_buttons, mouse_fb_nr;
+		console_getmouse(&xdelta, &ydelta, &mouse_buttons, &mouse_fb_nr);
 
-		int xdelta = mouse_x - d->mouse_x;
-		int ydelta = d->mouse_y - mouse_y;	// note: inverted
+		ydelta = 0 - ydelta;
 
 		const int m = 100;
 
@@ -655,8 +652,6 @@ DEVICE_TICK(pckbc)
 
 		/*  Only send update if there is an actual diff.  */
 		if (xdelta != 0 || ydelta != 0 || d->mouse_buttons != mouse_buttons) {
-			d->mouse_x = mouse_x;
-			d->mouse_y = mouse_y;
 			d->mouse_buttons = mouse_buttons;
 
 			// See "The default protocol" at

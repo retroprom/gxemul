@@ -33,6 +33,9 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 <b><a name="shortlist">Current "short-list" (unsorted)</a></b>
 
 <p><pre>
+<font color="blue">X11:</font>
+	o) test with multiple host displays? ssh with X11 forwarding from laptop?
+
 <font color="blue">debugmsg-related and non-exit(1) stuff (mostly):</font>
 	o) "verb all 3" output does not look nice. prints headers multiple times.
 	o) src/cpu/:
@@ -44,7 +47,11 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 		   break-into-the-debugger constructs.
 	o) src/net/:
 		o) debugmsg:ify all src/net/.
-	o) Add an example of the "verbosity" command to the Debugger section of the documentation?
+	o) Add an example of the "verbosity" command to the Debugger section of
+		the documentation?
+		Or wait until breakpoints are implemented?
+		e.g. verbosity disk debug		<-- print all messages, but
+		     breakpoint subsystem disk warn	<-- break only for warn and error.
 
 <font color="blue">Build problems:</font>
 	o) Building a default build on my Linux machine currently fails with duplicate definitions from
@@ -57,12 +64,12 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 		Failed to compile X11 test program. Configuring without X11.
 	   Investigate this!
 
-<font color="blue">Release 0.7.0 related:</font>
-	o) Try all guest OSes in the documentation, cleaning up debugmsg related stuff as I go along.
-	o) update doc/*html wherever startup messages appear to show the current message style.
-	o) update Thanks list
-
 <font color="blue">Misc.:</font>
+	o) Try all guest OSes in the documentation, cleaning up debugmsg related stuff as I go along.
+	o) bare and test i960 and riscv machines.
+	o) Expect-script for launching OpenBSD/luna88k from a disk image, boot up,
+		log in as root, possibly do something more that is CPU intense,
+		then break. Print resulting time. (Useful for performance stuff.)
 	o) Instead of doing cpu->running = 0 in some places, and foreach cpu in the machine
 		in some other places, then the main emul loop should check if ANY
 		cpu goes from running to non-running, and treat that as a reason to
@@ -91,6 +98,11 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 <b><a name="cpu">CPU related</a></b>
 <pre>
 Dyntrans / general:
+	o)  Idling:
+		o)  How about showing "has_been_idling" in the status printout?
+			Consider removing has_been_idling alltogether? (now that the
+			number of cycles is kept low...)
+		o)  Turn some "chars" into "bools".
 	x)  SMP: INVALIDATION should cause translations in _all_ cpus to be
 	    invalidated in the machine, e.g. on a write to a write-protected page
 	    (containing code)
@@ -203,6 +215,11 @@ i960:
 	x. bout file loader?
 	x. uCLinux: CycloneVH machine for running uCLinux/i960?
 	x. uCLinux: http://www.ibiblio.org/lou/old/ViewStation/ ?
+
+M88K:
+	o)  Instruction combinations for:
+		memset, memcpy, memmove, strlen, bzero?
+	o)  OpenBSD/luna88k idle loop => detect and idle the host.
 
 MIPS:
 	o) Double-check R10000 vs R4400 TLB specifics:
@@ -380,7 +397,6 @@ HPCmips:
 LUNA-88K:
 	autoboot of OpenBSD: boot_unit and boot_partition in NVRAM should be
 		set to the actual boot device; currently hardcoded to 0,0.
-	OpenBSD idle loop => detect if possible and idle the host.
 	luna88k bootblock loader:
 		o load binary from UFS filesystem (i.e. a partition given by an
 			offset into a disk image).
@@ -393,7 +409,9 @@ LUNA-88K:
 	Cursor keys in the graphical framebuffer window? (Works with pckbd for SGI?)
 	separate out some devices into their own files? (reuse TOD clock for example)
 	Front-side LED panel
-	SMP stability
+	SMP stability: possibly instabilities are related to clearing
+		translation cache on page writes (for ALL cpus, not just the
+		one doing the page write).
 	LUNA-88K2 machine: check OpenBSD source code to see where there are
 		differences in devices and registers etc.
 
@@ -401,6 +419,9 @@ Malta:
 	o)  Try FreeBSD/malta: https://wiki.freebsd.org/FreeBSD/MipsEmulation
 	o)  Malta can perhaps have up to 2 GB RAM? Try same hack as for the SGI O2.
 	o)  Reconfigurable PCI memory space would be nice (just like SGI O2).
+
+MVME88K / mvme187:
+	OpenBSD 4.5 works ok with -x, but interrupts are lost (?) when not using -x.
 
 PReP:
 	x)  Clock time! ("Bad battery blah blah")
@@ -664,17 +685,6 @@ PCI:
 	x)  generalize the interrupt routing stuff (lines etc)
 
 X-windows and Framebuffer functionality in general:
-	o) Experiment with Mouse capture for X11 windows?
-		XGrabPointer?
-			grab window = same as confine to?
-			owner events = false?
-			confine to = the window.
-			cursor = none (since the guest OS shows its own)
-			time = ?
-			GrabSuccess / GrabNotViewable / ?
-		XGrabKeyboard too?
-		Release using left CTRL+ALT?
-		Change window title during capture.
 	o)  Change window title in X11 windows for machines that have all cpus halted?
 	o)  Do a complete rewrite of the framebuffer/console stuff, so that:
 		1)  It does not rely on X11 specifically.
