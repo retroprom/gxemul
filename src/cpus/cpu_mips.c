@@ -1730,7 +1730,7 @@ void mips_cpu_exception(struct cpu *cpu, int exccode, int tlb, uint64_t vaddr,
 		 *  the instruction following the wait instruction be the one
 		 *  we continue at when the interrupt service routine returns.
 		 */
-		cpu->is_halted = 0;
+		cpu->is_halted = false;
 		cpu->pc += sizeof(uint32_t);
 
 		debugmsg_cpu(cpu, SUBSYS_CPU, "wakeup", VERBOSITY_DEBUG,

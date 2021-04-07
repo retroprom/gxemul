@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2020  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -2321,29 +2321,19 @@ X(idle)
 	if (status & STATUS_IE && (status & cause & STATUS_IM_MASK))
 		return;
 
+	// Sync pc:
+	int low_pc = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page)
+	    / sizeof(struct mips_instr_call);
+	cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)
+	    << MIPS_INSTR_ALIGNMENT_SHIFT);
+	cpu->pc += (low_pc << MIPS_INSTR_ALIGNMENT_SHIFT);
+
 	cpu->cd.mips.next_ic = ic;
-	cpu->is_halted = 1;
-	cpu->has_been_idling = 1;
+	cpu->is_halted = true;
 
-	/*
-	 *  There was no interrupt. Go to sleep.
-	 *
-	 *  TODO:
-	 *
-	 *  Think about how to actually implement this usleep stuff,
-	 *  in an SMP and/or timing accurate environment.
-	 */
-
-	if (cpu->machine->ncpus == 1) {
-		static int x = 0;
-
-		if ((++x) == 300) {
-			usleep(20);
-			x = 0;
-		}
-
-		cpu->n_translated_instrs += N_SAFE_DYNTRANS_LIMIT / 6;
-	}
+	cpu->wants_to_idle = true;
+	cpu->n_translated_instrs += N_DYNTRANS_IDLE_BREAK;
+	cpu->cd.mips.next_ic = &nothing_call;
 }
 
 

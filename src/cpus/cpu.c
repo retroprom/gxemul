@@ -455,7 +455,7 @@ void cpu_show_cycles(struct machine *machine, bool forced)
 
 	if (cpu->has_been_idling) {
 		printf("; idling");
-		cpu->has_been_idling = 0;
+		cpu->has_been_idling = false;
 	} else
 		printf("; i/s=%" PRIi64" avg=%" PRIi64, is, avg);
 

@@ -652,15 +652,13 @@ void machine_default_cputype(struct machine *m)
 bool machine_run(struct machine *machine)
 {
 	struct cpu **cpus = machine->cpus;
-	int ncpus = machine->ncpus, cpu0instrs = 0;
+	int ncpus = machine->ncpus;
 	bool any_running = false;
 
 	for (int i=0; i<ncpus; i++) {
 		if (cpus[i]->running) {
 			any_running = true;
-			int instrs_run = cpus[i]->run_instr(cpus[i]);
-			if (i == 0)
-				cpu0instrs += instrs_run;
+			cpus[i]->run_instr(cpus[i]);
 		}
 	}
 
@@ -670,22 +668,24 @@ bool machine_run(struct machine *machine)
 	/*
 	 *  Hardware 'ticks':  (clocks, interrupt sources...)
 	 *
-	 *  Here, cpu0instrs is the number of instructions executed on cpu0.
+	 *  This assumes that the CPUs ran approximately N_SAFE_DYNTRANS_LIMIT
+	 *  instructions (or "ticks") in the core dyntrans loop.
 	 *
 	 *  TODO: This should be redesigned into some "mainbus" stuff instead!
 	 */
 
 	for (int te=0; te<machine->tick_functions.n_entries; te++) {
-		machine->tick_functions.ticks_till_next[te] -= cpu0instrs;
+		machine->tick_functions.ticks_till_next[te] -=
+		    single_step ? 1 : N_SAFE_DYNTRANS_LIMIT;
+
 		if (machine->tick_functions.ticks_till_next[te] <= 0) {
 			while (machine->tick_functions.ticks_till_next[te]<=0) {
 				machine->tick_functions.ticks_till_next[te] +=
-				    machine->tick_functions.
-				    ticks_reset_value[te];
-			}
+				    machine->tick_functions.ticks_reset_value[te];
 
-			machine->tick_functions.f[te](cpus[0],
-			    machine->tick_functions.extra[te]);
+				machine->tick_functions.f[te](cpus[0],
+			    	    machine->tick_functions.extra[te]);
+			}
 		}
 	}
 

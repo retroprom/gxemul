@@ -91,29 +91,13 @@ X(sleep)
 	    < cpu->cd.sh.int_level)
 		return;
 
+	SYNCH_PC;
 	cpu->cd.sh.next_ic = ic;
-	cpu->is_halted = 1;
-	cpu->has_been_idling = 1;
+	cpu->is_halted = true;
 
-	/*
-	 *  There was no interrupt. Let the host sleep for a while.
-	 *
-	 *  TODO:
-	 *
-	 *  Think about how to actually implement this usleep stuff,
-	 *  in an SMP and/or timing accurate environment.
-	 */
-
-	if (cpu->machine->ncpus == 1) {
-		static int x = 0;
-
-		if ((++x) == 600) {
-			usleep(10);
-			x = 0;
-		}
-
-		cpu->n_translated_instrs += N_SAFE_DYNTRANS_LIMIT / 6;
-	}
+	cpu->wants_to_idle = true;
+	cpu->n_translated_instrs += N_DYNTRANS_IDLE_BREAK;
+	cpu->cd.sh.next_ic = &nothing_call;
 }
 
 

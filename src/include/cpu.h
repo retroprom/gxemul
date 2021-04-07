@@ -328,6 +328,8 @@ struct cpu_family {
 #define	N_SAFE_DYNTRANS_LIMIT_SHIFT	14
 #define	N_SAFE_DYNTRANS_LIMIT	((1 << (N_SAFE_DYNTRANS_LIMIT_SHIFT - 1)) - 1)
 
+#define	N_DYNTRANS_IDLE_BREAK		N_SAFE_DYNTRANS_LIMIT
+
 #define	MAX_DYNTRANS_READAHEAD		128
 
 #define	DEFAULT_DYNTRANS_CACHE_SIZE	(96*1048576)
@@ -410,6 +412,12 @@ struct cpu {
 	int		trace_tree_depth;
 
 	/*
+	 *  If wants_to_idle is true, then N_DYNTRANS_IDLE_BREAK is assumed
+	 *  to have been added to n_translated_instructions and should
+	 *  thus be subtracted when the dyntrans loop exits. An attempt is
+	 *  then made to "idle the host", if all running CPUs in all
+	 *  machines want to idle at the same time.
+	 *
 	 *  If is_halted is true when an interrupt trap occurs, the pointer
 	 *  to the next instruction to execute will be the instruction
 	 *  following the halt instruction, not the halt instrucion itself.
@@ -418,8 +426,9 @@ struct cpu {
 	 *  instructions per second, "idling" is printed instead. (The number
 	 *  of instrs per second when idling is meaningless anyway.)
 	 */
-	char		is_halted;
-	char		has_been_idling;
+	bool		wants_to_idle;
+	bool		is_halted;
+	bool		has_been_idling;
 
 	/*
 	 *  Dynamic translation:

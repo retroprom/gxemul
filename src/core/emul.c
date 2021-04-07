@@ -898,11 +898,39 @@ void emul_run(struct emul *emul)
 	 *
 	 *  TODO:
 	 *	Rewrite the X11/console flush to use a timer (?).
-	 *	General guest-OS idling support should be here somewhere.
 	 */
 	while (!emul_shutdown) {
 		struct cpu *bootcpu = emul->machines[0]->cpus[
 		    emul->machines[0]->bootstrap_cpu];
+
+		bool idling = true;
+		for (int i = 0; i < emul->n_machines; ++i) {
+			for (int j = 0; j < emul->machines[i]->ncpus; ++j) {
+				if (emul->machines[i]->cpus[j]->running &&
+				    !emul->machines[i]->cpus[j]->wants_to_idle)
+					idling = false;
+			}
+		}
+
+		if (idling) {
+			x11_check_event(emul);
+			console_flush();
+
+			if (false) { //console_any_input_available()) {
+				debugmsg(SUBSYS_EMUL, "idle", VERBOSITY_DEBUG, "not idling; console input");
+			} else {
+				debugmsg(SUBSYS_EMUL, "idle", VERBOSITY_DEBUG, "idling the host processor...");
+
+				// Attempt to "idle the host", by sleeping for a short while.
+				// usleep() may return EINTR, if a signal was just delivered.
+				// In that case, naively try again once.
+				if (usleep(500) != 0) {
+					debugmsg(SUBSYS_EMUL, "idle", VERBOSITY_DEBUG, "usleep() interrupted once. retrying.");
+					if (usleep(500) != 0)
+						debugmsg(SUBSYS_EMUL, "idle", VERBOSITY_DEBUG, "usleep() interrupted twice! not retrying.");
+				}
+			}
+		}
 
 		/*  Flush X11 and serial console output every now and then:  */
 		if (bootcpu->ninstrs > bootcpu->ninstrs_flush + (1<<19)) {

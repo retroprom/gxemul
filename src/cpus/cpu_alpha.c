@@ -33,10 +33,11 @@
  *  on instruction formats etc.
  */
 
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
+#include <unistd.h>
 
 #include "cpu.h"
 #include "interrupt.h"

@@ -1872,9 +1872,8 @@ X(idle)
 
 	if (v == 0) {
 		SYNCH_PC;
-		usleep(1000);
-		cpu->has_been_idling = 1;
-		cpu->n_translated_instrs += N_SAFE_DYNTRANS_LIMIT / 2;
+		cpu->wants_to_idle = true;
+		cpu->n_translated_instrs += N_DYNTRANS_IDLE_BREAK;
 		cpu->cd.m88k.next_ic = &nothing_call;
 	} else {
 		cpu->n_translated_instrs ++;
@@ -1914,9 +1913,8 @@ X(idle_with_tb1)
 
 	if (v == 0) {
 		SYNCH_PC;
-		usleep(1000);
-		cpu->has_been_idling = 1;
-		cpu->n_translated_instrs += N_SAFE_DYNTRANS_LIMIT / 2;
+		cpu->wants_to_idle = true;
+		cpu->n_translated_instrs += N_DYNTRANS_IDLE_BREAK;
 		cpu->cd.m88k.next_ic = &nothing_call;
 	} else {
 		cpu->n_translated_instrs += 2;

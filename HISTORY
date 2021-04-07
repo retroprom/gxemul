@@ -5026,3 +5026,5 @@ Changelog for GXemul:
 		to boot from disk without asking for root and swap partitions.
 		Adding 'R' (upper-case) disk image prefix, as a shorthand for
 		creating temporary overlays.
+20210407	Code for idling the host processor has been moved out from
+		individual CPU implementations to the main emul loop.

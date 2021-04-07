@@ -658,7 +658,7 @@ void sh_exception(struct cpu *cpu, int expevt, int intevt, uint32_t vaddr)
 		 *  where execution resumes when the interrupt service routine
 		 *  returns.
 		 */
-		cpu->is_halted = 0;
+		cpu->is_halted = false;
 		cpu->pc += sizeof(uint16_t);
 	}
 

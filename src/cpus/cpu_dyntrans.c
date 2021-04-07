@@ -190,6 +190,8 @@ int DYNTRANS_RUN_INSTR_DEF(struct cpu *cpu)
 	DYNTRANS_PC_TO_POINTERS(cpu);
 #endif
 
+	cpu->wants_to_idle = false;
+
 	/*
 	 *  Interrupt assertion?  (This is _below_ the initial PC to pointer
 	 *  conversion; if the conversion caused an exception of some kind
@@ -334,10 +336,8 @@ int DYNTRANS_RUN_INSTR_DEF(struct cpu *cpu)
 			S; I; S; I; S; I; S; I; S; I; S; I;
 			S; I; S; I; S; I; S; I; S; I; S; I;
 
-			n_instrs += 24;
-
-			if (n_instrs + cpu->n_translated_instrs >=
-			    N_SAFE_DYNTRANS_LIMIT)
+			cpu->n_translated_instrs += 24;
+			if (cpu->n_translated_instrs >= N_SAFE_DYNTRANS_LIMIT)
 				break;
 		}
 	} else {
@@ -371,6 +371,22 @@ int DYNTRANS_RUN_INSTR_DEF(struct cpu *cpu)
 			if (cpu->n_translated_instrs >= N_SAFE_DYNTRANS_LIMIT)
 				break;
 		}
+	}
+
+	if (cpu->wants_to_idle) {
+		cpu->n_translated_instrs -= N_DYNTRANS_IDLE_BREAK;
+
+		// TODO: More arch specific interrupt checks
+		if (false
+#ifdef DYNTRANS_M88K
+		    || (cpu->cd.m88k.irq_asserted && !(cpu->cd.m88k.cr[M88K_CR_PSR] & M88K_PSR_IND))
+#endif
+		    ) {
+			debugmsg_cpu(cpu, SUBSYS_CPU, "idle", VERBOSITY_DEBUG, "not idling; exception");
+			cpu->wants_to_idle = false;
+		}
+
+		cpu->has_been_idling = true;
 	}
 
 	n_instrs += cpu->n_translated_instrs;

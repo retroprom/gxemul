@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2019  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -2029,8 +2029,6 @@ X(netbsd_idle)
 	}
 
 	if (rZ == 0) {
-		static int x = 0;
-
 		/*  Synch the program counter.  */
 		uint32_t low_pc = ((size_t)ic - (size_t)
 		    cpu->cd.arm.cur_ic_page) / sizeof(struct arm_instr_call);
@@ -2038,14 +2036,8 @@ X(netbsd_idle)
 		    << ARM_INSTR_ALIGNMENT_SHIFT);
 		cpu->pc += (low_pc << ARM_INSTR_ALIGNMENT_SHIFT);
 
-		/*  Quasi-idle for a while:  */
-		cpu->has_been_idling = 1;
-	        if (cpu->machine->ncpus == 1 && (++x) == 100) {
-			usleep(50);
-			x = 0;
-		}
-
-		cpu->n_translated_instrs += N_SAFE_DYNTRANS_LIMIT / 6;
+		cpu->wants_to_idle = true;
+		cpu->n_translated_instrs += N_DYNTRANS_IDLE_BREAK;
 		cpu->cd.arm.next_ic = &nothing_call;
 		return;
 	}
