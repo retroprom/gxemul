@@ -5033,3 +5033,5 @@ Changelog for GXemul:
 		using left CTRL + ALT. When grab is active, the host mouse
 		cursor is hidden and the window caption changes to indicate
 		that grab is active.
+20210408	Implementing an unusual 88K "not_maxneg_nor_zero" bcnd
+		condition.
