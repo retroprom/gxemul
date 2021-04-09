@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2020  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -98,10 +98,9 @@ void REDRAW(struct vfb_data *d, int addr, int len)
 	y = pixel / d->xsize;
 	x = pixel % d->xsize;
 
-	/*  How many framebuffer pixels?  */
+	/*  How many framebuffer pixels? (len doesn't include the last pixel)  */
 	npixels = len * 8 / d->bit_depth;
-	if (npixels == 0)
-		npixels = 1;
+	npixels += d->bit_depth >= 8 ? 1 : (8 / d->bit_depth);
 
 	if (d->bit_depth < 8) {
 		for (pixel=0; pixel<npixels; pixel++) {
@@ -113,7 +112,7 @@ void REDRAW(struct vfb_data *d, int addr, int len)
 			fb_addr &= 7;
 
 			/*  HPC is reverse:  */
-			if (d->vfb_type == VFB_HPC)
+			if (d->vfb_type == VFB_HPC || d->vfb_type == VFB_REVERSEBITS)
 				fb_addr = 8 - d->bit_depth - fb_addr;
 
 			c = (c >> fb_addr) & ((1<<d->bit_depth) - 1);
@@ -241,7 +240,7 @@ void REDRAW(struct vfb_data *d, int addr, int len)
 				fb_addr &= 7;
 
 				/*  HPC is reverse:  */
-				if (d->vfb_type == VFB_HPC)
+				if (d->vfb_type == VFB_HPC || d->vfb_type == VFB_REVERSEBITS)
 					fb_addr = 8 - d->bit_depth - fb_addr;
 
 				c = (c >> fb_addr) & ((1<<d->bit_depth) - 1);

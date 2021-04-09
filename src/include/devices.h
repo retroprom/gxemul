@@ -193,6 +193,7 @@ void dev_decxmi_init(struct memory *mem, uint64_t baseaddr);
 #define	VFB_DEC_VFB02		3
 #define	VFB_DEC_MAXINE		4
 #define	VFB_PLAYSTATION2	5
+#define	VFB_REVERSEBITS		6
 /*  Extra flags:  */
 #define	VFB_REVERSE_START	0x10000
 struct vfb_data {

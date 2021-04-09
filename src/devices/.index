@@ -48,6 +48,7 @@ dev_lca.c  LCA PCI bus, for Alpha machines
 dev_le.c  LANCE ethernet, as used in DECstations
 dev_lpt.c  LPT (parallel printer) controller
 dev_luna88k.c  OMRON Luna 88K-specific devices and control registers
+dev_lunafb.c  LUNA framebuffer
 dev_m8820x.c  M88200/M88204 CMMU (Cache/Memory Management Unit)
 dev_malta_lcd.c  Malta (evbmips) LCD display
 dev_mb8696x.c  Fujitsu MB8696x Ethernet interface (used in the Dreamcast)

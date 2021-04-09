@@ -42,12 +42,11 @@
  *  Things that are NOT implemented yet:
  *	LUNA-88K2 specifics. (Some registers are at different addresses etc.)
  *	Parallel I/O
- *	Front LCD display
+ *	Front LCD display (half-implemented but output not shown anywhere)
  *	Color framebuffer
  *
  *  TODO: Separate out some devices to their own files:
  *	x) so that they can potentially be reused for a luna68k mode
- *	x) better framebuffer performance!
  *	x) sio seems similar to scc?
  *	x) the clock is similar to other clock chips?
  */
@@ -77,7 +76,7 @@
 #define	LUNA88K_PSEUDO_TIMER_HZ	100.0
 
 #define	LUNA88K_REGISTERS_BASE		0x3ffffff0UL
-#define	LUNA88K_REGISTERS_END		0xd2000000UL
+#define	LUNA88K_REGISTERS_END		BMAP_START
 #define	LUNA88K_REGISTERS_LENGTH	(LUNA88K_REGISTERS_END - LUNA88K_REGISTERS_BASE)
 
 #define	MAX_CPUS	4
@@ -88,8 +87,6 @@
 
 
 struct luna88k_data {
-	struct vfb_data *fb;
-
 	struct interrupt cpu_irq[MAX_CPUS];
 	int		irqActive[MAX_CPUS];
 	uint32_t	interrupt_enable[MAX_CPUS];
@@ -100,6 +97,14 @@ struct luna88k_data {
 	struct timer	*timer;
 	int		pending_timer_interrupts;
 	struct interrupt timer_irq;
+
+	bool		using_framebuffer;
+
+	/*  LCD at PIO port 1:  */
+	uint8_t		lcd[40 * 2];
+	uint8_t		pio1c;
+	int		lcd_x;
+	int		lcd_y;
 
 	/*  sio: Serial controller, two channels.  */
 	int		console_handle;
@@ -252,12 +257,117 @@ static void luna88k_timer_tick(struct timer *t, void *extra)
 }
 
 
+int luna88k_lcd_access(struct luna88k_data *d, int writeflag, int idata)
+{
+	int odata = 0;
+
+	switch (d->pio1c) {
+
+	case 0x00:
+	case 0xb0:
+		// Ignore for now.
+		break;
+
+	case 0x90:	// "control"
+		if (writeflag && ((idata & 0xc0) == 0xc0 || (idata & 0xc0) == 0x80)) {
+			d->lcd_x = idata & 0x0f;
+			d->lcd_y = idata & 0x40 ? 1 : 0;
+		} else if (writeflag) {
+			switch (idata) {
+
+			case 0x01:
+				// CLS
+				memset(d->lcd, ' ', sizeof(d->lcd));
+				d->lcd_x = 0;
+				d->lcd_y = 0;
+				break;
+
+			case 0x02:
+				// HOME
+				d->lcd_x = 0;
+				d->lcd_y = 0;
+				break;
+
+			case 0x06:
+				// ENTRY
+				break;
+
+			case 0x0c:
+				// ON
+				break;
+
+			case 0x38:
+				// INIT
+				break;
+
+			default:
+				debugmsg(SUBSYS_DEVICE, "luna88k", VERBOSITY_WARNING,
+			    	    "unimplemented LCD CONTROL: 0x%x",
+				    (int) idata);
+			}
+		} else {
+			debugmsg(SUBSYS_DEVICE, "luna88k", VERBOSITY_WARNING,
+		    	    "unimplemented READ from PIO1A (pio1c = 0x%02x)",
+			    d->pio1c);
+		}
+		break;
+
+	case 0xd0:	// "data"
+		// I'm not sure if data can be _read_ like this, but at least
+		// writing works as intended.
+		if (writeflag)
+			d->lcd[d->lcd_x + 40 * d->lcd_y] = idata;
+		else
+			odata = d->lcd[d->lcd_x + 40 * d->lcd_y];
+
+		if (++ d->lcd_x == 40) {
+			d->lcd_x = 0;
+			d->lcd_y ^= 1;
+		}
+
+		if (writeflag) {
+			char tmp[100];
+			snprintf(tmp, sizeof(tmp), "LCD: |");
+
+			size_t b = strlen(tmp);
+
+			for (size_t i = 0; i < 16; ++i)
+				tmp[b + i] = d->lcd[i] >= ' ' && d->lcd[i] < 127 ? d->lcd[i] : ' ';
+
+			for (size_t i = 0; i < 16; ++i)
+				tmp[b + i + 16] = d->lcd[i+40] >= ' ' && d->lcd[i+40] < 127 ? d->lcd[i+40] : ' ';
+
+			tmp[b + 16*2] = '|';
+			tmp[b + 16*2 + 1] = 0;
+
+			debugmsg(SUBSYS_DEVICE, "luna88k", VERBOSITY_INFO, tmp);
+		}
+
+		break;
+
+	default:
+		if (writeflag == MEM_WRITE) {
+			debugmsg(SUBSYS_DEVICE, "luna88k", VERBOSITY_WARNING,
+		    	    "unimplemented WRITE to PIO1A: 0x%x (pio1c = 0x%02x)",
+			    (int) idata,
+			    d->pio1c);
+		} else
+			debugmsg(SUBSYS_DEVICE, "luna88k", VERBOSITY_WARNING,
+		    	    "unimplemented READ from PIO1A: 0x%x (pio1c = 0x%02x)",
+			    (int) odata,
+			    d->pio1c);
+	}
+
+	return odata;
+}
+
+
 DEVICE_TICK(luna88k)
 {
 	struct luna88k_data *d = (struct luna88k_data *) extra;
 
 	/*  Serial console:  */
-	if (d->fb == NULL) {
+	if (!d->using_framebuffer) {
 		 while (space_available_in_sio_queue(d, 0) > 2 &&
 		    console_charavail(d->console_handle)) {
 			int c = console_readchar(d->console_handle);
@@ -266,7 +376,7 @@ DEVICE_TICK(luna88k)
 	}
 
 	/*  Keyboard and mouse:  */
-	if (d->fb != NULL) {
+	if (d->using_framebuffer) {
 		while (space_available_in_sio_queue(d, 1) > 7 &&
 		    console_charavail(d->console_handle)) {
 			int c = console_readchar(d->console_handle);
@@ -429,23 +539,6 @@ DEVICE_TICK(luna88k)
 }
 
 
-static void swapBitOrder(uint8_t* data, int len)
-{
-	for (int bo = 0; bo < len; bo ++)
-	{
-		uint8_t b = (uint8_t)data[bo];
-		uint8_t c = 0x00;
-		for (int i = 0; i < 8; i++)
-		{
-			if (b & (128 >> i))
-				c |= (1 << i);
-		}
-
-		data[bo] = c;
-	}
-}
-
-
 DEVICE_ACCESS(luna88k)
 {
 	struct tm *tmp;
@@ -499,43 +592,6 @@ DEVICE_ACCESS(luna88k)
 		} else {
 			d->nvram[addr - NVRAM_ADDR_88K2] = idata;
 		}
-		return 1;
-	}
-
-	if (addr >= BMAP_BMP && addr < BMAP_BMP + 0x40000) {
-		// X resolution is 1280, but stride is 2048.
-		uint32_t s = 2048 * 1024 / 8;
-		addr -= (uint64_t)(uint32_t)(BMAP_BMP);
-		swapBitOrder(data, len);
-		if (addr + len - 1 < s) {
-			if (addr >= 8)
-				addr -= 8;
-			dev_fb_access(cpu, cpu->mem, addr, data, len, writeflag, d->fb);
-			swapBitOrder(data, len);
-			return 1;
-		}
-		else
-			return 1;
-	}
-
-	if (addr >= BMAP_BMAP0 && addr < BMAP_BMAP0 + 0x40000) {
-		// X resolution is 1280, but stride is 2048.
-		uint32_t s = 2048 * 1024 / 8;
-		addr -= (uint64_t)(uint32_t)(BMAP_BMAP0);
-		swapBitOrder(data, len);
-		if (addr + len - 1 < s) {
-			if (addr >= 8)
-				addr -= 8;
-			dev_fb_access(cpu, cpu->mem, addr, data, len, writeflag, d->fb);
-			swapBitOrder(data, len);
-			return 1;
-		}
-		else
-			return 1;
-	}
-
-	if (addr >= BMAP_PALLET2 && addr < BMAP_PALLET2 + 16) {
-		/*  Ignore for now.  */
 		return 1;
 	}
 
@@ -615,11 +671,20 @@ DEVICE_ACCESS(luna88k)
 		/*  TODO: Implement for real.  */
 		break;
 
-	case OBIO_PIO1A:	/*  0x4d000000: PIO-0 port A  */
-	case OBIO_PIO1B:	/*  0x4d000004: PIO-0 port B  */
-	case OBIO_PIO1C:	/*  0x4d000008: PIO-0 port C  */
-	case OBIO_PIO1:		/*  0x4d00000C: PIO-0 control  */
+	case OBIO_PIO1A:	/*  0x4d000000: PIO-1 port A  */
+		odata = luna88k_lcd_access(d, writeflag, idata);
+		break;
+
+	case OBIO_PIO1B:	/*  0x4d000004: PIO-1 port B  */
+	case OBIO_PIO1:		/*  0x4d00000C: PIO-1 control  */
 		/*  Ignore for now. (?)  */
+		break;
+
+	case OBIO_PIO1C:	/*  0x4d000008: PIO-1 port C  */
+		if (writeflag == MEM_WRITE)
+			d->pio1c = idata;
+		else
+			odata = d->pio1c;
 		break;
 
 	case OBIO_SIO + 0:	/*  0x51000000: data channel 0 */
@@ -793,36 +858,6 @@ DEVICE_ACCESS(luna88k)
 			cpu->machine->cpus[i]->running = 0;
 		break;
 
-	case BMAP_RFCNT:	/*  0xb1000000: RFCNT register  */
-		/*  video h-origin/v-origin, according to OpenBSD  */
-		/*  Ignore for now. (?)  */
-		break;
-
-	case BMAP_BMSEL:	/*  0xb1000000: BMSEL register  */
-		/*  Ignore for now. (?)  */
-		break;
-
-	case BMAP_BMAP1:	/*  0xb1100000: Bitmap plane 1  */
-		odata = 0xc0dec0de;
-		/*  Return dummy value. OpenBSD writes and reads to detect presence
-		    of bitplanes.  */
-		break;
-
-	case BMAP_FN + 4 * ROP_THROUGH:	/*  0xb12c0014: "common bitmap function"  */
-		/*  Function 5 is "ROP copy", according to OpenBSD sources.  */
-		/*  See hitachi_hm53462_rop.h  */
-		if (writeflag == MEM_READ) {
-			fatal("[ TODO: luna88k READ from BMAP_FN ROP register? ]\n");
-			cpu->running = 0;
-			return 0;
-		}
-		if (idata != 0xffffffff) {
-			fatal("[ TODO: luna88k write which does not set ALL bits? ]\n");
-			cpu->running = 0;
-			return 0;
-		}
-		break;
-
 	default:
 		if (writeflag == MEM_WRITE)
 			debugmsg_cpu(cpu, SUBSYS_DEVICE, "luna88k", VERBOSITY_ERROR,
@@ -902,6 +937,8 @@ DEVINIT(luna88k)
 			d->nvram[base + 4 * (32*si + 16 +i)] = v[si][i];
 	}
 
+	memset(d->lcd, ' ', sizeof(d->lcd));
+
 	memory_device_register(devinit->machine->memory, devinit->name,
 	    LUNA88K_REGISTERS_BASE, LUNA88K_REGISTERS_LENGTH, dev_luna88k_access, (void *)d,
 	    DM_DEFAULT, NULL);
@@ -956,12 +993,6 @@ DEVINIT(luna88k)
 	d->console_handle = console_start_slave(devinit->machine, "SIO", 1);
 	devinit->machine->main_console_handle = d->console_handle;
 
-	if (devinit->machine->x11_md.in_use) {
-		d->fb = dev_fb_init(devinit->machine, devinit->machine->memory,
-			0x100000000ULL + BMAP_BMAP0, VFB_GENERIC,
-			1280, 1024, 2048, 1024, 1, "LUNA 88K");
-	}
-
 	if (devinit->machine->ncpus > 4) {
 		printf("LUNA 88K can't have more than 4 CPUs.\n");
 		exit(1);
@@ -990,6 +1021,11 @@ DEVINIT(luna88k)
 
 	snprintf(n, sizeof(n), "mb89352 addr=0xE1000000 irq=%s.luna88k.3", devinit->interrupt_path);
 	device_add(devinit->machine, n);
+
+	if (devinit->machine->x11_md.in_use) {
+		d->using_framebuffer = true;
+		device_add(devinit->machine, "lunafb addr=0xB1000000");
+	}
 
 	return 1;
 }

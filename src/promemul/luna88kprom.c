@@ -73,7 +73,7 @@ void luna88kprom_init(struct machine *machine)
         store_32bit_word(cpu, 0x2044, 0xf400c001);	/*  jmp (r1)  */
   
         /*  0x00001114: Framebuffer depth  */
-        store_32bit_word(cpu, 0x1114, machine->x11_md.in_use ? 8 : 0);
+        store_32bit_word(cpu, 0x1114, machine->x11_md.in_use ? 1 : 0);
 }
 
 
