@@ -408,7 +408,10 @@ LUNA-88K:
 		for non-connected devices. (Just a warning though.)
 	Cursor keys in the graphical framebuffer window? (Works with pckbd for SGI?)
 	separate out some devices into their own files? (reuse TOD clock for example)
-	Front-side LED panel
+	Front-side LCD panel:
+		One idea is to make the framebuffer window taller, and show
+		the LCD text in the lower left-hand corner, in a way mimicing
+		a real machine.
 	SMP stability: possibly instabilities are related to clearing
 		translation cache on page writes (for ALL cpus, not just the
 		one doing the page write).
@@ -554,6 +557,8 @@ Breakpoints on subsystem messages?
 		Implement helper for these cases? cpu->running == 0 is just
 		one reason to break then.
 
+	breakpoints that just print hit count, rather than break?
+
 CD Image file support:
 	x)  Support CD formats that contain more than 1 track, e.g.
 	    CDI files (?). These can then contain a mixture of e.g. sound
@@ -589,6 +594,8 @@ Debugger:
 		e.g. "b sh" to mean "breakpoint show". Right now, "show" needs
 		to be written out in full.
 
+	"u pc+0x40" works but not "u pc + 0x40" with spaces!
+
 	More complex expressions, and Unit tests for them.
 
 	Extend the
@@ -615,6 +622,8 @@ Debugger:
 	"step call" ? running like single-step, but instead of one instruction, it
 		runs until the next function call (or function return)? (with implicit
 		function trace printout turned on...)
+
+	Tab completion for symbols? That would help...
 
 	CTRL-T is already supported when single-stepping.
 		o) Also support CTRL-T while executing in main emul loop?
@@ -685,6 +694,7 @@ PCI:
 	x)  generalize the interrupt routing stuff (lines etc)
 
 X-windows and Framebuffer functionality in general:
+	o)  Icon for X11 framebuffer windows?
 	o)  Change window title in X11 windows for machines that have all cpus halted?
 	o)  Do a complete rewrite of the framebuffer/console stuff, so that:
 		1)  It does not rely on X11 specifically.
