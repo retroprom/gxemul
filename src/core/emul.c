@@ -903,16 +903,19 @@ void emul_run(struct emul *emul)
 		struct cpu *bootcpu = emul->machines[0]->cpus[
 		    emul->machines[0]->bootstrap_cpu];
 
+		bool any_cpu_running = false;
 		bool idling = true;
 		for (int i = 0; i < emul->n_machines; ++i) {
 			for (int j = 0; j < emul->machines[i]->ncpus; ++j) {
-				if (emul->machines[i]->cpus[j]->running &&
-				    !emul->machines[i]->cpus[j]->wants_to_idle)
-					idling = false;
+				if (emul->machines[i]->cpus[j]->running) {
+					any_cpu_running = true;
+					if (!emul->machines[i]->cpus[j]->wants_to_idle)
+						idling = false;
+				}
 			}
 		}
 
-		if (idling) {
+		if (any_cpu_running && idling) {
 			x11_check_event(emul);
 			console_flush();
 
@@ -975,6 +978,7 @@ void emul_run(struct emul *emul)
 			}
 		}
 	}
+
 
 	/*  Stop any running timers:  */
 	timer_stop();
