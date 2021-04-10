@@ -325,7 +325,7 @@ if [ z$NOX11 = z ]; then
 		dis = XOpenDisplay(NULL);
 	}
 	int main(int argc, char *argv[])
-	{ return 0; }
+	{ printf(\"1\"); return 0; }
 	" > _test_x11.c
 
 	XOK=0
@@ -333,11 +333,13 @@ if [ z$NOX11 = z ]; then
 	XINCLUDE=-I/usr/X11R6/include
 	$CC $CFLAGS _test_x11.c -c -o _test_x11.o $XINCLUDE 2> /dev/null
 
-	XLIB="-L/usr/X11R6/lib -lX11"
+	XLIB="-L/usr/X11R6/lib -lX11 -Wl,-rpath,/usr/X11R6/lib"
 	$CC $CFLAGS _test_x11.o -o _test_x11 $XLIB 2> /dev/null
 
 	if [ -x _test_x11 ]; then
-		XOK=1
+		if [ 1 = `./_test_x11` ]; then
+			XOK=1
+		fi
 	fi
 
 	rm -f _test_x11 _test_x11.o
@@ -346,11 +348,13 @@ if [ z$NOX11 = z ]; then
 		XINCLUDE=-I/usr/X11R7/include
 		$CC $CFLAGS _test_x11.c -c -o _test_x11.o $XINCLUDE 2> /dev/null
 
-		XLIB="-L/usr/X11R7/lib -lX11"
+		XLIB="-L/usr/X11R7/lib -lX11 -Wl,-rpath,/usr/X11R7/lib"
 		$CC $CFLAGS _test_x11.o -o _test_x11 $XLIB 2> /dev/null
 
 		if [ -x _test_x11 ]; then
-			XOK=1
+			if [ 1 = `./_test_x11` ]; then
+				XOK=1
+			fi
 		fi
 	fi
 	rm -f _test_x11 _test_x11.o
@@ -359,11 +363,13 @@ if [ z$NOX11 = z ]; then
 		XINCLUDE=-I/usr/local/include
 		$CC $CFLAGS _test_x11.c -c -o _test_x11.o $XINCLUDE 2> /dev/null
 
-		XLIB="-L/usr/local/lib -lX11"
+		XLIB="-L/usr/local/lib -lX11 -Wl,-rpath,/usr/local/lib"
 		$CC $CFLAGS _test_x11.o -o _test_x11 $XLIB 2> /dev/null
 
 		if [ -x _test_x11 ]; then
-			XOK=1
+			if [ 1 = `./_test_x11` ]; then
+				XOK=1
+			fi
 		fi
 	fi
 	rm -f _test_x11 _test_x11.o
@@ -390,7 +396,9 @@ if [ z$NOX11 = z ]; then
 		$CC $CFLAGS _test_x11.o -o _test_x11 $XLIB 2> /dev/null
 
 		if [ -x _test_x11 ]; then
-			XOK=1
+			if [ 1 = `./_test_x11` ]; then
+				XOK=1
+			fi
 		fi
 	fi
 	rm -f _test_x11 _test_x11.o
@@ -404,21 +412,11 @@ if [ z$NOX11 = z ]; then
 		$CC $CFLAGS _test_x11.o -o _test_x11 $XLIB 2> /dev/null
 
 		if [ -x _test_x11 ]; then
-			XOK=1
+			if [ 1 = `./_test_x11` ]; then
+				XOK=1
+			fi
 		fi
 		rm -f _test_x11 _test_x11.o
-	fi
-
-	if [ z`uname` = zNetBSD ]; then
-		echo "Using NetBSD hack for X11 libs..."
-		XLIB="$XLIB -Wl,-rpath,/usr/X11R6/lib"
-	fi
-
-	if [ z`uname` = zOpenBSD ]; then
-		if [ z`uname -m` = zarc ]; then
-			echo "Using old OpenBSD/arc hack for X11 libs..."
-			XLIB="$XLIB -Wl,-rpath,/usr/X11R6/lib"
-		fi
 	fi
 
 	if [ z$XOK = z0 ]; then
