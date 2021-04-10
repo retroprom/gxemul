@@ -155,25 +155,44 @@ void riscv_cpu_list_available_types(void)
  */
 void riscv_cpu_register_dump(struct cpu *cpu, int gprs, int coprocs)
 {
-	char *symbol;
-	uint64_t offset;
-	int i, x = cpu->cpu_id;
-
 	if (gprs) {
-		symbol = get_symbol_name(&cpu->machine->symbol_context,
-		    cpu->pc, &offset);
-		debug("cpu%i:  pc  = 0x%08" PRIx32, x, (uint32_t)cpu->pc);
+		uint64_t offset;
+		const char *symbol = get_symbol_name(&cpu->machine->symbol_context, cpu->pc, &offset);
+
+		debug("cpu%i:  pc  = ", cpu->cpu_id);
+
+		if (cpu->is_32bit)
+			debug("0x%08" PRIx32, (uint32_t) cpu->pc);
+		else
+			debug("0x%016" PRIx64, (uint64_t) cpu->pc);
+
 		debug("  <%s>\n", symbol != NULL? symbol : " no symbol ");
 
-		for (i=0; i<N_RISCV_REGS; i++) {
-			if ((i % 4) == 0)
-				debug("cpu%i:", x);
-			if (i == 0)
-				debug("                  ");
-			else
-				debug("  x%-2i = 0x%08" PRIx32,
-				    i, cpu->cd.riscv.x[i]);
-			if ((i % 4) == 3)
+		int n_regs_per_line = cpu->is_32bit ? 4 : 2;
+
+		for (int i = 0; i < N_RISCV_REGS; i++) {
+			if ((i % n_regs_per_line) == 0)
+				debug("cpu%i:", cpu->cpu_id);
+
+			debug("  ");
+
+			if (i == 0) {
+				debug("      ");
+
+				if (cpu->is_32bit)
+					debug("          ");
+				else
+					debug("                  ");
+			} else {
+				debug("x%-2i = ", i);
+
+				if (cpu->is_32bit)
+					debug("0x%08" PRIx32, (uint32_t) cpu->cd.riscv.x[i]);
+				else
+					debug("0x%016" PRIx64, (uint64_t) cpu->cd.riscv.x[i]);
+			}
+
+			if ((i % n_regs_per_line) == n_regs_per_line-1)
 				debug("\n");
 		}
 	}
@@ -240,10 +259,87 @@ void riscv_exception(struct cpu *cpu, int vector, int is_trap)
 int riscv_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
         int running, uint64_t dumpaddr)
 {
-	debugmsg_cpu(cpu, SUBSYS_CPU, "", VERBOSITY_ERROR,
-	    "riscv_cpu_disassemble_instr(): TODO");
+	if (running)
+		dumpaddr = cpu->pc;
 
-	return sizeof(uint16_t);
+	uint64_t offset;
+	const char *symbol = get_symbol_name(&cpu->machine->symbol_context,
+	    dumpaddr, &offset);
+	if (symbol != NULL && offset == 0)
+		debug("<%s>\n", symbol);
+
+	if (cpu->machine->ncpus > 1 && running)
+		debug("cpu%i:\t", cpu->cpu_id);
+
+	if (cpu->is_32bit)
+		debug("%08" PRIx32": ", (uint32_t) dumpaddr);
+	else
+		debug("%016" PRIx64": ", (uint64_t) dumpaddr);
+
+	int instr_length_in_bytes = sizeof(uint16_t);
+	uint32_t iw;
+
+	if (cpu->byte_order == EMUL_LITTLE_ENDIAN)
+		iw = ib[0] + (ib[1]<<8);
+	else
+		iw = ib[1] + (ib[0]<<8);
+
+	if ((iw & 3) == 3) {
+		// At least 2 16-bit chunks.
+		uint16_t iw2;
+		if (cpu->byte_order == EMUL_LITTLE_ENDIAN)
+			iw2 = ib[2] + (ib[3]<<8);
+		else
+			iw2 = ib[3] + (ib[2]<<8);
+
+		iw |= (iw2 << 16);
+
+		if (((iw >> 2) & 7) == 7) {
+			debug("longer than 32-bit instruction: TODO\n");
+			return sizeof(uint32_t);	// actually wrong... :-(
+		}
+
+		instr_length_in_bytes = sizeof(uint32_t);
+	}
+
+	if (instr_length_in_bytes == sizeof(uint16_t))
+		debug("%04x    ", (uint32_t) iw);
+	else
+		debug("%08" PRIx32, (uint32_t) iw);
+
+	debug(!running && cpu->pc == dumpaddr ? " <- " : "    ");
+
+	if (instr_length_in_bytes == sizeof(uint16_t)) {
+		uint w13 = (iw >> 13) & 7;
+		uint w0 = (iw >> 0) & 3;
+		uint op = (w13 << 2) | w0;
+
+		uint rs1rd = (iw >> 7) & 31;
+		uint64_t nzimm5 = ((iw & (1 << 12)) ? -1 : 0) << 5;
+		uint64_t nzimm = nzimm5 | ((iw >> 2) & 31);
+
+		switch (op) {
+		case 1:
+			if (rs1rd == 0 && nzimm == 0)
+				debug("nop");
+			else if (rs1rd == 0)
+				debug("c.addi\tTODO: rs1rd = 0 but nzimm = %lli?", (long long) nzimm);
+			else
+				debug("c.addi\tTODO reg %i, %lli", rs1rd, (long long) nzimm);
+			break;
+		default:
+			debug("UNIMPLEMENTED compressed op %i", op);
+		}
+
+	} else if (instr_length_in_bytes == sizeof(uint32_t)) {
+		debug("TODO: 32-bit wide instruction words");
+	} else {
+		debug("TODO");
+	}
+	
+	debug("\n");
+
+	return instr_length_in_bytes;
 }
 
 

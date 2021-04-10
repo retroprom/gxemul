@@ -637,6 +637,14 @@ bool emul_machine_setup(struct machine *m, int n_load, char **load_names,
 				cpu->pc &= 0xffffffffULL;
 			break;
 
+		case ARCH_RISCV:
+			if (cpu->pc & 1) {
+				fatal("RISC-V: lowest bit of pc set: TODO\n");
+				return false;
+			}
+			cpu->pc &= ~1ULL;
+			break;
+
 		case ARCH_SH:
 			if (cpu->cd.sh.cpu_type.bits == 32)
 				cpu->pc &= 0xffffffffULL;

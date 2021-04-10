@@ -400,6 +400,48 @@ MACHINE_REGISTER(testppc)
 }
 
 
+MACHINE_SETUP(bareriscv)
+{
+	machine->machine_name = strdup("Generic \"bare\" RISC-V machine");
+}
+
+
+MACHINE_SETUP(testriscv)
+{
+	machine->machine_name = strdup("RISC-V test machine");
+
+	default_test(machine, cpu);
+}
+
+
+MACHINE_DEFAULT_CPU(bareriscv)
+{
+	machine->cpu_name = strdup("riscv");
+}
+
+
+MACHINE_DEFAULT_CPU(testriscv)
+{
+	machine->cpu_name = strdup("riscv");
+}
+
+
+MACHINE_REGISTER(bareriscv)
+{
+	MR_DEFAULT(bareriscv, "Generic \"bare\" RISC-V machine", MACHINE_BARERISCV);
+
+	machine_entry_add_alias(me, "bareriscv");
+}
+
+
+MACHINE_REGISTER(testriscv)
+{
+	MR_DEFAULT(testriscv, "Test-machine for RISC-V", MACHINE_TESTRISCV);
+
+	machine_entry_add_alias(me, "testriscv");
+}
+
+
 MACHINE_SETUP(baresh)
 {
 	machine->machine_name = strdup("Generic \"bare\" SH machine");

@@ -240,14 +240,14 @@ static void file_load_elf(struct machine *m, struct memory *mem,
 		case EM_PARISC:
 			ok = 1;
 		}
-		break;
+		break;  */
 	case ARCH_I960:
 		switch (emachine) {
 		case EM_960:
 			ok = 1;
 		}
 		break;
-	case ARCH_IA64:
+	/*  case ARCH_IA64:
 		switch (emachine) {
 		case EM_IA_64:
 			ok = 1;
@@ -276,6 +276,12 @@ static void file_load_elf(struct machine *m, struct memory *mem,
 		switch (emachine) {
 		case EM_PPC:
 		case EM_PPC64:
+			ok = 1;
+		}
+		break;
+	case ARCH_RISCV:
+		switch (emachine) {
+		case 243:
 			ok = 1;
 		}
 		break;

@@ -248,6 +248,10 @@ struct machine {
 /*  i960:  */
 #define	MACHINE_BAREI960	8000
 
+/*  RISC-V:  */
+#define	MACHINE_BARERISCV	9000
+#define	MACHINE_TESTRISCV	9001
+
 /*  Other "pseudo"-machines:  */
 #define	MACHINE_NONE		0
 
