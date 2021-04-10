@@ -5039,3 +5039,5 @@ Changelog for GXemul:
 		Beginning to implement the LUNA88K front panel LCD.
 		Also fixing a bug where the rightmost pixel (or 8 pixels in
 		the case of monochrome) were not drawn.
+20210410	Also check for X11R7 in the configure script, in addition
+		to X11R6.

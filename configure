@@ -343,6 +343,19 @@ if [ z$NOX11 = z ]; then
 	rm -f _test_x11 _test_x11.o
 
 	if [ z$XOK = z0 ]; then
+		XINCLUDE=-I/usr/X11R7/include
+		$CC $CFLAGS _test_x11.c -c -o _test_x11.o $XINCLUDE 2> /dev/null
+
+		XLIB="-L/usr/X11R7/lib -lX11"
+		$CC $CFLAGS _test_x11.o -o _test_x11 $XLIB 2> /dev/null
+
+		if [ -x _test_x11 ]; then
+			XOK=1
+		fi
+	fi
+	rm -f _test_x11 _test_x11.o
+
+	if [ z$XOK = z0 ]; then
 		XINCLUDE=-I/usr/local/include
 		$CC $CFLAGS _test_x11.c -c -o _test_x11.o $XINCLUDE 2> /dev/null
 
