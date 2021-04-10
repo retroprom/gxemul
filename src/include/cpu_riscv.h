@@ -58,13 +58,19 @@ DYNTRANS_MISC64_DECLARATIONS(riscv,RISCV,uint8_t)
 
 #define	N_RISCV_REGS		32
 
+#define RISCV_REGISTER_NAMES	{ \
+	"zero", "ra", "sp",  "gp",  "tp", "t0", "t1", "t2", \
+	"fp",   "s1", "a0",  "a1",  "a2", "a3", "a4", "a5", \
+	"a6",   "a7", "s2",  "s3",  "s4", "s5", "s6", "s7", \
+	"s8",   "s9", "s10", "s11", "t3", "t4", "t5", "t6"  }
+
 
 struct riscv_cpu {
 	/*  General purpose registers:  */
-	uint32_t		x[N_RISCV_REGS];
+	uint64_t		x[N_RISCV_REGS];
 
 	/*  Destination scratch register for non-nop instructions with destination x0:  */
-	uint32_t		zero_scratch;
+	uint64_t		zero_scratch;
 
 	/*  Current interrupt assertion:  */
 	int			irq_asserted;
@@ -72,7 +78,7 @@ struct riscv_cpu {
 
 	/*
 	 *  Instruction translation cache, internal TLB structure, and 32-bit
-	 *  virtual -> physical -> host address translation arrays.
+	 *  and 64-bit virtual -> physical -> host address translation arrays.
 	 */
 	DYNTRANS_ITC(riscv)
 	VPH_TLBS(riscv,RISCV)

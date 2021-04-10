@@ -55,6 +55,9 @@ void riscv_cpu_functioncall_trace(struct cpu *cpu, int n_args);
 void riscv_irq_interrupt_assert(struct interrupt *interrupt);
 void riscv_irq_interrupt_deassert(struct interrupt *interrupt);
 
+static const char *riscv_register_names[] = RISCV_REGISTER_NAMES;
+
+
 
 /*
  *  riscv_cpu_new():
@@ -65,8 +68,6 @@ void riscv_irq_interrupt_deassert(struct interrupt *interrupt);
 int riscv_cpu_new(struct cpu *cpu, struct memory *mem,
 	struct machine *machine, int cpu_id, char *cpu_type_name)
 {
-	int i;
-
 	/*  TODO: Check cpu_type_name in a better way.  */
 	if (strcmp(cpu_type_name, "riscv") != 0)
 		return 0;
@@ -95,29 +96,31 @@ int riscv_cpu_new(struct cpu *cpu, struct memory *mem,
 
 	CPU_SETTINGS_ADD_REGISTER64("pc", cpu->pc);
 
-	for (i=0; i<N_RISCV_REGS; i++) {
+	// Readonly "x0" register (zero).
+	settings_add(cpu->settings, "x0", 0, SETTINGS_TYPE_UINT64,
+            cpu->is_32bit? SETTINGS_FORMAT_HEX32 : SETTINGS_FORMAT_HEX64,
+            (void *) &cpu->cd.riscv.x[0]);
+
+	for (int i = 1; i < N_RISCV_REGS; i++) {
 		char name[10];
 		snprintf(name, sizeof(name), "x%i", i);
 
-		// TODO: skip x0 and add using the symbolic API names?
 		CPU_SETTINGS_ADD_REGISTER64(name, cpu->cd.riscv.x[i]);
+		CPU_SETTINGS_ADD_REGISTER64(riscv_register_names[i], cpu->cd.riscv.x[i]);
 	}
-
 
 	/*  Register the CPU interrupt pin:  */
-	{
-		struct interrupt templ;
-		char name[50];
-		snprintf(name, sizeof(name), "%s", cpu->path);
+	struct interrupt templ;
+	char name[50];
+	snprintf(name, sizeof(name), "%s", cpu->path);
 
-		memset(&templ, 0, sizeof(templ));
-		templ.line = 0;
-		templ.name = name;
-		templ.extra = cpu;
-		templ.interrupt_assert = riscv_irq_interrupt_assert;
-		templ.interrupt_deassert = riscv_irq_interrupt_deassert;
-		interrupt_handler_register(&templ);
-	}
+	memset(&templ, 0, sizeof(templ));
+	templ.line = 0;
+	templ.name = name;
+	templ.extra = cpu;
+	templ.interrupt_assert = riscv_irq_interrupt_assert;
+	templ.interrupt_deassert = riscv_irq_interrupt_deassert;
+	interrupt_handler_register(&templ);
 
 	return 1;
 }
@@ -184,7 +187,7 @@ void riscv_cpu_register_dump(struct cpu *cpu, int gprs, int coprocs)
 				else
 					debug("                  ");
 			} else {
-				debug("x%-2i = ", i);
+				debug("%-3s = ", riscv_register_names[i]);
 
 				if (cpu->is_32bit)
 					debug("0x%08" PRIx32, (uint32_t) cpu->cd.riscv.x[i]);
@@ -325,7 +328,7 @@ int riscv_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
 			else if (rs1rd == 0)
 				debug("c.addi\tTODO: rs1rd = 0 but nzimm = %lli?", (long long) nzimm);
 			else
-				debug("c.addi\tTODO reg %i, %lli", rs1rd, (long long) nzimm);
+				debug("c.addi\t%s,%s,%lli", riscv_register_names[rs1rd], riscv_register_names[rs1rd], (long long) nzimm);
 			break;
 		default:
 			debug("UNIMPLEMENTED compressed op %i", op);

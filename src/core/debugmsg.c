@@ -138,7 +138,7 @@ static void debugmsg_va(struct cpu* cpu, int subsystem,
 	vsnprintf(buf, DEBUG_BUFSIZE, fmt, argp);
 
 	char* s = buf;
-	bool ss = single_step; // || about_to_enter_single_step;
+	bool ss = single_step || about_to_enter_single_step;
 	bool debug_currently_at_start_of_line = true;
 	bool show_decorations = emul_executing && !ss;
 
@@ -315,7 +315,7 @@ void debug_indentation(int diff)
 void debug(const char *fmt, ...)
 {
 	va_list argp;
-	bool ss = single_step; // || about_to_enter_single_step;
+	bool ss = single_step || about_to_enter_single_step;
 	int v = verbose;
 	if (emul_executing)
 		v--;

@@ -33,9 +33,6 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 <b><a name="shortlist">Current "short-list" (unsorted)</a></b>
 
 <p><pre>
-<font color="blue">X11:</font>
-	o) test with multiple host displays? ssh with X11 forwarding from laptop?
-
 <font color="blue">debugmsg-related and non-exit(1) stuff (mostly):</font>
 	o) "verb all 3" output does not look nice. prints headers multiple times.
 	o) src/cpu/:
@@ -56,17 +53,10 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 <font color="blue">Build problems:</font>
 	o) Building a default build on my Linux machine currently fails with duplicate definitions from
 		Linux' bits/socket.h being "extern inlined" twice? (configure --debug works fine though)
-	o) Building GXemul 0.6.2 inside emulated NetBSD/hpcmips 8.1 says:
-		# date > a; ./configure && make; date > b; cat a; cat b
-		checking which C++ compiler to use... c++ -DNDEBUG 
-		checking for X11 headers and libs
-		Using NetBSD hack for X11 libs...
-		Failed to compile X11 test program. Configuring without X11.
-	   Investigate this!
 
 <font color="blue">Misc.:</font>
+	o) Try X11 grabbing with multiple host displays? ssh with X11 forwarding from laptop?
 	o) Try all guest OSes in the documentation, cleaning up debugmsg related stuff as I go along.
-	o) bare and test i960 and riscv machines.
 	o) Expect-script for launching OpenBSD/luna88k from a disk image, boot up,
 		log in as root, possibly do something more that is CPU intense,
 		then break. Print resulting time. (Useful for performance stuff.)

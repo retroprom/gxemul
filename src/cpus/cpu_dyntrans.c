@@ -1950,6 +1950,15 @@ bad:	/*
 	if (cpu->translation_readahead)
 		return;
 
+
+	/*
+	 *  Abort the emulation.  In principle, it may have been more accurate
+	 *  to treat invalid/unimplemented instructions as something that
+	 *  should cause e.g. an exception (depending on how the particular
+	 *  CPU works), but chances are that this is an unimplemented
+	 *  instruction that should be implemented for real.
+	 */
+
 	about_to_enter_single_step = true;
 
 	if (cpu->is_32bit)
@@ -1959,9 +1968,8 @@ bad:	/*
 		debugmsg_cpu(cpu, SUBSYS_CPU, "", VERBOSITY_ERROR,
 		    "UNIMPLEMENTED instruction at 0x%" PRIx64, (uint64_t)cpu->pc);
 
-	if (!cpu->machine->instruction_trace) {
+	if (!(single_step || cpu->machine->instruction_trace))
 		DISASSEMBLE(cpu, ib, 1, 0);
-	}
 
 	cpu->running = 0;
 
