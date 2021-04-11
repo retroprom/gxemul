@@ -344,13 +344,40 @@ DECstation:
 	o)  Figure out how to run multiple Sprite machines and make them talk
 		to each other. Starting point for experimentation:
 
-			rm /etc/spritehosts
-			echo "1 ds5000-a a.my.domain a" >> /etc/spritehosts
-			echo "ether 10:20:30:00:00:10 10.0.0.1" >> /etc/spritehosts
-			echo "2 ds5000-b b.my.domain b" >> /etc/spritehosts
-			echo "ether 10:20:30:00:00:20 10.0.0.2" >> /etc/spritehosts
-			sync
-			shutdown -r
+		Set up machine a:
+			Machine name, eg 'ernie' (): a
+
+		On A: (login as root)
+
+		printf "2\tds5000\tb.my.domain\tb\n" >> /etc/spritehosts
+		printf "\tether\t10:20:30:00:00:20\t10.0.0.2\n" >> /etc/spritehosts
+		netroute -f /etc/spritehosts
+		echo "10.0.0.2 b.my.domain b" >> /etc/hosts
+		rm /etc/gateway
+		echo "gw ether 60:50:40:30:20:10 10.0.0.254" > /etc/gateway
+		sync
+		shutdown
+
+		Set up machine b:
+			Machine name, eg 'ernie' (): b
+
+		On B: (login as root)
+
+		rm /etc/spritehosts
+		printf "1\tds5000\ta.my.domain\ta\t1\n" > /etc/spritehosts
+		printf "\tether\t10:20:30:00:00:10\t10.0.0.1\n" >> /etc/spritehosts
+		printf "2\tds5000\tb.my.domain\tb\t2\n" >> /etc/spritehosts
+		printf "\tether\t10:20:30:00:00:20\t10.0.0.2\n" >> /etc/spritehosts
+		echo "10.0.0.1 a.my.domain a" >> /etc/hosts
+		cd /
+		mv ROOT ROOTrenamed
+		sync
+		shutdown
+
+		Start up machine 'a' again, wait until the login prompt is shown.
+		Then start up machine 'b'.
+
+		But it doesn't quite work yet; b does not see A's "/".
 
 Dreamcast:
 	x)  Try to make the ROM from my real Dreamcast boot correctly.
