@@ -2105,7 +2105,7 @@ X(to_be_translated)
 	addr = cpu->pc & ~((M88K_IC_ENTRIES_PER_PAGE-1)
 	    << M88K_INSTR_ALIGNMENT_SHIFT);
 	addr += (low_pc << M88K_INSTR_ALIGNMENT_SHIFT);
-	cpu->pc = (MODE_int_t)addr;
+	cpu->pc = (uint32_t)addr;
 	addr &= ~((1 << M88K_INSTR_ALIGNMENT_SHIFT) - 1);
 
 	/*  Read the instruction word from memory:  */
