@@ -1732,7 +1732,9 @@ int arm_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
 		iw = ib[0] + (ib[1]<<8) + (ib[2]<<16) + (ib[3]<<24);
 	else
 		iw = ib[3] + (ib[2]<<8) + (ib[1]<<16) + (ib[0]<<24);
-	debug("%08x\t", (int)iw);
+	debug("%08x", (int)iw);
+
+	cpu_print_pc_indicator_in_disassembly(cpu, running, dumpaddr);
 
 	condition = arm_condition_string[iw >> 28];
 	main_opcode = (iw >> 24) & 15;

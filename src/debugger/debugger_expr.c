@@ -107,8 +107,12 @@ int debugger_parse_name(struct machine *m, char *name, int writeflag,
 	/*  Warn about non-signextended values:  */
 	if (writeflag) {
 		if (m->cpus[0]->is_32bit) {
-			/*  Automagically sign-extend.  TODO: Is this good?  */
-			if (((*valuep) >> 32) == 0 && (*valuep) & 0x80000000ULL)
+			/*
+			 *  Automagically sign-extend for MIPS.
+			 *  TODO: Is this good?
+			 */
+			if (m->cpus[0]->cpu_family->arch == ARCH_MIPS &&
+			    ((*valuep) >> 32) == 0 && (*valuep) & 0x80000000ULL)
 				(*valuep) |= 0xffffffff00000000ULL;
 		} else {
 			if (((*valuep) >> 32) == 0 && (*valuep) & 0x80000000ULL)

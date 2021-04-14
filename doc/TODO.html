@@ -598,8 +598,27 @@ Components:
 	framework was. machine_run currently run a) instructions from cpus, and
 	b) ticks from devices. There is no big reason why these could not be
 	made the same concept.
+
+	Components (busses, CPUs, devices, machines) would be a tree, like
+	in the C++ framework.
+
 	Component tree dump should then be the same during startup and
-	for the emul / machine debugger commands.
+	for the emul / machine debugger commands. Compare e.g. the C++ framework's
+		  mainbus0
+		  |-- cpu0  (i960CA, 25 MHz)
+		  |-- ram0  (2 MB repeated for 256 MB at offset 0x30000000)
+		  |-- ram1  (8 MB repeated for 16 MB at offset 0x40000000)
+		  \-- rom0  (512 KB at offset 0xfff80000)
+	to
+		machine: 
+		    device at 0x0030000000: ram (dyntrans R/W)
+		    device at 0x0040000000: ram (dyntrans R/W)
+		    device at 0x0041000000: ram (dyntrans R/W)
+		    device at 0x00fff80000: ram (dyntrans R/W)
+		    model: HP 700/RX
+		    cpu: i960CA
+		    memory: 1 MB
+
 	If there are multiple memories in a machine, a CPU searches for its
 	memory like in the C++ framework: first to a parent (e.g. a mainbus)
 	and then to a memory on that bus.

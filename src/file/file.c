@@ -200,6 +200,14 @@ void file_load(struct machine *machine, struct memory *mem,
 		    entrypointp, arch, byte_orderp);
 		goto ret;
 	}
+	if ((buf[0]==0x0d && buf[1]==0x01 && buf[2]==0x00 && buf[3]==0x00) ||
+	    (buf[0]==0x00 && buf[1]==0x00 && buf[2]==0x01 && buf[3]==0x0d)) {
+		/*  i960 b.out  */
+		machine->cpus[0]->byte_order = buf[0] == 0x0d ? EMUL_LITTLE_ENDIAN : EMUL_BIG_ENDIAN;
+		file_load_aout(machine, mem, filename,
+		    AOUT_FLAG_I960_BOUT, entrypointp, arch, byte_orderp);
+		goto ret;
+	}
 	if (buf[0]==0x00 && buf[1]==0x87 && buf[2]==0x01 && buf[3]==0x08) {
 		/*  M68K a.out  */
 		file_load_aout(machine, mem, filename,

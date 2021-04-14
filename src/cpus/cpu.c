@@ -409,6 +409,24 @@ void cpu_run_deinit(struct machine *machine)
 
 
 /*
+ *  cpu_print_pc_indicator_in_disassembly():
+ *
+ *  Helper which shows an arrow indicating the current instruction, during
+ *  disassembly.
+ */
+void cpu_print_pc_indicator_in_disassembly(struct cpu *cpu, int running, uint64_t dumpaddr)
+{
+	if (!running && cpu->pc == dumpaddr) {
+		color_pc_indicator();
+		debug(" <- ");
+		color_normal();
+	} else {
+		debug("    ");
+	}
+}
+
+
+/*
  *  cpu_show_cycles():
  *
  *  If show_nr_of_instructions is on, then print a line to stdout about how

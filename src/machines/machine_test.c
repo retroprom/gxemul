@@ -416,13 +416,13 @@ MACHINE_SETUP(testriscv)
 
 MACHINE_DEFAULT_CPU(bareriscv)
 {
-	machine->cpu_name = strdup("riscv");
+	machine->cpu_name = strdup("RV64GC");
 }
 
 
 MACHINE_DEFAULT_CPU(testriscv)
 {
-	machine->cpu_name = strdup("riscv");
+	machine->cpu_name = strdup("RV64GC");
 }
 
 

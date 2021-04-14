@@ -288,6 +288,7 @@ void color_error(bool bold);
 void color_debugmsg_subsystem();
 void color_debugmsg_name();
 void color_banner();
+void color_pc_indicator();
 const char* color_symbol_ptr();
 const char* color_normal_ptr();
 unsigned long long mystrtoull(const char *s, char **endp, int base);

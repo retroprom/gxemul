@@ -56,7 +56,7 @@ void riscv_irq_interrupt_assert(struct interrupt *interrupt);
 void riscv_irq_interrupt_deassert(struct interrupt *interrupt);
 
 static const char *riscv_register_names[] = RISCV_REGISTER_NAMES;
-
+static const char *riscv_extension_names[] = RISCV_EXTENSION_NAMES;
 
 
 /*
@@ -68,26 +68,83 @@ static const char *riscv_register_names[] = RISCV_REGISTER_NAMES;
 int riscv_cpu_new(struct cpu *cpu, struct memory *mem,
 	struct machine *machine, int cpu_id, char *cpu_type_name)
 {
-	/*  TODO: Check cpu_type_name in a better way.  */
-	if (strcmp(cpu_type_name, "riscv") != 0)
+	int bits;
+
+	if (strncmp(cpu_type_name, "RV32", 4) == 0) {
+		bits = 32;
+	} else if (strncmp(cpu_type_name, "RV64", 4) == 0) {
+		bits = 64;
+	} else if (strncmp(cpu_type_name, "RV128", 4) == 0) {
+		bits = 128;
+	} else
 		return 0;
 
-	cpu->run_instr = riscv_run_instr;
+	if (bits == 128) {
+		debugmsg_cpu(cpu, SUBSYS_CPU, "riscv_cpu_new", VERBOSITY_ERROR,
+	    	    "TODO: 128-bit");
+	    	return 0;
+	}
+
+	// Step through extension letters.
+	const char *p = cpu_type_name + strlen("RVxx");
+	cpu->cd.riscv.extensions = 0;
+	while (*p) {
+		char c = *p;
+		if (c == 'G') {
+			cpu->cd.riscv.extensions |= RISCV_EXT_G;
+		} else {
+			int i = 0;
+			while (riscv_extension_names[i] != NULL) {
+				if (c == riscv_extension_names[i][0])
+					cpu->cd.riscv.extensions |= 1 << i;
+
+				++ i;
+			}
+		}
+
+		++p;
+	}
+
+	if (cpu->cd.riscv.extensions & RISCV_EXT_E) {
+		if (bits != 32) {
+			debugmsg_cpu(cpu, SUBSYS_CPU, "riscv_cpu_new", VERBOSITY_ERROR,
+		    	    "the E extension only works with RV32");
+		    	return 0;
+		}
+
+		if (cpu->cd.riscv.extensions & RISCV_EXT_I) {
+			debugmsg_cpu(cpu, SUBSYS_CPU, "riscv_cpu_new", VERBOSITY_ERROR,
+		    	    "the E extension can not be combined with I");
+		    	return 0;
+		}
+	} else {
+		if (!(cpu->cd.riscv.extensions & RISCV_EXT_I)) {
+			debugmsg_cpu(cpu, SUBSYS_CPU, "riscv_cpu_new", VERBOSITY_ERROR,
+		    	    "either the I or E extensions must be present");
+		    	return 0;
+		}
+	}
+
+	cpu->name = strdup(cpu_type_name);
+
+	cpu->byte_order = EMUL_BIG_ENDIAN;
 	cpu->memory_rw = riscv_memory_rw;
-	cpu->update_translation_table = riscv_update_translation_table;
-	cpu->invalidate_translation_caches = riscv_invalidate_translation_caches;
-	cpu->invalidate_code_translation = riscv_invalidate_code_translation;
 
-	cpu->name            = strdup(cpu_type_name);
-
-	cpu->byte_order      = EMUL_BIG_ENDIAN;
-
-	// TODO
-	cpu->is_32bit        = 1;
-	cpu->vaddr_mask = 0x00000000ffffffffULL;
-
-	cpu->is_32bit        = 0;
-	cpu->vaddr_mask = 0xffffffffffffffffULL;
+	if (bits == 32) {
+		cpu->is_32bit        = 1;
+		cpu->vaddr_mask = 0x00000000ffffffffULL;
+		cpu->run_instr = riscv32_run_instr;
+		cpu->update_translation_table = riscv32_update_translation_table;
+		cpu->invalidate_translation_caches = riscv32_invalidate_translation_caches;
+		cpu->invalidate_code_translation = riscv32_invalidate_code_translation;
+	} else {
+		cpu->is_32bit        = 0;
+		cpu->vaddr_mask = 0xffffffffffffffffULL;
+		cpu->run_instr = riscv_run_instr;
+		cpu->update_translation_table = riscv_update_translation_table;
+		cpu->invalidate_translation_caches = riscv_invalidate_translation_caches;
+		cpu->invalidate_code_translation = riscv_invalidate_code_translation;
+	}
 
 
 	/*
@@ -126,14 +183,34 @@ int riscv_cpu_new(struct cpu *cpu, struct memory *mem,
 }
 
 
+static const char* riscv_extensions_string(struct cpu *cpu)
+{
+	static char buf[200];
+
+	snprintf(buf, sizeof(buf), "RV%i", cpu->is_32bit ? 32 : 64);
+
+	int i = 0;
+	while (riscv_extension_names[i] != NULL) {
+		if (cpu->cd.riscv.extensions & (1 << i))
+			snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),
+			    "%s", riscv_extension_names[i]);
+
+		++ i;
+	}
+
+	return buf;
+}
+
+
 /*
  *  riscv_cpu_dumpinfo():
  */
 void riscv_cpu_dumpinfo(struct cpu *cpu, bool verbose)
 {
 	debugmsg(SUBSYS_MACHINE, "cpu", VERBOSITY_INFO,
-	    "%s",
-	    cpu->name);
+	    "%s (%s)",
+	    cpu->name,
+	    riscv_extensions_string(cpu));
 }
 
 
@@ -144,7 +221,7 @@ void riscv_cpu_dumpinfo(struct cpu *cpu, bool verbose)
  */
 void riscv_cpu_list_available_types(void)
 {
-	debug("riscv\n");
+	debug("RV{32,64,128}EIMAFDGQLCBJTPVN\n");
 }
 
 
@@ -310,30 +387,103 @@ int riscv_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
 	else
 		debug("%08" PRIx32, (uint32_t) iw);
 
-	debug(!running && cpu->pc == dumpaddr ? " <- " : "    ");
+	cpu_print_pc_indicator_in_disassembly(cpu, running, dumpaddr);
 
+
+	// As far as I understood, the 16-bit compressed instructions can be
+	// "remapped" into 32-bit encoded instructions. Instead of showing
+	// disassembly such as "c.lui", the approach is to just show "lui"
+	// instead, like GNU's objdump -d. This makes the disassembly more
+	// readable. On the implementation side (cpu_riscv_instr.c), the
+	// compressed and the normal encoding should (hopefully) always end up
+	// in the same instruction implementation anyway.
 	if (instr_length_in_bytes == sizeof(uint16_t)) {
+		if (!(cpu->cd.riscv.extensions & RISCV_EXT_C))
+			debug("compressed (req. C ext)\t; ");
+
 		uint w13 = (iw >> 13) & 7;
 		uint w0 = (iw >> 0) & 3;
 		uint op = (w13 << 2) | w0;
 
 		uint rs1rd = (iw >> 7) & 31;
+		uint rs2 = (iw >> 2) & 31;
+		uint rprim_2 = ((iw >> 2) & 7) + RISCV_CREGBASE;
 		uint64_t nzimm5 = ((iw & (1 << 12)) ? -1 : 0) << 5;
-		uint64_t nzimm = nzimm5 | ((iw >> 2) & 31);
+		uint64_t nzimm;
+
+		int hi_imm53 = (iw >> 10) & 7;
+		int hi_imm86 = (iw >> 7) & 7;
+		int imm;
 
 		switch (op) {
-		case 1:
+		case 0:	// c.addi4spn
+			// nzimm[5:4|9:6|2|3] at bitpos 5
+			nzimm = (((iw >> 5) & 1) << 3)
+			      | (((iw >> 6) & 1) << 2)
+			      | (((iw >> 7) & 15) << 6)
+			      | (((iw >> 11) & 7) << 4);
+
+			if (nzimm == 0) {
+				debug("INVALID instruction");
+			} else {
+				debug("addi\t%s,%s,%lli",
+				    riscv_register_names[rprim_2],
+				    riscv_register_names[RISCV_REG_SP],
+				    (long long) nzimm);
+			}
+			break;
+
+		case 1:	// c.addi
+			nzimm = nzimm5 | ((iw >> 2) & 31);
 			if (rs1rd == 0 && nzimm == 0)
 				debug("nop");
 			else if (rs1rd == 0)
-				debug("c.addi\tTODO: rs1rd = 0 but nzimm = %lli?", (long long) nzimm);
+				debug("addi\tTODO: rs1rd = 0 but nzimm = %lli?", (long long) nzimm);
 			else
-				debug("c.addi\t%s,%s,%lli", riscv_register_names[rs1rd], riscv_register_names[rs1rd], (long long) nzimm);
+				debug("addi\t%s,%s,%lli", riscv_register_names[rs1rd], riscv_register_names[rs1rd], (long long) nzimm);
 			break;
+
+		case 13:	// c.lui
+			nzimm = (((iw >> 2) & 31) << 12)
+			      | (((iw >> 12) & 1) << 17);
+
+			if (nzimm == 0) {
+				debug("INVALID lui?");
+			} else if (rs1rd == 0) {
+				debug("INVALID lui, rs1rd = 0?");
+			} else if (rs1rd == RISCV_REG_SP) {
+				debug("TODO: c.addi16sp");
+			} else {
+				debug("lui\t%s,0x%x",
+				    riscv_register_names[rs1rd],
+				    (int) (nzimm >> 12));
+			}
+
+			break;
+
+		case 14:	// c.ldsp
+			// TODO: RV64/128 only
+			imm = (((iw >> 2) & 7) << 6)
+			      | (((iw >> 5) & 3) << 3)
+			      | (((iw >> 12) & 1) << 5);
+			debug("ld\t%s,%i(%s)",
+			    riscv_register_names[rs1rd],
+			    imm,
+			    riscv_register_names[RISCV_REG_SP]);
+			break;
+
+		case 30:	// c.sdsp
+			// TODO: RV64/128 only
+			imm = (hi_imm53 << 3) + (hi_imm86 << 6);
+			debug("sd\t%s,%i(%s)",
+			    riscv_register_names[rs2],
+			    imm,
+			    riscv_register_names[RISCV_REG_SP]);
+			break;
+
 		default:
 			debug("UNIMPLEMENTED compressed op %i", op);
 		}
-
 	} else if (instr_length_in_bytes == sizeof(uint32_t)) {
 		debug("TODO: 32-bit wide instruction words");
 	} else {

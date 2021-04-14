@@ -26,12 +26,15 @@
  *
  *
  *  COMMENT: a.out executable file support
+ *
+ *  Also: b.out was an a.out-like format used by i960 systems.
  */
 
 /*  Note: Included from file.c.  */
 
 
 #include "thirdparty/exec_aout.h"
+#include "thirdparty/exec_bout.h"
 
 
 #define	AOUT_FLAG_DECOSF1				1
@@ -39,6 +42,7 @@
 #define	AOUT_FLAG_VADDR_ZERO_HACK			4
 #define	AOUT_FLAG_NO_SIZES				8
 #define	AOUT_FLAG_DATA_AT_END_MAY_BE_OMITTED		16
+#define	AOUT_FLAG_I960_BOUT				32
 
 struct aout_symbol {
 	uint32_t	strindex;

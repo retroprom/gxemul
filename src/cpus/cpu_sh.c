@@ -793,7 +793,10 @@ int sh_cpu_disassemble_instr(struct cpu *cpu, unsigned char *instr,
 	else
 		iword = (instr[1] << 8) + instr[0];
 
-	debug(":  %04x %s\t", iword, cpu->delay_slot? "(d)" : "");
+	debug(":  %04x %s", iword, cpu->delay_slot? "(d)" : "");
+
+	cpu_print_pc_indicator_in_disassembly(cpu, running, dumpaddr);
+
 	const int hi4 = iword >> 12, lo4 = iword & 15, lo8 = iword & 255;
 	int r8 = (iword >> 8) & 15, r4 = (iword >> 4) & 15;
 

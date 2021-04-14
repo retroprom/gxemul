@@ -627,7 +627,10 @@ int ppc_cpu_disassemble_instr(struct cpu *cpu, unsigned char *instr,
 	iword = (instr[0] << 24) + (instr[1] << 16) + (instr[2] << 8)
 	    + instr[3];
 
-	debug(": %08" PRIx32"\t", iword);
+	debug(": %08" PRIx32, iword);
+
+	cpu_print_pc_indicator_in_disassembly(cpu, running, dumpaddr);
+
 
 	/*
 	 *  Decode the instruction:

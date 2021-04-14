@@ -921,7 +921,7 @@ int m88k_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
 	if (running && cpu->delay_slot)
 		debug(" (d)");
 
-	debug("\t");
+	cpu_print_pc_indicator_in_disassembly(cpu, running, dumpaddr);
 
 	op26   = (iw >> 26) & 0x3f;
 	op11   = (iw >> 11) & 0x1f;

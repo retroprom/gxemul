@@ -103,6 +103,15 @@ void color_banner()
 }
 
 
+void color_pc_indicator()
+{
+	if (!use_colorized_output())
+		return;
+
+	printf("\e[31m");
+}
+
+
 const char* color_symbol_ptr()
 {
 	if (use_colorized_output())

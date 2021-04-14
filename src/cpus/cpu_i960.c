@@ -67,7 +67,7 @@ int i960_cpu_new(struct cpu *cpu, struct memory *mem,
 	int i;
 
 	/*  TODO: Check cpu_type_name in a better way.  */
-	if (strcmp(cpu_type_name, "i960") != 0)
+	if (strcmp(cpu_type_name, "i960") != 0 && strcmp(cpu_type_name, "i960CA") != 0)
 		return 0;
 
 	cpu->run_instr = i960_run_instr;
@@ -87,7 +87,8 @@ int i960_cpu_new(struct cpu *cpu, struct memory *mem,
 	 *  Add register names as settings:
 	 */
 
-	CPU_SETTINGS_ADD_REGISTER64("pc", cpu->pc);
+	settings_add(cpu->settings, "ip", 0, SETTINGS_TYPE_UINT64,
+            SETTINGS_FORMAT_HEX32, (void *) &cpu->pc);
 
 	for (i=0; i<N_I960_REGS; i++) {
 		char name[10];
@@ -97,19 +98,17 @@ int i960_cpu_new(struct cpu *cpu, struct memory *mem,
 
 
 	/*  Register the CPU interrupt pin:  */
-	{
-		struct interrupt templ;
-		char name[50];
-		snprintf(name, sizeof(name), "%s", cpu->path);
+	struct interrupt templ;
+	char name[50];
+	snprintf(name, sizeof(name), "%s", cpu->path);
 
-		memset(&templ, 0, sizeof(templ));
-		templ.line = 0;
-		templ.name = name;
-		templ.extra = cpu;
-		templ.interrupt_assert = i960_irq_interrupt_assert;
-		templ.interrupt_deassert = i960_irq_interrupt_deassert;
-		interrupt_handler_register(&templ);
-	}
+	memset(&templ, 0, sizeof(templ));
+	templ.line = 0;
+	templ.name = name;
+	templ.extra = cpu;
+	templ.interrupt_assert = i960_irq_interrupt_assert;
+	templ.interrupt_deassert = i960_irq_interrupt_deassert;
+	interrupt_handler_register(&templ);
 
 	return 1;
 }
@@ -133,7 +132,7 @@ void i960_cpu_dumpinfo(struct cpu *cpu, bool verbose)
  */
 void i960_cpu_list_available_types(void)
 {
-	debug("i960\n");
+	debug("i960\ti960CA\n");
 }
 
 
@@ -154,7 +153,7 @@ void i960_cpu_register_dump(struct cpu *cpu, int gprs, int coprocs)
 	if (gprs) {
 		symbol = get_symbol_name(&cpu->machine->symbol_context,
 		    cpu->pc, &offset);
-		debug("cpu%i:  pc  = 0x%08" PRIx32, x, (uint32_t)cpu->pc);
+		debug("cpu%i:  ip  = 0x%08" PRIx32, x, (uint32_t)cpu->pc);
 		debug("  <%s>\n", symbol != NULL? symbol : " no symbol ");
 
 		for (i=0; i<N_I960_REGS; i++) {
@@ -232,8 +231,40 @@ void i960_exception(struct cpu *cpu, int vector, int is_trap)
 int i960_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
         int running, uint64_t dumpaddr)
 {
-	debugmsg_cpu(cpu, SUBSYS_CPU, "", VERBOSITY_ERROR,
-	    "i960_cpu_disassemble_instr(): TODO");
+	if (running)
+		dumpaddr = cpu->pc;
+
+	uint64_t offset;
+	const char *symbol = get_symbol_name(&cpu->machine->symbol_context,
+	    dumpaddr, &offset);
+	if (symbol != NULL && offset == 0)
+		debug("<%s>\n", symbol);
+
+	if (cpu->machine->ncpus > 1 && running)
+		debug("cpu%i:\t", cpu->cpu_id);
+
+	debug("%08" PRIx32": ", (uint32_t) dumpaddr);
+
+	uint32_t iw;
+
+	if (cpu->byte_order == EMUL_LITTLE_ENDIAN)
+		iw = ib[0] + (ib[1]<<8) + (ib[2]<<16) + (ib[3]<<24);
+	else
+		iw = ib[3] + (ib[2]<<8) + (ib[1]<<16) + (ib[0]<<24);
+
+	bool is_64bit_long_instruction = false;
+	uint32_t iw2 = 0;
+
+	debug("%08 " PRIx32, (uint32_t) iw);
+
+	if (is_64bit_long_instruction)
+		debug("%08" PRIx32, (uint32_t) iw2);
+	else
+		debug("        ");
+
+	cpu_print_pc_indicator_in_disassembly(cpu, running, dumpaddr);
+
+	debug("\n");
 
 	return sizeof(uint32_t);
 }

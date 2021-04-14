@@ -64,8 +64,35 @@ DYNTRANS_MISC64_DECLARATIONS(riscv,RISCV,uint8_t)
 	"a6",   "a7", "s2",  "s3",  "s4", "s5", "s6", "s7", \
 	"s8",   "s9", "s10", "s11", "t3", "t4", "t5", "t6"  }
 
+#define	RISCV_REG_SP	2
+
+#define	RISCV_CREGBASE	8
+
+#define	RISCV_EXT_E		(1<<0)
+#define	RISCV_EXT_I		(1<<1)
+#define	RISCV_EXT_M		(1<<2)
+#define	RISCV_EXT_A		(1<<3)
+#define	RISCV_EXT_F		(1<<4)
+#define	RISCV_EXT_D		(1<<5)
+#define	RISCV_EXT_Q		(1<<6)
+#define	RISCV_EXT_L		(1<<7)
+#define	RISCV_EXT_C		(1<<8)
+#define	RISCV_EXT_B		(1<<9)
+#define	RISCV_EXT_J		(1<<10)
+#define	RISCV_EXT_T		(1<<11)
+#define	RISCV_EXT_P		(1<<12)
+#define	RISCV_EXT_V		(1<<13)
+#define	RISCV_EXT_N		(1<<14)
+
+#define	RISCV_EXT_G		(RISCV_EXT_I|RISCV_EXT_M|RISCV_EXT_A|RISCV_EXT_F|RISCV_EXT_D)
+
+#define	RISCV_EXTENSION_NAMES { \
+	"E", "I", "M", "A", "F", "D", "Q", "L", "C", "B", "J", "T", "P", "V", "N", NULL }
+     
 
 struct riscv_cpu {
+	uint64_t		extensions;
+
 	/*  General purpose registers:  */
 	uint64_t		x[N_RISCV_REGS];
 
@@ -88,19 +115,27 @@ struct riscv_cpu {
 
 
 /*  cpu_riscv.c:  */
-int riscv_cpu_instruction_has_delayslot(struct cpu *cpu, unsigned char *ib);
+void riscv_cpu_family_init(struct cpu_family *);
+void riscv_exception(struct cpu *cpu, int vector, int is_trap);
+int riscv_memory_rw(struct cpu *cpu, struct memory *mem, uint64_t vaddr,
+	unsigned char *data, size_t len, int writeflag, int cache_flags);
+
 int riscv_run_instr(struct cpu *cpu);
 void riscv_update_translation_table(struct cpu *cpu, uint64_t vaddr_page,
 	unsigned char *host_page, int writeflag, uint64_t paddr_page);
 void riscv_invalidate_translation_caches(struct cpu *cpu, uint64_t, int);
 void riscv_invalidate_code_translation(struct cpu *cpu, uint64_t, int);
-int riscv_memory_rw(struct cpu *cpu, struct memory *mem, uint64_t vaddr,
-	unsigned char *data, size_t len, int writeflag, int cache_flags);
-void riscv_cpu_family_init(struct cpu_family *);
-void riscv_exception(struct cpu *cpu, int vector, int is_trap);
+
+int riscv32_run_instr(struct cpu *cpu);
+void riscv32_update_translation_table(struct cpu *cpu, uint64_t vaddr_page,
+	unsigned char *host_page, int writeflag, uint64_t paddr_page);
+void riscv32_invalidate_translation_caches(struct cpu *cpu, uint64_t, int);
+void riscv32_invalidate_code_translation(struct cpu *cpu, uint64_t, int);
 
 /*  memory_riscv.c:  */
 int riscv_translate_v2p(struct cpu *cpu, uint64_t vaddr,
+	uint64_t *return_addr, int flags);
+int riscv32_translate_v2p(struct cpu *cpu, uint64_t vaddr,
 	uint64_t *return_addr, int flags);
 
 

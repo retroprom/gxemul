@@ -504,6 +504,7 @@ void cpu_run_deinit(struct machine *machine);
 void cpu_dumpinfo(struct machine *m, struct cpu *cpu, bool verbose);
 void cpu_list_available_types(void);
 void cpu_show_cycles(struct machine *machine, bool forced);
+void cpu_print_pc_indicator_in_disassembly(struct cpu *cpu, int running, uint64_t dumpaddr);
 
 void cpu_init(void);
 

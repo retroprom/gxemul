@@ -115,20 +115,20 @@ struct bout_exec {
  * macro in cc_info.h .
  */
 
-#define N_MAGIC(x)	((x).a_magic)
-#define N_BADMAG(x)	(((x).a_magic)!=BOUT_BMAGIC)
-#define N_TXTOFF(x)	( sizeof(struct exec) )
-#define N_DATOFF(x)	( N_TXTOFF(x) + (x).a_text )
-#define N_TROFF(x)	( N_DATOFF(x) + (x).a_data )
-#define N_DROFF(x)	( N_TROFF(x) + (x).a_trsize )
-#define N_SYMOFF(x)	( N_DROFF(x) + (x).a_drsize )
-#define N_STROFF(x)	( N_SYMOFF(x) + (x).a_syms )
-#define N_CCINFO	( 0x17 )
-#define N_HAS_CCINFO(x)	(((x).a_ccinfo)==N_CCINFO)
+#define BOUT_N_MAGIC(x)	((x).a_magic)
+#define BOUT_N_BADMAG(x)	(((x).a_magic)!=BOUT_BMAGIC)
+#define BOUT_N_TXTOFF(x)	( sizeof(struct exec) )
+#define BOUT_N_DATOFF(x)	( N_TXTOFF(x) + (x).a_text )
+#define BOUT_N_TROFF(x)	( N_DATOFF(x) + (x).a_data )
+#define BOUT_N_DROFF(x)	( N_TROFF(x) + (x).a_trsize )
+#define BOUT_N_SYMOFF(x)	( N_DROFF(x) + (x).a_drsize )
+#define BOUT_N_STROFF(x)	( N_SYMOFF(x) + (x).a_syms )
+#define BOUT_N_CCINFO	( 0x17 )
+#define BOUT_N_HAS_CCINFO(x)	(((x).a_ccinfo)==N_CCINFO)
 
 /* A single entry in the symbol table
  */
-struct nlist {
+struct bout_nlist {
 	union {
 		char	*n_name;
 		struct nlist *n_next;
@@ -143,16 +143,16 @@ struct nlist {
 
 /* Legal values of n_type
  */
-#define N_UNDF	0	/* Undefined symbol	*/
-#define N_ABS	2	/* Absolute symbol	*/
-#define N_TEXT	4	/* Text symbol		*/
-#define N_DATA	6	/* Data symbol		*/
-#define N_BSS	8	/* BSS symbol		*/
-#define N_FN	31	/* Filename symbol	*/
+#define BOUT_N_UNDF	0	/* Undefined symbol	*/
+#define BOUT_N_ABS	2	/* Absolute symbol	*/
+#define BOUT_N_TEXT	4	/* Text symbol		*/
+#define BOUT_N_DATA	6	/* Data symbol		*/
+#define BOUT_N_BSS	8	/* BSS symbol		*/
+#define BOUT_N_FN	31	/* Filename symbol	*/
 
-#define N_EXT	1	/* External symbol (OR'd in with one of above)	*/
-#define N_TYPE	036	/* Mask for all the type bits			*/
-#define N_STAB	0340	/* Mask for all bits used for SDB entries 	*/
+#define BOUT_N_EXT	1	/* External symbol (OR'd in with one of above)	*/
+#define BOUT_N_TYPE	036	/* Mask for all the type bits			*/
+#define BOUT_N_STAB	0340	/* Mask for all bits used for SDB entries 	*/
 
 /* MEANING OF 'n_other'
  *
@@ -185,23 +185,23 @@ struct nlist {
  * Note that an N_CALLNAME entry *must* have a corresponding N_BALNAME entry,
  * but not every N_BALNAME entry must have an N_CALLNAME entry.
  */
-#define N_ORDINARY       ((unsigned) 0)
+#define BOUT_N_ORDINARY       ((unsigned) 0)
 
-#define N_BALNAME	 ((unsigned) 0xfe)
-#define N_CALLNAME	 ((unsigned) 0xff)
+#define BOUT_N_BALNAME	 ((unsigned) 0xfe)
+#define BOUT_N_CALLNAME	 ((unsigned) 0xff)
 
-#define MASK( V ) ((sizeof(V) == 1) ? 0x000000ff :\
+#define BOUT_MASK( V ) ((sizeof(V) == 1) ? 0x000000ff :\
 		  ((sizeof(V) == 2) ? 0x0000ffff :\
 		                      0x0000ffff))
 
 /* Get unsigned bits: */
-#define GET_UBITS( V ) ((unsigned) (V & MASK( V )))
+#define BOUT_GET_UBITS( V ) ((unsigned) (V & BOUT_MASK( V )))
 
-#define IS_ORDINARY(x)   (GET_UBITS(x) == N_ORDINARY)
-#define IS_CALLNAME(x)	 (GET_UBITS(x) == N_CALLNAME)
-#define IS_BALNAME(x)	 (GET_UBITS(x) == N_BALNAME) 
-#define IS_SYSPROCIDX(x) (GET_UBITS(x) > N_ORDINARY &&\
-			  GET_UBITS(x) < N_BALNAME)
+#define BOUT_IS_ORDINARY(x)   (BOUT_GET_UBITS(x) == BOUT_N_ORDINARY)
+#define BOUT_IS_CALLNAME(x)	 (BOUT_GET_UBITS(x) == BOUT_N_CALLNAME)
+#define BOUT_IS_BALNAME(x)	 (BOUT_GET_UBITS(x) == BOUT_N_BALNAME) 
+#define BOUT_IS_SYSPROCIDX(x) (BOUT_GET_UBITS(x) > BOUT_N_ORDINARY &&\
+			  BOUT_GET_UBITS(x) < BOUT_N_BALNAME)
 
 /*
  * Note that the following data structure won't compile using a 16-bit 
@@ -209,7 +209,7 @@ struct nlist {
  * (mondb).  So just ifdef the structure out of existence...
  */
 #ifndef CC_16BIT
-struct relocation_info {
+struct bout_relocation_info {
 	int	 r_address;	/* File address of item to be relocated	*/
 	unsigned
 		r_symbolnum:24,/* Index of symbol on which relocation is based,

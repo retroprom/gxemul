@@ -6,6 +6,7 @@ machine_cats.c  Simtec Electronics' CATS board
 machine_cobalt.c  Cobalt (MIPS-based)
 machine_dreamcast.c  SEGA Dreamcast
 machine_evbmips.c  MIPS evaluation boards (e.g. Malta)
+machine_hp700rx.c  HP 700/RX machine
 machine_hpcarm.c  Handheld ARM-based machines
 machine_hpcmips.c  Handheld MIPS-based machines
 machine_hpcsh.c  Handheld SuperH-based machines

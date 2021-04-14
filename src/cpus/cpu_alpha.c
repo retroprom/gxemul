@@ -281,7 +281,9 @@ int alpha_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
 	debug("%016" PRIx64":  ", (uint64_t) dumpaddr);
 
 	iw = ib[0] + (ib[1]<<8) + (ib[2]<<16) + (ib[3]<<24);
-	debug("%08x\t", (int)iw);
+	debug("%08x", (int)iw);
+
+	cpu_print_pc_indicator_in_disassembly(cpu, running, dumpaddr);
 
 	opcode = iw >> 26;
 	ra = (iw >> 21) & 31;
