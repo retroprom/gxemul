@@ -83,6 +83,11 @@ static void file_load_aout(struct machine *m, struct memory *mem,
 		exit(1);
 	}
 
+	if (flags & AOUT_FLAG_I960_BOUT) {
+		fprintf(stderr, "TODO: b.out\n");
+		exit(1);
+	}
+
 	if (flags & AOUT_FLAG_DECOSF1) {
 		if (fread(&buf, 1, 32, f) != 32) {
 			perror(filename);
