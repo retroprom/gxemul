@@ -56,19 +56,19 @@ MACHINE_SETUP(hp700rx)
 	machine->machine_name = strdup("HP 700/RX");
 	machine->cpus[0]->byte_order = EMUL_LITTLE_ENDIAN;
 
-	dev_ram_init(machine, 0x30000000, 2 * 1048576, DEV_RAM_RAM, 0, NULL);
+	dev_ram_init(machine, 0x30000000, 2 * 1048576, DEV_RAM_RAM, 0, "baseram");
 
 	// TODO: repeats of Base RAM
 
-	dev_ram_init(machine, 0x40000000, 8 * 1048576, DEV_RAM_RAM, 0, NULL);
+	dev_ram_init(machine, 0x40000000, 8 * 1048576, DEV_RAM_RAM, 0, "ram_exp");
 
 	// TODO: repeats of Expansion RAM
 
 	// TODO: This is actually framebuffer memory.
-	dev_ram_init(machine, 0x41000000, 2 * 1048576, DEV_RAM_RAM, 0, NULL);
+	dev_ram_init(machine, 0x41000000, 2 * 1048576, DEV_RAM_RAM, 0, "vram");
 
 	// TODO: Not RAM, but ROM.
-	dev_ram_init(machine, 0xfff80000, 512 * 1024, DEV_RAM_RAM, 0, NULL);
+	dev_ram_init(machine, 0xfff80000, 512 * 1024, DEV_RAM_RAM, 0, "rom");
 
 	machine_add_devices_as_symbols(machine, 0);
 }
