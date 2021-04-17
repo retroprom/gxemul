@@ -486,8 +486,8 @@ void DYNTRANS_FUNCTION_TRACE_DEF(struct cpu *cpu, int n_args)
 #if defined(DYNTRANS_ALPHA)
 	    6
 #else
-#if defined(DYNTRANS_SH) || defined(DYNTRANS_M88K) || defined(DYNTRANS_RISCV)
-	    8	/*  Both for 32-bit and 64-bit SuperH, and M88K, and RISC-V  */
+#if defined(DYNTRANS_SH) || defined(DYNTRANS_M88K) || defined(DYNTRANS_RISCV) || defined(DYNTRANS_I960)
+	    8	/*  For 32-bit and 64-bit SuperH, M88K, i960, and RISC-V  */
 #else
 	    4	/*  Default value for most archs  */
 #endif
@@ -526,7 +526,7 @@ void DYNTRANS_FUNCTION_TRACE_DEF(struct cpu *cpu, int n_args)
 		    r[0
 #endif
 #ifdef DYNTRANS_I960
-		    r[0		/*  TODO  */
+		    r[16	/*  g0  */
 #endif
 #ifdef DYNTRANS_MIPS
 		    gpr[MIPS_GPR_A0

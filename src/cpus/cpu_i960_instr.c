@@ -42,12 +42,6 @@
                 cpu->pc += (low_pc << I960_INSTR_ALIGNMENT_SHIFT);      \
         }
 
-#define	ABORT_EXECUTION	  {	SYNCH_PC;				\
-				fatal("Execution aborted at: pc = 0x%08x\n", (int)cpu->pc); \
-				cpu->cd.i960.next_ic = &nothing_call;	\
-				cpu->running = 0;			\
-				debugger_n_steps_left_before_interaction = 0; }
-
 
 /*
  *  nop:  Do nothing.
@@ -150,22 +144,20 @@ X(end_of_page2)
  */
 X(to_be_translated)
 {
-	uint32_t addr, low_pc, iword;
-	unsigned char *page;
-	unsigned char ib[4];
-
 	/*  Figure out the (virtual) address of the instruction:  */
-	low_pc = ((size_t)ic - (size_t)cpu->cd.i960.cur_ic_page)
+	uint32_t low_pc = ((size_t)ic - (size_t)cpu->cd.i960.cur_ic_page)
 	    / sizeof(struct i960_instr_call);
 
-	addr = cpu->pc & ~((I960_IC_ENTRIES_PER_PAGE-1)
+	uint32_t addr = cpu->pc & ~((I960_IC_ENTRIES_PER_PAGE-1)
 	    << I960_INSTR_ALIGNMENT_SHIFT);
 	addr += (low_pc << I960_INSTR_ALIGNMENT_SHIFT);
 	cpu->pc = (uint32_t)addr;
 	addr &= ~((1 << I960_INSTR_ALIGNMENT_SHIFT) - 1);
 
 	/*  Read the instruction word from memory:  */
-	page = cpu->cd.i960.host_load[(uint32_t)addr >> 12];
+	uint8_t* page = cpu->cd.i960.host_load[(uint32_t)addr >> 12];
+
+	unsigned char ib[4];
 
 	if (page != NULL) {
 		/*  fatal("TRANSLATION HIT!\n");  */
@@ -179,15 +171,14 @@ X(to_be_translated)
 		}
 	}
 
-	{
-		uint32_t *p = (uint32_t *) ib;
-		iword = *p;
-	}
+	uint32_t iw;
 
 	if (cpu->byte_order == EMUL_LITTLE_ENDIAN)
-		iword = LE32_TO_HOST(iword);
+		iw = ib[0] + (ib[1]<<8) + (ib[2]<<16) + (ib[3]<<24);
 	else
-		iword = BE32_TO_HOST(iword);
+		iw = ib[3] + (ib[2]<<8) + (ib[1]<<16) + (ib[0]<<24);
+
+	const int opcode = iw >> 24;
 
 
 #define DYNTRANS_TO_BE_TRANSLATED_HEAD
@@ -199,9 +190,7 @@ X(to_be_translated)
 	 *  Translate the instruction:
 	 */
 
-	int op26   = (iword >> 26) & 0x3f;
-
-	switch (op26) {
+	switch (opcode) {
 
 	default:goto bad;
 	}
