@@ -449,14 +449,18 @@ void m88k_ldcr(struct cpu *cpu, uint32_t *r32ptr, int cr)
 		 */
 		if (retval & DMT_VALID && !(retval & DMT_WRITE)) {
 			if (DMT_DREGBITS(retval) == M88K_ZERO_REG) {
-				fatal("DMT DREG = zero? Internal error.\n");
-				exit(1);
+				debugmsg_cpu(cpu, SUBSYS_CPU, "m88k", VERBOSITY_ERROR,
+				    "ldcr: DMT DREG = zero? Internal error.");
+				cpu->running = 0;
+				return;
 			}
 		}
 		if (!!(cpu->cd.m88k.cr[M88K_CR_PSR] & M88K_PSR_BO)
 		    != !!(retval & DMT_BO) && retval & DMT_VALID) {
-			fatal("DMT byte order not same as CPUs?\n");
-			exit(1);
+			debugmsg_cpu(cpu, SUBSYS_CPU, "m88k", VERBOSITY_ERROR,
+			    "ldcr: DMT byte order not same as CPUs?");
+			cpu->running = 0;
+			return;
 		}
 
 		break;
@@ -470,15 +474,19 @@ void m88k_ldcr(struct cpu *cpu, uint32_t *r32ptr, int cr)
 		 *  should always be zero.
 		 */
 		if (retval & 3) {
-			fatal("DMAx not word-aligned? Internal error.\n");
-			exit(1);
+			debugmsg_cpu(cpu, SUBSYS_CPU, "m88k", VERBOSITY_ERROR,
+			    "ldcr: DMAx not word-aligned? Internal error.");
+			cpu->running = 0;
+			return;
 		}
 
 		break;
 
-	default:fatal("m88k_ldcr: UNIMPLEMENTED cr = 0x%02x (%s)\n",
+	default:debugmsg_cpu(cpu, SUBSYS_CPU, "m88k", VERBOSITY_ERROR,
+		    "ldcr: UNIMPLEMENTED cr = 0x%02x (%s)\n",
 		    cr, m88k_cr_name(cpu, cr));
-		exit(1);
+		cpu->running = 0;
+		return;
 	}
 
 	*r32ptr = retval;
@@ -502,21 +510,26 @@ void m88k_stcr(struct cpu *cpu, uint32_t value, int cr, int rte)
 		    && !(value & M88K_PSR_BO)) ||
 		    (cpu->byte_order == EMUL_BIG_ENDIAN
 		    && (value & M88K_PSR_BO))) {
-			fatal("TODO: attempt to change endianness by flipping"
+			debugmsg_cpu(cpu, SUBSYS_CPU, "m88k", VERBOSITY_ERROR,
+			    "stcr: TODO: attempt to change endianness by flipping"
 			    " the endianness bit in the PSR. How should this"
-			    " be handled? Aborting.\n");
-			exit(1);
+			    " be handled? Aborting.");
+			cpu->running = 0;
+			return;
 		}
 
 		if (!rte && old & M88K_PSR_MODE && !(value & M88K_PSR_MODE))
-			fatal("[ m88k_stcr: WARNING! the PSR_MODE bit is being"
+			debugmsg_cpu(cpu, SUBSYS_CPU, "m88k", VERBOSITY_WARNING,
+			    "stcr: WARNING! the PSR_MODE bit is being"
 			    " cleared; this should be done using the RTE "
 			    "instruction only, according to the M88100 "
-			    "manual! Continuing anyway. ]\n");
+			    "manual! Continuing anyway.");
 
 		if (value & M88K_PSR_MXM) {
-			fatal("m88k_stcr: TODO: MXM support\n");
-			exit(1);
+			debugmsg_cpu(cpu, SUBSYS_CPU, "m88k", VERBOSITY_ERROR,
+			    "stcr: TODO: MXM support");
+			cpu->running = 0;
+			return;
 		}
 
 		if ((old & M88K_PSR_MODE) != (value & M88K_PSR_MODE))
@@ -538,15 +551,19 @@ void m88k_stcr(struct cpu *cpu, uint32_t value, int cr, int rte)
 
 	case M88K_CR_SSBR:	/*  Shadow ScoreBoard Register  */
 		if (value & 1)
-			fatal("[ m88k_stcr: WARNING! bit 0 non-zero when"
-			    " writing to SSBR (?) ]\n");
+			debugmsg_cpu(cpu, SUBSYS_CPU, "m88k", VERBOSITY_WARNING,
+			    "stcr: WARNING! bit 0 non-zero when"
+			    " writing to SSBR (?)");
+
 		cpu->cd.m88k.cr[cr] = value;
 		break;
 
 	case M88K_CR_VBR:
 		if (value & 0x00000fff)
-			fatal("[ m88k_stcr: WARNING! bits 0..11 non-zero when"
-			    " writing to VBR (?) ]\n");
+			debugmsg_cpu(cpu, SUBSYS_CPU, "m88k", VERBOSITY_WARNING,
+			    "stcr: WARNING! bits 0..11 non-zero when"
+			    " writing to VBR (?)");
+
 		cpu->cd.m88k.cr[cr] = value;
 		break;
 
@@ -563,9 +580,11 @@ void m88k_stcr(struct cpu *cpu, uint32_t value, int cr, int rte)
 		cpu->cd.m88k.cr[cr] = value;
 		break;
 
-	default:fatal("m88k_stcr: UNIMPLEMENTED cr = 0x%02x (%s)\n",
+	default:debugmsg_cpu(cpu, SUBSYS_CPU, "m88k", VERBOSITY_ERROR,
+		    "stcr: UNIMPLEMENTED cr = 0x%02x (%s)",
 		    cr, m88k_cr_name(cpu, cr));
-		exit(1);
+		cpu->running = 0;
+		return;
 	}
 }
 
@@ -577,18 +596,21 @@ void m88k_stcr(struct cpu *cpu, uint32_t value, int cr, int rte)
  */
 void m88k_fstcr(struct cpu *cpu, uint32_t value, int fcr)
 {
-#if 0
-	/*  TODO (?)  */
-	uint32_t old = cpu->cd.m88k.cr[fcr];
-
 	switch (fcr) {
-	default:fatal("m88k_fstcr: UNIMPLEMENTED fcr = 0x%02x (%s)\n",
-		    fcr, m88k_fcr_name(cpu, fcr));
-		exit(1);
+
+	case 0:
+	case 62:
+	case 63:
+		// Don't warn for writes with the value zero for these, for now.
+		if (value == 0)
+			break;
+	
+	default:debugmsg_cpu(cpu, SUBSYS_CPU, "m88k", VERBOSITY_WARNING,
+		    "WARNING: fstcr: write 0x%08x to UNIMPLEMENTED fcr = 0x%02x (%s)",
+		    value, fcr, m88k_fcr_name(cpu, fcr));
 	}
-#else
-	cpu->cd.m88k.cr[fcr] = value;
-#endif
+
+	cpu->cd.m88k.fcr[fcr] = value;
 }
 
 
@@ -865,8 +887,9 @@ void m88k_exception(struct cpu *cpu, int vector, int is_trap)
 			break;
 #endif
 
-		default:fatal("m88k_exception(): not reached\n");
-			exit(1);
+		default:debugmsg_cpu(cpu, SUBSYS_EXCEPTION, "m88k",
+			    VERBOSITY_ERROR, "internal error");
+			cpu->running = 0;
 		}
 	}
 
@@ -920,6 +943,8 @@ int m88k_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
 
 	if (running && cpu->delay_slot)
 		debug(" (d)");
+	else
+		debug("    ");
 
 	cpu_print_pc_indicator_in_disassembly(cpu, running, dumpaddr);
 

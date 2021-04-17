@@ -37,11 +37,8 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 	o) "verb all 3" output does not look nice. prints headers multiple times.
 	o) src/cpu/:
 		o) debugmsg:ify at least 'cpu' and 'exception' subsystem messages.
-		o) Fix some more exit(1) calls to cpu->running = 0?
-		o) Potentially break out of dyntrans after:
-			m88k_stcr		if it stops the CPU/machine
-		o) Go through more "exit()" calls and replace by reasonable
-		   break-into-the-debugger constructs.
+		o) Fix some more exit(1) calls to cpu->running = 0 and make
+			sure that they break out of the dyntrans loop.
 	o) src/net/:
 		o) debugmsg:ify all src/net/.
 	o) Add an example of the "verbosity" command to the Debugger section of

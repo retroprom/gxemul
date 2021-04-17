@@ -35,15 +35,14 @@
 
 
 #define SYNCH_PC                {                                       \
-                int low_pc = ((size_t)ic - (size_t)cpu->cd.m88k.cur_ic_page) \
+                int low_pc_ = ((size_t)ic - (size_t)cpu->cd.m88k.cur_ic_page) \
                     / sizeof(struct m88k_instr_call);                   \
                 cpu->pc &= ~((M88K_IC_ENTRIES_PER_PAGE-1)               \
                     << M88K_INSTR_ALIGNMENT_SHIFT);                     \
-                cpu->pc += (low_pc << M88K_INSTR_ALIGNMENT_SHIFT);      \
+                cpu->pc += (low_pc_ << M88K_INSTR_ALIGNMENT_SHIFT);      \
         }
 
 #define	ABORT_EXECUTION	  {	SYNCH_PC;				\
-				fatal("Execution aborted at: pc = 0x%08x\n", (int)cpu->pc); \
 				cpu->cd.m88k.next_ic = &nothing_call;	\
 				cpu->running = 0;			\
 				debugger_n_steps_left_before_interaction = 0; }
@@ -800,9 +799,12 @@ X(ldcr)
 {
 	SYNCH_PC;
 
-	if (cpu->cd.m88k.cr[M88K_CR_PSR] & M88K_PSR_MODE)
+	if (cpu->cd.m88k.cr[M88K_CR_PSR] & M88K_PSR_MODE) {
 		m88k_ldcr(cpu, (uint32_t *) (void *) ic->arg[0], ic->arg[1]);
-	else
+
+		if (!cpu->running)
+			ABORT_EXECUTION;
+	} else
 		m88k_exception(cpu, M88K_EXCEPTION_PRIVILEGE_VIOLATION, 0);
 }
 X(fldcr)
@@ -830,18 +832,24 @@ X(stcr)
 {
 	SYNCH_PC;
 
-	if (cpu->cd.m88k.cr[M88K_CR_PSR] & M88K_PSR_MODE)
+	if (cpu->cd.m88k.cr[M88K_CR_PSR] & M88K_PSR_MODE) {
 		m88k_stcr(cpu, reg(ic->arg[0]), ic->arg[1], 0);
-	else
+
+		if (!cpu->running)
+			ABORT_EXECUTION;
+	} else
 		m88k_exception(cpu, M88K_EXCEPTION_PRIVILEGE_VIOLATION, 0);
 }
 X(fstcr)
 {
 	SYNCH_PC;
 
-	if (cpu->cd.m88k.cr[M88K_CR_PSR] & M88K_PSR_MODE || ic->arg[1] >= 62)
+	if (cpu->cd.m88k.cr[M88K_CR_PSR] & M88K_PSR_MODE || ic->arg[1] >= 62) {
 		m88k_fstcr(cpu, reg(ic->arg[0]), ic->arg[1]);
-	else {
+
+		if (!cpu->running)
+			ABORT_EXECUTION;
+	} else {
 		/*  TODO: The manual says "floating point privilege
 		    violation", not just "privilege violation"!  */
 		m88k_exception(cpu, M88K_EXCEPTION_PRIVILEGE_VIOLATION, 0);
@@ -1590,12 +1598,14 @@ X(rte)
 	m88k_stcr(cpu, cpu->cd.m88k.cr[M88K_CR_EPSR], M88K_CR_PSR, 1);
 
 	if (cpu->cd.m88k.cr[M88K_CR_SNIP] & M88K_NIP_E) {
-		fatal("rte: NIP: TODO: single-step support\n");
+		debugmsg_cpu(cpu, SUBSYS_CPU, "m88k", VERBOSITY_ERROR,
+		    "rte: NIP: TODO: single-step support");
 		goto abort_dump;
 	}
 
 	if (cpu->cd.m88k.cr[M88K_CR_SFIP] & M88K_FIP_E) {
-		fatal("rte: TODO: FIP single-step support\n");
+		debugmsg_cpu(cpu, SUBSYS_CPU, "m88k", VERBOSITY_ERROR,
+		    "rte: TODO: FIP single-step support");
 		goto abort_dump;
 	}
 
@@ -1608,8 +1618,9 @@ X(rte)
 		if (!(cpu->cd.m88k.cr[M88K_CR_SFIP] & M88K_FIP_V)) {
 			if ((cpu->cd.m88k.cr[M88K_CR_SFIP] & M88K_FIP_ADDR)
 			    != (cpu->cd.m88k.cr[M88K_CR_SNIP] & M88K_NIP_ADDR) + 4) {
-				fatal("[ TODO: Neither FIP nor NIP has the "
-				    "Valid bit set?! ]\n");
+				debugmsg_cpu(cpu, SUBSYS_CPU, "m88k", VERBOSITY_ERROR,
+		    		    "rte: TODO: Neither FIP nor NIP has the "
+				    "Valid bit set?!");
 				goto abort_dump;
 			}
 
@@ -1636,16 +1647,18 @@ X(rte)
 		quick_pc_to_pointers(cpu);
 
 		if (cpu->pc != nip) {
-			fatal("NIP execution caused exception?! TODO\n");
+			debugmsg_cpu(cpu, SUBSYS_CPU, "m88k", VERBOSITY_ERROR,
+			    "NIP execution caused exception?! TODO");
 			goto abort_dump;
 		}
 
 		instr(to_be_translated)(cpu, cpu->cd.m88k.next_ic);
 
 		if ((cpu->pc & 0xfffff000) != (nip & 0xfffff000)) {
-			fatal("instruction in delay slot when returning via"
+			debugmsg_cpu(cpu, SUBSYS_CPU, "m88k", VERBOSITY_ERROR,
+			    "instruction in delay slot when returning via"
 			    " rte caused an exception?! nip=0x%08x, but pc "
-			    "changed to 0x%08x! TODO\n", nip, (int)cpu->pc);
+			    "changed to 0x%08x! TODO", nip, (int)cpu->pc);
 			goto abort_dump;
 		}
 
@@ -1662,7 +1675,8 @@ X(rte)
 	return;
 
 abort_dump:
-	fatal("RTE failed. NIP=0x%08" PRIx32", FIP=0x%08" PRIx32"\n",
+	debugmsg_cpu(cpu, SUBSYS_CPU, "m88k", VERBOSITY_ERROR,
+	    "rte failed. NIP=0x%08" PRIx32", FIP=0x%08" PRIx32,
 	    cpu->cd.m88k.cr[M88K_CR_SNIP], cpu->cd.m88k.cr[M88K_CR_SFIP]);
 
 	ABORT_EXECUTION;
@@ -1796,7 +1810,8 @@ X(prom_call)
 		mvmeprom_emul(cpu);
 		break;
 
-	default:fatal("m88k prom_call: unimplemented machine type\n");
+	default:debugmsg_cpu(cpu, SUBSYS_CPU, "m88k", VERBOSITY_ERROR,
+		    "prom_call: unimplemented machine type");
 		ABORT_EXECUTION;
 	}
 
@@ -1998,8 +2013,9 @@ X(end_of_page2)
 	if (cpu->delay_slot == NOT_DELAYED)
 		return;
 
-	fatal("end_of_page2: fatal error, we're in a delay slot\n");
-	exit(1);
+	debugmsg_cpu(cpu, SUBSYS_CPU, "to_be_translated", VERBOSITY_ERROR,
+	    "end_of_page2: fatal error, we're in a delay slot");
+	ABORT_EXECUTION;
 }
 
 
@@ -2148,8 +2164,10 @@ X(to_be_translated)
 	 *  scratch register instead).
 	 */
 	if (cpu->cd.m88k.r[M88K_ZERO_REG] != 0) {
-		fatal("INTERNAL ERROR! M88K_ZERO_REG != 0?\n");
-		exit(1);
+		debugmsg_cpu(cpu, SUBSYS_CPU, "to_be_translated", VERBOSITY_ERROR,
+		    "INTERNAL ERROR! M88K_ZERO_REG != 0");
+		cpu->running = 0;
+		goto bad;
 	}
 
 	op26   = (iword >> 26) & 0x3f;
