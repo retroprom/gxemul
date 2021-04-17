@@ -56,6 +56,7 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 
 <font color="blue">Misc.:</font>
 	o) Try X11 grabbing with multiple host displays? ssh with X11 forwarding from laptop?
+		with multiple mouse pointers, _which_ mouse pointer is grabbed?
 	o) Try all guest OSes in the documentation, cleaning up debugmsg related stuff as I go along.
 	o) Expect-script for launching OpenBSD/luna88k from a disk image, boot up,
 		log in as root, possibly do something more that is CPU intense,
@@ -574,7 +575,22 @@ Breakpoints on subsystem messages?
 		Implement helper for these cases? cpu->running == 0 is just
 		one reason to break then.
 
-	breakpoints that just print hit count, rather than break?
+	Currently, breakpoints are just an array of string and addresses,
+	inside a machine. (Because addresses are conceptually bound to the _memory_ in
+	that machine.)
+
+	breakpoints that just print hit count, rather than break? Or better:
+		all breakpoints can keep track of hit count
+		and then there could be a setting on how long to run until
+			actually breakin. e.g.
+				1 = always break
+				inf = never break, just count
+				100 = run 100 then break.
+		implementationwise:
+			int64_t hits_until_break
+			int64_t hitcount
+			int64_t next_hitcount_to_break_on
+		CTRL-T could show breakpoint hit counts.
 
 CD Image file support:
 	x)  Support CD formats that contain more than 1 track, e.g.
@@ -606,6 +622,7 @@ Components:
 	for the emul / machine debugger commands. Compare e.g. the C++ framework's
 		  mainbus0
 		  |-- cpu0  (i960CA, 25 MHz)
+		  |   \-- cache  etc...
 		  |-- ram0  (2 MB repeated for 256 MB at offset 0x30000000)
 		  |-- ram1  (8 MB repeated for 16 MB at offset 0x40000000)
 		  \-- rom0  (512 KB at offset 0xfff80000)
