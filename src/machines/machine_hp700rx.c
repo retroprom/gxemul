@@ -30,13 +30,28 @@
  *  This is for experiments with the original firmware from my HP 700/RX
  *  X-terminal, a diskless i960CA-based machine.
  *
- *  My machine says:
+ *  As a starting point:
  *
- *  2048 KB Base RAM       at 0x30000000 .. 0x3fffffff (repeated)
- *  8192 KB Expansion RAM  at 0x40000000 .. 0x40ffffff (repeated)
- *  2048 KB Video RAM      at 0x41000000?
+ *	gxemul -V -E hp700rx 0xfff80000:0:0xfff8b000:hp700rx-rom.bin
  *
- *  The ROM seems to be 512 KB at 0xfff80000.
+ *  Experiments on my machine has resulted in the following approximate
+ *  memory map:
+ *
+ *  0x00000000 .. 0x000003ff	1 KB on-chip RAM (i960CA-specific).
+ *  0x3xxxxxxx			Base RAM, 2 MB in size, repeated.
+ *  0x40000000			Extended RAM, 8 MB, repeated (I think).
+ *  0x41000000			Video RAM, 2 MB. But possibly interleaved/paged.
+ *  0xc0000000			Devices (accessed using 8-bit loads and stores?)
+ *	0xc0000800 .. 0xc0000803
+ *	0xc0001000 .. 0xc0001003
+ *	0xc0001800 .. 0xc0001803
+ *	0xc0002000 .. 0xc0002001
+ *	0xc0003000 && 0xc0003002			  
+ *	0xc0003800
+ *	0xc0004000
+ *	0xc0004800 .. 0xc0004803
+ *	0xc0005800 .. 0xc000580f
+ *  0xfff80000			ROM, 512 KB.
  */
 
 #include <stdio.h>
@@ -82,7 +97,8 @@ MACHINE_DEFAULT_CPU(hp700rx)
 
 MACHINE_DEFAULT_RAM(hp700rx)
 {
-	// TODO.
+	// TODO. Just 1 KB at offset 0. The "base" and "expanded" RAM are
+	// at higher addresses.
 	machine->physical_ram_in_mb = 1;
 }
 
