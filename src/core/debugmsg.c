@@ -436,13 +436,13 @@ void debugmsg_change_settings(char *subsystem_name, char *n)
 		
 		debugmsg_current_verbosity[i] = v;
 
-		debugmsg_print_settings(debugmsg_subsystem_name[i]);
-
 		++ns;
 	}
 
 	if (ns == 0)
 		printf("Unknown debugmsg subsystem name '%s'\n", subsystem_name);
+	else
+		debugmsg_print_settings(subsystem_name);
 }
 
 
@@ -456,7 +456,8 @@ void debugmsg_print_settings(const char *subsystem_name)
 	int n = 0;
 
 	for (size_t i = 0; i < debugmsg_nr_of_subsystems; ++i) {
-		if (subsystem_name != NULL && subsystem_name[0] != '\0') {
+		if (subsystem_name != NULL && subsystem_name[0] != '\0' &&
+		    strcasecmp("ALL", subsystem_name) != 0) {
 			if (strcmp(subsystem_name, debugmsg_subsystem_name[i]) != 0)
 				continue;
 		}
