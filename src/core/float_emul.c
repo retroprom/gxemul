@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2004-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -51,39 +51,6 @@ void ieee_interpret_float_value(uint64_t x, struct ieee_float_value *fvp,
 {
 	memset(fvp, 0, sizeof(struct ieee_float_value));
 
-#if 0
-	// HACK: Use the host's float/double representation:
-	switch (fmt) {
-	case IEEE_FMT_S:
-		{
-			uint32_t x2 = x;
-			void* p = (void*) &x2;
-			float *pf = (float*) p;
-			fvp->f = *pf;
-		}
-		break;
-
-	case IEEE_FMT_D:
-		{
-			void* p = (void*) &x;
-			double *pf = (double*) p;
-			fvp->f = *pf;
-		}
-		break;
-
-	case IEEE_FMT_W:
-	case IEEE_FMT_L:
-		{
-			fvp->f = x;
-		}
-		break;
-
-	default:fatal("ieee_interpret_float_value(): "
-		    "unimplemented format %i\n", fmt);
-	}
-
-	fvp->nan = isnan(fvp->f);
-#else
 	int n_frac = 0, n_exp = 0;
 	int i, nan, sign = 0, exponent;
 	double fraction;
@@ -122,7 +89,7 @@ void ieee_interpret_float_value(uint64_t x, struct ieee_float_value *fvp,
 	case IEEE_FMT_S:
 		sign = (x >> 31) & 1;
 		if ((x & ~0x80000000ULL) == 0x7f800000ULL) {
-			fvp->f = 1.0 / 0.0;
+			fvp->f = INFINITY;
 			goto zero_or_no_reasonable_result;
 		}
 		if ((x & 0x7f800000ULL) == 0x7f800000ULL)
@@ -131,7 +98,7 @@ void ieee_interpret_float_value(uint64_t x, struct ieee_float_value *fvp,
 	case IEEE_FMT_D:
 		sign = (x >> 63) & 1;
 		if ((x & ~0x8000000000000000ULL) == 0x7ff0000000000000ULL) {
-			fvp->f = 1.0 / 0.0;
+			fvp->f = INFINITY;
 			goto zero_or_no_reasonable_result;
 		}
 		if ((x & 0x7ff0000000000000ULL) == 0x7ff0000000000000ULL)
@@ -207,10 +174,10 @@ void ieee_interpret_float_value(uint64_t x, struct ieee_float_value *fvp,
 		 *  2.0 emulated on an Alpha host.)
 		 */
 		if (exponent == 1024)
-			exponent = 1023;
-
-		while (exponent-- > 0)
-			fvp->f *= 2.0;
+			fvp->f = INFINITY;
+		else
+			while (exponent-- > 0)
+				fvp->f *= 2.0;
 	} else if (exponent < 0) {
 		while (exponent++ < 0)
 			fvp->f /= 2.0;
@@ -225,8 +192,6 @@ no_reasonable_result:
 
 #ifdef IEEE_DEBUG
 	fatal("nan=%i (f=%f) }\n", nan, fvp->f);
-#endif
-
 #endif
 }
 
