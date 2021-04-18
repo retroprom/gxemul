@@ -213,7 +213,7 @@ MACHINE_SETUP(barei960)
 
 MACHINE_DEFAULT_CPU(barei960)
 {
-	machine->cpu_name = strdup("i960");
+	machine->cpu_name = strdup("i960CA");
 }
 
 
