@@ -4,6 +4,7 @@ machine_androidarm.c  ARM-based "Android" machines
 machine_arc.c  ARC (Advanced RISC Computing) machines
 machine_cats.c  Simtec Electronics' CATS board
 machine_cobalt.c  Cobalt (MIPS-based)
+machine_cyclonevh.c  Cyclone VH machine
 machine_dreamcast.c  SEGA Dreamcast
 machine_evbmips.c  MIPS evaluation boards (e.g. Malta)
 machine_hp700rx.c  HP 700/RX machine

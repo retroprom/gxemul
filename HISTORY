@@ -5042,3 +5042,5 @@ Changelog for GXemul:
 20210410	Also check for X11R7 in the configure script, in addition
 		to X11R6.
 20210417	Porting over i960CA disassembly from the C++ framework.
+20210418	More i960 stuff, including re-adding the (so far dummy)
+		Cyclone VH machine.

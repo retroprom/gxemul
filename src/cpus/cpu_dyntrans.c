@@ -526,7 +526,7 @@ void DYNTRANS_FUNCTION_TRACE_DEF(struct cpu *cpu, int n_args)
 		    r[0
 #endif
 #ifdef DYNTRANS_I960
-		    r[16	/*  g0  */
+		    r[I960_G0
 #endif
 #ifdef DYNTRANS_MIPS
 		    gpr[MIPS_GPR_A0

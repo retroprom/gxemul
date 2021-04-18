@@ -54,13 +54,28 @@ DYNTRANS_MISC_DECLARATIONS(i960,I960,uint32_t)
 
 // TODO: differently named registers? (register windows)
 #define	N_I960_REGS		32
+#define	N_I960_SFRS		32
+#define	I960_G0			16	// offset of register g0 (first parameter register)
 
 
 struct i960_cpu {
+	/*
+	 *  Control registers.
+	 *
+	 *  NOTE: The program counter is called "ip" on the i960. The
+	 *  long name for the i960 pc register is to separate it from
+	 *  cpu->pc (the program counter).
+	 */
+	uint32_t		ac;		// Arithmetic control
+	uint32_t		i960_pc;	// Process control
+	uint32_t		tc;		// Trace control
+
+	/*  General purpose registers: r and g registers  */
 	uint32_t		r[N_I960_REGS];
 
-	/*  Destination scratch register for non-nop instructions with d=r0:  */
-	uint32_t		zero_scratch;
+	/*  sfrs:  */
+	int			nr_of_valid_sfrs;
+	uint32_t		sfr[N_I960_SFRS];
 
 	/*  Current interrupt assertion:  */
 	int			irq_asserted;

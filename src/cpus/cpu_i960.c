@@ -26,6 +26,10 @@
  *
  *
  *  Intel 80960 (i960) CPU emulation.
+ *
+ *  Disassembly of i960CA should work.
+ *
+ *  TODO: Almost everything else.
  */
 
 #include <stdio.h>
@@ -43,6 +47,8 @@
 #include "settings.h"
 #include "symbol.h"
 
+
+// TODO: #define DYNTRANS_DELAYSLOT ?
 
 #define DYNTRANS_32
 #include "tmp_i960_head.c"
@@ -198,10 +204,8 @@ void i960_irq_interrupt_deassert(struct interrupt *interrupt);
 int i960_cpu_new(struct cpu *cpu, struct memory *mem,
 	struct machine *machine, int cpu_id, char *cpu_type_name)
 {
-	int i;
-
 	/*  TODO: Check cpu_type_name in a better way.  */
-	if (strcmp(cpu_type_name, "i960") != 0 && strcmp(cpu_type_name, "i960CA") != 0)
+	if (strcmp(cpu_type_name, "i960Jx") != 0 && strcmp(cpu_type_name, "i960CA") != 0)
 		return 0;
 
 	cpu->run_instr = i960_run_instr;
@@ -216,16 +220,30 @@ int i960_cpu_new(struct cpu *cpu, struct memory *mem,
 
 	cpu->vaddr_mask = 0x00000000ffffffffULL;
 
+	if (strcmp(cpu_type_name, "i960CA") == 0)
+		cpu->cd.i960.nr_of_valid_sfrs = 3;
+
 
 	/*
 	 *  Add register names as settings:
 	 */
 
-	settings_add(cpu->settings, "ip", 0, SETTINGS_TYPE_UINT64,
+	settings_add(cpu->settings, "ip", 1, SETTINGS_TYPE_UINT64,
             SETTINGS_FORMAT_HEX32, (void *) &cpu->pc);
 
-	for (i=0; i<N_I960_REGS; i++)
+	CPU_SETTINGS_ADD_REGISTER32("ac", cpu->cd.i960.ac);
+	CPU_SETTINGS_ADD_REGISTER32("pc", cpu->cd.i960.i960_pc);
+	CPU_SETTINGS_ADD_REGISTER32("tc", cpu->cd.i960.tc);
+
+	for (int i = 0; i < N_I960_REGS; i++) {
 		CPU_SETTINGS_ADD_REGISTER32(i960_regnames[i], cpu->cd.i960.r[i]);
+	}
+
+	for (int i = 0; i < cpu->cd.i960.nr_of_valid_sfrs; i++) {
+		char name[10];
+		snprintf(name, sizeof(name), "sfr%i", i);
+		CPU_SETTINGS_ADD_REGISTER32(name, cpu->cd.i960.sfr[i]);
+	}
 
 
 	/*  Register the CPU interrupt pin:  */
@@ -263,7 +281,7 @@ void i960_cpu_dumpinfo(struct cpu *cpu, bool verbose)
  */
 void i960_cpu_list_available_types(void)
 {
-	debug("i960\ti960CA\n");
+	debug("i960CA\ti960Jx\n");
 }
 
 
@@ -287,6 +305,10 @@ void i960_cpu_register_dump(struct cpu *cpu, int gprs, int coprocs)
 		debug("cpu%i:  ip  = 0x%08" PRIx32, x, (uint32_t)cpu->pc);
 		debug("  <%s>\n", symbol != NULL? symbol : " no symbol ");
 
+		debug("cpu%i:  ac  = 0x%08" PRIx32 "\n", x, cpu->cd.i960.ac);
+		debug("cpu%i:  pc  = 0x%08" PRIx32 "\n", x, cpu->cd.i960.i960_pc);
+		debug("cpu%i:  tc  = 0x%08" PRIx32 "\n", x, cpu->cd.i960.tc);
+
 		for (i=0; i<N_I960_REGS; i++) {
 			if ((i % 4) == 0)
 				debug("cpu%i:", x);
@@ -296,6 +318,12 @@ void i960_cpu_register_dump(struct cpu *cpu, int gprs, int coprocs)
 
 			if ((i % 4) == 3)
 				debug("\n");
+		}
+	}
+
+	if (coprocs) {
+		for (i = 0; i < cpu->cd.i960.nr_of_valid_sfrs; i++) {
+			debug("cpu%i:  sfr%i = 0x%08" PRIx32 "\n", x, i, cpu->cd.i960.sfr[i]);
 		}
 	}
 }

@@ -248,6 +248,7 @@ struct machine {
 /*  i960:  */
 #define	MACHINE_BAREI960	8000
 #define	MACHINE_HP700RX		8001
+#define	MACHINE_CYCLONEVH	8002
 
 /*  RISC-V:  */
 #define	MACHINE_BARERISCV	9000
