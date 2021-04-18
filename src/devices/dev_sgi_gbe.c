@@ -306,6 +306,24 @@ DEVICE_TICK(sgi_gbe)
 		}
 	}
 
+	/*
+	 *  NOTE/TODO: On my O2, if I do:
+	 *
+	 *	put 0xb6070004 0	to disable
+	 *	put 0xb6070004 2	for crosshair
+	 *
+	 *  it is not shown (since it is disabled). BUT! If I then do
+	 *
+	 *	put 0xb6070004 3	to enable with crosshair
+	 *	put 0xb6070004 2	to DISABLE but keep crosshair,
+	 *
+	 *  then the crosshair is still there. (Or so it seems, it feels
+	 *  slightly random.)
+	 *
+	 *  The emulator currently does not emulate that behavior, but requires
+	 *  the "ON" bit to be on in order to show a cursor.
+	 */
+
 	if (d->cursor_control & CRMFB_CURSOR_ON) {
 		int16_t cx = d->cursor_pos & 0xffff;
 		int16_t cy = d->cursor_pos >> 16;
