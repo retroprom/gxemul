@@ -1384,17 +1384,22 @@ static uint32_t m88k_fcmp_common(struct ieee_float_value *f1,
 	/*  TODO: Implement all bits correctly, e.g. "in range" bits.  */
 	d = 0;
 	if (isnan(f1->f) || isnan(f2->f))
+		// This bit is set if the two numbers are not comparable.
 		d |= (1 << 0);
 	else {
+		// This bit is set if the two numbers are comparable.
 		d |= (1 << 1);
+
 		if (f1->f == f2->f)
 			d |= (1 << 2);
 		else
 			d |= (1 << 3);
+
 		if (f1->f > f2->f)
 			d |= (1 << 4);
 		else
 			d |= (1 << 5);
+
 		if (f1->f < f2->f)
 			d |= (1 << 6);
 		else
@@ -1576,8 +1581,12 @@ X(xcr)
 	if (cpu->cd.m88k.cr[M88K_CR_PSR] & M88K_PSR_MODE) {
 		tmp = reg(ic->arg[1]);
 		m88k_ldcr(cpu, &tmp2, ic->arg[2]);
-		m88k_stcr(cpu, tmp, ic->arg[2], 0);
-		reg(ic->arg[0]) = tmp2;
+		if (!cpu->running) {
+			ABORT_EXECUTION;
+		} else {
+			m88k_stcr(cpu, tmp, ic->arg[2], 0);
+			reg(ic->arg[0]) = tmp2;
+		}
 	} else
 		m88k_exception(cpu, M88K_EXCEPTION_PRIVILEGE_VIOLATION, 0);
 }
@@ -2013,7 +2022,7 @@ X(end_of_page2)
 	if (cpu->delay_slot == NOT_DELAYED)
 		return;
 
-	debugmsg_cpu(cpu, SUBSYS_CPU, "to_be_translated", VERBOSITY_ERROR,
+	debugmsg_cpu(cpu, SUBSYS_CPU, "m88k", VERBOSITY_ERROR,
 	    "end_of_page2: fatal error, we're in a delay slot");
 	ABORT_EXECUTION;
 }

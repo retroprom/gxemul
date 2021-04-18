@@ -604,6 +604,8 @@ void m88k_fstcr(struct cpu *cpu, uint32_t value, int fcr)
 		// Don't warn for writes with the value zero for these, for now.
 		if (value == 0)
 			break;
+
+		// fall through
 	
 	default:debugmsg_cpu(cpu, SUBSYS_CPU, "m88k", VERBOSITY_WARNING,
 		    "WARNING: fstcr: write 0x%08x to UNIMPLEMENTED fcr = 0x%02x (%s)",

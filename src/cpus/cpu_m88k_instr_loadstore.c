@@ -94,9 +94,13 @@ void LS_GENERIC_N(struct cpu *cpu, struct m88k_instr_call *ic)
 	{
 		int dreg = (((uint32_t *)ic->arg[0]) - &cpu->cd.m88k.r[0]);
 		if (dreg < 1 || dreg > 31) {
-			fatal("HUH? dreg = %i in cpu_m88k_instr_loadstore.c."
-			    " Internal error.\n", dreg);
-			exit(1);
+			debugmsg_cpu(cpu, SUBSYS_CPU, "m88k load/store",
+			    VERBOSITY_ERROR,
+			    "HUH? dreg = %i in cpu_m88k_instr_loadstore.c."
+			    " Internal error.", dreg);
+			cpu->running = 0;
+			cpu->cd.m88k.next_ic = &nothing_call;
+			return;
 		}
 		cpu->cd.m88k.dmt[0] |= dreg << DMT_DREGSHIFT;
 	}
@@ -137,9 +141,13 @@ void LS_GENERIC_N(struct cpu *cpu, struct m88k_instr_call *ic)
 		int dreg = (((uint32_t *)ic->arg[0]) - &cpu->cd.m88k.r[0]);
 		dreg ++;
 		if (dreg < 1 || dreg > 31) {
-			fatal("HUH? dreg = %i in cpu_m88k_instr_loadstore.c."
-			    " Internal error.\n", dreg);
-			exit(1);
+			debugmsg_cpu(cpu, SUBSYS_CPU, "m88k load/store",
+			    VERBOSITY_ERROR,
+			    "HUH? dreg = %i in cpu_m88k_instr_loadstore.c."
+			    " Internal error.", dreg);
+			cpu->running = 0;
+			cpu->cd.m88k.next_ic = &nothing_call;
+			return;
 		}
 		cpu->cd.m88k.dmt[1] &= ~((0x1f) << DMT_DREGSHIFT);
 		cpu->cd.m88k.dmt[1] |= dreg << DMT_DREGSHIFT;

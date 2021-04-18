@@ -889,7 +889,8 @@ X(msr_imm_spsr)
 			old_pc = cpu->pc;
 			printf("msr_spsr: old pc = 0x%08" PRIx32"\n", old_pc);
 		}
-		exit(1);
+		cpu->running = 0;
+		cpu->cd.arm.next_ic = &nothing_call;
 	}
 }
 Y(msr_imm_spsr)
@@ -930,9 +931,9 @@ X(mrs_spsr)
 	case ARM_MODE_SVC32: reg(ic->arg[0]) = cpu->cd.arm.spsr_svc; break;
 	case ARM_MODE_USR32:
 	case ARM_MODE_SYS32: reg(ic->arg[0]) = 0; break;
-	default:fatal("mrs_spsr: unimplemented mode %i\n",
-		    cpu->cd.arm.cpsr & ARM_FLAG_MODE);
-		exit(1);
+	default:fatal("mrs_spsr: unimplemented mode %i\n", cpu->cd.arm.cpsr & ARM_FLAG_MODE);
+		cpu->running = 0;
+		cpu->cd.arm.next_ic = &nothing_call;
 	}
 }
 Y(mrs_spsr)
@@ -1481,7 +1482,9 @@ void arm_pop(struct cpu* cpu, uint32_t* np, int p_bit, int u_bit, int s_bit, int
 			new_cpsr = cpu->cd.arm.spsr_svc; break;
 		default:fatal("bdt_load: unimplemented mode %i\n",
 			    cpu->cd.arm.cpsr & ARM_FLAG_MODE);
-			exit(1);
+			cpu->running = 0;
+			cpu->cd.arm.next_ic = &nothing_call;
+			return;
 		}
 
 		switch_register_banks = (cpu->cd.arm.cpsr & ARM_FLAG_MODE) !=
@@ -1697,7 +1700,9 @@ X(ldrex)
 
 	if (addr & (sizeof(word)-1)) {
 		fatal("TODO: ldrex unaligned access: exception\n");
-		exit(1);
+		cpu->running = 0;
+		cpu->cd.arm.next_ic = &nothing_call;
+		return;
 	}
 
 	if (!cpu->memory_rw(cpu, cpu->mem, addr, word,
@@ -1740,7 +1745,9 @@ X(strex)
 
 	if (addr & (sizeof(word)-1)) {
 		fatal("TODO: strex unaligned access: exception\n");
-		exit(1);
+		cpu->running = 0;
+		cpu->cd.arm.next_ic = &nothing_call;
+		return;
 	}
 
 	if (cpu->byte_order == EMUL_LITTLE_ENDIAN) {

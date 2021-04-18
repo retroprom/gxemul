@@ -35,12 +35,17 @@
 
 
 #define SYNCH_PC                {                                       \
-                int low_pc = ((size_t)ic - (size_t)cpu->cd.i960.cur_ic_page) \
+                int low_pc_ = ((size_t)ic - (size_t)cpu->cd.i960.cur_ic_page) \
                     / sizeof(struct i960_instr_call);                   \
                 cpu->pc &= ~((I960_IC_ENTRIES_PER_PAGE-1)               \
                     << I960_INSTR_ALIGNMENT_SHIFT);                     \
-                cpu->pc += (low_pc << I960_INSTR_ALIGNMENT_SHIFT);      \
+                cpu->pc += (low_pc_ << I960_INSTR_ALIGNMENT_SHIFT);      \
         }
+
+#define	ABORT_EXECUTION	  {	SYNCH_PC;				\
+				cpu->cd.i960.next_ic = &nothing_call;	\
+				cpu->running = 0;			\
+				debugger_n_steps_left_before_interaction = 0; }
 
 
 /*
@@ -126,8 +131,9 @@ X(end_of_page2)
 	if (cpu->delay_slot == NOT_DELAYED)
 		return;
 
-	fatal("end_of_page2: fatal error, we're in a delay slot\n");
-	exit(1);
+	debugmsg_cpu(cpu, SUBSYS_CPU, "i960", VERBOSITY_ERROR,
+	    "end_of_page2: fatal error, we're in a delay slot");
+	ABORT_EXECUTION;
 }
 
 

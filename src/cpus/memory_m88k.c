@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2007-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -388,7 +388,9 @@ exception:
 	switch (pfsr_status) {
 
 	case CMMU_PFSR_SUCCESS:
-		fatal("HUH? CMMU_PFSR_SUCCESS:, but exception? TODO\n");
+		debugmsg_cpu(cpu, SUBSYS_CPU, "m88k",
+		    VERBOSITY_ERROR,
+		    "HUH? CMMU_PFSR_SUCCESS:, but exception? TODO");
 		exit(1);
 		break;
 
@@ -404,7 +406,9 @@ exception:
 		break;
 
 	default:
-		fatal("Internal error in memory_m88k? pfsr_status = %i\n",
+		debugmsg_cpu(cpu, SUBSYS_CPU, "m88k",
+		    VERBOSITY_ERROR,
+		    "Internal error in memory_m88k? pfsr_status = %i",
 		    pfsr_status);
 		exit(1);
 	}
