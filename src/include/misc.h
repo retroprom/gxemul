@@ -178,29 +178,14 @@ enum Endianness
 #endif
 
 
-#ifdef HAVE___FUNCTION__
-
 #define	FAILURE(error_msg)					{	\
 		char where_msg[400];					\
 		snprintf(where_msg, sizeof(where_msg),			\
 		    "%s, line %i, function %s().\n",			\
-		    __FILE__, __LINE__, __FUNCTION__);			\
+		    __FILE__, __LINE__, __func__);			\
         	fprintf(stderr, "\n%s, in %s\n", error_msg, where_msg);	\
 		exit(1);						\
 	}
-
-#else
-
-#define	FAILURE(error_msg)					{	\
-		char where_msg[400];					\
-		snprintf(where_msg, sizeof(where_msg),			\
-		    "%s, line %i\n", __FILE__, __LINE__);		\
-        	fprintf(stderr, "\n%s, in %s.\n", error_msg, where_msg);\
-		exit(1);						\
-	}
-
-#endif	/*  !HAVE___FUNCTION__  */
-
 
 #define	CHECK_ALLOCATION(ptr)					{	\
 		if ((ptr) == NULL)					\
