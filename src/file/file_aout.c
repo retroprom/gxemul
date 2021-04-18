@@ -65,6 +65,7 @@ static void file_load_aout(struct machine *m, struct memory *mem,
 	uint64_t *entrypointp, int arch, int *byte_orderp)
 {
 	struct exec aout_header;
+	struct bout_exec bout_header;
 	FILE *f;
 	int len;
 	int encoding = ELFDATA2LSB;
@@ -84,11 +85,23 @@ static void file_load_aout(struct machine *m, struct memory *mem,
 	}
 
 	if (flags & AOUT_FLAG_I960_BOUT) {
-		fprintf(stderr, "TODO: b.out\n");
-		exit(1);
-	}
+		len = fread(&bout_header, 1, sizeof(bout_header), f);
+		if (len != sizeof(bout_header)) {
+			fprintf(stderr, "%s: not a complete b.out image\n",
+			    filename);
+			exit(1);
+		}
 
-	if (flags & AOUT_FLAG_DECOSF1) {
+		unencode(entry, &bout_header.a_entry, uint32_t);
+		debug("b.out, entry point 0x%08lx\n", (long)entry);
+		vaddr = entry;
+
+		unencode(textsize, &bout_header.a_text, uint32_t);
+		unencode(datasize, &bout_header.a_data, uint32_t);
+		debug("text + data = %i + %i bytes\n", textsize, datasize);
+
+		unencode(symbsize, &bout_header.a_syms, uint32_t);
+	} else if (flags & AOUT_FLAG_DECOSF1) {
 		if (fread(&buf, 1, 32, f) != 32) {
 			perror(filename);
 			exit(1);
