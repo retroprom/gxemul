@@ -240,7 +240,7 @@ int i960_cpu_new(struct cpu *cpu, struct memory *mem,
 	}
 
 	for (int i = 0; i < cpu->cd.i960.nr_of_valid_sfrs; i++) {
-		char name[10];
+		char name[20];
 		snprintf(name, sizeof(name), "sfr%i", i);
 		CPU_SETTINGS_ADD_REGISTER32(name, cpu->cd.i960.sfr[i]);
 	}
