@@ -133,7 +133,7 @@ struct machine {
 	int	byte_order_override;
 	int	bootstrap_cpu;
 	int	use_random_bootstrap_cpu;
-	int	start_paused;
+	bool	start_paused;
 	int	ncpus;
 	struct cpu **cpus;
 

@@ -111,7 +111,7 @@ MACHINE_SETUP(luna88k)
 	// the OS kernel code simultaneously and it is up to the OS
 	// kernel's initial code to sort things out.)
 	for (i = 0; i < (size_t)machine->ncpus; ++i)
-		machine->cpus[i]->running = 1;
+		machine->cpus[i]->running = true;
 
 	// machine_add_devices_as_symbols(machine, 0);
 

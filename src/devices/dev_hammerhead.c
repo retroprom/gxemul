@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -69,7 +69,7 @@ DEVICE_ACCESS(hammerhead)
 if (idata <= 0x100)
 return 1;
 
-		other_cpu->running = 1;
+		other_cpu->running = true;
 		other_cpu->pc = idata;
 
 		if (other_cpu->is_32bit)

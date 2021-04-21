@@ -44,8 +44,7 @@
 
 #define	ABORT_EXECUTION	  {	SYNCH_PC;				\
 				cpu->cd.m88k.next_ic = &nothing_call;	\
-				cpu->running = 0;			\
-				debugger_n_steps_left_before_interaction = 0; }
+				cpu->running = false; }
 
 
 /*
@@ -2175,7 +2174,7 @@ X(to_be_translated)
 	if (cpu->cd.m88k.r[M88K_ZERO_REG] != 0) {
 		debugmsg_cpu(cpu, SUBSYS_CPU, "to_be_translated", VERBOSITY_ERROR,
 		    "INTERNAL ERROR! M88K_ZERO_REG != 0");
-		cpu->running = 0;
+		cpu->running = false;
 		goto bad;
 	}
 

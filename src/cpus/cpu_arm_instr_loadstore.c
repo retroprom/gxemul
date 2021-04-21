@@ -128,10 +128,8 @@ void A__NAME__general(struct cpu *cpu, struct arm_instr_call *ic)
 	if (!cpu->memory_rw(cpu, cpu->mem, addr, data, datalen,
 	    MEM_READ, memory_rw_flags)) {
 		/*  load failed, an exception was generated  */
-		if (!cpu->running) {
+		if (!cpu->running)
 			cpu->cd.arm.next_ic = &nothing_call;
-			debugger_n_steps_left_before_interaction = 0;
-		}
 		return;
 	}
 #if defined(A__B) && !defined(A__LDRD)
@@ -204,10 +202,8 @@ void A__NAME__general(struct cpu *cpu, struct arm_instr_call *ic)
 	if (!cpu->memory_rw(cpu, cpu->mem, addr, data, datalen,
 	    MEM_WRITE, memory_rw_flags)) {
 		/*  store failed, an exception was generated  */
-		if (!cpu->running) {
+		if (!cpu->running)
 			cpu->cd.arm.next_ic = &nothing_call;
-			debugger_n_steps_left_before_interaction = 0;
-		}
 		return;
 	}
 #endif

@@ -65,9 +65,8 @@ void LS_GENERIC_N(struct cpu *cpu, struct ppc_instr_call *ic)
 		debugmsg_cpu(cpu, SUBSYS_CPU, "ppc", VERBOSITY_ERROR,
 		    "PPC LOAD/STORE misalignment across page boundary: TODO"
 		    " (addr=0x%08x, LS_SIZE=%i)\n", (int)addr, LS_SIZE);
-		cpu->running = 0;
+		cpu->running = false;
 		cpu->cd.ppc.next_ic = &nothing_call;
-		debugger_n_steps_left_before_interaction = 0;
 		return;
 	}
 #endif
@@ -76,10 +75,8 @@ void LS_GENERIC_N(struct cpu *cpu, struct ppc_instr_call *ic)
 	if (!cpu->memory_rw(cpu, cpu->mem, addr, data, sizeof(data),
 	    MEM_READ, CACHE_DATA)) {
 		/*  Exception.  */
-		if (!cpu->running) {
+		if (!cpu->running)
 			cpu->cd.ppc.next_ic = &nothing_call;
-			debugger_n_steps_left_before_interaction = 0;
-		}
 		return;
 	}
 #ifdef LS_B
@@ -164,10 +161,8 @@ void LS_GENERIC_N(struct cpu *cpu, struct ppc_instr_call *ic)
 	if (!cpu->memory_rw(cpu, cpu->mem, addr, data, sizeof(data),
 	    MEM_WRITE, CACHE_DATA)) {
 		/*  Exception.  */
-		if (!cpu->running) {
+		if (!cpu->running)
 			cpu->cd.ppc.next_ic = &nothing_call;
-			debugger_n_steps_left_before_interaction = 0;
-		}
 		return;
 	}
 #endif

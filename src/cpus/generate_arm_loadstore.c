@@ -63,7 +63,6 @@ int main(int argc, char *argv[])
 	printf("extern void arm_instr_nothing(struct cpu *, struct arm_instr_call *);\n");
 	printf("extern void arm_instr_invalid(struct cpu *, struct arm_instr_call *);\n");
 	printf("extern void arm_pc_to_pointers(struct cpu *);\n");
-	printf("extern int debugger_n_steps_left_before_interaction;\n");
 	
 	if (!only_array)
 	  for (reg=0; reg<=1; reg++)

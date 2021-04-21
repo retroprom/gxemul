@@ -71,12 +71,12 @@ bool single_step = false;
 bool about_to_enter_single_step = false;
 bool debugger_enter_at_end_of_run = false;
 volatile int single_step_breakpoint = 0;
-int debugger_n_steps_left_before_interaction = 0;
 
 extern bool emul_shutdown;
 
 int old_quiet_mode = 0;
 
+static int debugger_n_steps_left_before_interaction = 0;
 static volatile bool exit_debugger;
 static volatile bool exit_debugger_to_continue_single_stepping;
 

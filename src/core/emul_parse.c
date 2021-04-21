@@ -512,7 +512,7 @@ static void parse__machine(struct emul *e, FILE *f, int *in_emul, int *line,
 		if (!cur_machine_start_paused[0])
 			strlcpy(cur_machine_start_paused, "no",
 			    sizeof(cur_machine_start_paused));
-		m->start_paused = parse_on_off(cur_machine_start_paused);
+		m->start_paused = parse_on_off(cur_machine_start_paused) ? true : false;
 
 		/*  NOTE: Default nr of CPUs is 0:  */
 		if (!cur_machine_ncpus[0])

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2020  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -2603,17 +2603,17 @@ X(sc)
 X(openfirmware)
 {
 	of_emul(cpu);
-	if (cpu->running == 0) {
-		cpu->n_translated_instrs --;
-		cpu->cd.ppc.next_ic = &nothing_call;
-		debugger_n_steps_left_before_interaction = 0;
-	}
 
 	cpu->pc = cpu->cd.ppc.spr[SPR_LR];
 	if (cpu->machine->show_trace_tree)
 		cpu_functioncall_trace_return(cpu);
 
 	quick_pc_to_pointers(cpu);
+
+	if (!cpu->running) {
+		cpu->n_translated_instrs --;
+		cpu->cd.ppc.next_ic = &nothing_call;
+	}
 }
 
 

@@ -602,7 +602,7 @@ static void debugger_cmd_pause(struct machine *m, char *args)
 		return;
 	}
 
-	m->cpus[cpuid]->running ^= 1;
+	m->cpus[cpuid]->running = !m->cpus[cpuid]->running;
 
 	printf("cpu%i (%s) in machine \"%s\" is now %s\n", cpuid,
 	    m->cpus[cpuid]->name, m->name,

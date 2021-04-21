@@ -1976,7 +1976,9 @@ bad:	/*
 	/*  Note: Single-stepping can jump here.  */
 stop_running_translated:
 
-	debugger_n_steps_left_before_interaction = 0;
+	// This makes sure that we stop in the debugger, even if e.g.
+	// "step 100" was executing and 50 steps remained.
+	debugger_reset();
 
 	ic = cpu->cd.DYNTRANS_ARCH.next_ic = &nothing_call;
 	cpu->cd.DYNTRANS_ARCH.next_ic ++;

@@ -198,7 +198,7 @@ DEVICE_ACCESS(i80321)
 		if (writeflag == MEM_WRITE && idata == 0x30) {
 			int j;
 			for (j=0; j<cpu->machine->ncpus; j++)
-				cpu->machine->cpus[j]->running = 0;
+				cpu->machine->cpus[j]->running = false;
 		}
 		break;
 	case VERDE_ATU_BASE + ATU_ATUIMR:

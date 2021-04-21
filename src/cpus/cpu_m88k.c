@@ -451,7 +451,7 @@ void m88k_ldcr(struct cpu *cpu, uint32_t *r32ptr, int cr)
 			if (DMT_DREGBITS(retval) == M88K_ZERO_REG) {
 				debugmsg_cpu(cpu, SUBSYS_CPU, "m88k", VERBOSITY_ERROR,
 				    "ldcr: DMT DREG = zero? Internal error.");
-				cpu->running = 0;
+				cpu->running = false;
 				return;
 			}
 		}
@@ -459,7 +459,7 @@ void m88k_ldcr(struct cpu *cpu, uint32_t *r32ptr, int cr)
 		    != !!(retval & DMT_BO) && retval & DMT_VALID) {
 			debugmsg_cpu(cpu, SUBSYS_CPU, "m88k", VERBOSITY_ERROR,
 			    "ldcr: DMT byte order not same as CPUs?");
-			cpu->running = 0;
+			cpu->running = false;
 			return;
 		}
 
@@ -476,7 +476,7 @@ void m88k_ldcr(struct cpu *cpu, uint32_t *r32ptr, int cr)
 		if (retval & 3) {
 			debugmsg_cpu(cpu, SUBSYS_CPU, "m88k", VERBOSITY_ERROR,
 			    "ldcr: DMAx not word-aligned? Internal error.");
-			cpu->running = 0;
+			cpu->running = false;
 			return;
 		}
 
@@ -485,7 +485,7 @@ void m88k_ldcr(struct cpu *cpu, uint32_t *r32ptr, int cr)
 	default:debugmsg_cpu(cpu, SUBSYS_CPU, "m88k", VERBOSITY_ERROR,
 		    "ldcr: UNIMPLEMENTED cr = 0x%02x (%s)\n",
 		    cr, m88k_cr_name(cpu, cr));
-		cpu->running = 0;
+		cpu->running = false;
 		return;
 	}
 
@@ -514,7 +514,7 @@ void m88k_stcr(struct cpu *cpu, uint32_t value, int cr, int rte)
 			    "stcr: TODO: attempt to change endianness by flipping"
 			    " the endianness bit in the PSR. How should this"
 			    " be handled? Aborting.");
-			cpu->running = 0;
+			cpu->running = false;
 			return;
 		}
 
@@ -528,7 +528,7 @@ void m88k_stcr(struct cpu *cpu, uint32_t value, int cr, int rte)
 		if (value & M88K_PSR_MXM) {
 			debugmsg_cpu(cpu, SUBSYS_CPU, "m88k", VERBOSITY_ERROR,
 			    "stcr: TODO: MXM support");
-			cpu->running = 0;
+			cpu->running = false;
 			return;
 		}
 
@@ -583,7 +583,7 @@ void m88k_stcr(struct cpu *cpu, uint32_t value, int cr, int rte)
 	default:debugmsg_cpu(cpu, SUBSYS_CPU, "m88k", VERBOSITY_ERROR,
 		    "stcr: UNIMPLEMENTED cr = 0x%02x (%s)",
 		    cr, m88k_cr_name(cpu, cr));
-		cpu->running = 0;
+		cpu->running = false;
 		return;
 	}
 }
@@ -752,7 +752,7 @@ void m88k_exception(struct cpu *cpu, int vector, int is_trap)
 			vector,
 			(int)cpu->pc);
 		for (int j = 0; j < cpu->machine->ncpus; ++j)
-			cpu->machine->cpus[j]->running = 0;
+			cpu->machine->cpus[j]->running = false;
 		m88k_pc_to_pointers(cpu);
 		return;
 	}
@@ -835,7 +835,7 @@ void m88k_exception(struct cpu *cpu, int vector, int is_trap)
 		case M88K_EXCEPTION_RESET:
 			fatal("[ m88k_exception: reset ]\n");
 			for (int j = 0; j < cpu->machine->ncpus; ++j)
-				cpu->machine->cpus[j]->running = 0;
+				cpu->machine->cpus[j]->running = false;
 			break;
 
 		case M88K_EXCEPTION_INTERRUPT:
@@ -891,7 +891,7 @@ void m88k_exception(struct cpu *cpu, int vector, int is_trap)
 
 		default:debugmsg_cpu(cpu, SUBSYS_EXCEPTION, "m88k",
 			    VERBOSITY_ERROR, "internal error");
-			cpu->running = 0;
+			cpu->running = false;
 		}
 	}
 

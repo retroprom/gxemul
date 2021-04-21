@@ -73,7 +73,7 @@
 #define DYNTRANS_MISC_DECLARATIONS(arch,ARCH,addrtype)  struct \
 	arch ## _instr_call {					\
 		void	(*f)(struct cpu *, struct arch ## _instr_call *); \
-		size_t	arg[ARCH ## _N_IC_ARGS];			\
+		uintptr_t arg[ARCH ## _N_IC_ARGS];			\
 	};								\
 									\
 	/*  Translation cache struct for each physical page:  */	\
@@ -372,11 +372,11 @@ struct cpu {
 	/*  0 for emulated 64-bit CPUs, 1 for 32-bit.  */
 	uint8_t		is_32bit;
 
-	/*  1 while running, 0 when paused/stopped.  */
-	uint8_t		running;
-
 	/*  See comment further up.  */
 	uint8_t		delay_slot;
+
+	/*  true while running, false when paused/stopped.  */
+	bool		running;
 
 	/*  0-based CPU id, in an emulated SMP system.  */
 	int		cpu_id;

@@ -318,7 +318,7 @@ void riscv_exception(struct cpu *cpu, int vector, int is_trap)
 	debugmsg_cpu(cpu, SUBSYS_EXCEPTION, "", VERBOSITY_ERROR,
 	    "riscv_exception(): TODO");
 
-	cpu->running = 0;
+	cpu->running = false;
 
 	riscv_pc_to_pointers(cpu);
 }

@@ -44,8 +44,7 @@
 
 #define	ABORT_EXECUTION	  {	SYNCH_PC;				\
 				cpu->cd.i960.next_ic = &nothing_call;	\
-				cpu->running = 0;			\
-				debugger_n_steps_left_before_interaction = 0; }
+				cpu->running = false; }
 
 
 /*

@@ -105,7 +105,7 @@ DEVICE_ACCESS(mp)
 			    " arch yet!\n");
 			exit(1);
 		}
-		d->cpus[which_cpu]->running = 1;
+		d->cpus[which_cpu]->running = true;
 		/*  debug("[ dev_mp: starting up cpu%i at 0x%llx ]\n", 
 		    which_cpu, (long long)d->startup_addr);  */
 		break;
@@ -126,7 +126,7 @@ DEVICE_ACCESS(mp)
 
 		for (i=0; i<cpu->machine->ncpus; i++)
 			if (i != which_cpu)
-				d->cpus[i]->running = 0;
+				d->cpus[i]->running = false;
 		break;
 
 	case DEV_MP_UNPAUSE_CPU:
@@ -134,7 +134,7 @@ DEVICE_ACCESS(mp)
 		which_cpu = idata;
 
 		if (which_cpu >= 0 && which_cpu <cpu->machine->ncpus)
-			d->cpus[which_cpu]->running = 1;
+			d->cpus[which_cpu]->running = true;
 		break;
 
 	case DEV_MP_STARTUPSTACK:

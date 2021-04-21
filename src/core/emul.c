@@ -672,12 +672,12 @@ bool emul_machine_setup(struct machine *m, int n_load, char **load_names,
 		}
 
 	/*  Startup the bootstrap CPU:  */
-	cpu->running = 1;
+	cpu->running = true;
 
 	/*  ... or pause all CPUs, if start_paused is set:  */
 	if (m->start_paused) {
 		for (i=0; i<m->ncpus; i++)
-			m->cpus[i]->running = 0;
+			m->cpus[i]->running = false;
 	}
 
 	/*  Parse and add breakpoints:  */

@@ -2115,8 +2115,7 @@ X(reboot)
 	if (!cop0_availability_check(cpu, ic))
 		return;
 
-	cpu->running = 0;
-	debugger_n_steps_left_before_interaction = 0;
+	cpu->running = false;
 	cpu->cd.mips.next_ic = &nothing_call;
 }
 

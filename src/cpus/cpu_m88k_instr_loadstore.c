@@ -175,9 +175,7 @@ void LS_GENERIC_N(struct cpu *cpu, struct m88k_instr_call *ic)
 		    " addr = %08" PRIx32", pc = %08" PRIx32" }\n", LS_SIZE,
 		    (uint32_t) addr, (uint32_t) cpu->pc);
 
-		/*  TODO: Generalize this into a abort_call, or similar:  */
 		cpu->running = 0;
-		debugger_n_steps_left_before_interaction = 0;
 		cpu->cd.m88k.next_ic = &nothing_call;
 
 		if (cpu->delay_slot)
@@ -191,10 +189,8 @@ void LS_GENERIC_N(struct cpu *cpu, struct m88k_instr_call *ic)
 	if (!cpu->memory_rw(cpu, cpu->mem, addr, data, sizeof(data),
 	    MEM_READ, memory_rw_flags)) {
 		/*  Exception or aborted execution.  */
-		if (!cpu->running) {
+		if (!cpu->running)
 			cpu->cd.m88k.next_ic = &nothing_call;
-			debugger_n_steps_left_before_interaction = 0;
-		}
 		return;
 	}
 	x = memory_readmax64(cpu, data, LS_SIZE);
@@ -238,10 +234,8 @@ void LS_GENERIC_N(struct cpu *cpu, struct m88k_instr_call *ic)
 	if (!cpu->memory_rw(cpu, cpu->mem, addr, data, sizeof(data),
 	    MEM_WRITE, memory_rw_flags)) {
 		/*  Exception or aborted execution.  */
-		if (!cpu->running) {
+		if (!cpu->running)
 			cpu->cd.m88k.next_ic = &nothing_call;
-			debugger_n_steps_left_before_interaction = 0;
-		}
 		return;
 	}
 #endif

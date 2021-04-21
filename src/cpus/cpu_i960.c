@@ -368,7 +368,7 @@ void i960_exception(struct cpu *cpu, int vector, int is_trap)
 	debugmsg_cpu(cpu, SUBSYS_EXCEPTION, "", VERBOSITY_ERROR,
 	    "i960_exception(): TODO");
 
-	cpu->running = 0;
+	cpu->running = false;
 
 	i960_pc_to_pointers(cpu);
 }

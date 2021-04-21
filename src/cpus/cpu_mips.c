@@ -732,6 +732,8 @@ int mips_cpu_disassemble_instr(struct cpu *cpu, unsigned char *originstr,
 
 	if (running && cpu->delay_slot)
 		debug(" (d)");
+	else
+		debug("    ");
 
 	cpu_print_pc_indicator_in_disassembly(cpu, running, dumpaddr);
 
