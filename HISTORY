@@ -5045,3 +5045,10 @@ Changelog for GXemul:
 20210418	More i960 stuff, including re-adding the (so far dummy)
 		Cyclone VH machine.
 		Assuming availabilty of __func__ (C99 standard).
+20210422	Enabling idle detection for OpenBSD/luna88k, which uses a
+		bcnd.n instruction. A hack, but it seems to work.
+		Fixing a bug where console input could randomly be lost when
+		idling, if there were multiple emulated serial ports.
+
+==============  RELEASE 0.7.0  ==============
+

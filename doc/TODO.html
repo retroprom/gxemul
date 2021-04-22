@@ -33,10 +33,13 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 <b><a name="shortlist">Current "short-list" (unsorted)</a></b>
 
 <p><pre>
+<font color="blue">bool-ify stuff:</font>
+	o) int -> bool for things like cpu->running
+
 <font color="blue">debugmsg-related and non-exit(1) stuff (mostly):</font>
 	o) src/cpu/:
 		o) debugmsg:ify at least 'cpu' and 'exception' subsystem messages.
-		o) Fix some more exit(1) calls to cpu->running = 0 and make
+		o) Fix some more exit(1) calls to cpu->running = false and make
 			sure that they break out of the dyntrans loop.
 	o) src/net/:
 		o) debugmsg:ify all src/net/.
@@ -68,6 +71,25 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 	o) Apply Chris Berry's patch for tap device use on Linux.
 	o) Try tap networking on FreeBSD host (e.g. using netbsd/pmax guest).
 		Performance better than when using simulated NAT?
+	o) Breakpoints etc:
+		Helper for setting/adding the break-out-of-dyntrans value to ninstr.
+			cpu_dyntrans_abort_loop(cpu)?
+		Debugmsg breakpoint should then:
+			call cpu_dyntrans_abort_loop(cpu) if cpu != NULL,
+			set about-to-enter-single-step
+			print "subsystem breakpoint" for non-errors,
+			print "aborting" for errors.
+		ABORT_DT =   ninstr & XXX
+		if (ABORT_DT) { SYNCH_PC; next ic = nothing; }
+		step/continue after hitting a breakpoint must work.
+		counts for breakpoints, only break "after x hits".
+		CTRL-T should print breakpoint counts.
+		-T can be implemented as a "warning level breakpoint" for the
+			memory subsystem.
+		-K should implicitly be set if any breakpoints (subsystem 
+			or regular) are used.
+		Always break on debugmsg errors!
+		Document the break-out-of-dyntrans mechanism.
 	o) When using e.g. "-E alpha" and there was more than one subtype, then _list_
    	   them instead of just complaining "Maybe you forgot the -e command line option".
 	o) Try using profil() for very basic runtime profiling?
