@@ -1,0 +1,14 @@
+#!/usr/local/bin/expect
+
+set timeout 4000
+spawn ./gxemul -e luna-88k -q -d R:liveimage-luna88k-raw-20201206.img boot
+
+set  send_slow  {1 .5}
+
+expect " starting in"
+send -s "\r"
+
+expect "login:"
+
+close
+

@@ -54,9 +54,6 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 	o) Try X11 grabbing with multiple host displays? ssh with X11 forwarding from laptop?
 		with multiple mouse pointers, _which_ mouse pointer is grabbed?
 	o) Try all guest OSes in the documentation, cleaning up debugmsg related stuff as I go along.
-	o) Expect-script for launching OpenBSD/luna88k from a disk image, boot up,
-		log in as root, possibly do something more that is CPU intense,
-		then break. Print resulting time. (Useful for performance stuff.)
 	o) Instead of doing cpu->running = 0 in some places, and foreach cpu in the machine
 		in some other places, then the main emul loop should check if ANY
 		cpu goes from running to non-running, and treat that as a reason to
