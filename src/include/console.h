@@ -38,11 +38,13 @@
 
 #define	CONSOLE_OUTPUT_ONLY	-1
 
+struct emul;
+
 void console_deinit_main(void);
 void console_sigcont(int x);
 void console_makeavail(int handle, char ch);
 int console_charavail(int handle);
-bool console_any_input_available();
+bool console_any_input_available(struct emul *emul);
 int console_readchar(int handle);
 void console_putchar(int handle, int ch);
 void console_flush(void);

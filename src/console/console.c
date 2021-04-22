@@ -405,7 +405,7 @@ int console_charavail(int handle)
  *
  *  TODO: Mouse buttons are not checked yet.
  */
-bool console_any_input_available()
+bool console_any_input_available(struct emul *emul)
 {
 	bool somethingAvailable = false;
 
@@ -417,14 +417,15 @@ bool console_any_input_available()
 		uint64_t t1 = console_mouse_lastupdate.tv_sec * 1000000 +
 			console_mouse_lastupdate.tv_usec;
 		uint64_t t2 = tv.tv_sec * 1000000 + tv.tv_usec;
-		
+
 		if (t2 - t1 < 1000000)
 			somethingAvailable = true;
 	}
 
-	for (int i = 0; i < n_console_handles; ++i)
-		if (console_charavail(i))
+	if (emul->n_machines == 1) {
+		if (console_charavail(emul->machines[0]->main_console_handle))
 			somethingAvailable = true;
+	}
 
 	return somethingAvailable;
 }
