@@ -2076,20 +2076,23 @@ void COMBINE(idle)(struct cpu *cpu, struct m88k_instr_call *ic, int low_addr)
 		return;
 	}
 
-#if 0
-	// TODO: bcnd_samepage_eq0 with "n" for the delay slot?
+	// NOTE: In this case, we are only checking the tb1, the ld, and
+	// the bcnd.n instruction. It actually executes the instruction after
+	// it: hopefully it is an 'or', but in principle it could be anything.
+	// Here we take a chance and hope that it is not something weird that
+	// would cause an exception. (It is unlikely that this particular loop
+	// construct, used for idle loops, would have something else after it.)
 	if (ic[0].f == instr(bcnd_n_eq0) &&
-	    ic[0].arg[2] == 2112 && // (size_t) &ic[-2] &&
+	    ic[0].arg[2] == (size_t) low_addr - 8 &&
 	    ic[-2].f == instr(tb1) &&
 	    ic[-2].arg[1] == (size_t) &cpu->cd.m88k.r[M88K_ZERO_REG] &&
 	    ic[-1].f == instr(ld_u_4_be) &&
 	    ic[0].arg[0] == ic[-1].arg[0] &&
 	    ic[0].arg[0] != (size_t) &cpu->cd.m88k.r[M88K_ZERO_REG]) {
 		ic[-2].f = instr(idle_with_tb1);
-		printf("NEW IDLE using bcnd.n!!!\n");
+		// printf("NEW IDLE using bcnd.n!!!\n");
 		return;
 	}
-#endif
 }
 
 
