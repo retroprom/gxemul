@@ -2674,8 +2674,11 @@ X(to_be_translated)
 			/*
 			 *  TODO. For now, just treat "tcnd ne0, r0, xxx" as
 			 *  a nop (since r0 will always be equal to zero).
-			 *  Perhaps it is used as a way to flush some internal
-			 *  CPU state?
+			 *
+			 *  According to the manual, this "synchronizes the
+			 *  MC88100 in that all previous operations are allowed
+			 *  to complete ([..] clearing the scoreboard register
+			 *  and data unit pipeline)".
 			 */
 			if (s1 == M88K_ZERO_REG && d == 0xc /* ne0 */) {
 				ic->f = instr(nop);
