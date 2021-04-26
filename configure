@@ -687,7 +687,7 @@ rm -f _testr.c _testr.o _testr
 
 
 #  -lm?
-printf "checking for math libs..."
+printf "checking for math libs... "
 printf "#include <math.h>\nint main(int argc, char *argv[]) { " > _testr.c
 printf "double x = sqrt(sin((double)argc)); return (int)x; }\n" >> _testr.c
 $CC $CFLAGS _testr.c -o _testr 2> /dev/null
@@ -696,20 +696,35 @@ if [ ! -x _testr ]; then
 	if [ ! -x _testr ]; then
 		$CC $CFLAGS _testr.c -lm -lcpml -o _testr 2> /dev/null
 		if [ ! -x _testr ]; then
-			printf "\nWARNING! Could not compile math test "
+			printf "\n\nWARNING! Could not compile math test "
 			printf "at all!\nContinuing anyway.\n\n"
 		else
 			#  -lm AND -lcpml
 			OTHERLIBS="-lm -lcpml $OTHERLIBS"
-			printf " -lm -lcpml\n"
+			printf "-lm -lcpml\n"
 		fi
 	else
 		#  Normal -lm
 		OTHERLIBS="-lm $OTHERLIBS"
-		printf " -lm\n"
+		printf "-lm\n"
 	fi
 else
-	printf " none needed\n"
+	printf "none needed\n"
+fi
+rm -f _testr.c _testr.o _testr
+
+
+#  C99 INFINITY definition?
+printf "checking for math INFINITY... "
+printf "#include <math.h>\nint main(int argc, char *argv[]) { " > _testr.c
+printf "double x = INFINITY; return (int)x; }\n" >> _testr.c
+$CC $CFLAGS $OTHERLIBS _testr.c -o _testr > /dev/null 2> /dev/null
+if [ ! -x _testr ]; then
+	printf "no\n\n"
+	printf "INFINITY (in C99 math.h) is required. Aborting.\n\n"
+	exit
+else
+	printf "yes\n"
 fi
 rm -f _testr.c _testr.o _testr
 
