@@ -899,6 +899,41 @@ void m88k_exception(struct cpu *cpu, int vector, int is_trap)
 }
 
 
+static const char *m88k_m5_condition(int m5)
+{
+	/*
+	 *  Attempt to decode bcnd/tcnd condition:
+	 *
+	 *  The manual says:
+	 *
+	 *	16: "reserved, unused by the branch selection logic"
+	 *	 8: "maximum negative number"
+	 *	 4: "less than zero"
+	 *	 2: "equal to zero"
+	 *	 1: "greater than zero"
+	 *
+	 *  Perhaps the hardware allows any combination of these, but in
+	 *  practice, real-life code (such as that used by OpenBSD) does
+	 *  not trigger all cases.
+	 */
+	switch (m5) {
+	case 0x1: return "gt0";
+	case 0x2: return "eq0";
+	case 0x3: return "ge0";
+	case 0x5: return "not_maxneg_nor_zero";
+	case 0x7: return "not_maxneg";
+	case 0x8: return "maxneg";
+	case 0xc: return "lt0";
+	case 0xd: return "ne0";
+	case 0xe: return "le0";
+	}
+
+	static char buf[32];
+	snprintf(buf, sizeof(buf), "unimplemented_%i", m5);
+	return buf;
+}
+
+
 /*
  *  m88k_cpu_disassemble_instr():
  *
@@ -1261,19 +1296,7 @@ int m88k_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
 		}
 		debug("%s%s\t", mnem, op26 & 1? ".n" : "");
 		if (op26 == 0x3a || op26 == 0x3b) {
-			/*  Attempt to decode bcnd condition:  */
-			switch (d) {
-			case 0x1: debug("gt0"); break;
-			case 0x2: debug("eq0"); break;
-			case 0x3: debug("ge0"); break;
-			case 0x5: debug("not_maxneg_nor_zero"); break;
-			case 0x7: debug("not_maxneg"); break;
-			case 0x8: debug("maxneg"); break;
-			case 0xc: debug("lt0"); break;
-			case 0xd: debug("ne0"); break;
-			case 0xe: debug("le0"); break;
-			default:  debug("unimplemented_%i", d);
-			}
+			debug("%s", m88k_m5_condition(d));
 		} else {
 			debug("%i", d);
 		}
@@ -1351,6 +1374,13 @@ int m88k_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
 			case 0x36: mnem = "tb1"; break;
 			}
 			debug("%s\t%i,r%i,0x%x\n", mnem, d, s1, iw & 0x1ff);
+			break;
+		case 0x3a:
+			if (iw & 0x200)
+				debug("UNIMPLEMENTED tcnd but with 0x200 bit!\n");
+			else
+				debug("tcnd\t%s,r%i,0x%x\n",
+				    m88k_m5_condition(d), s1, iw & 0x1ff);
 			break;
 		default:debug("UNIMPLEMENTED 0x3c, op10=0x%02x\n", op10);
 		}

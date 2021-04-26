@@ -5052,3 +5052,5 @@ Changelog for GXemul:
 
 ==============  RELEASE 0.7.0  ==============
 
+20210426	Adding disassembly of 88K "tcnd", and treating tcnd ne0,r0,x
+		as a nop (since r0 is always zero).
