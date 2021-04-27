@@ -106,10 +106,10 @@ void LS_GENERIC_N(struct cpu *cpu, struct mips_instr_call *ic)
 	if (!cpu->memory_rw(cpu, cpu->mem, addr, data, sizeof(data),
 	    MEM_READ, CACHE_DATA)) {
 		/*  Exception.  */
-		if (!cpu->running)
-			cpu->cd.mips.next_ic = &nothing_call;
+		BREAK_DYNTRANS_CHECK(cpu);
 		return;
 	}
+	BREAK_DYNTRANS_CHECK(cpu);
 	x = memory_readmax64(cpu, data, LS_SIZE);
 #ifdef LS_SIGNED
 #ifdef LS_1
@@ -128,10 +128,10 @@ void LS_GENERIC_N(struct cpu *cpu, struct mips_instr_call *ic)
 	if (!cpu->memory_rw(cpu, cpu->mem, addr, data, sizeof(data),
 	    MEM_WRITE, CACHE_DATA)) {
 		/*  Exception.  */
-		if (!cpu->running)
-			cpu->cd.mips.next_ic = &nothing_call;
+		BREAK_DYNTRANS_CHECK(cpu);
 		return;
 	}
+	BREAK_DYNTRANS_CHECK(cpu);
 #endif
 }
 #endif	/*  LS_INCLUDE_GENERIC  */

@@ -37,6 +37,15 @@
 #include "float_emul.h"
 
 
+#define SYNCH_PC                {                                       \
+                int low_pc_ = ((size_t)ic - (size_t)cpu->cd.ppc.cur_ic_page) \
+                    / sizeof(struct ppc_instr_call);                   \
+                cpu->pc &= ~((PPC_IC_ENTRIES_PER_PAGE-1)               \
+                    << PPC_INSTR_ALIGNMENT_SHIFT);                     \
+                cpu->pc += (low_pc_ << PPC_INSTR_ALIGNMENT_SHIFT);      \
+        }
+
+
 #define DOT0(n) X(n ## _dot) { instr(n)(cpu,ic); \
 	update_cr0(cpu, reg(ic->arg[0])); }
 #define DOT1(n) X(n ## _dot) { instr(n)(cpu,ic); \
@@ -47,12 +56,7 @@
 #ifndef CHECK_FOR_FPU_EXCEPTION
 #define CHECK_FOR_FPU_EXCEPTION { if (!(cpu->cd.ppc.msr & PPC_MSR_FP)) { \
 		/*  Synchronize the PC, and cause an FPU exception:  */  \
-		uint64_t low_pc = ((size_t)ic -				 \
-		    (size_t)cpu->cd.ppc.cur_ic_page)			 \
-		    / sizeof(struct ppc_instr_call);			 \
-		cpu->pc = (cpu->pc & ~((PPC_IC_ENTRIES_PER_PAGE-1) <<	 \
-		    PPC_INSTR_ALIGNMENT_SHIFT)) + (low_pc <<		 \
-		    PPC_INSTR_ALIGNMENT_SHIFT);				 \
+		SYNCH_PC						 \
 		ppc_exception(cpu, PPC_EXCEPTION_FPU);			 \
 		return; } }
 #endif

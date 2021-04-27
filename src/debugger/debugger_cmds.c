@@ -45,7 +45,8 @@ static void debugger_cmd_allsettings(struct machine *m, char *args)
  */
 static void debugger_cmd_breakpoint(struct machine *m, char *args)
 {
-	int i, res;
+	size_t i;
+	int res;
 
 	while (args[0] != '\0' && args[0] == ' ')
 		args ++;
@@ -59,39 +60,43 @@ static void debugger_cmd_breakpoint(struct machine *m, char *args)
 		return;
 	}
 
+	/*
+	 *  TODO: Move implementation details to a separate breakpoint module.
+	 */
+
 	if (strcmp(args, "show") == 0) {
-		if (m->breakpoints.n == 0)
+		if (m->breakpoints.n_addr_bp == 0)
 			printf("No breakpoints set.\n");
-		for (i=0; i<m->breakpoints.n; i++)
+		for (i = 0; i < m->breakpoints.n_addr_bp; i++)
 			show_breakpoint(m, i);
 		return;
 	}
 
 	if (strncmp(args, "delete ", 7) == 0) {
-		int x = atoi(args + 7);
+		size_t x = atoi(args + 7);
 
-		if (m->breakpoints.n == 0) {
+		if (m->breakpoints.n_addr_bp == 0) {
 			printf("No breakpoints set.\n");
 			return;
 		}
-		if (x < 0 || x > m->breakpoints.n) {
+
+		if (x >= m->breakpoints.n_addr_bp) {
 			printf("Invalid breakpoint nr %i. Use 'breakpoint "
-			    "show' to see the current breakpoints.\n", x);
+			    "show' to see the current breakpoints.\n", (int)x);
 			return;
 		}
 
-		free(m->breakpoints.string[x]);
+		free(m->breakpoints.addr_bp[x].string);
 
-		for (i=x; i<m->breakpoints.n-1; i++) {
-			m->breakpoints.addr[i]   = m->breakpoints.addr[i+1];
-			m->breakpoints.string[i] = m->breakpoints.string[i+1];
-		}
-		m->breakpoints.n --;
+		for (i = x; i < m->breakpoints.n_addr_bp - 1; i++)
+			m->breakpoints.addr_bp[i] = m->breakpoints.addr_bp[i+1];
+
+		m->breakpoints.n_addr_bp --;
 
 		/*  Clear translations:  */
-		for (i=0; i<m->ncpus; i++)
-			if (m->cpus[i]->translation_cache != NULL)
-				cpu_create_or_reset_tc(m->cpus[i]);
+		for (int j = 0; j < m->ncpus; j++)
+			if (m->cpus[j]->translation_cache != NULL)
+				cpu_create_or_reset_tc(m->cpus[j]);
 		return;
 	}
 
@@ -99,7 +104,7 @@ static void debugger_cmd_breakpoint(struct machine *m, char *args)
 		uint64_t tmp;
 		size_t breakpoint_buf_len;
 
-		i = m->breakpoints.n;
+		i = m->breakpoints.n_addr_bp;
 
 		res = debugger_parse_expression(m, args + 4, 0, &tmp);
 		if (!res) {
@@ -107,28 +112,25 @@ static void debugger_cmd_breakpoint(struct machine *m, char *args)
 			return;
 		}
 
-		CHECK_ALLOCATION(m->breakpoints.string = (char **) realloc(
-		    m->breakpoints.string, sizeof(char *) *
-		    (m->breakpoints.n + 1)));
-		CHECK_ALLOCATION(m->breakpoints.addr = (uint64_t *) realloc(
-		    m->breakpoints.addr, sizeof(uint64_t) *
-		   (m->breakpoints.n + 1)));
+		CHECK_ALLOCATION(m->breakpoints.addr_bp = (struct address_breakpoint *) realloc(
+		    m->breakpoints.addr_bp, sizeof(struct address_breakpoint) *
+		   (m->breakpoints.n_addr_bp + 1)));
 
 		breakpoint_buf_len = strlen(args+4) + 1;
 
-		CHECK_ALLOCATION(m->breakpoints.string[i] = (char *)
+		CHECK_ALLOCATION(m->breakpoints.addr_bp[i].string = (char *)
 		    malloc(breakpoint_buf_len));
-		strlcpy(m->breakpoints.string[i], args+4,
+		strlcpy(m->breakpoints.addr_bp[i].string, args+4,
 		    breakpoint_buf_len);
-		m->breakpoints.addr[i] = tmp;
+		m->breakpoints.addr_bp[i].addr = tmp;
 
-		m->breakpoints.n ++;
+		m->breakpoints.n_addr_bp ++;
 		show_breakpoint(m, i);
 
 		/*  Clear translations:  */
-		for (i=0; i<m->ncpus; i++)
-			if (m->cpus[i]->translation_cache != NULL)
-				cpu_create_or_reset_tc(m->cpus[i]);
+		for (int j = 0; j < m->ncpus; j++)
+			if (m->cpus[j]->translation_cache != NULL)
+				cpu_create_or_reset_tc(m->cpus[j]);
 		return;
 	}
 
@@ -539,46 +541,48 @@ static void debugger_cmd_machine(struct machine *m, char *args)
  */
 static void debugger_cmd_ninstrs(struct machine *m, char *args)
 {
-	int toggle = 1;
-	int previous_mode = m->show_nr_of_instructions;
+	bool toggle = true;
+	bool previous_mode = emul_show_nr_of_instructions;
 
 	if (args[0] != '\0') {
 		while (args[0] != '\0' && args[0] == ' ')
 			args ++;
 		switch (args[0]) {
 		case '0':
-			toggle = 0;
-			m->show_nr_of_instructions = 0;
+			toggle = false;
+			emul_show_nr_of_instructions = false;
 			break;
 		case '1':
-			toggle = 0;
-			m->show_nr_of_instructions = 1;
+			toggle = false;
+			emul_show_nr_of_instructions = true;
 			break;
 		case 'o':
 		case 'O':
-			toggle = 0;
+			toggle = false;
 			switch (args[1]) {
 			case 'n':
 			case 'N':
-				m->show_nr_of_instructions = 1;
+				emul_show_nr_of_instructions = true;
 				break;
 			default:
-				m->show_nr_of_instructions = 0;
+				emul_show_nr_of_instructions = false;
 			}
 			break;
 		default:
-			printf("syntax: trace [on|off]\n");
+			printf("syntax: ninstrs [on|off]\n");
 			return;
 		}
 	}
 
 	if (toggle)
-		m->show_nr_of_instructions = !m->show_nr_of_instructions;
+		emul_show_nr_of_instructions = !emul_show_nr_of_instructions;
 
 	printf("show_nr_of_instructions = %s",
-	    m->show_nr_of_instructions? "ON" : "OFF");
-	if (m->show_nr_of_instructions != previous_mode)
+	    emul_show_nr_of_instructions ? "ON" : "OFF");
+
+	if (emul_show_nr_of_instructions != previous_mode)
 		printf("  (was: %s)", previous_mode? "ON" : "OFF");
+
 	printf("\n");
 }
 

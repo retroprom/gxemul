@@ -95,7 +95,7 @@ X(sleep)
 	cpu->is_halted = true;
 
 	cpu->wants_to_idle = true;
-	cpu->n_translated_instrs += N_DYNTRANS_IDLE_BREAK;
+	cpu_break_out_of_dyntrans_loop(cpu);
 	cpu->cd.sh.next_ic = &nothing_call;
 }
 
@@ -207,18 +207,17 @@ X(xor_b_imm_r0_gbr)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		   sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
 		data ^= ic->arg[0];
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		   sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 }
 X(or_b_imm_r0_gbr)
@@ -234,18 +233,17 @@ X(or_b_imm_r0_gbr)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		   sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
 		data |= ic->arg[0];
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		   sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 }
 X(and_b_imm_r0_gbr)
@@ -261,18 +259,17 @@ X(and_b_imm_r0_gbr)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		   sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
 		data &= ic->arg[0];
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		   sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 }
 
@@ -315,10 +312,10 @@ X(mov_b_rm_predec_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		   sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 		/*  The store was ok:  */
 		reg(ic->arg[1]) = addr;
 	}
@@ -342,10 +339,10 @@ X(mov_w_rm_predec_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		   sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 		/*  The store was ok:  */
 		reg(ic->arg[1]) = addr;
 	}
@@ -369,10 +366,10 @@ X(mov_l_rm_predec_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		   sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 		/*  The store was ok:  */
 		reg(ic->arg[1]) = addr;
 	}
@@ -398,10 +395,10 @@ X(stc_l_rm_predec_rn_md)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		   sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 		/*  The store was ok:  */
 		reg(ic->arg[1]) = addr;
 	}
@@ -429,10 +426,10 @@ X(mov_l_disp_pc_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 	if (cpu->byte_order == EMUL_LITTLE_ENDIAN)
 		data = LE32_TO_HOST(data);
@@ -475,10 +472,10 @@ X(mov_w_disp_pc_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 
 	if (cpu->byte_order == EMUL_LITTLE_ENDIAN)
@@ -528,10 +525,10 @@ X(load_b_rm_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 	reg(ic->arg[1]) = (int8_t) data;
 }
@@ -548,10 +545,10 @@ X(load_w_rm_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 	if (cpu->byte_order == EMUL_LITTLE_ENDIAN)
 		data = LE16_TO_HOST(data);
@@ -572,10 +569,10 @@ X(load_l_rm_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 
 	if (cpu->byte_order == EMUL_LITTLE_ENDIAN)
@@ -610,10 +607,10 @@ X(fmov_rm_frn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr + 4, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 
 		data2 = data;
 		
@@ -627,10 +624,10 @@ X(fmov_rm_frn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 
 	if (cpu->byte_order == EMUL_LITTLE_ENDIAN)
@@ -669,10 +666,10 @@ X(fmov_r0_rm_frn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 
 	if (cpu->byte_order == EMUL_LITTLE_ENDIAN)
@@ -705,10 +702,10 @@ X(fmov_rm_postinc_frn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 
 	if (cpu->byte_order == EMUL_LITTLE_ENDIAN)
@@ -722,10 +719,10 @@ X(fmov_rm_postinc_frn)
 		SYNCH_PC;
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned
 		    char *)&data2, sizeof(data2), MEM_READ, CACHE_DATA)) {
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 
 		if (cpu->byte_order == EMUL_LITTLE_ENDIAN)
 			data2 = LE32_TO_HOST(data2);
@@ -749,10 +746,10 @@ X(mov_b_disp_gbr_r0)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 	cpu->cd.sh.r[0] = data;
 }
@@ -768,10 +765,10 @@ X(mov_w_disp_gbr_r0)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 	if (cpu->byte_order == EMUL_LITTLE_ENDIAN)
 		data = LE16_TO_HOST(data);
@@ -791,10 +788,10 @@ X(mov_l_disp_gbr_r0)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 	if (cpu->byte_order == EMUL_LITTLE_ENDIAN)
 		data = LE32_TO_HOST(data);
@@ -814,10 +811,10 @@ X(mov_b_arg1_postinc_to_arg0)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 	/*  The load was ok:  */
 	reg(ic->arg[1]) = addr + sizeof(int8_t);
@@ -836,10 +833,10 @@ X(mov_w_arg1_postinc_to_arg0)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 
 	if (cpu->byte_order == EMUL_LITTLE_ENDIAN)
@@ -862,10 +859,10 @@ X(mov_l_arg1_postinc_to_arg0)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 	/*  The load was ok:  */
 	if (cpu->byte_order == EMUL_LITTLE_ENDIAN)
@@ -890,10 +887,10 @@ X(mov_l_arg1_postinc_to_arg0_md)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 	/*  The load was ok:  */
 	if (cpu->byte_order == EMUL_LITTLE_ENDIAN)
@@ -923,10 +920,10 @@ X(mov_l_arg1_postinc_to_arg0_fp)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 	/*  The load was ok:  */
 	if (cpu->byte_order == EMUL_LITTLE_ENDIAN)
@@ -954,10 +951,10 @@ X(mov_b_r0_rm_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 
 	reg(ic->arg[1]) = data;
@@ -975,10 +972,10 @@ X(mov_w_r0_rm_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 
 	if (cpu->byte_order == EMUL_LITTLE_ENDIAN)
@@ -1000,10 +997,10 @@ X(mov_l_r0_rm_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 
 	if (cpu->byte_order == EMUL_LITTLE_ENDIAN)
@@ -1026,10 +1023,10 @@ X(mov_l_disp_rm_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 
 	if (cpu->byte_order == EMUL_LITTLE_ENDIAN)
@@ -1051,10 +1048,10 @@ X(mov_b_disp_rn_r0)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 
 	cpu->cd.sh.r[0] = (int8_t) data;
@@ -1072,10 +1069,10 @@ X(mov_w_disp_rn_r0)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_READ, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 
 	if (cpu->byte_order == EMUL_LITTLE_ENDIAN)
@@ -1120,10 +1117,10 @@ X(mov_b_store_rm_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, &data,
 		    sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 }
 X(mov_w_store_rm_rn)
@@ -1144,10 +1141,10 @@ X(mov_w_store_rm_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 }
 X(mov_l_store_rm_rn)
@@ -1168,10 +1165,10 @@ X(mov_l_store_rm_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 }
 X(fmov_frm_rn)
@@ -1201,10 +1198,10 @@ X(fmov_frm_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr + 4, (unsigned char *)&data2,
 		    sizeof(data2), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 		
 		// fall-through to write the first word in the pair:
 	}
@@ -1221,10 +1218,10 @@ X(fmov_frm_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 }
 X(fmov_frm_r0_rn)
@@ -1253,10 +1250,10 @@ X(fmov_frm_r0_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 }
 X(fmov_frm_predec_rn)
@@ -1289,10 +1286,10 @@ X(fmov_frm_predec_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 
 	if (d) {
@@ -1305,10 +1302,10 @@ X(fmov_frm_predec_rn)
 		SYNCH_PC;
 		if (!cpu->memory_rw(cpu, cpu->mem, addr + 4, (unsigned
 		    char *)&data, sizeof(data), MEM_WRITE, CACHE_DATA)) {
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 
 	reg(ic->arg[1]) = addr;
@@ -1325,10 +1322,10 @@ X(mov_b_rm_r0_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 }
 X(mov_w_rm_r0_rn)
@@ -1349,10 +1346,10 @@ X(mov_w_rm_r0_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
-		return;
+			BREAK_DYNTRANS_CHECK(cpu);
+			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 }
 X(mov_l_rm_r0_rn)
@@ -1373,10 +1370,10 @@ X(mov_l_rm_r0_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 }
 X(mov_b_r0_disp_gbr)
@@ -1391,10 +1388,10 @@ X(mov_b_r0_disp_gbr)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 }
 X(mov_w_r0_disp_gbr)
@@ -1415,10 +1412,10 @@ X(mov_w_r0_disp_gbr)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 }
 X(mov_l_r0_disp_gbr)
@@ -1439,10 +1436,10 @@ X(mov_l_r0_disp_gbr)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 }
 X(mov_l_rm_disp_rn)
@@ -1464,10 +1461,10 @@ X(mov_l_rm_disp_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 }
 X(mov_b_r0_disp_rn)
@@ -1483,10 +1480,10 @@ X(mov_b_r0_disp_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 }
 X(mov_w_r0_disp_rn)
@@ -1507,10 +1504,10 @@ X(mov_w_r0_disp_rn)
 		if (!cpu->memory_rw(cpu, cpu->mem, addr, (unsigned char *)&data,
 		    sizeof(data), MEM_WRITE, CACHE_DATA)) {
 			/*  Exception.  */
-			if (!cpu->running)
-				cpu->cd.sh.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 }
 
@@ -3034,20 +3031,20 @@ X(tas_b_rn)
 	if (!cpu->memory_rw(cpu, cpu->mem, addr, &byte, 1, MEM_READ,
 	   CACHE_DATA)) {
 		/*  Exception.  */
-		if (!cpu->running)
-			cpu->cd.sh.next_ic = &nothing_call;
+		BREAK_DYNTRANS_CHECK(cpu);
 		return;
 	}
+	BREAK_DYNTRANS_CHECK(cpu);
 
 	newbyte = byte | 0x80;
 
 	if (!cpu->memory_rw(cpu, cpu->mem, addr, &newbyte, 1, MEM_WRITE,
 	   CACHE_DATA)) {
 		/*  Exception.  */
-		if (!cpu->running)
-			cpu->cd.sh.next_ic = &nothing_call;
+		BREAK_DYNTRANS_CHECK(cpu);
 		return;
 	}
+	BREAK_DYNTRANS_CHECK(cpu);
 
 	if (byte == 0)
 		cpu->cd.sh.sr |= SH_SR_T;

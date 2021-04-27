@@ -428,9 +428,8 @@ not just the device in question.
 #endif /* MIPS */
 		{
 			if (paddr >= mem->physical_max && !no_exceptions)
-				if (memory_warn_about_unimplemented_addr
-				    (cpu, mem, writeflag, paddr, len))
-					return MEMORY_ACCESS_FAILED;
+				memory_warn_about_unimplemented_addr
+				    (cpu, mem, writeflag, paddr, len);
 
 			if (writeflag == MEM_READ) {
 				/*  Return all zeroes? (Or 0xff? TODO)  */

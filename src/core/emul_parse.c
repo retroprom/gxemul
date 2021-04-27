@@ -482,7 +482,7 @@ static void parse__machine(struct emul *e, FILE *f, int *in_emul, int *line,
 			strlcpy(cur_machine_random_mem, "no",
 			    sizeof(cur_machine_random_mem));
 		m->random_mem_contents =
-		    parse_on_off(cur_machine_random_mem);
+		    parse_on_off(cur_machine_random_mem) ? true : false;
 
 		if (!cur_machine_random_cpu[0])
 			strlcpy(cur_machine_random_cpu, "no",

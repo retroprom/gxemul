@@ -241,9 +241,6 @@ Emulate
 .Ar m
 MBs of physical RAM. This overrides the default amount of RAM for the 
 selected machine type.
-.It Fl N
-Display the number of executed instructions per second on average, at
-regular intervals.
 .It Fl n Ar nr
 Set the number of processors in the machine, for SMP experiments.
 .Pp
@@ -330,7 +327,7 @@ option, instruction combinations are always disabled (i.e. an implicit
 .Fl J
 flag is added to the command line).
 .It Fl T
-Halt if the emulated program attempts to access non-existing memory.
+Break if the emulated program attempts to access non-existing memory.
 .It Fl t
 Show a trace tree of all function calls being made.
 .It Fl X
@@ -393,6 +390,9 @@ Set the size of the dyntrans cache (per emulated CPU) to
 MB. The default size is 96 MB.
 .It Fl K
 Show the debugger prompt instead of exiting, when a simulation ends.
+.It Fl N
+Display status at regular intervals, showing the number of executed
+instructions etc.
 .It Fl q
 Quiet mode; this suppresses startup messages.
 .It Fl V

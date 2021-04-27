@@ -5054,3 +5054,6 @@ Changelog for GXemul:
 
 20210426	Adding disassembly of 88K "tcnd", and treating tcnd ne0,r0,x
 		as a nop (since r0 is always zero).
+20210427	Refactoring of the breakpoint handling code; moving towards
+		subsystem breakpoints. (So far, -T is implemented as a
+		breakpoint for the "memory" subsytem.)

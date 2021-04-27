@@ -241,6 +241,7 @@ void debugmsg_change_settings(char *subsystem_name, char *n);
 void debugmsg_print_settings(const char *subsystem_name);
 void debugmsg_add_verbosity_level(int subsystem, int verbosity_delta);
 void debugmsg_set_verbosity_level(int subsystem, int verbosity);
+void debugmsg_set_breakpoint_level(int subsystem, int level);
 void debugmsg(int subsystem, const char *name, int verbosity_required, const char *fmt, ...);
 void debugmsg_cpu(struct cpu* cpu, int subsystem, const char *name, int verbosity_required, const char *fmt, ...);
 

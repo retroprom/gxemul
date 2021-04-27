@@ -328,8 +328,25 @@ struct cpu_family {
 #define	N_SAFE_DYNTRANS_LIMIT_SHIFT	14
 #define	N_SAFE_DYNTRANS_LIMIT	((1 << (N_SAFE_DYNTRANS_LIMIT_SHIFT - 1)) - 1)
 
-#define	N_DYNTRANS_IDLE_BREAK		N_SAFE_DYNTRANS_LIMIT
+/*
+ *  A large number which, if it is ORed into n_translated_instrs breaks out
+ *  of the core dyntrans loop quicker. Use cpu_break_out_of_dyntrans_loop()
+ *  to break out of the dyntrans loop.
+ */
+#define	N_BREAK_OUT_OF_DYNTRANS_LOOP	(1 << 30)
 
+/*
+ *  A check, which should be performed after e.g. device memory accesses, or
+ *  after anything that could trigger a breakpoint (debugmsg output). It breaks
+ *  out of the dyntrans loop quickly.
+ */
+#define	BREAK_DYNTRANS_CHECK(cpu)	{if (!(cpu)->running || about_to_enter_single_step) {	\
+	SYNCH_PC; \
+	(cpu)->n_translated_instrs --; \
+	(cpu)->n_translated_instrs |= N_BREAK_OUT_OF_DYNTRANS_LOOP; \
+	cpu->cd.DYNTRANS_ARCH.next_ic = &nothing_call; return; }}
+
+// Max nr of instructions to translated in advance.
 #define	MAX_DYNTRANS_READAHEAD		128
 
 #define	DEFAULT_DYNTRANS_CACHE_SIZE	(96*1048576)
@@ -361,10 +378,7 @@ struct cpu {
 
 	/*  Nr of instructions executed, etc.:  */
 	int64_t		ninstrs;
-	int64_t		ninstrs_show;
-	int64_t		ninstrs_flush;
-	int64_t		ninstrs_since_gettimeofday;
-	struct timeval	starttime;
+	int64_t		ninstrs_at_last_status_printout;
 
 	/*  EMUL_LITTLE_ENDIAN or EMUL_BIG_ENDIAN.  */
 	uint8_t		byte_order;
@@ -412,11 +426,9 @@ struct cpu {
 	int		trace_tree_depth;
 
 	/*
-	 *  If wants_to_idle is true, then N_DYNTRANS_IDLE_BREAK is assumed
-	 *  to have been added to n_translated_instructions and should
-	 *  thus be subtracted when the dyntrans loop exits. An attempt is
-	 *  then made to "idle the host", if all running CPUs in all
-	 *  machines want to idle at the same time.
+	 *  If wants_to_idle is set to true, when the dyntrans loop exits,
+	 *  attempt is made to "idle the host". (Actually, the host only idles
+	 *  if all running CPUs in all machines want to idle at the same time.)
 	 *
 	 *  If is_halted is true when an interrupt trap occurs, the pointer
 	 *  to the next instruction to execute will be the instruction
@@ -493,17 +505,18 @@ void cpu_register_dump(struct machine *m, struct cpu *cpu,
 int cpu_disassemble_instr(struct machine *m, struct cpu *cpu,
 	unsigned char *instr, int running, uint64_t addr);
 
-void cpu_functioncall_trace(struct cpu *cpu, uint64_t f);
-void cpu_functioncall_trace_return(struct cpu *cpu);
+void cpu_functioncall_print(struct cpu *);
+void cpu_functioncall_trace(struct cpu *, uint64_t);
+void cpu_functioncall_trace_return(struct cpu *);
 
-void cpu_create_or_reset_tc(struct cpu *cpu);
+void cpu_create_or_reset_tc(struct cpu *);
+void cpu_break_out_of_dyntrans_loop(struct cpu *);
 
 void cpu_run_init(struct machine *machine);
-void cpu_run_deinit(struct machine *machine);
 
 void cpu_dumpinfo(struct machine *m, struct cpu *cpu, bool verbose);
 void cpu_list_available_types(void);
-void cpu_show_cycles(struct machine *machine, bool forced);
+void cpu_show_cycles(struct machine *machine, uint64_t total_elapsed_ms);
 void cpu_print_pc_indicator_in_disassembly(struct cpu *cpu, int running, uint64_t dumpaddr);
 
 void cpu_init(void);

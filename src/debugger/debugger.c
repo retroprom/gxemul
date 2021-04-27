@@ -70,9 +70,10 @@ extern int verbose;
 bool single_step = false;
 bool about_to_enter_single_step = false;
 bool debugger_enter_at_end_of_run = false;
-volatile int single_step_breakpoint = 0;
+bool single_step_breakpoint = false;
 
 extern bool emul_shutdown;
+extern bool emul_show_nr_of_instructions;
 
 int old_quiet_mode = 0;
 
@@ -169,11 +170,13 @@ static void show_breakpoint(struct machine *m, int i)
 {
 	printf("%3i: 0x", i);
 	if (m->cpus[0]->is_32bit)
-		printf("%08" PRIx32, (uint32_t) m->breakpoints.addr[i]);
+		printf("%08" PRIx32, (uint32_t) m->breakpoints.addr_bp[i].addr);
 	else
-		printf("%016" PRIx64, (uint64_t) m->breakpoints.addr[i]);
-	if (m->breakpoints.string[i] != NULL)
-		printf(" (%s)", m->breakpoints.string[i]);
+		printf("%016" PRIx64, (uint64_t) m->breakpoints.addr_bp[i].addr);
+
+	if (m->breakpoints.addr_bp[i].string != NULL)
+		printf(" (%s)", m->breakpoints.addr_bp[i].string);
+
 	printf("\n");
 }
 
@@ -197,7 +200,6 @@ void debugger_assignment(struct machine *m, char *cmd)
 	char *left, *right;
 	int res_left, res_right;
 	uint64_t tmp;
-	uint64_t old_pc = m->cpus[0]->pc;	/*  TODO: multiple cpus?  */
 
 	CHECK_ALLOCATION(left = (char *) malloc(MAX_CMD_BUFLEN));
 	strlcpy(left, cmd, MAX_CMD_BUFLEN);
@@ -244,14 +246,8 @@ void debugger_assignment(struct machine *m, char *cmd)
 		}
 	}
 
-	/*
-	 *  If the PC has changed, then release any breakpoint we were
-	 *  currently stopped at.
-	 *
-	 *  TODO: multiple cpus?
-	 */
-	if (old_pc != m->cpus[0]->pc)
-		single_step_breakpoint = 0;
+	// Always clear breakpoint state when assigning variables.
+	single_step_breakpoint = false;
 
 	free(left);
 }
@@ -480,34 +476,11 @@ static char *debugger_readline(void)
 				}
 			} while (0);
 		} else if (ch == 20) {
-			/*  CTRL-T: Print SIGINFO-like info.  */
+			/*  CTRL-T: Print SIGINFO-like status info.  */
 			color_normal();
 			printf("^T\n");
 
-			struct cpu* cpu = debugger_machine->cpus[debugger_cur_cpu];
-
-			char info[1000];
-			snprintf(info, sizeof(info), "ninstrs=%lli, pc=", (long long) cpu->ninstrs);
-
-			if (cpu->is_32bit)
-				snprintf(info + strlen(info), sizeof(info) - strlen(info),
-				    "0x%08" PRIx32, (uint32_t) cpu->pc);
-			else
-				snprintf(info + strlen(info), sizeof(info) - strlen(info),
-				    "0x%016" PRIx64, (uint64_t) cpu->pc);
-
-			uint64_t offset;
-			int n_args;
-			char* pc_symbol = get_symbol_name_and_n_args(&debugger_machine->symbol_context, cpu->pc, &offset, &n_args);
-			if (pc_symbol != NULL)
-				snprintf(info + strlen(info), sizeof(info) - strlen(info),
-				    " <%s>", pc_symbol);
-
-			if (!cpu->running)
-				snprintf(info + strlen(info), sizeof(info) - strlen(info),
-				    ", stopped");
-
-			debugmsg_cpu(cpu, SUBSYS_CPU, "", VERBOSITY_INFO, "%s", info);
+			cpu_show_cycles(debugger_machine, 0);
 
 			color_prompt();
 			printf("GXemul> ");
@@ -766,13 +739,6 @@ void debugger(void)
 
 	/*  Start up timers again:  */
 	timer_start();
-
-	/*  ... and reset starttime, so that nr of instructions per second
-	    can be calculated correctly:  */
-	for (i=0; i<debugger_machine->ncpus; i++) {
-		gettimeofday(&debugger_machine->cpus[i]->starttime, NULL);
-		debugger_machine->cpus[i]->ninstrs_since_gettimeofday = 0;
-	}
 
 	single_step = false;
 	quiet_mode = old_quiet_mode;

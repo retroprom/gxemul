@@ -33,8 +33,21 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 <b><a name="shortlist">Current "short-list" (unsorted)</a></b>
 
 <p><pre>
-<font color="blue">bool-ify stuff:</font>
-	o) int -> bool for things like cpu->running
+<font color="blue">Breakpoints:</font>
+	o) BREAK_DYNTRANS_CHECK(cpu); after all memory_rw calls!
+	o) BREAK_DYNTRANS_CHECK(cpu); after all debugmsg calls!
+	o) BREAK_DYNTRANS_CHECK(cpu); after all exception generating calls!
+	o) Move breakpoint helper functions to breakpoints.c.
+	o) Implement support for Counts for breakpoints:
+		uint64_t	total_hit_count;
+		uint64_t	current_hit_count;
+		uint64_t	break_after_n_hits;	// if 0, run forever and just count (never break)
+				break = 0 = never, 1 = Yes, >1 = Every n hits
+	o) Implement support for specifying subsystem breakpoints. A specially formatted "string"?
+	o) CTRL-T should print breakpoint counts.
+		Name:		Hits:
+		memset		42	(break every x)
+		strlen		118	(never break)
 
 <font color="blue">debugmsg-related and non-exit(1) stuff (mostly):</font>
 	o) src/cpu/:
@@ -43,6 +56,8 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 			sure that they break out of the dyntrans loop.
 	o) src/net/:
 		o) debugmsg:ify all src/net/.
+	o) src/devices/:
+		o) debugmsg:ify all devices.
 	o) Add an example of the "verbosity" command to the Debugger section of
 		the documentation?
 		Or wait until breakpoints are implemented?
@@ -57,39 +72,16 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 	o) Try X11 grabbing with multiple host displays? ssh with X11 forwarding from laptop?
 		with multiple mouse pointers, _which_ mouse pointer is grabbed?
 	o) Try all guest OSes in the documentation, cleaning up debugmsg related stuff as I go along.
-	o) Instead of doing cpu->running = 0 in some places, and foreach cpu in the machine
+	o) Instead of doing !cpu->running in some places, and foreach cpu in the machine
 		in some other places, then the main emul loop should check if ANY
 		cpu goes from running to non-running, and treat that as a reason to
 		halt the machine. there's really no reason to continue running the
 		other CPUs if there was an error in one of them.
 		ALSO: if about to enter single step, or single step, is true, then
 			abort too.
-		AND: if support for debugmsg breakpoints is to be added later,
-			then the break-out-of-dyntrans check needs to be done
-			not only on memory references, but potentially after
-			ALL debugmsg printouts!
 	o) Apply Chris Berry's patch for tap device use on Linux.
 	o) Try tap networking on FreeBSD host (e.g. using netbsd/pmax guest).
 		Performance better than when using simulated NAT?
-	o) Breakpoints etc:
-		Helper for setting/adding the break-out-of-dyntrans value to ninstr.
-			cpu_dyntrans_abort_loop(cpu)?
-		Debugmsg breakpoint should then:
-			call cpu_dyntrans_abort_loop(cpu) if cpu != NULL,
-			set about-to-enter-single-step
-			print "subsystem breakpoint" for non-errors,
-			print "aborting" for errors.
-		ABORT_DT =   ninstr & XXX
-		if (ABORT_DT) { SYNCH_PC; next ic = nothing; }
-		step/continue after hitting a breakpoint must work.
-		counts for breakpoints, only break "after x hits".
-		CTRL-T should print breakpoint counts.
-		-T can be implemented as a "warning level breakpoint" for the
-			memory subsystem.
-		-K should implicitly be set if any breakpoints (subsystem 
-			or regular) are used.
-		Always break on debugmsg errors!
-		Document the break-out-of-dyntrans mechanism.
 	o) When using e.g. "-E alpha" and there was more than one subtype, then _list_
    	   them instead of just complaining "Maybe you forgot the -e command line option".
 	o) Try using profil() for very basic runtime profiling?
@@ -103,11 +95,7 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 <b><a name="cpu">CPU related</a></b>
 <pre>
 Dyntrans / general:
-	o)  Idling:
-		o)  How about showing "has_been_idling" in the status printout?
-			Consider removing has_been_idling alltogether? (now that the
-			number of cycles is kept low...)
-		o)  Turn some "chars" into "bools".
+	x)  Document the break-out-of-dyntrans mechanism.
 	x)  SMP: INVALIDATION should cause translations in _all_ cpus to be
 	    invalidated in the machine, e.g. on a write to a write-protected page
 	    (containing code)
@@ -192,6 +180,9 @@ Dyntrans / general:
 	x)  Breakpoints:
 		o) Physical vs virtual addresses!
 		o) 32-bit vs 64-bit sign extension for MIPS, and others?
+		o) make this work for multiple CPUs/machines. right now, there
+			are a bunch of global variables (single_step_breakpoint)
+			etc that don't work with more than 1 CPU.
 	x)  16-bit encodings? (MIPS16, ARM Thumb, etc)
 	x)  Lots of other stuff: see src/cpus/README_DYNTRANS
 	x)  Native code generation backends... think _carefully_ about this.
@@ -214,10 +205,9 @@ ARM:
 	o)  Debian/cats crashes because of unimplemented coproc stuff. fix this?
 
 i960:
-	Reimplement after the C++ to C switch:
-	x. i960 CPU: Disassembly of at least i960CA instructions.
-	x. HP700/RX machine skeleton.
-	x. bout file loader?
+	x. Instructions.
+	x. Dyntrans: see "/*  TODO/Note: This must be large enough to hold
+			    any instruction for any ISA:  */" in cpu_dyntrans.c.
 	x. uCLinux: CycloneVH machine for running uCLinux/i960?
 	x. uCLinux: http://www.ibiblio.org/lou/old/ViewStation/ ?
 
@@ -655,6 +645,8 @@ Components:
 	and then to a memory on that bus.
 
 Debugger:
+	Writing to a "pc" (or "ip") setting should clear that CPU's delay slot flag.
+
 	Helpers for splitting up into arguments/words.
 
 	Helpers for using abbreviations/tab completion for arguments? Allow

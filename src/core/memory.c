@@ -550,7 +550,7 @@ unsigned char *memory_paddr_to_hostaddr(struct memory *mem,
  *  Called from memory_rw whenever memory outside of the physical address space
  *  is accessed.
  */
-bool memory_warn_about_unimplemented_addr(struct cpu *cpu, struct memory *mem,
+void memory_warn_about_unimplemented_addr(struct cpu *cpu, struct memory *mem,
 	int writeflag, uint64_t paddr, size_t len)
 {
 	/*
@@ -558,15 +558,11 @@ bool memory_warn_about_unimplemented_addr(struct cpu *cpu, struct memory *mem,
 	 *  the end of memory, without giving too many warnings.
 	 */
 	if (paddr < mem->physical_max + 0x40000)
-		return false;
+		return;
 
 	int verbosity = VERBOSITY_WARNING;
-	if (cpu->machine->halt_on_nonexistant_memaccess)
-		verbosity = VERBOSITY_ERROR;
-
-	// ERROR is always "enough", so we will print in that case.
 	if (!ENOUGH_VERBOSITY(SUBSYS_MEMORY, verbosity))
-		return false;
+		return;
 
 	uint64_t offset;
 	char* symbol = get_symbol_name(&cpu->machine->symbol_context, cpu->pc, &offset);
@@ -596,17 +592,6 @@ bool memory_warn_about_unimplemented_addr(struct cpu *cpu, struct memory *mem,
 		    symbol ? " <" : "",
 		    symbol ? symbol : "",
 		    symbol ? ">" : "");
-
-	if (cpu->machine->halt_on_nonexistant_memaccess) {
-		// Halt all CPUs, even though the bad memory access was on
-		// just one of them.
-		for (int i = 0; i < cpu->machine->ncpus; ++i)
-			cpu->machine->cpus[i]->running = 0;
-
-		return true;
-	}
-
-	return false;
 }
 
 

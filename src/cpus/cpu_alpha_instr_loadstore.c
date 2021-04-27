@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -67,9 +67,12 @@ static void LS_GENERIC_N(struct cpu *cpu, struct alpha_instr_call *ic)
 	/*  Load:  */
 	if (!cpu->memory_rw(cpu, cpu->mem, addr, data, sizeof(data),
 	    MEM_READ, CACHE_DATA)) {
-		fatal("store failed: TODO\n");
-		exit(1);
+		debugmsg_cpu(cpu, SUBSYS_MEMORY, "", VERBOSITY_ERROR, "alpha: load failed: TODO");
+		BREAK_DYNTRANS_CHECK(cpu);
+		return;
 	}
+
+	BREAK_DYNTRANS_CHECK(cpu);
 
 	data_x = data[0];
 #ifndef LS_B
@@ -109,9 +112,12 @@ static void LS_GENERIC_N(struct cpu *cpu, struct alpha_instr_call *ic)
 
 	if (!cpu->memory_rw(cpu, cpu->mem, addr, data, sizeof(data),
 	    MEM_WRITE, CACHE_DATA)) {
-		fatal("store failed: TODO\n");
-		exit(1);
+		debugmsg_cpu(cpu, SUBSYS_MEMORY, "", VERBOSITY_ERROR, "alpha: store failed: TODO");
+		BREAK_DYNTRANS_CHECK(cpu);
+		return;
 	}
+
+	BREAK_DYNTRANS_CHECK(cpu);
 
 #ifdef LS_LLSC
 #ifndef LS_LOAD

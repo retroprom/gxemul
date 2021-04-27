@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2020  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2005-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -37,6 +37,15 @@
 #include "float_emul.h"
 
 
+#define SYNCH_PC                {                                       \
+                int low_pc_ = ((size_t)ic - (size_t)cpu->cd.alpha.cur_ic_page) \
+                    / sizeof(struct alpha_instr_call);                   \
+                cpu->pc &= ~((ALPHA_IC_ENTRIES_PER_PAGE-1)               \
+                    << ALPHA_INSTR_ALIGNMENT_SHIFT);                     \
+                cpu->pc += (low_pc_ << ALPHA_INSTR_ALIGNMENT_SHIFT);      \
+        }
+
+
 /*
  *  nop:  Do nothing.
  */
@@ -52,20 +61,15 @@ X(nop)
  */
 X(call_pal)
 {
-	/*  Synchronize PC first:  */
-	uint64_t old_pc, low_pc = ((size_t)ic - (size_t)
-	    cpu->cd.alpha.cur_ic_page) / sizeof(struct alpha_instr_call);
-	cpu->pc &= ~((ALPHA_IC_ENTRIES_PER_PAGE-1) <<
-	    ALPHA_INSTR_ALIGNMENT_SHIFT);
-	cpu->pc += (low_pc << ALPHA_INSTR_ALIGNMENT_SHIFT);
-	old_pc = cpu->pc;
+	SYNCH_PC
+
+	uint64_t old_pc = cpu->pc;
 
 	alpha_palcode(cpu, ic->arg[0]);
 
-	if (!cpu->running) {
-		cpu->n_translated_instrs --;
-		cpu->cd.alpha.next_ic = &nothing_call;
-	} else if (cpu->pc != old_pc) {
+	BREAK_DYNTRANS_CHECK(cpu);
+
+	if (cpu->pc != old_pc) {
 		/*  The PC value was changed by the palcode call.  */
 		/*  Find the new physical page and update the translation
 		    pointers:  */

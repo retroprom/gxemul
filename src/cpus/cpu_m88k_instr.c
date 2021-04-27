@@ -42,10 +42,6 @@
                 cpu->pc += (low_pc_ << M88K_INSTR_ALIGNMENT_SHIFT);      \
         }
 
-#define	ABORT_EXECUTION	  {	SYNCH_PC;				\
-				cpu->cd.m88k.next_ic = &nothing_call;	\
-				cpu->running = false; }
-
 
 /*
  *  nop:  Do nothing.
@@ -800,9 +796,7 @@ X(ldcr)
 
 	if (cpu->cd.m88k.cr[M88K_CR_PSR] & M88K_PSR_MODE) {
 		m88k_ldcr(cpu, (uint32_t *) (void *) ic->arg[0], ic->arg[1]);
-
-		if (!cpu->running)
-			ABORT_EXECUTION;
+		BREAK_DYNTRANS_CHECK(cpu);
 	} else
 		m88k_exception(cpu, M88K_EXCEPTION_PRIVILEGE_VIOLATION, 0);
 }
@@ -833,9 +827,7 @@ X(stcr)
 
 	if (cpu->cd.m88k.cr[M88K_CR_PSR] & M88K_PSR_MODE) {
 		m88k_stcr(cpu, reg(ic->arg[0]), ic->arg[1], 0);
-
-		if (!cpu->running)
-			ABORT_EXECUTION;
+		BREAK_DYNTRANS_CHECK(cpu);
 	} else
 		m88k_exception(cpu, M88K_EXCEPTION_PRIVILEGE_VIOLATION, 0);
 }
@@ -845,9 +837,7 @@ X(fstcr)
 
 	if (cpu->cd.m88k.cr[M88K_CR_PSR] & M88K_PSR_MODE || ic->arg[1] >= 62) {
 		m88k_fstcr(cpu, reg(ic->arg[0]), ic->arg[1]);
-
-		if (!cpu->running)
-			ABORT_EXECUTION;
+		BREAK_DYNTRANS_CHECK(cpu);
 	} else {
 		/*  TODO: The manual says "floating point privilege
 		    violation", not just "privilege violation"!  */
@@ -1580,12 +1570,10 @@ X(xcr)
 	if (cpu->cd.m88k.cr[M88K_CR_PSR] & M88K_PSR_MODE) {
 		tmp = reg(ic->arg[1]);
 		m88k_ldcr(cpu, &tmp2, ic->arg[2]);
-		if (!cpu->running) {
-			ABORT_EXECUTION;
-		} else {
-			m88k_stcr(cpu, tmp, ic->arg[2], 0);
-			reg(ic->arg[0]) = tmp2;
-		}
+		BREAK_DYNTRANS_CHECK(cpu);
+		m88k_stcr(cpu, tmp, ic->arg[2], 0);
+		BREAK_DYNTRANS_CHECK(cpu);
+		reg(ic->arg[0]) = tmp2;
 	} else
 		m88k_exception(cpu, M88K_EXCEPTION_PRIVILEGE_VIOLATION, 0);
 }
@@ -1687,7 +1675,7 @@ abort_dump:
 	    "rte failed. NIP=0x%08" PRIx32", FIP=0x%08" PRIx32,
 	    cpu->cd.m88k.cr[M88K_CR_SNIP], cpu->cd.m88k.cr[M88K_CR_SFIP]);
 
-	ABORT_EXECUTION;
+	BREAK_DYNTRANS_CHECK(cpu);
 }
 
 
@@ -1820,7 +1808,8 @@ X(prom_call)
 
 	default:debugmsg_cpu(cpu, SUBSYS_CPU, "m88k", VERBOSITY_ERROR,
 		    "prom_call: unimplemented machine type");
-		ABORT_EXECUTION;
+		cpu->running = false;
+		BREAK_DYNTRANS_CHECK(cpu);
 	}
 
 	if (!cpu->running) {
@@ -1896,7 +1885,7 @@ X(idle)
 	if (v == 0) {
 		SYNCH_PC;
 		cpu->wants_to_idle = true;
-		cpu->n_translated_instrs += N_DYNTRANS_IDLE_BREAK;
+		cpu_break_out_of_dyntrans_loop(cpu);
 		cpu->cd.m88k.next_ic = &nothing_call;
 	} else {
 		cpu->n_translated_instrs ++;
@@ -1937,7 +1926,7 @@ X(idle_with_tb1)
 	if (v == 0) {
 		SYNCH_PC;
 		cpu->wants_to_idle = true;
-		cpu->n_translated_instrs += N_DYNTRANS_IDLE_BREAK;
+		cpu_break_out_of_dyntrans_loop(cpu);
 		cpu->cd.m88k.next_ic = &nothing_call;
 	} else {
 		cpu->n_translated_instrs += 2;
@@ -2023,7 +2012,8 @@ X(end_of_page2)
 
 	debugmsg_cpu(cpu, SUBSYS_CPU, "m88k", VERBOSITY_ERROR,
 	    "end_of_page2: fatal error, we're in a delay slot");
-	ABORT_EXECUTION;
+
+	BREAK_DYNTRANS_CHECK(cpu);
 }
 
 

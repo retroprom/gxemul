@@ -4,8 +4,8 @@
 
 CFLAGS=$(CWARNINGS) $(COPTIM) $(XINCLUDE) $(DINCLUDE)
 
-OBJS=debugmsg.o emul.o emul_parse.o float_emul.o interrupt.o main.o \
-	memory.o misc.o settings.o timer.o
+OBJS=breakpoints.o debugmsg.o emul.o emul_parse.o float_emul.o interrupt.o \
+	main.o memory.o misc.o settings.o timer.o
 
 all: $(OBJS)
 

@@ -181,7 +181,7 @@ void add_environment_string_dual(struct cpu *cpu,
 void store_pointer_and_advance(struct cpu *cpu, uint64_t *addrp,
         uint64_t data, int flag64);
 
-bool memory_warn_about_unimplemented_addr(struct cpu *cpu, struct memory *mem,
+void memory_warn_about_unimplemented_addr(struct cpu *cpu, struct memory *mem,
 	int writeflag, uint64_t paddr, size_t len);
 
 

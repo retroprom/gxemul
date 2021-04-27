@@ -977,7 +977,7 @@ static void net_ip_broadcast_dhcp(struct net *net, struct nic_data *nic,
 	}
 
 	if (len < 34 + 8 + 236) {
-		debugmsg(SUBSYS_NET, "IPv4 DHCP", VERBOSITY_ERROR, "packet too short? len=%i", len);
+		debugmsg(SUBSYS_NET, "IPv4 DHCP", VERBOSITY_WARNING, "packet too short? len=%i", len);
 		return;
 	}
 
@@ -1230,7 +1230,7 @@ void net_ip_broadcast(struct net *net, struct nic_data *nic,
 	}
 
 	/*  Unknown packet:  */
-	if (ENOUGH_VERBOSITY(SUBSYS_NET, VERBOSITY_ERROR)) {
+	if (ENOUGH_VERBOSITY(SUBSYS_NET, VERBOSITY_WARNING)) {
 		char s[4000];
 		
 		snprintf(s, sizeof(s), "ver=%02x ", packet[14]);
@@ -1252,7 +1252,7 @@ void net_ip_broadcast(struct net *net, struct nic_data *nic,
 		}
 		snprintf(s+strlen(s), sizeof(s)-strlen(s), " (match=%i)", match);
 
-		debugmsg(SUBSYS_NET, "ip UNIMPLEMENTED BROADCAST", VERBOSITY_ERROR, "%s", s);
+		debugmsg(SUBSYS_NET, "ip UNIMPLEMENTED BROADCAST", VERBOSITY_WARNING, "%s", s);
 	}
 }
 

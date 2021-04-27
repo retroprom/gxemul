@@ -98,8 +98,7 @@ void LS_GENERIC_N(struct cpu *cpu, struct m88k_instr_call *ic)
 			    VERBOSITY_ERROR,
 			    "HUH? dreg = %i in cpu_m88k_instr_loadstore.c."
 			    " Internal error.", dreg);
-			cpu->running = 0;
-			cpu->cd.m88k.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
 		cpu->cd.m88k.dmt[0] |= dreg << DMT_DREGSHIFT;
@@ -145,8 +144,7 @@ void LS_GENERIC_N(struct cpu *cpu, struct m88k_instr_call *ic)
 			    VERBOSITY_ERROR,
 			    "HUH? dreg = %i in cpu_m88k_instr_loadstore.c."
 			    " Internal error.", dreg);
-			cpu->running = 0;
-			cpu->cd.m88k.next_ic = &nothing_call;
+			BREAK_DYNTRANS_CHECK(cpu);
 			return;
 		}
 		cpu->cd.m88k.dmt[1] &= ~((0x1f) << DMT_DREGSHIFT);
@@ -171,12 +169,13 @@ void LS_GENERIC_N(struct cpu *cpu, struct m88k_instr_call *ic)
 		/*  Cause an address alignment exception:  */
 		m88k_exception(cpu, M88K_EXCEPTION_MISALIGNED_ACCESS, 0);
 #else
-		fatal("{ m88k dyntrans alignment exception, size = %i,"
-		    " addr = %08" PRIx32", pc = %08" PRIx32" }\n", LS_SIZE,
-		    (uint32_t) addr, (uint32_t) cpu->pc);
+		debugmsg_cpu(cpu, SUBSYS_CPU, "m88k load/store",
+		    VERBOSITY_ERROR,
+		    "dyntrans alignment exception, size = %i,"
+		    " addr = %08" PRIx32", pc = %08" PRIx32,
+		    LS_SIZE, (uint32_t) addr, (uint32_t) cpu->pc);
 
-		cpu->running = 0;
-		cpu->cd.m88k.next_ic = &nothing_call;
+		BREAK_DYNTRANS_CHECK(cpu);
 
 		if (cpu->delay_slot)
 			cpu->delay_slot |= EXCEPTION_IN_DELAY_SLOT;
@@ -188,11 +187,12 @@ void LS_GENERIC_N(struct cpu *cpu, struct m88k_instr_call *ic)
 #ifdef LS_LOAD
 	if (!cpu->memory_rw(cpu, cpu->mem, addr, data, sizeof(data),
 	    MEM_READ, memory_rw_flags)) {
-		/*  Exception or aborted execution.  */
-		if (!cpu->running)
-			cpu->cd.m88k.next_ic = &nothing_call;
+		BREAK_DYNTRANS_CHECK(cpu);
 		return;
 	}
+
+	BREAK_DYNTRANS_CHECK(cpu);
+
 	x = memory_readmax64(cpu, data, LS_SIZE);
 #ifdef LS_8
 	if (cpu->byte_order == EMUL_BIG_ENDIAN) {
@@ -233,11 +233,11 @@ void LS_GENERIC_N(struct cpu *cpu, struct m88k_instr_call *ic)
 	memory_writemax64(cpu, data, LS_SIZE, x);
 	if (!cpu->memory_rw(cpu, cpu->mem, addr, data, sizeof(data),
 	    MEM_WRITE, memory_rw_flags)) {
-		/*  Exception or aborted execution.  */
-		if (!cpu->running)
-			cpu->cd.m88k.next_ic = &nothing_call;
+		BREAK_DYNTRANS_CHECK(cpu);
 		return;
 	}
+
+	BREAK_DYNTRANS_CHECK(cpu);
 #endif
 }
 #endif	/*  LS_INCLUDE_GENERIC  */

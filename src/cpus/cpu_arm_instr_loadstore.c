@@ -128,10 +128,12 @@ void A__NAME__general(struct cpu *cpu, struct arm_instr_call *ic)
 	if (!cpu->memory_rw(cpu, cpu->mem, addr, data, datalen,
 	    MEM_READ, memory_rw_flags)) {
 		/*  load failed, an exception was generated  */
-		if (!cpu->running)
-			cpu->cd.arm.next_ic = &nothing_call;
+		BREAK_DYNTRANS_CHECK(cpu);
 		return;
 	}
+
+	BREAK_DYNTRANS_CHECK(cpu);
+
 #if defined(A__B) && !defined(A__LDRD)
 	reg(ic->arg[2]) =
 #ifdef A__SIGNED
@@ -202,10 +204,11 @@ void A__NAME__general(struct cpu *cpu, struct arm_instr_call *ic)
 	if (!cpu->memory_rw(cpu, cpu->mem, addr, data, datalen,
 	    MEM_WRITE, memory_rw_flags)) {
 		/*  store failed, an exception was generated  */
-		if (!cpu->running)
-			cpu->cd.arm.next_ic = &nothing_call;
+		BREAK_DYNTRANS_CHECK(cpu);
 		return;
 	}
+
+	BREAK_DYNTRANS_CHECK(cpu);
 #endif
 
 #ifdef A__P

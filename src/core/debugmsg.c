@@ -48,6 +48,10 @@
  *		debugmsg(SUBSYS_XXX, "component", VERBOSITY_YYY, "%s", msg);
  *	}
  *
+ *  Note that after calling debugmsg from instruction implementations, there
+ *  also needs to be a BREAK_DYNTRANS_CHECK(cpu); because a breakpoint may have
+ *  been triggered.
+ *
  *
  *  TODO:
  *	New debugger commands:
@@ -79,10 +83,12 @@ int quiet_mode = 0;
 extern bool emul_executing;
 extern bool single_step;
 extern bool about_to_enter_single_step;
+extern bool single_step_breakpoint;
 
 size_t debugmsg_nr_of_subsystems = 0;
 static const char **debugmsg_subsystem_name = NULL;
 int *debugmsg_current_verbosity = NULL;
+int *debugmsg_current_breakpoint_level = NULL;
 
 static const int default_verbosity = VERBOSITY_INFO;
 
@@ -144,6 +150,9 @@ static void debugmsg_va(struct cpu* cpu, int subsystem,
 
 	if (console_are_slaves_allowed())
 		show_decorations = false;
+
+	if (single_step_breakpoint)
+		goto skip_print;
 
 	while (true) {
 		if (debug_currently_at_start_of_line) {
@@ -213,6 +222,8 @@ static void debugmsg_va(struct cpu* cpu, int subsystem,
 
 			if (verbosity == VERBOSITY_ERROR)
 				color_error(true);
+			else if (verbosity == VERBOSITY_WARNING)
+				color_error(false);
 			else
 				color_normal();
 		}
@@ -247,6 +258,47 @@ static void debugmsg_va(struct cpu* cpu, int subsystem,
 
 	if (!debug_currently_at_start_of_line)
 		printf("\n");
+
+skip_print:
+	// If single_step_breakpoint is already set, then that means we were
+	// stopped at a breakpoint, and are now printing a debugmsg again.
+	// We shouldn't enter single-stepping again here, over and over again,
+	// hence the check for !single_step_breakpoint.
+	if (!single_step_breakpoint &&
+	    debugmsg_current_breakpoint_level[subsystem] >= verbosity) {
+		single_step_breakpoint = true;
+		about_to_enter_single_step = true;
+
+		if (cpu != NULL)
+			cpu_break_out_of_dyntrans_loop(cpu);
+
+		if (debugmsg_current_breakpoint_level[subsystem] == VERBOSITY_ERROR) {
+			color_error(false);
+			if (show_decorations)
+				printf("[ ");
+			printf("Aborting.");
+			if (show_decorations)
+				printf(" ]");
+			printf("\n");
+
+			if (cpu != NULL)
+				cpu->running = false;
+		} else {
+			if (show_decorations)
+				printf("[ ");
+
+			color_debugmsg_subsystem();
+			printf("%s", debugmsg_subsystem_name[subsystem]);
+			color_normal();
+
+			printf(" breakpoint");
+			if (show_decorations)
+				printf(" ]");
+			printf("\n");
+		}
+
+		color_normal();
+	}
 }
 
 
@@ -341,6 +393,28 @@ void fatal(const char *fmt, ...)
 }
 
 
+void debugmsg_set_breakpoint_level(int subsystem, int level)
+{
+	if (subsystem != SUBSYS_ALL) {
+		debugmsg_current_breakpoint_level[subsystem] = level;
+
+		if (debugmsg_current_verbosity[subsystem] < level) {
+			printf("(Increasing subsystem verbosity.)\n");
+			debugmsg_current_verbosity[subsystem] = level;
+		}
+	} else {
+		for (size_t i = 0; i < debugmsg_nr_of_subsystems; ++i) {
+			debugmsg_current_breakpoint_level[i] = level;
+
+			if (debugmsg_current_verbosity[i] < level) {
+				printf("(Increasing subsystem verbosity.)\n");
+				debugmsg_current_verbosity[i] = level;
+			}
+		}
+	}
+}
+
+
 void debugmsg_set_verbosity_level(int subsystem, int verbosity)
 {
 	if (subsystem != SUBSYS_ALL)
@@ -390,9 +464,12 @@ int debugmsg_register_subsystem(const char* name)
 	    sizeof(char*) * debugmsg_nr_of_subsystems);
 	debugmsg_current_verbosity = realloc(debugmsg_current_verbosity,
 	    sizeof(int) * debugmsg_nr_of_subsystems);;
+	debugmsg_current_breakpoint_level = realloc(debugmsg_current_breakpoint_level,
+	    sizeof(int) * debugmsg_nr_of_subsystems);
 
 	debugmsg_subsystem_name[subsys] = strdup(name);
 	debugmsg_set_verbosity_level(subsys, default_verbosity);
+	debugmsg_set_breakpoint_level(subsys, VERBOSITY_ERROR);
 
 	return subsys;
 }
@@ -508,6 +585,7 @@ void debugmsg_init()
 	debugmsg_nr_of_subsystems = 11;
 	debugmsg_subsystem_name = malloc(sizeof(char*) * debugmsg_nr_of_subsystems);
 	debugmsg_current_verbosity = malloc(sizeof(int) * debugmsg_nr_of_subsystems);;
+	debugmsg_current_breakpoint_level = malloc(sizeof(int) * debugmsg_nr_of_subsystems);;
 
 	debugmsg_subsystem_name[SUBSYS_STARTUP]   = "";
 	debugmsg_subsystem_name[SUBSYS_EMUL]      = "emul";
@@ -523,6 +601,7 @@ void debugmsg_init()
 
 	// Default verbosity levels.
 	debugmsg_set_verbosity_level(SUBSYS_ALL, default_verbosity);
+	debugmsg_set_breakpoint_level(SUBSYS_ALL, VERBOSITY_ERROR);
 }
 
 

@@ -35,6 +35,7 @@
 #include <string.h>
 
 #include "cpu.h"
+#include "emul.h"
 #include "machine.h"
 #include "memory.h"
 #include "settings.h"
@@ -225,6 +226,21 @@ void cpu_register_dump(struct machine *m, struct cpu *cpu,
 
 
 /*
+ *  cpu_functioncall_print():
+ *
+ *  Like trace, but used to print function name and argument during
+ *  disassembl rather than showing a trace tree.
+ */
+void cpu_functioncall_print(struct cpu *cpu)
+{
+	int old = cpu->trace_tree_depth;
+	cpu->trace_tree_depth = 0;
+	cpu_functioncall_trace(cpu, cpu->pc);
+	cpu->trace_tree_depth = old;
+}
+
+
+/*
  *  cpu_functioncall_trace():
  *
  *  This function should be called if machine->show_trace_tree is enabled, and
@@ -319,6 +335,15 @@ void cpu_create_or_reset_tc(struct cpu *cpu)
 
 
 /*
+ *  cpu_break_out_of_dyntrans_loop():
+ */
+void cpu_break_out_of_dyntrans_loop(struct cpu *cpu)
+{
+	cpu->n_translated_instrs |= N_BREAK_OUT_OF_DYNTRANS_LOOP;
+}
+
+
+/*
  *  cpu_dumpinfo():
  *
  *  Dumps info about a CPU using debug(). "cpu0: CPUNAME, running" (or similar)
@@ -378,37 +403,6 @@ void cpu_list_available_types(void)
 
 
 /*
- *  cpu_run_deinit():
- *
- *  Shuts down all CPUs in a machine when ending a simulation. (This function
- *  should only need to be called once for each machine.)
- */
-void cpu_run_deinit(struct machine *machine)
-{
-	int te;
-
-	/*
-	 *  Two last ticks of every hardware device.  This will allow e.g.
-	 *  framebuffers to draw the last updates to the screen before halting.
-	 *
-	 *  TODO: This should be refactored when redesigning the mainbus
-	 *        concepts!
-	 */
-        for (te=0; te<machine->tick_functions.n_entries; te++) {
-		machine->tick_functions.f[te](machine->cpus[0],
-		    machine->tick_functions.extra[te]);
-		machine->tick_functions.f[te](machine->cpus[0],
-		    machine->tick_functions.extra[te]);
-	}
-
-	if (machine->show_nr_of_instructions)
-		cpu_show_cycles(machine, true);
-
-	fflush(stdout);
-}
-
-
-/*
  *  cpu_print_pc_indicator_in_disassembly():
  *
  *  Helper which shows an arrow indicating the current instruction, during
@@ -432,59 +426,37 @@ void cpu_print_pc_indicator_in_disassembly(struct cpu *cpu, int running, uint64_
  *  If show_nr_of_instructions is on, then print a line to stdout about how
  *  many instructions/cycles have been executed so far.
  */
-void cpu_show_cycles(struct machine *machine, bool forced)
+void cpu_show_cycles(struct machine *machine, uint64_t total_elapsed_ms)
 {
-	uint64_t offset, pc;
-	char *symbol;
-	int64_t mseconds, ninstrs, is, avg;
-	struct timeval tv;
 	struct cpu *cpu = machine->cpus[machine->bootstrap_cpu];
 
-	static int64_t mseconds_last = 0;
-	static int64_t ninstrs_last = -1;
+	char buf[2048];
+	buf[0] = 0;
 
-	pc = cpu->pc;
+	snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),
+	    "%" PRIi64" instrs", (int64_t) cpu->ninstrs);
 
-	gettimeofday(&tv, NULL);
-	mseconds = (tv.tv_sec - cpu->starttime.tv_sec) * 1000
-	         + (tv.tv_usec - cpu->starttime.tv_usec) / 1000;
+	if (total_elapsed_ms != 0) {
+		uint64_t avg = cpu->ninstrs * 1000 / total_elapsed_ms;
 
-	if (mseconds == 0)
-		mseconds = 1;
-
-	if (mseconds - mseconds_last == 0)
-		mseconds ++;
-
-	ninstrs = cpu->ninstrs_since_gettimeofday;
-
-	/*  RETURN here, unless show_nr_of_instructions (-N) is turned on:  */
-	if (!machine->show_nr_of_instructions && !forced)
-		goto do_return;
-
-	printf("[ %" PRIi64" instrs", (int64_t) cpu->ninstrs);
-
-	/*  Instructions per second, and average so far:  */
-	is = 1000 * (ninstrs-ninstrs_last) / (mseconds-mseconds_last);
-	avg = (long long)1000 * ninstrs / mseconds;
-	if (is < 0)
-		is = 0;
-	if (avg < 0)
-		avg = 0;
-
-	if (cpu->has_been_idling) {
-		printf("; idling");
-		cpu->has_been_idling = false;
-	} else
-		printf("; i/s=%" PRIi64" avg=%" PRIi64, is, avg);
-
-	symbol = get_symbol_name(&machine->symbol_context, pc, &offset);
-
-	if (machine->ncpus == 1) {
-		if (cpu->is_32bit)
-			printf("; pc=0x%08" PRIx32, (uint32_t) pc);
-		else
-			printf("; pc=0x%016" PRIx64, (uint64_t) pc);
+		if (cpu->has_been_idling) {
+			snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "; idling");
+			cpu->has_been_idling = false;
+		} else {
+			snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),
+			    "; instrs/sec=%" PRIi64, avg);
+		}
 	}
+
+	uint64_t offset;
+	const char* symbol = get_symbol_name(&machine->symbol_context, cpu->pc, &offset);
+
+	if (cpu->is_32bit)
+		snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),
+		    "; pc=0x%08" PRIx32, (uint32_t) cpu->pc);
+	else
+		snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),
+		    "; pc=0x%016" PRIx64, (uint64_t) cpu->pc);
 
 	/*  Special hack for M88K userland:  (Don't show symbols.)  */
 	if (cpu->cpu_family->arch == ARCH_M88K &&
@@ -492,12 +464,13 @@ void cpu_show_cycles(struct machine *machine, bool forced)
 		symbol = NULL;
 
 	if (symbol != NULL)
-		printf(" <%s>", symbol);
-	printf(" ]\n");
+		snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), " <%s>", symbol);
 
-do_return:
-	ninstrs_last = ninstrs;
-	mseconds_last = mseconds;
+	if (!cpu->running)
+		snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),
+		    ", stopped");
+
+	debugmsg_cpu(cpu, SUBSYS_STARTUP, "", VERBOSITY_WARNING, "%s", buf);
 }
 
 
@@ -516,17 +489,8 @@ void cpu_run_init(struct machine *machine)
 		exit(1);
 	}
 
-	for (i=0; i<machine->ncpus; i++) {
-		struct cpu *cpu = machine->cpus[i];
-
-		cpu->ninstrs_flush = 0;
-		cpu->ninstrs = 0;
-		cpu->ninstrs_show = 0;
-
-		/*  For performance measurement:  */
-		gettimeofday(&cpu->starttime, NULL);
-		cpu->ninstrs_since_gettimeofday = 0;
-	}
+	for (i=0; i<machine->ncpus; i++)
+		machine->cpus[i]->ninstrs = 0;
 }
 
 

@@ -61,66 +61,11 @@ extern bool debugger_enter_at_end_of_run;
 extern bool single_step;
 extern bool about_to_enter_single_step;
 
+bool emul_show_nr_of_instructions = false;
 bool emul_executing = false;
 bool emul_shutdown = false;
 
-
-/*
- *  add_breakpoints():
- *
- *  Take the strings breakpoint_string[] and convert to addresses
- *  (and store them in breakpoint_addr[]).
- *
- *  TODO: This function should be moved elsewhere.
- */
-static void add_breakpoints(struct machine *m)
-{
-	int i;
-	int string_flag;
-	uint64_t dp;
-
-	for (i=0; i<m->breakpoints.n; i++) {
-		string_flag = 0;
-		dp = strtoull(m->breakpoints.string[i], NULL, 0);
-
-		/*
-		 *  If conversion resulted in 0, then perhaps it is a
-		 *  symbol:
-		 */
-		if (dp == 0) {
-			uint64_t addr;
-			int res = get_symbol_addr(&m->symbol_context,
-			    m->breakpoints.string[i], &addr);
-			if (!res) {
-				fprintf(stderr,
-				    "ERROR! Breakpoint '%s' could not be"
-					" parsed\n",
-				    m->breakpoints.string[i]);
-				exit(1);
-			} else {
-				dp = addr;
-				string_flag = 1;
-			}
-		}
-
-		/*
-		 *  TODO:  It would be nice if things like   symbolname+0x1234
-		 *  were automatically converted into the correct address.
-		 */
-
-		if (m->cpus[0]->cpu_family->arch == ARCH_MIPS) {
-			if ((dp >> 32) == 0 && ((dp >> 31) & 1))
-				dp |= 0xffffffff00000000ULL;
-		}
-
-		m->breakpoints.addr[i] = dp;
-
-		debug("breakpoint %i: 0x%" PRIx64, i, dp);
-		if (string_flag)
-			debug(" (%s)", m->breakpoints.string[i]);
-		debug("\n");
-	}
-}
+static bool emul_want_to_print_info = false;
 
 
 /*
@@ -681,7 +626,7 @@ bool emul_machine_setup(struct machine *m, int n_load, char **load_names,
 	}
 
 	/*  Parse and add breakpoints:  */
-	add_breakpoints(m);
+	breakpoints_parse_all(m);
 
 	symbol_recalc_sizes(&m->symbol_context);
 
@@ -828,6 +773,12 @@ struct emul *emul_create_from_configfile(char *fname)
 }
 
 
+void emul_print_info()
+{
+	emul_want_to_print_info = true;
+}
+
+
 /*
  *  emul_run():
  *
@@ -899,18 +850,28 @@ void emul_run(struct emul *emul)
 	timer_start();
 
 
+	struct timeval tv_start;
+	gettimeofday(&tv_start, NULL);
+
+	struct timeval tv_now;
+	uint64_t next_flush_ms = 0;
+	uint64_t next_status_ms = 0;
+	uint64_t tv_diff_ms = 0;
+
+
 	/*
 	 *  MAIN LOOP:
 	 *
 	 *  Run instructions from each cpu in each machine.
-	 *
-	 *  TODO:
-	 *	Rewrite the X11/console flush to use a timer (?).
 	 */
 	while (!emul_shutdown) {
-		struct cpu *bootcpu = emul->machines[0]->cpus[
-		    emul->machines[0]->bootstrap_cpu];
+		gettimeofday(&tv_now, NULL);
+		tv_diff_ms = (tv_now.tv_sec - tv_start.tv_sec) * 1000 +
+		    (tv_now.tv_usec - tv_start.tv_usec) / 1000;
 
+		/*
+		 *  Check if all CPUs in all machines are idling.
+		 */
 		bool any_cpu_running = false;
 		bool idling = true;
 		for (int i = 0; i < emul->n_machines; ++i) {
@@ -944,22 +905,19 @@ void emul_run(struct emul *emul)
 		}
 
 		/*  Flush X11 and serial console output every now and then:  */
-		if (bootcpu->ninstrs > bootcpu->ninstrs_flush + (1<<19)) {
+		if (tv_diff_ms >= next_flush_ms || about_to_enter_single_step || single_step) {
 			x11_check_event(emul);
 			console_flush();
-			bootcpu->ninstrs_flush = bootcpu->ninstrs;
+
+			// Next time to flush, in milliseconds.
+			// 50 ms means 20 times per second.
+			next_flush_ms = tv_diff_ms + 50;
 		}
 
-		if (bootcpu->ninstrs > bootcpu->ninstrs_show + (1<<25)) {
-			bootcpu->ninstrs_since_gettimeofday +=
-			    (bootcpu->ninstrs - bootcpu->ninstrs_show);
-			cpu_show_cycles(emul->machines[0], false);
-			bootcpu->ninstrs_show = bootcpu->ninstrs;
-		}
-		
 		if (about_to_enter_single_step) {
 			single_step = true;
 			about_to_enter_single_step = false;
+			debugger_reset();
 		}
 
 		if (single_step)
@@ -969,6 +927,22 @@ void emul_run(struct emul *emul)
 			break;
 
 		emul_executing = true;
+
+		/*
+		 *  Print info at regular intervals (if -N is used), or when
+		 *  CTRL-T is typed.
+		 */
+		if (emul_show_nr_of_instructions && tv_diff_ms >= next_status_ms) {
+			emul_want_to_print_info = true;
+			next_status_ms = tv_diff_ms + 1000;
+		}
+
+		if (emul_want_to_print_info) {
+			for (int i = 0; i < emul->n_machines; ++i)
+				cpu_show_cycles(emul->machines[i], tv_diff_ms);
+
+			emul_want_to_print_info = false;
+		}
 
 		bool any_machine_still_running = false;
 		for (int i = 0; i < emul->n_machines; i++)
@@ -991,9 +965,10 @@ void emul_run(struct emul *emul)
 	/*  Stop any running timers:  */
 	timer_stop();
 
-	/*  Deinitialize all CPUs in all machines:  */
-	for (int j = 0; j <emul->n_machines; j++)
-		cpu_run_deinit(emul->machines[j]);
+	for (int j = 0; j <emul->n_machines; j++) {
+		if (emul_show_nr_of_instructions)
+			cpu_show_cycles(emul->machines[j], tv_diff_ms);
+	}
 
 	console_deinit_main();
 }

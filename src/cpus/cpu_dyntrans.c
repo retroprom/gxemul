@@ -177,7 +177,7 @@ static void gather_statistics(struct cpu *cpu)
 int DYNTRANS_RUN_INSTR_DEF(struct cpu *cpu)
 {
 	MODE_uint_t cached_pc;
-	int low_pc, n_instrs;
+	int low_pc;
 
 	/*  Ugly... fix this some day.  */
 #ifdef DYNTRANS_DUALMODE_32
@@ -324,10 +324,9 @@ int DYNTRANS_RUN_INSTR_DEF(struct cpu *cpu)
 		/*  Execute just one instruction:  */
 		I;
 
-		n_instrs = 1;
+		cpu->n_translated_instrs ++;
 	} else if (cpu->machine->statistics.enabled) {
 		/*  Gather statistics while executing multiple instructions:  */
-		n_instrs = 0;
 		for (;;) {
 			struct DYNTRANS_IC *ic;
 
@@ -346,8 +345,6 @@ int DYNTRANS_RUN_INSTR_DEF(struct cpu *cpu)
 		 *
 		 *  (This is the core dyntrans loop.)
 		 */
-		n_instrs = 0;
-
 		for (;;) {
 			struct DYNTRANS_IC *ic;
 
@@ -373,23 +370,22 @@ int DYNTRANS_RUN_INSTR_DEF(struct cpu *cpu)
 		}
 	}
 
-	if (cpu->wants_to_idle) {
-		cpu->n_translated_instrs -= N_DYNTRANS_IDLE_BREAK;
+	if (cpu->n_translated_instrs >= N_BREAK_OUT_OF_DYNTRANS_LOOP)
+		cpu->n_translated_instrs -= N_BREAK_OUT_OF_DYNTRANS_LOOP;
 
+	if (cpu->wants_to_idle) {
 		// TODO: More arch specific interrupt checks
 		if (false
 #ifdef DYNTRANS_M88K
 		    || (cpu->cd.m88k.irq_asserted && !(cpu->cd.m88k.cr[M88K_CR_PSR] & M88K_PSR_IND))
 #endif
 		    ) {
-			debugmsg_cpu(cpu, SUBSYS_CPU, "idle", VERBOSITY_DEBUG, "not idling; exception");
+			debugmsg_cpu(cpu, SUBSYS_CPU, "idle", VERBOSITY_DEBUG, "not idling due to irq_asserted");
 			cpu->wants_to_idle = false;
 		}
 
 		cpu->has_been_idling = true;
 	}
-
-	n_instrs += cpu->n_translated_instrs;
 
 	/*  Synchronize the program counter:  */
 	low_pc = ((size_t)cpu->cd.DYNTRANS_ARCH.next_ic - (size_t)
@@ -423,7 +419,7 @@ int DYNTRANS_RUN_INSTR_DEF(struct cpu *cpu)
 		old = cpu->cd.mips.coproc[0]->reg[COP0_COUNT];
 		diff1 = cpu->cd.mips.coproc[0]->reg[COP0_COMPARE] - old;
 		cpu->cd.mips.coproc[0]->reg[COP0_COUNT] =
-		    (int32_t) (old + n_instrs);
+		    (int32_t) (old + cpu->n_translated_instrs);
 		diff2 = cpu->cd.mips.coproc[0]->reg[COP0_COMPARE] -
 		    cpu->cd.mips.coproc[0]->reg[COP0_COUNT];
 
@@ -448,21 +444,21 @@ int DYNTRANS_RUN_INSTR_DEF(struct cpu *cpu)
 	/*  Update the Decrementer and Time base registers:  */
 	{
 		uint32_t old = cpu->cd.ppc.spr[SPR_DEC];
-		cpu->cd.ppc.spr[SPR_DEC] = (uint32_t) (old - n_instrs);
+		cpu->cd.ppc.spr[SPR_DEC] = (uint32_t) (old - cpu->n_translated_instrs);
 		if ((old >> 31) == 0 && (cpu->cd.ppc.spr[SPR_DEC] >> 31) == 1
 		    && !(cpu->cd.ppc.cpu_type.flags & PPC_NO_DEC))
 			cpu->cd.ppc.dec_intr_pending = 1;
 		old = cpu->cd.ppc.spr[SPR_TBL];
-		cpu->cd.ppc.spr[SPR_TBL] += n_instrs;
+		cpu->cd.ppc.spr[SPR_TBL] += cpu->n_translated_instrs;
 		if ((old >> 31) == 1 && (cpu->cd.ppc.spr[SPR_TBL] >> 31) == 0)
 			cpu->cd.ppc.spr[SPR_TBU] ++;
 	}
 #endif
 
-	cpu->ninstrs += n_instrs;
+	cpu->ninstrs += cpu->n_translated_instrs;
 
 	/*  Return the nr of instructions executed:  */
-	return n_instrs;
+	return cpu->n_translated_instrs;
 }
 #endif	/*  DYNTRANS_RUN_INSTR  */
 
@@ -1780,22 +1776,24 @@ cpu->cd.DYNTRANS_ARCH.vph_tlb_entry[r].valid);
 	 */
 	if (!single_step_breakpoint && !cpu->translation_readahead) {
 		MODE_uint_t curpc = cpu->pc;
-		int i;
-		for (i=0; i<cpu->machine->breakpoints.n; i++)
+		for (size_t i=0; i<cpu->machine->breakpoints.n_addr_bp; i++)
 			if (curpc == (MODE_uint_t)
-			    cpu->machine->breakpoints.addr[i]) {
-				if (!cpu->machine->instruction_trace) {
-					int tmp_old_quiet_mode = quiet_mode;
-					quiet_mode = 0;
+			    cpu->machine->breakpoints.addr_bp[i].addr) {
+			    	bool was_already_singlestepping = single_step;
+
+				single_step_breakpoint = true;
+				single_step = true;
+
+				if (!cpu->machine->instruction_trace &&
+				    !was_already_singlestepping)
 					DISASSEMBLE(cpu, ib, 1, 0);
-					quiet_mode = tmp_old_quiet_mode;
-				}
+
 #ifdef MODE32
-				fatal("BREAKPOINT: pc = 0x%" PRIx32"\n(The "
+				printf("BREAKPOINT: pc = 0x%" PRIx32"\n(The "
 				    "instruction has not yet executed.)\n",
 				    (uint32_t)cpu->pc);
 #else
-				fatal("BREAKPOINT: pc = 0x%" PRIx64"\n(The "
+				printf("BREAKPOINT: pc = 0x%" PRIx64"\n(The "
 				    "instruction has not yet executed.)\n",
 				    (uint64_t)cpu->pc);
 #endif
@@ -1804,8 +1802,6 @@ cpu->cd.DYNTRANS_ARCH.vph_tlb_entry[r].valid);
 					fatal("ERROR! Breakpoint in a delay"
 					    " slot! Not yet supported.\n");
 #endif
-				single_step_breakpoint = 1;
-				single_step = true;
 				goto stop_running_translated;
 			}
 	}
@@ -1887,16 +1883,19 @@ cpu->cd.DYNTRANS_ARCH.vph_tlb_entry[r].valid);
 	    || in_crosspage_delayslot
 #endif
 	    ) {
-		single_step_breakpoint = 0;
+		// Manually execute the instruction with single_step_breakpoint still
+		// set. This way, any debugmsg that would cause a breakpoint to be
+		// triggered will not trigger.
 		ic->f(cpu, ic);
 		ic->f = TO_BE_TRANSLATED;
+		single_step_breakpoint = false;
 		return;
 	}
 
 
 	/*  Translation read-ahead:  */
 	if (!single_step && !cpu->machine->instruction_trace &&
-	    cpu->machine->breakpoints.n == 0) {
+	    cpu->machine->breakpoints.n_addr_bp == 0) {
 		uint64_t baseaddr = cpu->pc;
 		uint64_t pagenr = DYNTRANS_ADDR_TO_PAGENR(baseaddr);
 		int i = 1;
@@ -1980,7 +1979,13 @@ stop_running_translated:
 	// "step 100" was executing and 50 steps remained.
 	debugger_reset();
 
+	// Break out quickly from the dyntrans loop.
+	cpu_break_out_of_dyntrans_loop(cpu);
+
 	ic = cpu->cd.DYNTRANS_ARCH.next_ic = &nothing_call;
+
+	// The nothing_call will do a next_ic -- so we have to point
+	// next_ic to the next instruction call here.
 	cpu->cd.DYNTRANS_ARCH.next_ic ++;
 
 #ifdef DYNTRANS_DELAYSLOT
@@ -1990,7 +1995,10 @@ stop_running_translated:
 		cpu->delay_slot |= EXCEPTION_IN_DELAY_SLOT;
 #endif
 
-	/*  Execute the "nothing" instruction:  */
+	/*
+	 *  Execute the "nothing" instruction until the core dyntrans
+	 *  loop exits:
+	 */
 	ic->f(cpu, ic);
 
 #endif	/*  DYNTRANS_TO_BE_TRANSLATED_TAIL  */

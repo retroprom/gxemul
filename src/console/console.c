@@ -140,6 +140,8 @@ static int n_console_handles = 0;
  */
 void console_deinit_main(void)
 {
+	fflush(stdout);
+
 	if (!console_initialized)
 		return;
 
@@ -381,14 +383,11 @@ int console_charavail(int handle)
 					ch[i] = 3;
 			}
 
-			// CTRL-T (SIGINFO-like) info. This does not work
+			// CTRL-T (SIGINFO-like) info. TODO: This does not work
 			// well when running with -x, since noone checks
 			// for charavail at stdin then...
-			//
-			// if (ch[i] == 20 && d == STDIN_FILENO) {
-			//	printf("\n");
-			//	cpu_show_cycles(machine..., true);
-			// }
+			if (ch[i] == 20 && d == STDIN_FILENO)
+				emul_print_info();
 
 			console_makeavail(handle, ch[i]);
 		}
@@ -423,8 +422,9 @@ bool console_any_input_available(struct emul *emul)
 	}
 
 	if (emul->n_machines == 1) {
-		if (console_charavail(emul->machines[0]->main_console_handle))
-			somethingAvailable = true;
+		for (int i = 0; i < emul->n_machines; ++i)
+			if (console_charavail(emul->machines[i]->main_console_handle))
+				somethingAvailable = true;
 	}
 
 	return somethingAvailable;

@@ -38,6 +38,15 @@
  */
 
 
+#define SYNCH_PC                {                                       \
+                int low_pc_ = ((size_t)ic - (size_t)cpu->cd.arm.cur_ic_page) \
+                    / sizeof(struct arm_instr_call);                   \
+                cpu->pc &= ~((ARM_IC_ENTRIES_PER_PAGE-1)               \
+                    << ARM_INSTR_ALIGNMENT_SHIFT);                     \
+                cpu->pc += (low_pc_ << ARM_INSTR_ALIGNMENT_SHIFT);      \
+        }
+
+
 /*  #define GATHER_BDT_STATISTICS  */
 
 
@@ -1264,6 +1273,7 @@ X(swp)
 	if (!cpu->memory_rw(cpu, cpu->mem, addr, d, sizeof(d), MEM_READ,
 	    CACHE_DATA)) {
 		fatal("swp: load failed\n");
+		BREAK_DYNTRANS_CHECK(cpu);
 		return;
 	}
 	data = d[0] + (d[1] << 8) + (d[2] << 16) + (d[3] << 24);
@@ -1272,8 +1282,10 @@ X(swp)
 	if (!cpu->memory_rw(cpu, cpu->mem, addr, d, sizeof(d), MEM_WRITE,
 	    CACHE_DATA)) {
 		fatal("swp: store failed\n");
+		BREAK_DYNTRANS_CHECK(cpu);
 		return;
 	}
+	BREAK_DYNTRANS_CHECK(cpu);
 	reg(ic->arg[0]) = data;
 }
 Y(swp)
@@ -1291,6 +1303,7 @@ X(swpb)
 	if (!cpu->memory_rw(cpu, cpu->mem, addr, d, sizeof(d), MEM_READ,
 	    CACHE_DATA)) {
 		fatal("swp: load failed\n");
+		BREAK_DYNTRANS_CHECK(cpu);
 		return;
 	}
 	data = d[0];
@@ -1298,8 +1311,10 @@ X(swpb)
 	if (!cpu->memory_rw(cpu, cpu->mem, addr, d, sizeof(d), MEM_WRITE,
 	    CACHE_DATA)) {
 		fatal("swp: store failed\n");
+		BREAK_DYNTRANS_CHECK(cpu);
 		return;
 	}
+	BREAK_DYNTRANS_CHECK(cpu);
 	reg(ic->arg[0]) = data;
 }
 Y(swpb)
@@ -2044,7 +2059,7 @@ X(netbsd_idle)
 		cpu->pc += (low_pc << ARM_INSTR_ALIGNMENT_SHIFT);
 
 		cpu->wants_to_idle = true;
-		cpu->n_translated_instrs += N_DYNTRANS_IDLE_BREAK;
+		cpu_break_out_of_dyntrans_loop(cpu);
 		cpu->cd.arm.next_ic = &nothing_call;
 		return;
 	}

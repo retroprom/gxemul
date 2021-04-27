@@ -63,7 +63,17 @@ int main(int argc, char *argv[])
 	printf("extern void arm_instr_nothing(struct cpu *, struct arm_instr_call *);\n");
 	printf("extern void arm_instr_invalid(struct cpu *, struct arm_instr_call *);\n");
 	printf("extern void arm_pc_to_pointers(struct cpu *);\n");
-	
+	printf("extern bool single_step;\n");
+	printf("extern bool about_to_enter_single_step;\n");
+	printf("#define DYNTRANS_ARCH arm\n");
+	printf("#define SYNCH_PC                {                                       \\\n"
+            "    int low_pc_ = ((size_t)ic - (size_t)cpu->cd.arm.cur_ic_page) \\\n"
+            "        / sizeof(struct arm_instr_call);                   \\\n"
+            "    cpu->pc &= ~((ARM_IC_ENTRIES_PER_PAGE-1)               \\\n"
+            "        << ARM_INSTR_ALIGNMENT_SHIFT);                     \\\n"
+            "    cpu->pc += (low_pc_ << ARM_INSTR_ALIGNMENT_SHIFT);      \\\n"
+        "}\n");
+
 	if (!only_array)
 	  for (reg=0; reg<=1; reg++)
 	      for (b=0; b<=1; b++)

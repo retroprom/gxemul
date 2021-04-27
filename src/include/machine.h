@@ -31,6 +31,7 @@
 #include <stdbool.h>
 #include <sys/types.h>
 
+#include "breakpoints.h"
 #include "symbol.h"
 
 struct cpu_family;
@@ -51,14 +52,6 @@ struct isa_pic_data {
 
 	int			*pending_timer_interrupts;
 	int			last_int;
-};
-
-struct breakpoints {
-	int		n;
-
-	/*  Arrays, with one element for each entry:  */
-	char		**string;
-	uint64_t	*addr;
 };
 
 struct statistics {
@@ -141,7 +134,7 @@ struct machine {
 
 	struct symbol_context symbol_context;
 
-	int	random_mem_contents;
+	bool	random_mem_contents;
 	uint32_t physical_ram_in_mb;
 	int	memory_offset_in_mb;
 	int	prom_emulation;
@@ -153,12 +146,9 @@ struct machine {
 	char	*bootstr;
 	char	*bootarg;
 
-	/*  Breakpoints:  */
 	struct breakpoints breakpoints;
 
-	int	halt_on_nonexistant_memaccess;
 	int	instruction_trace;
-	int	show_nr_of_instructions;
 	int	show_trace_tree;
 	int	emulated_hz;
 	int	allow_instruction_combinations;

@@ -51,6 +51,7 @@
 extern bool single_step;
 extern bool debugger_enter_at_end_of_run;
 extern bool enable_colorized_output;
+extern bool emul_show_nr_of_instructions;
 
 extern int verbose;
 extern int quiet_mode;
@@ -181,8 +182,6 @@ static void usage(bool longusage)
 	    " kernel to load.\n");
 	printf("  -L tapdev enable tap networking using device 'tapdev'\n");
 	printf("  -M m      emulate m MBs of physical RAM\n");
-	printf("  -N        display nr of instructions/second average, at"
-	    " regular intervals\n");
 	printf("  -n nr     set nr of CPUs (for SMP experiments)\n");
 	printf("  -O        force netboot (tftp instead of disk), even when"
 	    " a disk image is\n"
@@ -208,7 +207,7 @@ static void usage(bool longusage)
 	printf("                d    disable statistics gathering at "
 	    "startup\n");
 	printf("                o    overwrite instead of append\n");
-	printf("  -T        halt on non-existant memory accesses\n");
+	printf("  -T        break on non-existant memory accesses\n");
 	printf("  -t        show function trace tree\n");
 #ifdef WITH_X11
 	printf("  -X        use X11\n");
@@ -234,6 +233,8 @@ static void usage(bool longusage)
 	printf("  -k n      set dyntrans translation caches to n MB (default"
 	    " size is %i MB)\n", DEFAULT_DYNTRANS_CACHE_SIZE / 1048576);
 	printf("  -K        show the debugger prompt instead of exiting, when a simulation ends\n");
+	printf("  -N        display status info (nr of instrs/second etc), at"
+	    " regular intervals\n");
 	printf("  -q        quiet mode (don't print startup messages)\n");
 	printf("  -V        start up in the interactive debugger, paused; this also sets -K\n");
 	printf("  -v        increase debug message verbosity\n");
@@ -377,8 +378,7 @@ int get_cmd_args(int argc, char *argv[], struct emul *emul,
 			machine_specific_options_used = true;
 			break;
 		case 'N':
-			m->show_nr_of_instructions = 1;
-			machine_specific_options_used = true;
+			emul_show_nr_of_instructions = true;
 			break;
 		case 'n':
 			m->ncpus = atoi(optarg);
@@ -412,7 +412,7 @@ int get_cmd_args(int argc, char *argv[], struct emul *emul,
 			machine_specific_options_used = true;
 			break;
 		case 'S':
-			m->random_mem_contents = 1;
+			m->random_mem_contents = true;
 			machine_specific_options_used = true;
 			break;
 		case 's':
@@ -420,7 +420,7 @@ int get_cmd_args(int argc, char *argv[], struct emul *emul,
 			machine_specific_options_used = true;
 			break;
 		case 'T':
-			m->halt_on_nonexistant_memaccess = 1;
+			debugmsg_set_breakpoint_level(SUBSYS_MEMORY, VERBOSITY_WARNING);
 			machine_specific_options_used = true;
 			break;
 		case 't':

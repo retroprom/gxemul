@@ -112,6 +112,15 @@ int cop0_availability_check(struct cpu *cpu, struct mips_instr_call *ic)
 #endif
 
 
+#define SYNCH_PC                {                                       \
+                int low_pc_ = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page) \
+                    / sizeof(struct mips_instr_call);                   \
+                cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)               \
+                    << MIPS_INSTR_ALIGNMENT_SHIFT);                     \
+                cpu->pc += (low_pc_ << MIPS_INSTR_ALIGNMENT_SHIFT);      \
+        }
+
+
 /*
  *  invalid:  For catching bugs.
  */
@@ -130,12 +139,7 @@ X(invalid)
  */
 X(reserved)
 {
-	/*  Synchronize the PC and cause an exception:  */
-	int low_pc = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page)
-	    / sizeof(struct mips_instr_call);
-	cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)
-	    << MIPS_INSTR_ALIGNMENT_SHIFT);
-	cpu->pc += (low_pc << MIPS_INSTR_ALIGNMENT_SHIFT);
+	SYNCH_PC
 	mips_cpu_exception(cpu, EXCEPTION_RI, 0, 0, 0, 0, 0, 0);
 }
 
@@ -147,12 +151,7 @@ X(reserved)
  */
 X(cpu)
 {
-	/*  Synchronize the PC and cause an exception:  */
-	int low_pc = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page)
-	    / sizeof(struct mips_instr_call);
-	cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)
-	    << MIPS_INSTR_ALIGNMENT_SHIFT);
-	cpu->pc += (low_pc << MIPS_INSTR_ALIGNMENT_SHIFT);
+	SYNCH_PC
 	mips_cpu_exception(cpu, EXCEPTION_CPU, 0, 0, ic->arg[0], 0, 0, 0);
 }
 
@@ -1163,12 +1162,7 @@ X(tgei)
 	MODE_int_t imm = ic->arg[2];
 
 	if (rs >= imm) {
-		/*  Synchronize the PC and cause an exception:  */
-		int low_pc = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page)
-		    / sizeof(struct mips_instr_call);
-		cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)
-		    << MIPS_INSTR_ALIGNMENT_SHIFT);
-		cpu->pc += (low_pc << MIPS_INSTR_ALIGNMENT_SHIFT);
+		SYNCH_PC
 		mips_cpu_exception(cpu, EXCEPTION_TR, 0, 0, 0, 0, 0, 0);
 	}
 }
@@ -1178,12 +1172,7 @@ X(tgeiu)
 	MODE_uint_t imm = ic->arg[2];
 
 	if (rs >= imm) {
-		/*  Synchronize the PC and cause an exception:  */
-		int low_pc = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page)
-		    / sizeof(struct mips_instr_call);
-		cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)
-		    << MIPS_INSTR_ALIGNMENT_SHIFT);
-		cpu->pc += (low_pc << MIPS_INSTR_ALIGNMENT_SHIFT);
+		SYNCH_PC
 		mips_cpu_exception(cpu, EXCEPTION_TR, 0, 0, 0, 0, 0, 0);
 	}
 }
@@ -1193,12 +1182,7 @@ X(tlti)
 	MODE_int_t imm = ic->arg[2];
 
 	if (rs < imm) {
-		/*  Synchronize the PC and cause an exception:  */
-		int low_pc = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page)
-		    / sizeof(struct mips_instr_call);
-		cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)
-		    << MIPS_INSTR_ALIGNMENT_SHIFT);
-		cpu->pc += (low_pc << MIPS_INSTR_ALIGNMENT_SHIFT);
+		SYNCH_PC
 		mips_cpu_exception(cpu, EXCEPTION_TR, 0, 0, 0, 0, 0, 0);
 	}
 }
@@ -1208,12 +1192,7 @@ X(tltiu)
 	MODE_uint_t imm = ic->arg[2];
 
 	if (rs < imm) {
-		/*  Synchronize the PC and cause an exception:  */
-		int low_pc = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page)
-		    / sizeof(struct mips_instr_call);
-		cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)
-		    << MIPS_INSTR_ALIGNMENT_SHIFT);
-		cpu->pc += (low_pc << MIPS_INSTR_ALIGNMENT_SHIFT);
+		SYNCH_PC
 		mips_cpu_exception(cpu, EXCEPTION_TR, 0, 0, 0, 0, 0, 0);
 	}
 }
@@ -1223,12 +1202,7 @@ X(teqi)
 	MODE_uint_t imm = ic->arg[2];
 
 	if (rs == imm) {
-		/*  Synchronize the PC and cause an exception:  */
-		int low_pc = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page)
-		    / sizeof(struct mips_instr_call);
-		cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)
-		    << MIPS_INSTR_ALIGNMENT_SHIFT);
-		cpu->pc += (low_pc << MIPS_INSTR_ALIGNMENT_SHIFT);
+		SYNCH_PC
 		mips_cpu_exception(cpu, EXCEPTION_TR, 0, 0, 0, 0, 0, 0);
 	}
 }
@@ -1238,12 +1212,7 @@ X(tnei)
 	MODE_uint_t imm = ic->arg[2];
 
 	if (rs != imm) {
-		/*  Synchronize the PC and cause an exception:  */
-		int low_pc = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page)
-		    / sizeof(struct mips_instr_call);
-		cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)
-		    << MIPS_INSTR_ALIGNMENT_SHIFT);
-		cpu->pc += (low_pc << MIPS_INSTR_ALIGNMENT_SHIFT);
+		SYNCH_PC
 		mips_cpu_exception(cpu, EXCEPTION_TR, 0, 0, 0, 0, 0, 0);
 	}
 }
@@ -1493,12 +1462,7 @@ X(tge)
 {
 	MODE_int_t a = reg(ic->arg[0]), b = reg(ic->arg[1]);
 	if (a >= b) {
-		/*  Synch. PC and cause an exception:  */
-		int low_pc = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page)
-		    / sizeof(struct mips_instr_call);
-		cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)
-		    << MIPS_INSTR_ALIGNMENT_SHIFT);
-		cpu->pc += (low_pc << MIPS_INSTR_ALIGNMENT_SHIFT);
+		SYNCH_PC
 		mips_cpu_exception(cpu, EXCEPTION_TR, 0, 0, 0, 0, 0, 0);
 	}
 }
@@ -1506,12 +1470,7 @@ X(tgeu)
 {
 	MODE_uint_t a = reg(ic->arg[0]), b = reg(ic->arg[1]);
 	if (a >= b) {
-		/*  Synch. PC and cause an exception:  */
-		int low_pc = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page)
-		    / sizeof(struct mips_instr_call);
-		cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)
-		    << MIPS_INSTR_ALIGNMENT_SHIFT);
-		cpu->pc += (low_pc << MIPS_INSTR_ALIGNMENT_SHIFT);
+		SYNCH_PC
 		mips_cpu_exception(cpu, EXCEPTION_TR, 0, 0, 0, 0, 0, 0);
 	}
 }
@@ -1519,12 +1478,7 @@ X(tlt)
 {
 	MODE_int_t a = reg(ic->arg[0]), b = reg(ic->arg[1]);
 	if (a < b) {
-		/*  Synch. PC and cause an exception:  */
-		int low_pc = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page)
-		    / sizeof(struct mips_instr_call);
-		cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)
-		    << MIPS_INSTR_ALIGNMENT_SHIFT);
-		cpu->pc += (low_pc << MIPS_INSTR_ALIGNMENT_SHIFT);
+		SYNCH_PC
 		mips_cpu_exception(cpu, EXCEPTION_TR, 0, 0, 0, 0, 0, 0);
 	}
 }
@@ -1532,12 +1486,7 @@ X(tltu)
 {
 	MODE_uint_t a = reg(ic->arg[0]), b = reg(ic->arg[1]);
 	if (a < b) {
-		/*  Synch. PC and cause an exception:  */
-		int low_pc = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page)
-		    / sizeof(struct mips_instr_call);
-		cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)
-		    << MIPS_INSTR_ALIGNMENT_SHIFT);
-		cpu->pc += (low_pc << MIPS_INSTR_ALIGNMENT_SHIFT);
+		SYNCH_PC
 		mips_cpu_exception(cpu, EXCEPTION_TR, 0, 0, 0, 0, 0, 0);
 	}
 }
@@ -1545,12 +1494,7 @@ X(teq)
 {
 	MODE_uint_t a = reg(ic->arg[0]), b = reg(ic->arg[1]);
 	if (a == b) {
-		/*  Synch. PC and cause an exception:  */
-		int low_pc = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page)
-		    / sizeof(struct mips_instr_call);
-		cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)
-		    << MIPS_INSTR_ALIGNMENT_SHIFT);
-		cpu->pc += (low_pc << MIPS_INSTR_ALIGNMENT_SHIFT);
+		SYNCH_PC
 		mips_cpu_exception(cpu, EXCEPTION_TR, 0, 0, 0, 0, 0, 0);
 	}
 }
@@ -1558,12 +1502,7 @@ X(tne)
 {
 	MODE_uint_t a = reg(ic->arg[0]), b = reg(ic->arg[1]);
 	if (a != b) {
-		/*  Synch. PC and cause an exception:  */
-		int low_pc = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page)
-		    / sizeof(struct mips_instr_call);
-		cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)
-		    << MIPS_INSTR_ALIGNMENT_SHIFT);
-		cpu->pc += (low_pc << MIPS_INSTR_ALIGNMENT_SHIFT);
+		SYNCH_PC
 		mips_cpu_exception(cpu, EXCEPTION_TR, 0, 0, 0, 0, 0, 0);
 	}
 }
@@ -1583,12 +1522,7 @@ X(add)
 	int32_t rd = rs + rt;
 
 	if (unlikely((rs >= 0 && rt >= 0 && rd < 0) || (rs < 0 && rt < 0 && rd >= 0))) {
-		/*  Synch. PC and cause an exception:  */
-		int low_pc = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page)
-		    / sizeof(struct mips_instr_call);
-		cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)
-		    << MIPS_INSTR_ALIGNMENT_SHIFT);
-		cpu->pc += (low_pc << MIPS_INSTR_ALIGNMENT_SHIFT);
+		SYNCH_PC
 		mips_cpu_exception(cpu, EXCEPTION_OV, 0, 0, 0, 0, 0, 0);
 	} else
 		reg(ic->arg[2]) = rd;
@@ -1600,12 +1534,7 @@ X(dadd)
 	int64_t rd = rs + rt;
 
 	if (unlikely((rs >= 0 && rt >= 0 && rd < 0) || (rs < 0 && rt < 0 && rd >= 0))) {
-		/*  Synch. PC and cause an exception:  */
-		int low_pc = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page)
-		    / sizeof(struct mips_instr_call);
-		cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)
-		    << MIPS_INSTR_ALIGNMENT_SHIFT);
-		cpu->pc += (low_pc << MIPS_INSTR_ALIGNMENT_SHIFT);
+		SYNCH_PC
 		mips_cpu_exception(cpu, EXCEPTION_OV, 0, 0, 0, 0, 0, 0);
 	} else
 		reg(ic->arg[2]) = rd;
@@ -1618,12 +1547,7 @@ X(sub)
 	int32_t rd = rs + rt;
 
 	if (unlikely((rs >= 0 && rt >= 0 && rd < 0) || (rs < 0 && rt < 0 && rd >= 0))) {
-		/*  Synch. PC and cause an exception:  */
-		int low_pc = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page)
-		    / sizeof(struct mips_instr_call);
-		cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)
-		    << MIPS_INSTR_ALIGNMENT_SHIFT);
-		cpu->pc += (low_pc << MIPS_INSTR_ALIGNMENT_SHIFT);
+		SYNCH_PC
 		mips_cpu_exception(cpu, EXCEPTION_OV, 0, 0, 0, 0, 0, 0);
 	} else
 		reg(ic->arg[2]) = rd;
@@ -1636,12 +1560,7 @@ X(dsub)
 	int64_t rd = rs + rt;
 
 	if (unlikely((rs >= 0 && rt >= 0 && rd < 0) || (rs < 0 && rt < 0 && rd >= 0))) {
-		/*  Synch. PC and cause an exception:  */
-		int low_pc = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page)
-		    / sizeof(struct mips_instr_call);
-		cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)
-		    << MIPS_INSTR_ALIGNMENT_SHIFT);
-		cpu->pc += (low_pc << MIPS_INSTR_ALIGNMENT_SHIFT);
+		SYNCH_PC
 		mips_cpu_exception(cpu, EXCEPTION_OV, 0, 0, 0, 0, 0, 0);
 	} else
 		reg(ic->arg[2]) = rd;
@@ -1868,12 +1787,7 @@ X(addi)
 	int32_t rt = rs + imm;
 
 	if (unlikely((rs >= 0 && imm >= 0 && rt < 0) || (rs < 0 && imm < 0 && rt >= 0))) {
-		/*  Synch. PC and cause an exception:  */
-		int low_pc = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page)
-		    / sizeof(struct mips_instr_call);
-		cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)
-		    << MIPS_INSTR_ALIGNMENT_SHIFT);
-		cpu->pc += (low_pc << MIPS_INSTR_ALIGNMENT_SHIFT);
+		SYNCH_PC
 		mips_cpu_exception(cpu, EXCEPTION_OV, 0, 0, 0, 0, 0, 0);
 	} else
 		reg(ic->arg[1]) = rt;
@@ -1889,12 +1803,7 @@ X(daddi)
 	int64_t rt = rs + imm;
 
 	if (unlikely((rs >= 0 && imm >= 0 && rt < 0) || (rs < 0 && imm < 0 && rt >= 0))) {
-		/*  Synch. PC and cause an exception:  */
-		int low_pc = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page)
-		    / sizeof(struct mips_instr_call);
-		cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)
-		    << MIPS_INSTR_ALIGNMENT_SHIFT);
-		cpu->pc += (low_pc << MIPS_INSTR_ALIGNMENT_SHIFT);
+		SYNCH_PC
 		mips_cpu_exception(cpu, EXCEPTION_OV, 0, 0, 0, 0, 0, 0);
 	} else
 		reg(ic->arg[1]) = rt;
@@ -2096,10 +2005,7 @@ X(cop1_slow)
  */
 X(syscall)
 {
-	int low_pc = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page)
-	    / sizeof(struct mips_instr_call);
-	cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)<< MIPS_INSTR_ALIGNMENT_SHIFT);
-	cpu->pc += (low_pc << MIPS_INSTR_ALIGNMENT_SHIFT);
+	SYNCH_PC
 	mips_cpu_exception(cpu, EXCEPTION_SYS, 0, 0, 0, 0, 0, 0);
 }
 X(break)
@@ -2126,12 +2032,10 @@ X(reboot)
 X(promemul)
 {
 	/*  Synchronize the PC and call the correct emulation layer:  */
-	MODE_int_t old_pc;
-	int res, low_pc = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page)
-	    / sizeof(struct mips_instr_call);
-	cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)<< MIPS_INSTR_ALIGNMENT_SHIFT);
-	cpu->pc += (low_pc << MIPS_INSTR_ALIGNMENT_SHIFT);
-	old_pc = cpu->pc;
+	SYNCH_PC
+
+	MODE_int_t old_pc = cpu->pc;
+	int res;
 
 	switch (cpu->machine->machine_type) {
 	case MACHINE_PMAX:
@@ -2320,18 +2224,14 @@ X(idle)
 	if (status & STATUS_IE && (status & cause & STATUS_IM_MASK))
 		return;
 
-	// Sync pc:
-	int low_pc = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page)
-	    / sizeof(struct mips_instr_call);
-	cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)
-	    << MIPS_INSTR_ALIGNMENT_SHIFT);
-	cpu->pc += (low_pc << MIPS_INSTR_ALIGNMENT_SHIFT);
+	SYNCH_PC
 
 	cpu->cd.mips.next_ic = ic;
 	cpu->is_halted = true;
 
 	cpu->wants_to_idle = true;
-	cpu->n_translated_instrs += N_DYNTRANS_IDLE_BREAK;
+
+	cpu_break_out_of_dyntrans_loop(cpu);
 	cpu->cd.mips.next_ic = &nothing_call;
 }
 
@@ -2389,15 +2289,10 @@ X(rdhwr_cc)
 X(ll)
 {
 	MODE_int_t addr = reg(ic->arg[1]) + (int32_t)ic->arg[2];
-	int low_pc;
 	uint8_t word[sizeof(uint32_t)];
 
 	/*  Synch. PC and load using slow memory_rw():  */
-	low_pc = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page)
-	    / sizeof(struct mips_instr_call);
-	cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)
-	    << MIPS_INSTR_ALIGNMENT_SHIFT);
-	cpu->pc += (low_pc << MIPS_INSTR_ALIGNMENT_SHIFT);
+	SYNCH_PC
 
 	if (addr & (sizeof(word)-1)) {
 		fatal("TODO: load linked unaligned access: exception\n");
@@ -2407,8 +2302,11 @@ X(ll)
 	if (!cpu->memory_rw(cpu, cpu->mem, addr, word,
 	    sizeof(word), MEM_READ, CACHE_DATA)) {
 		/*  An exception occurred.  */
+		BREAK_DYNTRANS_CHECK(cpu);
 		return;
 	}
+
+	BREAK_DYNTRANS_CHECK(cpu);
 
 	cpu->cd.mips.rmw = 1;
 	cpu->cd.mips.rmw_addr = addr;
@@ -2427,15 +2325,10 @@ X(ll)
 X(lld)
 {
 	MODE_int_t addr = reg(ic->arg[1]) + (int32_t)ic->arg[2];
-	int low_pc;
 	uint8_t word[sizeof(uint64_t)];
 
 	/*  Synch. PC and load using slow memory_rw():  */
-	low_pc = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page)
-	    / sizeof(struct mips_instr_call);
-	cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)
-	    << MIPS_INSTR_ALIGNMENT_SHIFT);
-	cpu->pc += (low_pc << MIPS_INSTR_ALIGNMENT_SHIFT);
+	SYNCH_PC
 
 	if (addr & (sizeof(word)-1)) {
 		fatal("TODO: load linked unaligned access: exception\n");
@@ -2445,8 +2338,11 @@ X(lld)
 	if (!cpu->memory_rw(cpu, cpu->mem, addr, word,
 	    sizeof(word), MEM_READ, CACHE_DATA)) {
 		/*  An exception occurred.  */
+		BREAK_DYNTRANS_CHECK(cpu);
 		return;
 	}
+
+	BREAK_DYNTRANS_CHECK(cpu);
 
 	cpu->cd.mips.rmw = 1;
 	cpu->cd.mips.rmw_addr = addr;
@@ -2470,15 +2366,10 @@ X(sc)
 {
 	MODE_int_t addr = reg(ic->arg[1]) + (int32_t)ic->arg[2];
 	uint64_t r = reg(ic->arg[0]);
-	int low_pc, i;
 	uint8_t word[sizeof(uint32_t)];
 
 	/*  Synch. PC and store using slow memory_rw():  */
-	low_pc = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page)
-	    / sizeof(struct mips_instr_call);
-	cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)
-	    << MIPS_INSTR_ALIGNMENT_SHIFT);
-	cpu->pc += (low_pc << MIPS_INSTR_ALIGNMENT_SHIFT);
+	SYNCH_PC
 
 	if (addr & (sizeof(word)-1)) {
 		fatal("TODO: sc unaligned access: exception\n");
@@ -2503,12 +2394,15 @@ X(sc)
 	if (!cpu->memory_rw(cpu, cpu->mem, addr, word,
 	    sizeof(word), MEM_WRITE, CACHE_DATA)) {
 		/*  An exception occurred.  */
+		BREAK_DYNTRANS_CHECK(cpu);
 		return;
 	}
 
+	BREAK_DYNTRANS_CHECK(cpu);
+
 	/*  We succeeded. Let's invalidate everybody else's store to this
 	    cache line:  */
-	for (i=0; i<cpu->machine->ncpus; i++) {
+	for (int i=0; i<cpu->machine->ncpus; i++) {
 		if (cpu->machine->cpus[i]->cd.mips.rmw) {
 			uint64_t yaddr = addr, xaddr = cpu->machine->cpus[i]->
 			    cd.mips.rmw_addr;
@@ -2528,15 +2422,10 @@ X(scd)
 {
 	MODE_int_t addr = reg(ic->arg[1]) + (int32_t)ic->arg[2];
 	uint64_t r = reg(ic->arg[0]);
-	int low_pc, i;
 	uint8_t word[sizeof(uint64_t)];
 
 	/*  Synch. PC and store using slow memory_rw():  */
-	low_pc = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page)
-	    / sizeof(struct mips_instr_call);
-	cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)
-	    << MIPS_INSTR_ALIGNMENT_SHIFT);
-	cpu->pc += (low_pc << MIPS_INSTR_ALIGNMENT_SHIFT);
+	SYNCH_PC
 
 	if (addr & (sizeof(word)-1)) {
 		fatal("TODO: sc unaligned access: exception\n");
@@ -2563,12 +2452,15 @@ X(scd)
 	if (!cpu->memory_rw(cpu, cpu->mem, addr, word,
 	    sizeof(word), MEM_WRITE, CACHE_DATA)) {
 		/*  An exception occurred.  */
+		BREAK_DYNTRANS_CHECK(cpu);
 		return;
 	}
 
+	BREAK_DYNTRANS_CHECK(cpu);
+
 	/*  We succeeded. Let's invalidate everybody else's store to this
 	    cache line:  */
-	for (i=0; i<cpu->machine->ncpus; i++) {
+	for (int i=0; i<cpu->machine->ncpus; i++) {
 		if (cpu->machine->cpus[i]->cd.mips.rmw) {
 			uint64_t yaddr = addr, xaddr = cpu->machine->cpus[i]->
 			    cd.mips.rmw_addr;
@@ -3187,11 +3079,7 @@ X(end_of_page)
 X(end_of_page2)
 {
 	/*  Synchronize PC on the _second_ instruction on the next page:  */
-	int low_pc = ((size_t)ic - (size_t)cpu->cd.mips.cur_ic_page)
-	    / sizeof(struct mips_instr_call);
-	cpu->pc &= ~((MIPS_IC_ENTRIES_PER_PAGE-1)
-	    << MIPS_INSTR_ALIGNMENT_SHIFT);
-	cpu->pc += (low_pc << MIPS_INSTR_ALIGNMENT_SHIFT);
+	SYNCH_PC
 
 	/*  This doesn't count as an executed instruction.  */
 	cpu->n_translated_instrs --;

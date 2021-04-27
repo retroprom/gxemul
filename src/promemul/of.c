@@ -62,9 +62,6 @@
 #include "of.h"
 
 
-/*  #define debug fatal  */
-
-extern int quiet_mode;
 extern int verbose;
 
 
@@ -1162,7 +1159,6 @@ int of_emul(struct cpu *cpu)
 	}
 
 	if (os == NULL) {
-		quiet_mode = 0;
 		cpu_register_dump(cpu->machine, cpu, 1, 0);
 		printf("\n");
 		fatal("[ of: unimplemented service \"%s\" with %i input "

@@ -701,10 +701,13 @@ int mips_cpu_disassemble_instr(struct cpu *cpu, unsigned char *originstr,
 	if ((dumpaddr & 3) != 0)
 		printf("WARNING: Unaligned address!\n");
 
-	symbol = get_symbol_name(&cpu->machine->symbol_context,
-	    dumpaddr, &offset);
-	if (symbol != NULL && offset==0)
-		debug("<%s>\n", symbol);
+	symbol = get_symbol_name(&cpu->machine->symbol_context, dumpaddr, &offset);
+	if (symbol != NULL && offset == 0) {
+		if (running)
+			cpu_functioncall_print(cpu);
+		else
+			debug("<%s>\n", symbol);
+	}
 
 	if (cpu->machine->ncpus > 1 && running)
 		debug("cpu%i: ", cpu->cpu_id);

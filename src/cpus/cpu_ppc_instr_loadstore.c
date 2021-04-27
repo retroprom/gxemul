@@ -75,10 +75,10 @@ void LS_GENERIC_N(struct cpu *cpu, struct ppc_instr_call *ic)
 	if (!cpu->memory_rw(cpu, cpu->mem, addr, data, sizeof(data),
 	    MEM_READ, CACHE_DATA)) {
 		/*  Exception.  */
-		if (!cpu->running)
-			cpu->cd.ppc.next_ic = &nothing_call;
+		BREAK_DYNTRANS_CHECK(cpu);
 		return;
 	}
+	BREAK_DYNTRANS_CHECK(cpu);
 #ifdef LS_B
 	reg(ic->arg[0]) =
 #ifndef LS_ZERO
@@ -161,10 +161,10 @@ void LS_GENERIC_N(struct cpu *cpu, struct ppc_instr_call *ic)
 	if (!cpu->memory_rw(cpu, cpu->mem, addr, data, sizeof(data),
 	    MEM_WRITE, CACHE_DATA)) {
 		/*  Exception.  */
-		if (!cpu->running)
-			cpu->cd.ppc.next_ic = &nothing_call;
+		BREAK_DYNTRANS_CHECK(cpu);
 		return;
 	}
+	BREAK_DYNTRANS_CHECK(cpu);
 #endif
 
 #ifdef LS_UPDATE

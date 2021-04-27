@@ -326,9 +326,8 @@ void ppc_exception(struct cpu *cpu, int exception_nr)
 	else
 		cpu->cd.ppc.spr[SPR_SRR1] = (cpu->cd.ppc.msr & 0x87c0ffff);
 
-	if (!quiet_mode)
-		fatal("[ PPC Exception 0x%x; pc=0x%" PRIx64" ]\n",
-		    exception_nr, cpu->pc);
+	debugmsg_cpu(cpu, SUBSYS_EXCEPTION, "", VERBOSITY_INFO,
+	    "exception_nr=0x%x, pc=0x%" PRIx64, exception_nr, cpu->pc);
 
 	/*  Disable External Interrupts, Recoverable Interrupt Mode,
 	    and go to Supervisor mode  */
@@ -610,10 +609,13 @@ int ppc_cpu_disassemble_instr(struct cpu *cpu, unsigned char *instr,
 	if (running)
 		dumpaddr = cpu->pc;
 
-	symbol = get_symbol_name(&cpu->machine->symbol_context,
-	    dumpaddr, &offset);
-	if (symbol != NULL && offset==0)
-		debug("<%s>\n", symbol);
+	symbol = get_symbol_name(&cpu->machine->symbol_context, dumpaddr, &offset);
+	if (symbol != NULL && offset==0) {
+		if (running)
+			cpu_functioncall_print(cpu);
+		else
+			debug("<%s>\n", symbol);
+	}
 
 	if (cpu->machine->ncpus > 1 && running)
 		debug("cpu%i: ", cpu->cpu_id);
@@ -1784,10 +1786,12 @@ static void debug_spr_usage(uint64_t pc, int spr)
 		break;
 	default:if (spr >= SPR_IBAT0U && spr <= SPR_DBAT3L) {
 			break;
-		} else
-			fatal("[ using UNIMPLEMENTED spr %i (%s), pc = "
-			    "0x%" PRIx64" ]\n", spr, ppc_spr_names[spr] == NULL?
+		} else {
+			debugmsg(SUBSYS_CPU, "", VERBOSITY_WARNING,
+			    "using UNIMPLEMENTED spr %i (%s), pc = "
+			    "0x%" PRIx64, spr, ppc_spr_names[spr] == NULL?
 			    "UNKNOWN" : ppc_spr_names[spr], (uint64_t) pc);
+		}
 	}
 
 	spr_used[spr >> 2] |= (1 << (spr & 3));
