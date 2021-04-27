@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -44,8 +44,6 @@
 
 #include "thirdparty/comreg.h"
 
-
-/*  #define debug fatal  */
 
 #define	TICK_SHIFT		14
 #define	DEV_NS16550_LENGTH	8
@@ -107,19 +105,17 @@ DEVICE_TICK(ns16550)
 
 DEVICE_ACCESS(ns16550)
 {
-	uint64_t idata = 0, odata=0;
-	size_t i;
+	uint64_t idata = 0, odata = 0;
 	struct ns_data *d = (struct ns_data *) extra;
 
 	if (writeflag == MEM_WRITE)
 		idata = memory_readmax64(cpu, data, len);
 
-#if 0
 	/*  The NS16550 should be accessed using byte read/writes:  */
 	if (len != 1)
-		fatal("[ ns16550 (%s): len=%i, idata=0x%16llx! ]\n",
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "ns16550", VERBOSITY_WARNING,
+		    "device %s: len=%i, idata=0x%16llx!",
 		    d->name, len, (long long)idata);
-#endif
 
 	/*
 	 *  Always ready to transmit:
@@ -138,8 +134,9 @@ DEVICE_ACCESS(ns16550)
 	relative_addr /= d->addrmult;
 
 	if (relative_addr >= DEV_NS16550_LENGTH) {
-		fatal("[ ns16550 (%s): outside register space? relative_addr="
-		    "0x%llx. bad addrmult? bad device length? ]\n", d->name,
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "ns16550", VERBOSITY_ERROR,
+		    "device %s: outside register space? relative_addr="
+		    "0x%llx. bad addrmult? bad device length?", d->name,
 		    (long long)relative_addr);
 		return 0;
 	}
@@ -177,7 +174,8 @@ DEVICE_ACCESS(ns16550)
 			if (writeflag == MEM_WRITE) {
 				/*  Set the high byte of the divisor:  */
 				d->divisor = (d->divisor & 0xff) | (idata << 8);
-				debug("[ ns16550 (%s): speed set to %i bps ]\n",
+				debugmsg_cpu(cpu, SUBSYS_DEVICE, "ns16550", VERBOSITY_DEBUG,
+				    "device %s: speed set to %i bps",
 				    d->name, (int)(115200 / d->divisor));
 			} else
 				odata = d->divisor >> 8;
@@ -188,8 +186,9 @@ DEVICE_ACCESS(ns16550)
 		if (writeflag == MEM_WRITE) {
 			/*  This is to supress Linux' behaviour  */
 			if (idata != 0)
-				debug("[ ns16550 (%s): write to ier: 0x%02x ]"
-				    "\n", d->name, (int)idata);
+				debugmsg_cpu(cpu, SUBSYS_DEVICE, "ns16550", VERBOSITY_DEBUG,
+				    "device %s: write to ier: 0x%02x",
+				    d->name, (int)idata);
 
 			/*  Needed for NetBSD 2.0.x, but not 1.6.2?  */
 			if (!(d->reg[com_ier] & IER_ETXRDY)
@@ -204,14 +203,16 @@ DEVICE_ACCESS(ns16550)
 
 	case com_iir:	/*  interrupt identification (r), fifo control (w)  */
 		if (writeflag == MEM_WRITE) {
-			debug("[ ns16550 (%s): write to fifo control: 0x%02x ]"
-			    "\n", d->name, (int)idata);
+			debugmsg_cpu(cpu, SUBSYS_DEVICE, "ns16550", VERBOSITY_DEBUG,
+			    "device %s: write to fifo control: 0x%02x",
+			    d->name, (int)idata);
 			d->fcr = idata;
 		} else {
 			odata = d->reg[com_iir];
 			if (d->reg[com_iir] & IIR_TXRDY)
 				d->reg[com_iir] &= ~IIR_TXRDY;
-			debug("[ ns16550 (%s): read from iir: 0x%02x ]\n",
+			debugmsg_cpu(cpu, SUBSYS_DEVICE, "ns16550", VERBOSITY_DEBUG,
+			    "device %s: read from iir: 0x%02x",
 			    d->name, (int)odata);
 			dev_ns16550_tick(cpu, d);
 		}
@@ -219,24 +220,28 @@ DEVICE_ACCESS(ns16550)
 
 	case com_lsr:
 		if (writeflag == MEM_WRITE) {
-			debug("[ ns16550 (%s): write to lsr: 0x%02x ]\n",
+			debugmsg_cpu(cpu, SUBSYS_DEVICE, "ns16550", VERBOSITY_DEBUG,
+			    "device %s: write to lsr: 0x%02x",
 			    d->name, (int)idata);
 			d->reg[com_lsr] = idata;
 		} else {
 			odata = d->reg[com_lsr];
-			/*  debug("[ ns16550 (%s): read from lsr: 0x%02x ]\n",
-			    d->name, (int)odata);  */
+			debugmsg_cpu(cpu, SUBSYS_DEVICE, "ns16550", VERBOSITY_DEBUG,
+			    "device %s: read from lsr: 0x%02x",
+			    d->name, (int)odata);
 		}
 		break;
 
 	case com_msr:
 		if (writeflag == MEM_WRITE) {
-			debug("[ ns16550 (%s): write to msr: 0x%02x ]\n",
+			debugmsg_cpu(cpu, SUBSYS_DEVICE, "ns16550", VERBOSITY_DEBUG,
+			    "device %s: write to msr: 0x%02x",
 			    d->name, (int)idata);
 			d->reg[com_msr] = idata;
 		} else {
 			odata = d->reg[com_msr];
-			debug("[ ns16550 (%s): read from msr: 0x%02x ]\n",
+			debugmsg_cpu(cpu, SUBSYS_DEVICE, "ns16550", VERBOSITY_DEBUG,
+			    "device %s: read from msr: 0x%02x",
 			    d->name, (int)odata);
 		}
 		break;
@@ -267,14 +272,16 @@ DEVICE_ACCESS(ns16550)
 
 			d->dlab = idata & 0x80? 1 : 0;
 
-			debug("[ ns16550 (%s): write to lctl: 0x%02x (%s%s"
-			    "setting mode %i%c%s) ]\n", d->name, (int)idata,
+			debugmsg_cpu(cpu, SUBSYS_DEVICE, "ns16550", VERBOSITY_DEBUG,
+			    "device %s: write to lctl: 0x%02x (%s%s"
+			    "setting mode %i%c%s)", d->name, (int)idata,
 			    d->dlab? "Divisor Latch access, " : "",
 			    idata&0x40? "sending BREAK, " : "",
 			    d->databits, d->parity, d->stopbits);
 		} else {
 			odata = d->reg[com_lctl];
-			debug("[ ns16550 (%s): read from lctl: 0x%02x ]\n",
+			debugmsg_cpu(cpu, SUBSYS_DEVICE, "ns16550", VERBOSITY_DEBUG,
+			    "device %s: read from lctl: 0x%02x",
 			    d->name, (int)odata);
 		}
 		break;
@@ -282,7 +289,8 @@ DEVICE_ACCESS(ns16550)
 	case com_mcr:
 		if (writeflag == MEM_WRITE) {
 			d->reg[com_mcr] = idata;
-			debug("[ ns16550 (%s): write to mcr: 0x%02x ]\n",
+			debugmsg_cpu(cpu, SUBSYS_DEVICE, "ns16550", VERBOSITY_DEBUG,
+			    "device %s: write to mcr: 0x%02x",
 			    d->name, (int)idata);
 			if (!(d->reg[com_iir] & IIR_TXRDY)
 			    && (idata & MCR_IENABLE))
@@ -290,22 +298,22 @@ DEVICE_ACCESS(ns16550)
 			dev_ns16550_tick(cpu, d);
 		} else {
 			odata = d->reg[com_mcr];
-			debug("[ ns16550 (%s): read from mcr: 0x%02x ]\n",
+			debugmsg_cpu(cpu, SUBSYS_DEVICE, "ns16550", VERBOSITY_DEBUG,
+			    "device %s: read from mcr: 0x%02x",
 			    d->name, (int)odata);
 		}
 		break;
 
 	default:
 		if (writeflag==MEM_READ) {
-			debug("[ ns16550 (%s): read from reg %i ]\n",
-			    d->name, (int)relative_addr);
 			odata = d->reg[relative_addr];
+			debugmsg_cpu(cpu, SUBSYS_DEVICE, "ns16550", VERBOSITY_DEBUG,
+			    "device %s: read from reg %i: 0x%x",
+			    d->name, (int)relative_addr, (int)odata);
 		} else {
-			debug("[ ns16550 (%s): write to reg %i:",
-			    d->name, (int)relative_addr);
-			for (i=0; i<len; i++)
-				debug(" %02x", data[i]);
-			debug(" ]\n");
+			debugmsg_cpu(cpu, SUBSYS_DEVICE, "ns16550", VERBOSITY_DEBUG,
+			    "device %s: write to reg %i: 0x%x",
+			    d->name, (int)relative_addr, (int)idata);
 			d->reg[relative_addr] = idata;
 		}
 	}
