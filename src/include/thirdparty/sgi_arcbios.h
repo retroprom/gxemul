@@ -14,8 +14,8 @@
 #undef __noreturn__
 #endif
 
-#define	__attribute__(x)  /*  */
-#define	__noreturn__  /*  */
+//#define	__attribute__(x)  /*  */
+//#define	__noreturn__  /*  */
 
 /*	$NetBSD: arcbios.h,v 1.3 2001/12/06 14:59:02 rafal Exp $	*/
 
