@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2018  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2003-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -421,7 +421,8 @@ void draw_primitive(struct cpu* cpu, struct sgi_re_data *d)
 	int nr_of_bits_in_the_middle = 32 - nr_of_bits_to_strip_to_the_left - nr_of_bits_to_strip_to_the_right;
 
 	if (stipple_mode & 0xe0e0ffff)
-		fatal("[ sgi_de: UNIMPLEMENTED stipple_mode bits: 0x%08x ]\n", stipple_mode);
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_WARNING,
+		    "UNIMPLEMENTED stipple_mode bits: 0x%08x", stipple_mode);
 
 	uint32_t x1 = (d->de_reg[(CRIME_DE_X_VERTEX_0 - 0x2000) / sizeof(uint32_t)] >> 16) & 0x7ff;
 	uint32_t y1 = d->de_reg[(CRIME_DE_X_VERTEX_0 - 0x2000) / sizeof(uint32_t)]& 0x7ff;
@@ -429,9 +430,10 @@ void draw_primitive(struct cpu* cpu, struct sgi_re_data *d)
 	uint32_t y2 = d->de_reg[(CRIME_DE_X_VERTEX_1 - 0x2000) / sizeof(uint32_t)]& 0x7ff;
 	size_t x, y;
 
-	debug("[ sgi_de: STARTING DRAWING COMMAND: op = 0x%08x,"
+	debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_DEBUG,
+	    "STARTING DRAWING COMMAND: op = 0x%08x,"
 	    " drawmode=0x%x src_mode=0x%x dst_mode=0x%x x1=%i y1=%i"
-	    " x2=%i y2=%i fg=0x%x bg=0x%x pattern=0x%08x ]\n",
+	    " x2=%i y2=%i fg=0x%x bg=0x%x pattern=0x%08x",
 	    op, drawmode, src_mode, dst_mode, x1, y1, x2, y2, fg, bg, pattern);
 
 	// bufdepth = 1, 2, or 4.
@@ -460,12 +462,12 @@ void draw_primitive(struct cpu* cpu, struct sgi_re_data *d)
 		}
 
 		if (step_x != src_bufdepth || (step_y != 0 && step_y != 1)) {
-			fatal("[ sgi_de: unimplemented XFER addr_src=0x%x src_bufdepth=%i "
+			debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_WARNING,
+			    "unimplemented XFER addr_src=0x%x src_bufdepth=%i "
 				"strd_src=0x%x step_x=0x%x step_y=0x%x "
-				"addr_dst=0x%x strd_dst=0x%x ]\n",
-				addr_src, src_bufdepth, strd_src, step_x, step_y, addr_dst, strd_dst);
-
-			// exit(1);
+				"addr_dst=0x%x strd_dst=0x%x",
+				addr_src, src_bufdepth, strd_src,
+				step_x, step_y, addr_dst, strd_dst);
 		}
 	}
 
@@ -502,7 +504,8 @@ void draw_primitive(struct cpu* cpu, struct sgi_re_data *d)
 	switch (op & 0xff000000) {
 	case DE_PRIM_LINE:
 		if (drawmode & DE_DRAWMODE_XFER_EN)
-			fatal("[ sgi_de: XFER_EN for LINE op? ]\n");
+			debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_WARNING,
+			    "XFER_EN for LINE op?");
 
 		// The PROM uses width 32, but NetBSD documents it as "half pixels".
 		// if ((op & DE_PRIM_LINE_WIDTH_MASK) != 2)
@@ -554,11 +557,13 @@ void draw_primitive(struct cpu* cpu, struct sgi_re_data *d)
 
 						if (!rop_used[rop & 255]) {
 							rop_used[rop & 255] = 1;
-							fatal("[ sgi_de: LINE: rop[0x%02x] used! ]\n", rop & 255);
+							debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_WARNING,
+							    "LINE: rop[0x%02x] used!", rop & 255);
 						}
 
 						if (rop >> 8) {
-							fatal("[ sgi_de: LINE: rop > 255: 0x%08x ]\n", rop);
+							debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_WARNING,
+							    "LINE: rop > 255: 0x%08x", rop);
 						}
 					}
 				}
@@ -620,11 +625,13 @@ void draw_primitive(struct cpu* cpu, struct sgi_re_data *d)
 
 							if (!rop_used[rop & 255]) {
 								rop_used[rop & 255] = 1;
-								fatal("[ sgi_de: RECT: rop[0x%02x] used! ]\n", rop & 255);
+								debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_WARNING,
+								    "RECT: rop[0x%02x] used!", rop & 255);
 							}
 
 							if (rop >> 8) {
-								fatal("[ sgi_de: RECT: rop > 255: 0x%08x ]\n", rop);
+								debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_WARNING,
+								    "RECT: rop > 255: 0x%08x", rop);
 							}
 						}
 					}
@@ -646,10 +653,10 @@ void draw_primitive(struct cpu* cpu, struct sgi_re_data *d)
 		}
 		break;
 
-	default:fatal("[ sgi_de: UNIMPLEMENTED drawing op = 0x%08x,"
-		    " x1=%i y1=%i x2=%i y2=%i fg=0x%x bg=0x%x pattern=0x%08x ]\n",
+	default:debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_ERROR,
+		    "UNIMPLEMENTED drawing op = 0x%08x,"
+		    " x1=%i y1=%i x2=%i y2=%i fg=0x%x bg=0x%x pattern=0x%08x",
 		    op, x1, y1, x2, y2, fg, bg, pattern);
-		exit(1);
 	}
 }
 
@@ -685,221 +692,264 @@ DEVICE_ACCESS(sgi_de)
 		else
 			odata = d->de_reg[regnr];
 	} else {
-		fatal("sgi_de: len = %i not implemented\n", len);
-		exit(1);
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_ERROR,
+		    "len = %i not implemented", len);
+		return 0;
 	}
 
 	switch (relative_addr) {
 
 	case CRIME_DE_MODE_SRC:
-		debug("[ sgi_de: %s CRIME_DE_MODE_SRC: 0x%016llx ]\n",
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_DEBUG,
+		    "%s CRIME_DE_MODE_SRC: 0x%016llx",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		break;
 
 	case CRIME_DE_MODE_DST:
-		debug("[ sgi_de: %s CRIME_DE_MODE_DST: 0x%016llx ]\n",
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_DEBUG,
+		    "%s CRIME_DE_MODE_DST: 0x%016llx",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		break;
 
 	case CRIME_DE_CLIPMODE:
-		debug("[ sgi_de: %s CRIME_DE_CLIPMODE: 0x%016llx ]\n",
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_DEBUG,
+		    "%s CRIME_DE_CLIPMODE: 0x%016llx",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		if (writeflag == MEM_WRITE && idata != 0)
-			fatal("[ sgi_de: TODO: non-zero CRIME_DE_CLIPMODE: 0x%016llx ]\n", idata);
+			debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_WARNING,
+			    "TODO: non-zero CRIME_DE_CLIPMODE: 0x%016llx", idata);
 		break;
 
 	case CRIME_DE_DRAWMODE:
-		debug("[ sgi_de: %s CRIME_DE_DRAWMODE: 0x%016llx ]\n",
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_DEBUG,
+		    "%s CRIME_DE_DRAWMODE: 0x%016llx",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		break;
 
 	case CRIME_DE_SCRMASK0:
-		debug("[ sgi_de: %s CRIME_DE_SCRMASK0: 0x%016llx ]\n",
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_DEBUG,
+		    "%s CRIME_DE_SCRMASK0: 0x%016llx",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		if (writeflag == MEM_WRITE && idata != 0)
-			fatal("[ sgi_de: TODO: non-zero CRIME_DE_SCRMASK0: 0x%016llx ]\n", idata);
+			debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_WARNING,
+			    "TODO: non-zero CRIME_DE_SCRMASK0: 0x%016llx", idata);
 		break;
 
 	case CRIME_DE_SCRMASK1:
-		debug("[ sgi_de: %s CRIME_DE_SCRMASK1: 0x%016llx ]\n",
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_DEBUG,
+		    "%s CRIME_DE_SCRMASK1: 0x%016llx",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		if (writeflag == MEM_WRITE && idata != 0)
-			fatal("[ sgi_de: TODO: non-zero CRIME_DE_SCRMASK1: 0x%016llx ]\n", idata);
+			debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_WARNING,
+			    "TODO: non-zero CRIME_DE_SCRMASK1: 0x%016llx", idata);
 		break;
 
 	case CRIME_DE_SCRMASK2:
-		debug("[ sgi_de: %s CRIME_DE_SCRMASK2: 0x%016llx ]\n",
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_DEBUG,
+		    "%s CRIME_DE_SCRMASK2: 0x%016llx",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		if (writeflag == MEM_WRITE && idata != 0)
-			fatal("[ sgi_de: TODO: non-zero CRIME_DE_SCRMASK2: 0x%016llx ]\n", idata);
+			debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_WARNING,
+			    "TODO: non-zero CRIME_DE_SCRMASK2: 0x%016llx", idata);
 		break;
 
 	case CRIME_DE_SCRMASK3:
-		debug("[ sgi_de: %s CRIME_DE_SCRMASK3: 0x%016llx ]\n",
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_DEBUG,
+		    "%s CRIME_DE_SCRMASK3: 0x%016llx",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		if (writeflag == MEM_WRITE && idata != 0)
-			fatal("[ sgi_de: TODO: non-zero CRIME_DE_SCRMASK3: 0x%016llx ]\n", idata);
+			debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_WARNING,
+			    "TODO: non-zero CRIME_DE_SCRMASK3: 0x%016llx", idata);
 		break;
 
 	case CRIME_DE_SCRMASK4:
-		debug("[ sgi_de: %s CRIME_DE_SCRMASK4: 0x%016llx ]\n",
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_DEBUG,
+		    "%s CRIME_DE_SCRMASK4: 0x%016llx",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		if (writeflag == MEM_WRITE && idata != 0)
-			fatal("[ sgi_de: TODO: non-zero CRIME_DE_SCRMASK4: 0x%016llx ]\n", idata);
+			debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_WARNING,
+			    "TODO: non-zero CRIME_DE_SCRMASK4: 0x%016llx", idata);
 		break;
 
 	case CRIME_DE_SCISSOR:
-		debug("[ sgi_de: %s CRIME_DE_SCISSOR: 0x%016llx ]\n",
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_DEBUG,
+		    "%s CRIME_DE_SCISSOR: 0x%016llx",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		if (writeflag == MEM_WRITE && idata != 0)
-			fatal("[ sgi_de: TODO: non-zero CRIME_DE_SCISSOR: 0x%016llx ]\n", idata);
+			debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_WARNING,
+			    "TODO: non-zero CRIME_DE_SCISSOR: 0x%016llx", idata);
 		break;
 
 	case CRIME_DE_SCISSOR + 4:
 		// NetBSD writes 0x3fff3fff here. "High" part of SCISSOR register?
-		debug("[ sgi_de: %s CRIME_DE_SCISSOR+4: 0x%016llx ]\n",
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_DEBUG,
+		    "%s CRIME_DE_SCISSOR+4: 0x%016llx",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		if (writeflag == MEM_WRITE && idata != 0x3fff3fff)
-			fatal("[ sgi_de: TODO: CRIME_DE_SCISSOR+4: 0x%016llx ]\n", idata);
+			debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_WARNING,
+			    "TODO: CRIME_DE_SCISSOR+4: 0x%016llx", idata);
 		break;
 
 	case CRIME_DE_PRIMITIVE:
-		debug("[ sgi_de: %s CRIME_DE_PRIMITIVE: 0x%016llx ]\n",
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_DEBUG,
+		    "%s CRIME_DE_PRIMITIVE: 0x%016llx",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		break;
 
 	case CRIME_DE_WINOFFSET_SRC:
-		debug("[ sgi_de: %s CRIME_DE_WINOFFSET_SRC: 0x%016llx ]\n",
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_DEBUG,
+		    "%s CRIME_DE_WINOFFSET_SRC: 0x%016llx",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		if (writeflag == MEM_WRITE && idata != 0)
-			fatal("[ sgi_de: TODO: non-zero CRIME_DE_WINOFFSET_SRC: 0x%016llx ]\n", idata);
+			debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_WARNING,
+			    "TODO: non-zero CRIME_DE_WINOFFSET_SRC: 0x%016llx", idata);
 		break;
 
 	case CRIME_DE_WINOFFSET_DST:
-		debug("[ sgi_de: %s CRIME_DE_WINOFFSET_DST: 0x%016llx ]\n",
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_DEBUG,
+		    "%s CRIME_DE_WINOFFSET_DST: 0x%016llx",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		if (writeflag == MEM_WRITE && idata != 0)
-			fatal("[ sgi_de: TODO: non-zero CRIME_DE_WINOFFSET_DST: 0x%016llx ]\n", idata);
+			debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_WARNING,
+			    "TODO: non-zero CRIME_DE_WINOFFSET_DST: 0x%016llx", idata);
 		break;
 
 	case CRIME_DE_X_VERTEX_0:
-		debug("[ sgi_de: %s CRIME_DE_X_VERTEX_0: 0x%016llx ]\n",
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_DEBUG,
+		    "%s CRIME_DE_X_VERTEX_0: 0x%016llx",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		break;
 
 	case CRIME_DE_X_VERTEX_1:
-		debug("[ sgi_de: %s CRIME_DE_X_VERTEX_1: 0x%016llx ]\n",
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_DEBUG,
+		    "%s CRIME_DE_X_VERTEX_1: 0x%016llx",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		break;
 
 	case CRIME_DE_XFER_ADDR_SRC:
-		debug("[ sgi_de: %s CRIME_DE_XFER_ADDR_SRC: 0x%016llx ]\n",
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_DEBUG,
+		    "%s CRIME_DE_XFER_ADDR_SRC: 0x%016llx",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		break;
 
 	case CRIME_DE_XFER_STRD_SRC:
-		debug("[ sgi_de: %s CRIME_DE_XFER_STRD_SRC: 0x%016llx ]\n",
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_DEBUG,
+		    "%s CRIME_DE_XFER_STRD_SRC: 0x%016llx",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		break;
 
 	case CRIME_DE_XFER_STEP_X:
-		debug("[ sgi_de: %s CRIME_DE_XFER_STEP_X: 0x%016llx ]\n",
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_DEBUG,
+		    "%s CRIME_DE_XFER_STEP_X: 0x%016llx",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		break;
 
 	case CRIME_DE_XFER_STEP_Y:
-		debug("[ sgi_de: %s CRIME_DE_XFER_STEP_Y: 0x%016llx ]\n",
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_DEBUG,
+		    "%s CRIME_DE_XFER_STEP_Y: 0x%016llx",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		break;
 
 	case CRIME_DE_XFER_ADDR_DST:
-		debug("[ sgi_de: %s CRIME_DE_XFER_ADDR_DST: 0x%016llx ]\n",
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_DEBUG,
+		    "%s CRIME_DE_XFER_ADDR_DST: 0x%016llx",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		break;
 
 	case CRIME_DE_XFER_STRD_DST:
-		debug("[ sgi_de: %s CRIME_DE_XFER_STRD_DST: 0x%016llx ]\n",
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_DEBUG,
+		    "%s CRIME_DE_XFER_STRD_DST: 0x%016llx",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		break;
 
 	case CRIME_DE_STIPPLE_MODE:
-		debug("[ sgi_de: %s CRIME_DE_STIPPLE_MODE: 0x%016llx ]\n",
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_DEBUG,
+		    "%s CRIME_DE_STIPPLE_MODE: 0x%016llx",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		break;
 
 	case CRIME_DE_STIPPLE_PAT:
-		debug("[ sgi_de: %s CRIME_DE_STIPPLE_PAT: 0x%016llx ]\n",
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_DEBUG,
+		    "%s CRIME_DE_STIPPLE_PAT: 0x%016llx",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		break;
 
 	case CRIME_DE_FG:
-		debug("[ sgi_de: %s CRIME_DE_FG: 0x%016llx ]\n",
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_DEBUG,
+		    "%s CRIME_DE_FG: 0x%016llx",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		break;
 
 	case CRIME_DE_BG:
-		debug("[ sgi_de: %s CRIME_DE_BG: 0x%016llx ]\n",
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_DEBUG,
+		    "%s CRIME_DE_BG: 0x%016llx",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		break;
 
 	case CRIME_DE_ROP:
-		debug("[ sgi_de: %s CRIME_DE_ROP: 0x%016llx ]\n",
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_DEBUG,
+		    "%s CRIME_DE_ROP: 0x%016llx",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		break;
 
 	case CRIME_DE_PLANEMASK:
-		debug("[ sgi_de: %s CRIME_DE_PLANEMASK: 0x%016llx ]\n",
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_DEBUG,
+		    "%s CRIME_DE_PLANEMASK: 0x%016llx",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		break;
 
 	case CRIME_DE_NULL:
-		debug("[ sgi_de: %s CRIME_DE_NULL: 0x%016llx ]\n",
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_DEBUG,
+		    "%s CRIME_DE_NULL: 0x%016llx",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		break;
 
 	case CRIME_DE_FLUSH:
-		debug("[ sgi_de: %s CRIME_DE_FLUSH: 0x%016llx ]\n",
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_DEBUG,
+		    "%s CRIME_DE_FLUSH: 0x%016llx",
 		    writeflag == MEM_WRITE ? "write to" : "read from",
 		    writeflag == MEM_WRITE ? (long long)idata : (long long)odata);
 		break;
 
 	default:
 		if (writeflag == MEM_WRITE)
-			fatal("[ sgi_de: unimplemented write to "
-			    "address 0x%llx, data=0x%016llx ]\n",
+			debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_WARNING,
+			    "unimplemented write to "
+			    "address 0x%llx, data=0x%016llx",
 			    (long long)relative_addr, (long long)idata);
 		else
-			fatal("[ sgi_de: unimplemented read from address"
-			    " 0x%llx ]\n", (long long)relative_addr);
+			debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de", VERBOSITY_WARNING,
+			    "unimplemented read from address"
+			    " 0x%llx", (long long)relative_addr);
 	}
 
 	if (startFlag)
@@ -948,29 +998,33 @@ void do_mte_transfer(struct cpu* cpu, struct sgi_re_data *d)
 	uint32_t bytemask = d->mte_reg[(CRIME_MTE_BYTEMASK - 0x3000) / sizeof(uint32_t)];
 	uint32_t bg = d->mte_reg[(CRIME_MTE_BG - 0x3000) / sizeof(uint32_t)];
 
-	debug("[ sgi_mte: STARTING: mode=0x%08x src0=0x%08x src1=0x%08x src_y_step=%i dst0=0x%08x,"
-	    " dst1=0x%08x dst_y_step=%i bg=0x%x bytemask=0x%x ]\n",
+	debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_mte", VERBOSITY_DEBUG,
+	    "STARTING: mode=0x%08x src0=0x%08x src1=0x%08x src_y_step=%i dst0=0x%08x,"
+	    " dst1=0x%08x dst_y_step=%i bg=0x%x bytemask=0x%x",
 	    mode,
 	    src0, src1, src_y_step,
 	    dst0, dst1, dst_y_step,
 	    bg, bytemask);
 
 	if (dst_y_step != 0 && dst_y_step != 1 && dst_y_step != -1) {
-		fatal("[ sgi_mte: TODO! unimplemented dst_y_step %i ]", dst_y_step);
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_mte", VERBOSITY_WARNING,
+		    "TODO! unimplemented dst_y_step %i", dst_y_step);
 		// exit(1);
 	}
 
 	if (mode & MTE_MODE_STIPPLE) {
-		fatal("[ sgi_mte: unimplemented MTE_MODE_STIPPLE ]");
-		exit(1);
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_mte", VERBOSITY_ERROR,
+		    "unimplemented MTE_MODE_STIPPLE");
+		return;
 	}
 
 	int src_tlb = (mode & MTE_MODE_SRC_BUF_MASK) >> MTE_SRC_TLB_SHIFT;
 	int dst_tlb = (mode & MTE_MODE_DST_BUF_MASK) >> MTE_DST_TLB_SHIFT;
 	
 	if (src > MTE_TLB_C) {
-		fatal("[ sgi_mte: unimplemented SRC ]");
-		exit(1);
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_mte", VERBOSITY_WARNING,
+		    "unimplemented SRC");
+		return;
 	}
 
 	switch (dst_tlb) {
@@ -1039,8 +1093,9 @@ void do_mte_transfer(struct cpu* cpu, struct sgi_re_data *d)
 			exit(1);
 		}
 
-		debug("[ sgi_mte: LINEAR TRANSFER: mode=0x%08x dst0=0x%016llx,"
-		    " dst1=0x%016llx (length 0x%llx), dst_y_step=%i bg=0x%x, bytemask=0x%x ]\n",
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_mte", VERBOSITY_DEBUG,
+		    "LINEAR TRANSFER: mode=0x%08x dst0=0x%016llx,"
+		    " dst1=0x%016llx (length 0x%llx), dst_y_step=%i bg=0x%x, bytemask=0x%x",
 		    mode,
 		    (long long)dst0, (long long)dst1,
 		    (long long)dstlen, dst_y_step, (int)bg, (int)bytemask);
@@ -1120,8 +1175,9 @@ void do_mte_transfer(struct cpu* cpu, struct sgi_re_data *d)
 				cpu->memory_rw(cpu, cpu->mem, fill_addr, zerobuf, fill_len,
 					MEM_WRITE, NO_EXCEPTIONS | PHYSICAL);
 			} else {
-				debug("[ sgi_mte: WARNING: address 0x%x not found in TLB? Ignoring fill. ]\n",
-					(long long)fill_addr);
+				debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_mte", VERBOSITY_WARNING,
+				    "WARNING: address 0x%x not found in TLB? Ignoring fill.",
+				    (long long)fill_addr);
 			}
 
 			fill_addr += fill_len;
@@ -1310,11 +1366,13 @@ DEVICE_ACCESS(sgi_de_status)
 
 	default:
 		if (writeflag == MEM_WRITE)
-			debug("[ sgi_de_status: unimplemented write to "
-			    "address 0x%llx, data=0x%016llx ]\n",
+			debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de_status", VERBOSITY_WARNING,
+			    "unimplemented write to "
+			    "address 0x%llx, data=0x%016llx",
 			    (long long)relative_addr, (long long)idata);
 		else
-			debug("[ sgi_de_status: unimplemented read from address"
+			debugmsg_cpu(cpu, SUBSYS_DEVICE, "sgi_de_status", VERBOSITY_WARNING,
+			    "unimplemented read from address"
 			    " 0x%llx ]\n", (long long)relative_addr);
 	}
 
