@@ -22,7 +22,7 @@ $(OBJS): Makefile
 ###############################################################################
 
 cpu_alpha.o: cpu_alpha.c cpu_alpha_instr.c cpu_dyntrans.c memory_rw.c \
-	tmp_alpha_head.c tmp_alpha_tail.c
+	tmp_alpha_head.c tmp_alpha_misc.c tmp_alpha_tail.c
 
 cpu_alpha_instr.c: cpu_alpha_instr_alu.c tmp_alpha_misc.c
 
