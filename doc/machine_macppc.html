@@ -16,7 +16,7 @@
 
 <!--
 
-Copyright (C) 2006-2019  Anders Gavare.  All rights reserved.
+Copyright (C) 2006-2021  Anders Gavare.  All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -59,10 +59,12 @@ eventually other guest OSes.
 <a name="netbsdmacppcinstall"></a>
 <h3>NetBSD/macppc:</h3>
 
-<p>It is possible to install and run <a 
+<p>It is possible to install and run old versions of <a 
 href="http://www.netbsd.org/ports/macppc/">NetBSD/macppc</a> in GXemul on 
 an emulated generic PowerPC machine. No specific Machintosh model is 
 emulated, but it is enough to for NetBSD to recognize it.
+
+<p>(Newer versions of NetBSD trigger unimplemented cases in the emulator.)
 
 <p>
 <a href="20070318-netbsd-macppc.png"><img src="20070318-netbsd-macppc_small.png"></a>
@@ -77,8 +79,8 @@ emulated, but it is enough to for NetBSD to recognize it.
 
 </pre>
   <li>Download the NetBSD/macppc 4.0.1 ISO image and a generic kernel:<pre>
-    <a href="ftp://ftp.netbsd.org/pub/NetBSD/iso/4.0.1/macppccd-4.0.1.iso">ftp://ftp.netbsd.org/pub/NetBSD/iso/4.0.1/macppccd-4.0.1.iso</a>
-    <a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-4.0.1/macppc/binary/kernel/">ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-4.0.1/macppc/binary/kernel</a>/<a href="ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-4.0.1/macppc/binary/kernel/netbsd-GENERIC.MP.gz">netbsd-GENERIC.MP.gz</a>
+    <a href="http://archive.netbsd.org/pub/NetBSD-archive/NetBSD-4.0.1/iso/macppccd-4.0.1.iso">http://archive.netbsd.org/pub/NetBSD-archive/NetBSD-4.0.1/iso/macppccd-4.0.1.iso</a>
+    <a href="http://archive.netbsd.org/pub/NetBSD-archive/NetBSD-4.0.1/macppc/binary/kernel/netbsd-GENERIC.MP.gz">http://archive.netbsd.org/pub/NetBSD-archive/NetBSD-4.0.1/macppc/binary/kernel/netbsd-GENERIC.MP.gz</a>
 
 </pre>
   <p>
