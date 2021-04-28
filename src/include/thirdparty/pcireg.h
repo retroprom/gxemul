@@ -4,17 +4,6 @@
 #ifndef _DEV_PCI_PCIREG_H_
 #define	_DEV_PCI_PCIREG_H_
 
-#ifdef __attribute__
-#undef __attribute__
-#endif
-
-#ifdef __noreturn__
-#undef __noreturn__
-#endif
-
-#define __attribute__(x)  /*  */
-#define __noreturn__  /*  */
-
 /*
  * Copyright (c) 1995, 1996, 1999, 2000
  *     Christopher G. Demetriou.  All rights reserved.
