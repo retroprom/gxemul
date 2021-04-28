@@ -1812,6 +1812,11 @@ cpu->cd.DYNTRANS_ARCH.vph_tlb_entry[r].valid);
 
 
 #ifdef DYNTRANS_TO_BE_TRANSLATED_TAIL
+
+	if (about_to_enter_single_step)
+		goto stop_running_translated;
+
+
 	/*
 	 *  If we end up here, then an instruction was translated. Let's mark
 	 *  the page as containing a translation at this part of the page.
