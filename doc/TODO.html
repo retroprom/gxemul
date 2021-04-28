@@ -209,8 +209,7 @@ i960:
 
 M88K:
 	o)  Instruction combinations for:
-		memset, memcpy, memmove, strlen, bzero?
-	o)  OpenBSD/luna88k idle loop => detect and idle the host.
+		memcpy, memmove, strlen, bcopy, bzero?
 
 MIPS:
 	o) Double-check R10000 vs R4400 TLB specifics:
@@ -413,6 +412,7 @@ HPCmips:
 	x)  A NIC? (As a PCMCIA device?)
 
 LUNA-88K:
+	OpenBSD power-down?
 	autoboot of OpenBSD: boot_unit and boot_partition in NVRAM should be
 		set to the actual boot device; currently hardcoded to 0,0.
 	luna88k bootblock loader:
@@ -420,7 +420,8 @@ LUNA-88K:
 			offset into a disk image).
 		o) if no bootstring (boot file) is specified, then perhaps try a few
 			from a list? "vmunix", "boot".
-	Color framebuffer
+	Color framebuffer: complicated, as the bit planes are after each other and not
+		like in most other systems.
 	SCSI: OpenBSD/luna88k warns about
 		probe(spc0:0:0): Check Condition (error 0) on opcode 0x0
 		for non-connected devices. (Just a warning though.)

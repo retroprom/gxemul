@@ -5057,3 +5057,5 @@ Changelog for GXemul:
 20210427	Refactoring of the breakpoint handling code; moving towards
 		subsystem breakpoints. (So far, -T is implemented as a
 		breakpoint for the "memory" subsytem.)
+20210428	Implementing 88K word and byte memset loops (used by the
+		OpenBSD/luna88k kernel and userland, respectively).

@@ -1935,6 +1935,166 @@ X(idle_with_tb1)
 }
 
 
+/*
+ *  byte_fill_loop:
+ *
+ *  s001af90c:         subu	rX,rX,1
+ *  s001af910:         st.b	rZ,r0,rY  or  rZ,rY,r0
+ *  s001af914:         bcnd.n	ne0,rX,0x001af90c
+ *  s001af918:  (d)    addu	rY,rY,1
+
+printf "int main()
+{
+char *p = malloc(1048576);
+int i;
+for (i = 0; i < 10000; ++i)
+	memset(p, 0, 1048576);
+}
+" > z.c
+make z
+time ./z
+
+ *  takes about 0.5 seconds with this implementation, 101.5 seconds without.
+ */
+X(byte_fill_loop)
+{
+	uint32_t rY = reg(ic[3].arg[0]);
+	uint8_t *page = cpu->cd.m88k.host_store[rY >> 12];
+
+	// Fallback:
+	if (page == NULL) {
+		// printf("fallback due to page == NULL\n");
+		instr(dec_reg)(cpu, ic);
+		return;
+	}
+
+	uint32_t rX = reg(ic[0].arg[0]);
+	uint32_t rZ = reg(ic[1].arg[0]);
+
+	// printf("in byte_fill_loop\n");
+	// printf("rX = 0x%08x\n", rX);
+	// printf("rY = 0x%08x\n", rY);
+	// printf("rZ = 0x%08x\n", rZ);
+
+	uint8_t fillbyte = rZ & 0xff;
+
+	/*
+	 *  This now corresponds to a memset loop using the fillbyte value.
+	 *  The number of bytes to fill is rX.
+	 *  The address to fill at is rY.
+	 *
+	 *  After completing the fill operation, if rX reached zero, the
+	 *  program counter points to the instruction after the addu.
+	 */
+
+	uint32_t nr_of_bytes_to_fill = rX;
+	uint32_t offset_within_page = rY & 0xfff;
+	
+	uint32_t offset_after_fill = offset_within_page + nr_of_bytes_to_fill;
+
+	if (offset_after_fill > 0x1000) {
+#if 1
+		// printf("only filling one page, because of over-page-boundary. rX = 0x%08x, rY = 0x%08x\n", rX, rY);
+		nr_of_bytes_to_fill = 0x1000 - offset_within_page;
+		memset(page + offset_within_page, fillbyte, nr_of_bytes_to_fill);
+		reg(ic[0].arg[0]) -= nr_of_bytes_to_fill;
+		reg(ic[3].arg[0]) += nr_of_bytes_to_fill;
+		cpu->n_translated_instrs += nr_of_bytes_to_fill * 4;
+		cpu->cd.m88k.next_ic = &ic[0];
+#else
+		// printf("fallback due to filling over page boundary. rX = 0x%08x, rY = 0x%08x\n", rX, rY);
+		instr(dec_reg)(cpu, ic);
+#endif
+		return;
+	}
+
+	// printf("filling within a page. rX = 0x%08x, rY = 0x%08x\n", rX, rY);
+	memset(page + offset_within_page, fillbyte, nr_of_bytes_to_fill);
+
+	reg(ic[0].arg[0]) -= nr_of_bytes_to_fill;
+	reg(ic[3].arg[0]) += nr_of_bytes_to_fill;
+	cpu->n_translated_instrs += nr_of_bytes_to_fill * 4;
+	cpu->cd.m88k.next_ic = &ic[4];
+}
+
+/*
+ *  word_fill_loop:
+ *
+ *  s001af90c: 65080001        subu	rX,rX,1
+ *  s001af910: f4c02407        st	rZ,r0,rY  or  rZ,rY,r0
+ *  s001af914: eda8fffe        bcnd.n	ne0,rX,0x001af90c
+ *  s001af918: 60e70004 (d)    addu	rY,rY,4
+ */
+X(word_fill_loop)
+{
+	uint32_t rY = reg(ic[3].arg[0]);
+	uint8_t *page = cpu->cd.m88k.host_store[rY >> 12];
+
+	// Fallback:
+	if (page == NULL || rY & 3) {
+		// printf("fallback due to page == NULL or unaligned access\n");
+		instr(dec_reg)(cpu, ic);
+		return;
+	}
+
+	uint32_t rX = reg(ic[0].arg[0]);
+	uint32_t rZ = reg(ic[1].arg[0]);
+
+	// printf("in word_fill_loop\n");
+	// printf("rX = 0x%08x\n", rX);
+	// printf("rY = 0x%08x\n", rY);
+	// printf("rZ = 0x%08x\n", rZ);
+
+	uint8_t fillbyte = rZ & 0xff;
+
+	if (((rZ >> 8) & 0xff) != fillbyte ||
+	    ((rZ >> 16) & 0xff) != fillbyte ||
+	    ((rZ >> 24) & 0xff) != fillbyte) {
+		// printf("fallback due to rZ not having all four bytes equal: rZ = 0x%08x\n", rZ);
+		instr(dec_reg)(cpu, ic);
+		return;
+	}
+
+	/*
+	 *  This now corresponds to a memset loop using the fillbyte value.
+	 *  The number of bytes to fill is four times rX.
+	 *  The address to fill at is rY.
+	 *
+	 *  After completing the fill operation, if rX reached zero, the
+	 *  program counter points to the instruction after the addu.
+	 */
+
+	uint32_t nr_of_bytes_to_fill = sizeof(uint32_t) * rX;
+	uint32_t offset_within_page = rY & 0xfff;
+	
+	uint32_t offset_after_fill = offset_within_page + nr_of_bytes_to_fill;
+
+	if (offset_after_fill > 0x1000) {
+#if 1
+		// printf("only filling one page, because of over-page-boundary. rX = 0x%08x, rY = 0x%08x\n", rX, rY);
+		nr_of_bytes_to_fill = 0x1000 - offset_within_page;
+		memset(page + offset_within_page, fillbyte, nr_of_bytes_to_fill);
+		reg(ic[0].arg[0]) -= nr_of_bytes_to_fill / 4;
+		reg(ic[3].arg[0]) += nr_of_bytes_to_fill;
+		cpu->n_translated_instrs += nr_of_bytes_to_fill;
+		cpu->cd.m88k.next_ic = &ic[0];
+#else
+		// printf("fallback due to filling over page boundary. rX = 0x%08x, rY = 0x%08x\n", rX, rY);
+		instr(dec_reg)(cpu, ic);
+#endif
+		return;
+	}
+
+	// printf("filling within a page. rX = 0x%08x, rY = 0x%08x\n", rX, rY);
+	memset(page + offset_within_page, fillbyte, nr_of_bytes_to_fill);
+
+	reg(ic[0].arg[0]) -= nr_of_bytes_to_fill / 4;
+	reg(ic[3].arg[0]) += nr_of_bytes_to_fill;
+	cpu->n_translated_instrs += nr_of_bytes_to_fill;
+	cpu->cd.m88k.next_ic = &ic[4];
+}
+
+
 /*****************************************************************************/
 
 
@@ -2018,6 +2178,68 @@ X(end_of_page2)
 
 
 /*****************************************************************************/
+
+
+/*
+ *  Loop detection:
+ *
+ *  s001af90c: 65080001        subu	rX,rX,1
+ *  s001af910: f4c02407        st	rZ,r0,rY    or    rZ,rY,r0
+ *  s001af914: eda8fffe        bcnd.n	ne0,rX,0x001af90c
+ *  s001af918: 60e70004 (d)    addu	rY,rY,4
+ */
+void COMBINE(addu_imm)(struct cpu *cpu, struct m88k_instr_call *ic, int low_addr)
+{
+	int n_back = (low_addr >> M88K_INSTR_ALIGNMENT_SHIFT)
+	    & (M88K_IC_ENTRIES_PER_PAGE-1);
+	if (n_back < 3)
+		return;
+
+	if (ic[-3].f == instr(dec_reg) &&
+	    ic[-3].arg[0] == ic[-1].arg[0] &&
+
+	    ic[-2].f == instr(st_4_be_regofs) &&
+	    (ic[-2].arg[1] == (size_t) &cpu->cd.m88k.r[M88K_ZERO_REG] ||
+	     ic[-2].arg[2] == (size_t) &cpu->cd.m88k.r[M88K_ZERO_REG]) &&
+	    (ic[-2].arg[1] == ic[0].arg[0] ||
+	     ic[-2].arg[2] == ic[0].arg[0]) &&
+
+	    ic[-1].f == instr(bcnd_n_ne0) &&
+	    ic[-1].arg[2] == (size_t) low_addr - 12 &&
+
+	    ic[0].f == instr(addu_imm) &&
+	    ic[0].arg[0] == ic[0].arg[1] &&
+	    ic[0].arg[2] == 4 &&
+	    ic[0].arg[0] != (size_t) &cpu->cd.m88k.r[M88K_ZERO_REG]) {
+		debugmsg_cpu(cpu, SUBSYS_CPU, "instruction combination", VERBOSITY_WARNING,
+		    "word_fill_loop detected, pc = 0x%x", (int)cpu->pc);
+		ic[-3].f = instr(word_fill_loop);
+		return;
+	}
+
+	if (ic[-3].f == instr(dec_reg) &&
+	    ic[-3].arg[0] == ic[-1].arg[0] &&
+
+	    ic[-2].f == instr(st_1_le_regofs) &&
+	    (ic[-2].arg[1] == (size_t) &cpu->cd.m88k.r[M88K_ZERO_REG] ||
+	     ic[-2].arg[2] == (size_t) &cpu->cd.m88k.r[M88K_ZERO_REG]) &&
+	    (ic[-2].arg[1] == ic[0].arg[0] ||
+	     ic[-2].arg[2] == ic[0].arg[0]) &&
+
+	    ic[-1].f == instr(bcnd_n_ne0) &&
+	    ic[-1].arg[2] == (size_t) low_addr - 12 &&
+
+	    ic[0].f == instr(inc_reg) &&
+	    ic[0].arg[0] == ic[0].arg[1] &&
+	    ic[0].arg[2] == 1 &&
+	    ic[0].arg[0] != (size_t) &cpu->cd.m88k.r[M88K_ZERO_REG]) {
+		debugmsg_cpu(cpu, SUBSYS_CPU, "instruction combination", VERBOSITY_WARNING,
+		    "byte_fill_loop detected, pc = 0x%x", (int)cpu->pc);
+		ic[-3].f = instr(byte_fill_loop);
+		return;
+	}
+}
+
 
 
 /*
@@ -2298,6 +2520,9 @@ X(to_be_translated)
 			if (ic->f == instr(subu_imm))
 				ic->f = instr(dec_reg);
 		}
+
+		if (op26 == 0x18 && d != M88K_ZERO_REG)
+			cpu->cd.m88k.combination_check = COMBINE(addu_imm);
 
 		if (d == M88K_ZERO_REG)
 			ic->f = instr(nop);
@@ -2670,7 +2895,7 @@ X(to_be_translated)
 			 *  to complete ([..] clearing the scoreboard register
 			 *  and data unit pipeline)".
 			 */
-			if (s1 == M88K_ZERO_REG && d == 0xc /* ne0 */) {
+			if (s1 == M88K_ZERO_REG && d == 0xd /* ne0 */) {
 				ic->f = instr(nop);
 			} else {
 				goto bad;
@@ -2866,6 +3091,7 @@ X(to_be_translated)
 					ic->arg[0] = (size_t)
 					    &cpu->cd.m88k.zero_scratch;
 			}
+
 			break;
 		case 0xc0:	/*  jmp    */
 		case 0xc4:	/*  jmp.n  */
