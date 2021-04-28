@@ -293,7 +293,7 @@ int DYNTRANS_RUN_INSTR_DEF(struct cpu *cpu)
 				int len =
 #endif
 				    cpu_disassemble_instr(
-				    cpu->machine, cpu, instr, 1, cpu->pc);
+				    cpu->machine, cpu, instr, true, cpu->pc);
 #ifdef DYNTRANS_DELAYSLOT
 				/*  Show the instruction in the delay slot,
 				    if any:  */
@@ -310,7 +310,7 @@ int DYNTRANS_RUN_INSTR_DEF(struct cpu *cpu)
 					cpu->delay_slot = DELAYED;
 					cpu->pc += len;
 					cpu_disassemble_instr(cpu->machine,
-					    cpu, instr, 1, cpu->pc);
+					    cpu, instr, true, cpu->pc);
 					cpu->delay_slot = saved_delayslot;
 					cpu->pc -= len;
 				}
@@ -1786,7 +1786,7 @@ cpu->cd.DYNTRANS_ARCH.vph_tlb_entry[r].valid);
 
 				if (!cpu->machine->instruction_trace &&
 				    !was_already_singlestepping)
-					DISASSEMBLE(cpu, ib, 1, 0);
+					DISASSEMBLE(cpu, ib, true, cpu->pc);
 
 #ifdef MODE32
 				printf("BREAKPOINT: pc = 0x%" PRIx32"\n(The "
@@ -1973,7 +1973,7 @@ bad:	/*
 		    "UNIMPLEMENTED instruction at 0x%" PRIx64, (uint64_t)cpu->pc);
 
 	if (!(single_step || cpu->machine->instruction_trace))
-		DISASSEMBLE(cpu, ib, 1, 0);
+		DISASSEMBLE(cpu, ib, true, cpu->pc);
 
 	cpu->running = 0;
 
