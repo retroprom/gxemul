@@ -116,7 +116,6 @@ int main(int argc, char *argv[])
 
 	printf("\nextern bool single_step;\n"
 	    "extern bool about_to_enter_single_step;\n"
-	    "extern bool about_to_enter_single_step;\n"
 	    "extern bool single_step_breakpoint;\n"
 	    "extern bool single_step;\n"
 	    "extern int quiet_mode;\n");
