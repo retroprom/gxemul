@@ -3647,13 +3647,14 @@ X(to_be_translated)
 					static int warning_rotate = 0;
 					if (!warning_rotate &&
 					    !cpu->translation_readahead) {
-						fatal("[ WARNING! MIPS32/64 "
+						debugmsg_cpu(cpu, SUBSYS_CPU, "opcode", VERBOSITY_WARNING,
+						    "WARNING! MIPS32/64 "
 						    "revision 2 rotate opcode"
 						    " used, but the %s process"
 						    "or does not implement "
 						    "such instructions. Only "
 						    "printing this "
-						    "warning once. ]\n",
+						    "warning once.",
 						    cpu->cd.mips.cpu_type.name);
 						warning_rotate = 1;
 					}
@@ -4190,13 +4191,14 @@ X(to_be_translated)
 					static int warning_ei_di = 0;
 					if (!warning_ei_di &&
 					    !cpu->translation_readahead) {
-						fatal("[ WARNING! MIPS32/64 "
+						debugmsg_cpu(cpu, SUBSYS_CPU, "opcode", VERBOSITY_WARNING,
+						    "WARNING! MIPS32/64 "
 						    "revision 2 di or ei opcode"
 						    " used, but the %s process"
 						    "or does not implement "
 						    "such instructions. Only "
 						    "printing this "
-						    "warning once. ]\n",
+						    "warning once.",
 						    cpu->cd.mips.cpu_type.name);
 						warning_ei_di = 1;
 					}
@@ -4534,10 +4536,11 @@ X(to_be_translated)
 			if (cpu->cd.mips.cpu_type.isa_level < 32) {
 				static int warning = 0;
 				if (!warning && !cpu->translation_readahead) {
-					fatal("[ WARNING! Trap opcode used, but"
+					debugmsg_cpu(cpu, SUBSYS_CPU, "opcode", VERBOSITY_WARNING,
+					    "WARNING! Trap opcode used, but"
 					    " the %s processor does not implement "
 					    "such instructions. Only printing this "
-					    "warning once. ]\n",
+					    "warning once.",
 					    cpu->cd.mips.cpu_type.name);
 					warning = 1;
 				}
@@ -4723,10 +4726,11 @@ X(to_be_translated)
 		    cpu->cd.mips.cpu_type.isa_revision < 2) {
 			static int warning = 0;
 			if (!warning && !cpu->translation_readahead) {
-				fatal("[ WARNING! SPECIAL3 opcode used, but"
+				debugmsg_cpu(cpu, SUBSYS_CPU, "opcode", VERBOSITY_WARNING,
+				    "WARNING! SPECIAL3 opcode used, but"
 				    " the %s processor does not implement "
 				    "such instructions. Only printing this "
-				    "warning once. ]\n",
+				    "warning once.",
 				    cpu->cd.mips.cpu_type.name);
 				warning = 1;
 			}
