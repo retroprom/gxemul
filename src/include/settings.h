@@ -47,6 +47,7 @@ struct settings;
 #define	SETTINGS_TYPE_UINT16		10
 #define	SETTINGS_TYPE_UINT32		11
 #define	SETTINGS_TYPE_UINT64		12
+#define	SETTINGS_TYPE_BOOL		13
 
 /*  Presentation formats:  */
 #define	SETTINGS_FORMAT_DECIMAL		1	/*  -123  */

@@ -192,6 +192,9 @@ static int settings_read(struct settings *settings, int i, uint64_t *valuep)
 	case SETTINGS_TYPE_UINT64:
 		*valuep = *((uint64_t *) settings->ptr[i]);
 		break;
+	case SETTINGS_TYPE_BOOL:
+		*valuep = *((bool *) settings->ptr[i]);
+		break;
 	case SETTINGS_TYPE_STRING:
 		/*  Note: Strings cannot be read like this.  */
 		break;
@@ -234,6 +237,9 @@ static int settings_write(struct settings *settings, int i, uint64_t *valuep)
 	case SETTINGS_TYPE_INT64:
 	case SETTINGS_TYPE_UINT64:
 		*((int64_t *) settings->ptr[i]) = *valuep;
+		break;
+	case SETTINGS_TYPE_BOOL:
+		*((bool *) settings->ptr[i]) = *valuep;
 		break;
 	case SETTINGS_TYPE_STRING:
 		/*  Note: Strings cannot be read like this.  */

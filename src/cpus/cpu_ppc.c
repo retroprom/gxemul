@@ -596,7 +596,7 @@ void ppc_irq_interrupt_deassert(struct interrupt *interrupt)
  *  cpu->pc for relative addresses.
  */
 int ppc_cpu_disassemble_instr(struct cpu *cpu, unsigned char *instr,
-	int running, uint64_t dumpaddr)
+	bool running, uint64_t dumpaddr)
 {
 	int hi6, xo, lev, rt, rs, ra, rb, imm, sh, me, rc, l_bit; //, oe_bit;
 	int spr, aa_bit, lk_bit, bf, bh, bi, bo, mb, nb, bt, ba, bb, fpreg;
@@ -605,20 +605,6 @@ int ppc_cpu_disassemble_instr(struct cpu *cpu, unsigned char *instr,
 	uint32_t iword;
 	const char *symbol, *mnem = "ERROR";
 	int power = cpu->cd.ppc.mode == MODE_POWER;
-
-	if (running)
-		dumpaddr = cpu->pc;
-
-	symbol = get_symbol_name(&cpu->machine->symbol_context, dumpaddr, &offset);
-	if (symbol != NULL && offset==0) {
-		if (running)
-			cpu_functioncall_print(cpu);
-		else
-			debug("<%s>\n", symbol);
-	}
-
-	if (cpu->machine->ncpus > 1 && running)
-		debug("cpu%i: ", cpu->cpu_id);
 
 	if (cpu->cd.ppc.bits == 32)
 		debug("%08" PRIx32, (uint32_t) dumpaddr);

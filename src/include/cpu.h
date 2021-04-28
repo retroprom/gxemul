@@ -292,7 +292,7 @@ struct cpu_family {
 
 	/*  Disassemble an instruction.  */
 	int			(*disassemble_instr)(struct cpu *cpu,
-				    unsigned char *instr, int running,
+				    unsigned char *instr, bool running,
 				    uint64_t dumpaddr);
 
 	/*  Dump CPU registers in readable format.  */
@@ -503,7 +503,7 @@ void cpu_tlbdump(struct cpu *cpu, int rawflag);
 void cpu_register_dump(struct machine *m, struct cpu *cpu,
 	int gprs, int coprocs);
 int cpu_disassemble_instr(struct machine *m, struct cpu *cpu,
-	unsigned char *instr, int running, uint64_t addr);
+	unsigned char *instr, bool running, uint64_t addr);
 
 void cpu_functioncall_print(struct cpu *);
 void cpu_functioncall_trace(struct cpu *, uint64_t);
@@ -517,7 +517,7 @@ void cpu_run_init(struct machine *machine);
 void cpu_dumpinfo(struct machine *m, struct cpu *cpu, bool verbose);
 void cpu_list_available_types(void);
 void cpu_show_cycles(struct machine *machine, uint64_t total_elapsed_ms);
-void cpu_print_pc_indicator_in_disassembly(struct cpu *cpu, int running, uint64_t dumpaddr);
+void cpu_print_pc_indicator_in_disassembly(struct cpu *cpu, bool running, uint64_t dumpaddr);
 
 void cpu_init(void);
 

@@ -259,27 +259,13 @@ static void alpha_print_imm16_disp(int imm, int rb)
  *  cpu->pc for relative addresses.
  */                     
 int alpha_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
-        int running, uint64_t dumpaddr)
+        bool running, uint64_t dumpaddr)
 {
 	uint32_t iw;
 	uint64_t offset, tmp;
 	int opcode, ra, rb, func, rc, imm, floating, rbrc = 0, indir = 0;
 	const char *symbol, *mnem = NULL;
 	char palcode_name[30];
-
-	if (running)
-		dumpaddr = cpu->pc;
-
-	symbol = get_symbol_name(&cpu->machine->symbol_context, dumpaddr, &offset);
-	if (symbol != NULL && offset == 0) {
-		if (running)
-			cpu_functioncall_print(cpu);
-		else
-			debug("<%s>\n", symbol);
-	}
-
-	if (cpu->machine->ncpus > 1 && running)
-		debug("cpu%i:\t", cpu->cpu_id);
 
 	debug("%016" PRIx64":  ", (uint64_t) dumpaddr);
 

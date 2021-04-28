@@ -292,7 +292,7 @@ void mips_cpu_register_match(struct machine *m, char *name,
 	int writeflag, uint64_t *valuep, int *match_register);
 void mips_cpu_register_dump(struct cpu *cpu, int gprs, int coprocs);
 int mips_cpu_disassemble_instr(struct cpu *cpu, unsigned char *instr,
-        int running, uint64_t addr);
+        bool running, uint64_t addr);
 void mips_cpu_exception(struct cpu *cpu, int exccode, int tlb, uint64_t vaddr,
         /*  uint64_t pagemask,  */  int coproc_nr, uint64_t vaddr_vpn2,
         int vaddr_asid, int x_64);

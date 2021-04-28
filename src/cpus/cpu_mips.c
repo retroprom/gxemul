@@ -686,7 +686,7 @@ void mips_cpu_tlbdump(struct cpu *cpu, int rawflag)
  *  NOTE 2:  coprocessor instructions are not decoded nicely yet  (TODO)
  */
 int mips_cpu_disassemble_instr(struct cpu *cpu, unsigned char *originstr,
-	int running, uint64_t dumpaddr)
+	bool running, uint64_t dumpaddr)
 {
 	int hi6, special6, regimm5, sub;
 	int rt, rd, rs, sa, imm, copz, cache_op, which_cache, showtag;
@@ -694,23 +694,6 @@ int mips_cpu_disassemble_instr(struct cpu *cpu, unsigned char *originstr,
 	uint32_t instrword;
 	unsigned char instr[4];
 	char *symbol;
-
-	if (running)
-		dumpaddr = cpu->pc;
-
-	if ((dumpaddr & 3) != 0)
-		printf("WARNING: Unaligned address!\n");
-
-	symbol = get_symbol_name(&cpu->machine->symbol_context, dumpaddr, &offset);
-	if (symbol != NULL && offset == 0) {
-		if (running)
-			cpu_functioncall_print(cpu);
-		else
-			debug("<%s>\n", symbol);
-	}
-
-	if (cpu->machine->ncpus > 1 && running)
-		debug("cpu%i: ", cpu->cpu_id);
 
 	if (cpu->is_32bit)
 		debug("%08" PRIx32, (uint32_t)dumpaddr);

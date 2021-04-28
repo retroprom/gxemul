@@ -337,20 +337,8 @@ void riscv_exception(struct cpu *cpu, int vector, int is_trap)
  *  cpu->pc for relative addresses.
  */                     
 int riscv_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
-        int running, uint64_t dumpaddr)
+        bool running, uint64_t dumpaddr)
 {
-	if (running)
-		dumpaddr = cpu->pc;
-
-	uint64_t offset;
-	const char *symbol = get_symbol_name(&cpu->machine->symbol_context,
-	    dumpaddr, &offset);
-	if (symbol != NULL && offset == 0)
-		debug("<%s>\n", symbol);
-
-	if (cpu->machine->ncpus > 1 && running)
-		debug("cpu%i:\t", cpu->cpu_id);
-
 	if (cpu->is_32bit)
 		debug("%08" PRIx32": ", (uint32_t) dumpaddr);
 	else

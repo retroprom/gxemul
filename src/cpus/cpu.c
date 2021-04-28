@@ -81,7 +81,7 @@ struct cpu *cpu_new(struct memory *mem, struct machine *machine,
 	cpu->machine    = machine;
 	cpu->cpu_id     = cpu_id;
 	cpu->byte_order = EMUL_UNDEFINED_ENDIAN;
-	cpu->running    = 0;
+	cpu->running    = false;
 
 	/*  Create settings, and attach to the machine:  */
 	cpu->settings = settings_new();
@@ -91,7 +91,7 @@ struct cpu *cpu_new(struct memory *mem, struct machine *machine,
 
 	settings_add(cpu->settings, "name", 0, SETTINGS_TYPE_STRING,
 	    SETTINGS_FORMAT_STRING, (void *) &cpu->name);
-	settings_add(cpu->settings, "running", 0, SETTINGS_TYPE_UINT8,
+	settings_add(cpu->settings, "running", 0, SETTINGS_TYPE_BOOL,
 	    SETTINGS_FORMAT_YESNO, (void *) &cpu->running);
 
 	cpu_create_or_reset_tc(cpu);
@@ -196,14 +196,36 @@ void cpu_tlbdump(struct cpu *cpu, int rawflag)
  *  tracing.
  */
 int cpu_disassemble_instr(struct machine *m, struct cpu *cpu,
-	unsigned char *instr, int running, uint64_t addr)
+	unsigned char *instr, bool running, uint64_t addr)
 {
 	if (cpu->cpu_family == NULL || cpu->cpu_family->disassemble_instr == NULL) {
 		fatal("cpu_disassemble_instr(): NULL\n");
 		return 0;
-	} else
-		return cpu->cpu_family->disassemble_instr(cpu, instr,
-		    running, addr);
+	}
+
+	if (running)
+		addr = cpu->pc;
+
+	bool show_symbolic_function_name = true;
+
+	/*  Special hack for M88K userspace:  */
+	if (cpu->cpu_family->arch == ARCH_M88K &&
+	    !(cpu->cd.m88k.cr[M88K_CR_PSR] & M88K_PSR_MODE))
+		show_symbolic_function_name = false;
+
+	uint64_t offset;
+	const char *symbol = get_symbol_name(&cpu->machine->symbol_context, addr, &offset);
+	if (symbol != NULL && offset == 0 && show_symbolic_function_name) {
+		if (running && !cpu->machine->show_trace_tree)
+			cpu_functioncall_print(cpu);
+		else
+			debug("<%s>\n", symbol);
+	}
+
+	if (cpu->machine->ncpus > 1 && running)
+		debug("cpu%i: ", cpu->cpu_id);
+
+	return cpu->cpu_family->disassemble_instr(cpu, instr, running, addr);
 }
 
 
@@ -248,7 +270,7 @@ void cpu_functioncall_print(struct cpu *cpu)
  */
 void cpu_functioncall_trace(struct cpu *cpu, uint64_t f)
 {
-	int show_symbolic_function_name = 1;
+	bool show_symbolic_function_name = true;
 	int i, n_args = -1;
 	char *symbol;
 	uint64_t offset;
@@ -256,7 +278,7 @@ void cpu_functioncall_trace(struct cpu *cpu, uint64_t f)
 	/*  Special hack for M88K userspace:  */
 	if (cpu->cpu_family->arch == ARCH_M88K &&
 	    !(cpu->cd.m88k.cr[M88K_CR_PSR] & M88K_PSR_MODE))
-		show_symbolic_function_name = 0;
+		show_symbolic_function_name = false;
 
 	if (cpu->machine->ncpus > 1)
 		fatal("cpu%i:\t", cpu->cpu_id);
@@ -408,7 +430,7 @@ void cpu_list_available_types(void)
  *  Helper which shows an arrow indicating the current instruction, during
  *  disassembly.
  */
-void cpu_print_pc_indicator_in_disassembly(struct cpu *cpu, int running, uint64_t dumpaddr)
+void cpu_print_pc_indicator_in_disassembly(struct cpu *cpu, bool running, uint64_t dumpaddr)
 {
 	if (!running && cpu->pc == dumpaddr) {
 		color_pc_indicator();

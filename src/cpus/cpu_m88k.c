@@ -947,7 +947,7 @@ static const char *m88k_m5_condition(int m5)
  *  cpu->pc for relative addresses.
  */                     
 int m88k_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
-        int running, uint64_t dumpaddr)
+        bool running, uint64_t dumpaddr)
 {
 	int supervisor = cpu->cd.m88k.cr[M88K_CR_PSR] & M88K_PSR_MODE;
 	uint32_t iw;
@@ -955,20 +955,6 @@ int m88k_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
 	uint64_t offset;
 	uint32_t op26, op10, op11, d, s1, s2, w5, cr6, imm16;
 	int32_t d16, d26;
-
-	if (running)
-		dumpaddr = cpu->pc;
-
-	symbol = get_symbol_name(&cpu->machine->symbol_context, dumpaddr, &offset);
-	if (symbol != NULL && offset == 0 && supervisor) {
-		if (running)
-			cpu_functioncall_print(cpu);
-		else
-			debug("<%s>\n", symbol);
-	}
-
-	if (cpu->machine->ncpus > 1 && running)
-		debug("cpu%i:\t", cpu->cpu_id);
 
 	debug("%c%08" PRIx32": ",
 	    cpu->cd.m88k.cr[M88K_CR_PSR] & M88K_PSR_MODE? 's' : 'u',

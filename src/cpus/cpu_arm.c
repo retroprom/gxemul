@@ -1704,27 +1704,13 @@ int arm_cpu_interpret_thumb_SLOW(struct cpu *cpu)
  *  cpu->pc for relative addresses.
  */                     
 int arm_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
-        int running, uint64_t dumpaddr)
+        bool running, uint64_t dumpaddr)
 {
 	uint32_t iw, tmp;
 	int main_opcode, secondary_opcode, s_bit, r16, r12, r8;
 	int i, n, p_bit, u_bit, b_bit, w_bit, l_bit;
 	const char *symbol, *condition;
 	uint64_t offset;
-
-	if (running)
-		dumpaddr = cpu->pc;
-
-	symbol = get_symbol_name(&cpu->machine->symbol_context, dumpaddr, &offset);
-	if (symbol != NULL && offset == 0) {
-		if (running)
-			cpu_functioncall_print(cpu);
-		else
-			debug("<%s>\n", symbol);
-	}
-
-	if (cpu->machine->ncpus > 1 && running)
-		debug("cpu%i:\t", cpu->cpu_id);
 
 	debug("%08x:  ", (int)dumpaddr & ~1);
 
