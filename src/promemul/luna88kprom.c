@@ -66,6 +66,10 @@ void luna88kprom_init(struct machine *machine)
         store_32bit_word(cpu, 0x1100 + sizeof(uint32_t) * 3, 0x2030);       /*  ROM console getch  */
         store_32bit_word(cpu, 0x1100 + sizeof(uint32_t) * 4, 0x2040);       /*  ROM console putch  */
 
+	/*  0x1120 is "getxargs". 0x1180 should be a string (?) containing
+	    arguments, but for now it is '\0'.  */
+        store_32bit_word(cpu, 0x1120, 0x1180);
+
         store_32bit_word(cpu, 0x2030, M88K_PROM_INSTR);
         store_32bit_word(cpu, 0x2034, 0xf400c001);	/*  jmp (r1)  */
 
