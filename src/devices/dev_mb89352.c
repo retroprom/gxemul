@@ -58,7 +58,7 @@
 
 const int MB89352_REGISTERS_LENGTH = MB89352_NREGS * 4;
 
-const bool mb89352_abort_on_unimplemented_stuff = true;
+const bool mb89352_abort_on_unimplemented_stuff = false;
 
 static char *regname[16] = {
 	"BDID", "SCTL", "SCMD", "TMOD", "INTS", "PSNS", "SSTS", "SERR",
@@ -296,7 +296,7 @@ DEVICE_ACCESS(mb89352)
 	if (len != 1) {
 		debugmsg_cpu(cpu, d->subsys, "",
 		    mb89352_abort_on_unimplemented_stuff ? VERBOSITY_ERROR : VERBOSITY_WARNING,
-	    	    "unimplemented LEN: %i-bit access, address 0x%x: 0x%x",
+	    	    "unimplemented LEN: %i-bit access, address 0x%x",
 	    	    len * 8,
 	    	    (int) relative_addr);
 
