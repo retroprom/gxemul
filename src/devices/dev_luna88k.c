@@ -612,6 +612,7 @@ DEVICE_ACCESS(luna88k)
 	case 0x3ffffff0:
 		/*  Accessed by OpenBSD/luna88k to trigger an illegal address  */
 		cpu->cd.m88k.cmmu[1]->reg[CMMU_PFSR] = CMMU_PFSR_BERROR << 16;
+		cpu->cd.m88k.cmmu[1]->reg[CMMU_PFAR] = 0x3ffffff0;
 		break;
 
 	case PROM_ADDR:		/*  0x41000000  */
