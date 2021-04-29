@@ -5059,3 +5059,5 @@ Changelog for GXemul:
 		breakpoint for the "memory" subsytem.)
 20210428	Implementing 88K word and byte memset loops (used by the
 		OpenBSD/luna88k kernel and userland, respectively).
+20210429	Applying a patch from Kenji Aoyama for calculating LUNA-88K
+		FUSE ROM checksum.

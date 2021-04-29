@@ -100,6 +100,28 @@ MACHINE_SETUP(luna88k)
 		exit(1);
 	}
 
+
+	/*
+	 * From Kenji Aoyama: OMRON Mach kernel checks FUSE ROM checksum stored
+	 * at FUSE_ROM_ADDR + 127, so calculate and store it in advance
+	 */
+	uint8_t h, l, checksum = 0;
+
+	for (i = 0; i < 128 - 1; i++) {
+	       h = (load_32bit_word(cpu, FUSE_ROM_ADDR + i * 8 + 0)
+		       & 0xf0000000) >> 24;
+	       l = (load_32bit_word(cpu, FUSE_ROM_ADDR + i * 8 + 4)
+		       & 0xf0000000) >> 28;
+	       checksum ^= (uint8_t)(h | l);
+	}
+
+	h = checksum & 0xf0;
+	l = checksum & 0x0f;
+
+	store_32bit_word(cpu, FUSE_ROM_ADDR + 127 * 8 + 0, h << 24);
+	store_32bit_word(cpu, FUSE_ROM_ADDR + 127 * 8 + 4, l << 28);
+
+
 	if (machine->ncpus > 4) {
 		fatal("More than 4 CPUs is not supported for LUNA 88K.\n");
 		exit(1);
