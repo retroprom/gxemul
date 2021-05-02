@@ -293,7 +293,12 @@ DEVICE_ACCESS(mb89352)
 	struct mb89352_data *d = (struct mb89352_data *) extra;
 	uint64_t idata = 0, odata = 0;
 
-	if (len != 1) {
+	/*
+	 *  MACH reads relative address 0 using 32-bit reads, to probe that
+	 *  the controller is here. But apart from that, all accesses should
+	 *  be 8-bit wide.
+	 */
+	if (len != 1 && relative_addr > 0) {
 		debugmsg_cpu(cpu, d->subsys, "",
 		    mb89352_abort_on_unimplemented_stuff ? VERBOSITY_ERROR : VERBOSITY_WARNING,
 	    	    "unimplemented LEN: %i-bit access, address 0x%x",
@@ -362,6 +367,7 @@ DEVICE_ACCESS(mb89352)
 				break;
 
 			case SCMD_SELECT:
+			case SCMD_SELECT | SCMD_PROG_XFR:
 				// Select target in the temp register.
 				{
 					int target = 0;
