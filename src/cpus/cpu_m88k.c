@@ -50,6 +50,7 @@
 #include "settings.h"
 #include "symbol.h"
 
+#include "thirdparty/m8820x.h"
 #include "thirdparty/m8820x_pte.h"
 #include "thirdparty/m88k_dmt.h"
 #include "thirdparty/mvmeprom.h"

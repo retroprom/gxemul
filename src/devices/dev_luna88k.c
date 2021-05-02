@@ -75,7 +75,7 @@
 // TODO: Actually make this configurable. Currently hardcoded to match OpenBSD/luna88k.
 #define	LUNA88K_PSEUDO_TIMER_HZ	100.0
 
-#define	LUNA88K_REGISTERS_BASE		0x3ffffff0UL
+#define	LUNA88K_REGISTERS_BASE		PROM_ADDR
 #define	LUNA88K_REGISTERS_END		BMAP_START
 #define	LUNA88K_REGISTERS_LENGTH	(LUNA88K_REGISTERS_END - LUNA88K_REGISTERS_BASE)
 
@@ -609,12 +609,6 @@ DEVICE_ACCESS(luna88k)
 
 	switch (addr) {
 
-	case 0x3ffffff0:
-		/*  Accessed by OpenBSD/luna88k to trigger an illegal address  */
-		cpu->cd.m88k.cmmu[1]->reg[CMMU_PFSR] = CMMU_PFSR_BERROR << 16;
-		cpu->cd.m88k.cmmu[1]->reg[CMMU_PFAR] = 0x3ffffff0;
-		break;
-
 	case PROM_ADDR:		/*  0x41000000  */
 		/*  OpenBSD/luna88k write here during boot. Ignore for now. (?)  */
 		break;
@@ -889,8 +883,14 @@ void add_cmmu_for_cpu(struct devinit* devinit, int cpunr, uint32_t iaddr, uint32
 	char tmpstr[300];
 	struct m8820x_cmmu *cmmu;
 
-	if (cpunr >= devinit->machine->ncpus)
+	if (cpunr >= devinit->machine->ncpus) {
+		// Add dummy instruction and data devices, in order to get
+		// silent bootup of guest OSes that probe for all four
+		// possible CPUs.
+		dev_ram_init(devinit->machine, iaddr, 0x1000, DEV_RAM_RAM, 0x0, "cmmu_i");
+		dev_ram_init(devinit->machine, daddr, 0x1000, DEV_RAM_RAM, 0x0, "cmmu_d");
 		return;
+	}
 
 	/*  Instruction CMMU:  */
 	CHECK_ALLOCATION(cmmu = (struct m8820x_cmmu *) malloc(sizeof(struct m8820x_cmmu)));
@@ -1027,6 +1027,10 @@ DEVINIT(luna88k)
 		d->using_framebuffer = true;
 		device_add(devinit->machine, "lunafb addr=0xB1000000");
 	}
+
+	// Guest OSes such as OpenBSD probe memory by reading 0x3ffffff0.
+	// Having this device here suppresses visible debug messages.
+	dev_ram_init(devinit->machine, 0x3ffffff0, 0x10, DEV_RAM_FAIL, 0x0, "failprobe");
 
 	return 1;
 }

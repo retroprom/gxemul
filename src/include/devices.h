@@ -366,6 +366,7 @@ void dev_px_init(struct machine *machine, struct memory *mem,
 #define	DEV_RAM_MIRROR				1
 #define	DEV_RAM_MIGHT_POINT_TO_DEVICES		0x10
 #define	DEV_RAM_TRACE_ALL_ACCESSES		0x20
+#define	DEV_RAM_FAIL				0x40
 int dev_ram_access(struct cpu *cpu, struct memory *mem, uint64_t relative_addr,
 	unsigned char *data, size_t len, int writeflag, void *);
 void dev_ram_init(struct machine *machine, uint64_t baseaddr, uint64_t length,

@@ -99,135 +99,6 @@ int MEMORY_RW(struct cpu *cpu, struct memory *mem, uint64_t vaddr,
 			return MEMORY_ACCESS_FAILED;
 	}
 
-#if 0
-	/*
-	 *  For quick-and-dirty debugging of 32-bit code, typically
-	 *  unknown ROM code:  Write out a summary of accessed memory ranges.
-	 */
-	if (cpu->running && paddr < 0x00300000)
-	{
-		static int swriteflag = -1, lastswriteflag;
-		static int32_t start = -1, stop = -1;
-		static int32_t laststart = -1, laststop = -1;
-
-		if (start == -1)
-		{
-			start = stop = paddr;
-			swriteflag = writeflag;
-		}
-		else
-		{
-			if (paddr == stop + len && writeflag == swriteflag)
-			{
-				stop = paddr;
-			}
-			else
-			{
-				if (start != laststart || stop != laststop || swriteflag != lastswriteflag)
-				{
-					printf("%s  %08x -- %08x  %i-bit\n",
-						swriteflag ? "WRITE" : "READ ",
-						(int)start, (int)(stop + len - 1), (int)len*8);
-				}
-
-				laststart = start; laststop = stop; lastswriteflag = swriteflag;
-
-				start = stop = paddr;
-				swriteflag = writeflag;
-			}
-		}
-
-		// Make sure the access is not put into quick lookup tables:
-		ok |= MEMORY_NOT_FULL_PAGE;
-	}
-#endif
-
-#if 0
-	/*
-	 *  For quick-and-dirty test to see which memory addresses are in use,
-	 *  making a "waterfall spectrum"...
-	 */
-	if (cpu->running && (paddr < 0x200000 ||
-		(paddr >= 0x0c000000 && paddr < 0x0d000000)))
-	{
-		int64_t xsize = 1920, ysize = 1080;
-		static int y = 0;
-		static int count = 0;
-		static uint8_t* buf = NULL;
-
-		if (buf == NULL)
-		{
-			buf = (uint8_t*)malloc(xsize * ysize*3);
-			memset(buf, 0xff, xsize * ysize*3);
-		}
-
-		uint64_t paddr2 = paddr - 0x0c000000;
-		
-		if (paddr < 0x200000)
-			paddr2 = paddr + 16*1048576;
-
-		int64_t max = 16*1048576 + (2*1048576);
-
-		int64_t x = xsize * paddr2 / max;
-
-		if (x >= 0 && x < xsize)
-		{
-			if (writeflag)
-			{
-				int c = buf[(x+y*xsize)*3+0];
-				if (c == 255)
-					c = 128;
-				else if (c > 0)
-				{
-					c = c - 8;
-				}
-
-				buf[(x+y*xsize)*3+1] = c;
-				buf[(x+y*xsize)*3+2] = c;
-			}
-			else
-			{
-				int c = buf[(x+y*xsize)*3+1];
-				if (c == 255)
-					c = 128;
-				else if (c > 0)
-				{
-					c = c - 8;
-				}
-
-				buf[(x+y*xsize)*3+0] = c;
-				buf[(x+y*xsize)*3+2] = c;
-			}
-		}
-		
-		for (int meg = 0; meg < 18; ++meg)
-			buf[((xsize * (meg * 0x100000LL) / max) +y*xsize)*3+1] = 64;
-
-		count ++;
-		if (count >= 8192)
-		{
-			count = 0;
-			y ++;
-			
-			if (y >= ysize)
-			{
-				static int n = 0;
-				char name[40];
-				snprintf(name, sizeof(name), "memory_%05i.ppm", n++);
-				FILE* f = fopen(name, "w");
-				printf("writing out %s\n", name);
-				fprintf(f, "P6\n%i %i\n255\n", (int)xsize, (int)ysize);
-				fwrite((char*)buf, 1, (int)(xsize*ysize*3), f);
-				fclose(f);
-				memset(buf, 0xff, xsize*ysize);
-				y = 0;
-			}
-		}
-		
-		// Make sure the access is not put into quick lookup tables:
-		ok |= MEMORY_NOT_FULL_PAGE;
-	}
-#endif
 
 	/*
 	 *  Memory mapped device?
@@ -366,11 +237,8 @@ not just the device in question.
 					    0, vaddr, 0, 0, 0, 0);
 #endif
 #ifdef MEM_M88K
-					/*  TODO: This is enough for
-					    OpenBSD/mvme88k's badaddr()
-					    implementation... but the
-					    faulting address should probably
-					    be included somewhere too!  */
+					cpu->cd.m88k.cmmu[1]->reg[CMMU_PFSR] = CMMU_PFSR_BERROR << 16;
+					cpu->cd.m88k.cmmu[1]->reg[CMMU_PFAR] = orig_paddr;
 					m88k_exception(cpu, cache == CACHE_INSTRUCTION
 					    ? M88K_EXCEPTION_INSTRUCTION_ACCESS
 					    : M88K_EXCEPTION_DATA_ACCESS, 0);
@@ -434,30 +302,34 @@ not just the device in question.
 			if (writeflag == MEM_READ) {
 				/*  Return all zeroes? (Or 0xff? TODO)  */
 				memset(data, 0, len);
-
-#if 0
-/*
- *  NOTE: This code prevents a PROM image from a real 5000/200 from booting.
- *  I think I introduced it because it was how some guest OS (NetBSD?) detected
- *  the amount of RAM on some machine.
- *
- *  TODO: Figure out if it is not needed anymore, and remove it completely.
- */
-#ifdef MEM_MIPS
-				/*
-				 *  For real data/instruction accesses, cause
-				 *  an exceptions on an illegal read:
-				 */
-				if (cache != CACHE_NONE && !no_exceptions &&
-				    paddr >= mem->physical_max &&
-				    paddr < mem->physical_max+1048576) {
-					mips_cpu_exception(cpu,
-					    EXCEPTION_DBE, 0, vaddr, 0,
-					    0, 0, 0);
-				}
-#endif  /*  MEM_MIPS  */
-#endif
 			}
+
+#ifdef MEM_MIPS
+			/*
+			 *  For real data/instruction accesses, cause
+			 *  an exceptions on an illegal read:
+			 */
+#if 0
+			/*
+			 *  NOTE: This code prevents a PROM image from a real 5000/200 from booting.
+			 *  I think I introduced it because it was how some guest OS (NetBSD?) detected
+			 *  the amount of RAM on some machine.
+			 *
+			 *  TODO: Figure out if it is not needed anymore, and remove it completely.
+			 */
+			if (cache != CACHE_NONE && !no_exceptions &&
+			    paddr >= mem->physical_max &&
+			    paddr < mem->physical_max+1048576) {
+				mips_cpu_exception(cpu,
+				    EXCEPTION_DBE, 0, vaddr, 0,
+				    0, 0, 0);
+			}
+#endif
+#endif  /*  MEM_MIPS  */
+#ifdef MEM_M88K
+			cpu->cd.m88k.cmmu[1]->reg[CMMU_PFSR] = CMMU_PFSR_BERROR << 16;
+			cpu->cd.m88k.cmmu[1]->reg[CMMU_PFAR] = paddr;
+#endif
 
 			/*  Hm? Shouldn't there be a DBE exception for
 			    invalid writes as well?  TODO  */

@@ -47,8 +47,9 @@ struct ram_data {
 	uint64_t	baseaddress;
 	const char*	name;
 
-	int		trace;
 	int		mode;
+	bool		trace;
+	bool		fail;
 	uint64_t	otheraddress;
 
 	/*  If mode = DEV_RAM_MIRROR:  */
@@ -63,6 +64,13 @@ struct ram_data {
 DEVICE_ACCESS(ram)
 {
 	struct ram_data *d = (struct ram_data *) extra;
+
+	if (d->fail) {
+		debugmsg_cpu(cpu, SUBSYS_DEVICE, d->name, VERBOSITY_DEBUG,
+		    "%s memory range that is configured to fail on access",
+		    writeflag == MEM_WRITE ? "WRITE to" : "READ from");
+		return 0;
+	}
 
 	if (cpu->running && d->trace && writeflag == MEM_WRITE) {
 		fatal("[ %s: write %i byte%s from 0x%x:",
@@ -161,7 +169,12 @@ void dev_ram_init(struct machine *machine, uint64_t baseaddr, uint64_t length,
 
 	if (mode & DEV_RAM_TRACE_ALL_ACCESSES) {
 		mode &= ~DEV_RAM_TRACE_ALL_ACCESSES;
-		d->trace = 1;
+		d->trace = true;
+	}
+
+	if (mode & DEV_RAM_FAIL) {
+		mode &= ~DEV_RAM_FAIL;
+		d->fail = true;
 	}
 
 	d->mode         = mode;
