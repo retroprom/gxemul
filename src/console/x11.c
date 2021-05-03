@@ -64,7 +64,6 @@ void x11_check_event(struct emul *emul) { }
 static bool left_ctrl = false;
 static bool left_alt = false;
 static struct fb_window *grabbed = NULL;
-static bool mouseExplicityMoved = false;
 static int mouseXbeforeGrab = 0;
 static int mouseYbeforeGrab = 0;
 static int mouseXofLastEvent = 0;
@@ -134,8 +133,6 @@ static void setMousePointerCoordinates(struct fb_window *fbwin, int x, int y)
 	XWarpPointer(fbwin->x11_display, None,
 	    DefaultRootWindow(fbwin->x11_display), 0, 0, 0, 0, x, y);
 	XFlush(fbwin->x11_display);
-
-	mouseExplicityMoved = true;
 }
 
 
@@ -699,19 +696,10 @@ static void x11_check_events_machine(struct emul *emul, struct machine *m)
 				need_redraw = true;
 			}
 
-			if (event.type == MotionNotify && mouseExplicityMoved) {
+			if (event.type == MotionNotify) {
 				// debugmsg(SUBSYS_X11, "event", VERBOSITY_WARNING,
-				//    "mouse explicitly moved to screen center; ignored.");
-
-				mouseExplicityMoved = false;
-
-				mouseXofLastEvent = event.xmotion.x;
-				mouseYofLastEvent = event.xmotion.y;
-
-			} else if (event.type == MotionNotify) {
-				// debugmsg(SUBSYS_X11, "event", VERBOSITY_WARNING,
-				//    "mouse moved to %i, %i",
-				//    event.xmotion.x, event.xmotion.y);
+				//   "mouse moved to %i, %i",
+				//   event.xmotion.x, event.xmotion.y);
 
 				int dx = event.xmotion.x - mouseXofLastEvent;
 				int dy = event.xmotion.y - mouseYofLastEvent;
@@ -719,7 +707,11 @@ static void x11_check_events_machine(struct emul *emul, struct machine *m)
 				mouseXofLastEvent = event.xmotion.x;
 				mouseYofLastEvent = event.xmotion.y;
 
-				if (grabbed == fbwin && (dx != 0 || dy != 0)) {
+				int distance = abs(dx) + abs(dy);
+
+				// Arbitrarily ignore large distances (which are
+				// due to wrap-around).
+				if (grabbed == fbwin && (dx != 0 || dy != 0) && distance < 250) {
 					// debugmsg(SUBSYS_X11, "event", VERBOSITY_WARNING,
 					//    "mouse moved dx %i, %i", dx, dy);
 
@@ -739,7 +731,6 @@ static void x11_check_events_machine(struct emul *emul, struct machine *m)
 					    &mask);
 
 					Screen *screen = XDefaultScreenOfDisplay(fbwin->x11_display);
-
 					int w = XWidthOfScreen(screen);
 					int h = XHeightOfScreen(screen);
 					int x1 = w * 1 / 5;
