@@ -2211,7 +2211,7 @@ void COMBINE(addu_imm)(struct cpu *cpu, struct m88k_instr_call *ic, int low_addr
 	    ic[0].arg[0] == ic[0].arg[1] &&
 	    ic[0].arg[2] == 4 &&
 	    ic[0].arg[0] != (size_t) &cpu->cd.m88k.r[M88K_ZERO_REG]) {
-		debugmsg_cpu(cpu, SUBSYS_CPU, "instruction combination", VERBOSITY_WARNING,
+		debugmsg_cpu(cpu, SUBSYS_CPU, "instruction combination", VERBOSITY_DEBUG,
 		    "word_fill_loop detected, pc = 0x%x", (int)cpu->pc);
 		ic[-3].f = instr(word_fill_loop);
 		return;
@@ -2233,7 +2233,7 @@ void COMBINE(addu_imm)(struct cpu *cpu, struct m88k_instr_call *ic, int low_addr
 	    ic[0].arg[0] == ic[0].arg[1] &&
 	    ic[0].arg[2] == 1 &&
 	    ic[0].arg[0] != (size_t) &cpu->cd.m88k.r[M88K_ZERO_REG]) {
-		debugmsg_cpu(cpu, SUBSYS_CPU, "instruction combination", VERBOSITY_WARNING,
+		debugmsg_cpu(cpu, SUBSYS_CPU, "instruction combination", VERBOSITY_DEBUG,
 		    "byte_fill_loop detected, pc = 0x%x", (int)cpu->pc);
 		ic[-3].f = instr(byte_fill_loop);
 		return;
