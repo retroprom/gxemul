@@ -23,13 +23,9 @@ controllers, ethernet controllers, disk controllers, and serial port
 controllers.
 
 GXemul, including the dynamic translation system, is implemented in C, which
-means that the emulator will (at least in theory) run on practically any
-modern host architecture and unix-like operating system, for which a C99
-compiler is available.
-
-The documentation lists the machines and specific guest operating systems
-that can be regarded as "working" in GXemul. The guest operating system
-that works best in GXemul is NetBSD/pmax on an emulated DECstation 5000/200.
+means that the emulator will (at least in theory) run on most modern host
+architecture and unix-like operating system, for which a C99 compiler is
+available.
 
 
 Possible uses of GXemul include:
@@ -41,7 +37,7 @@ Possible uses of GXemul include:
      NetBSD or OpenBSD), to make sure that your source code is portable to
      those platforms
 
- o)  educational purposes, e.g. to learn how to write code for MIPS
+ o)  educational purposes, e.g. to learn how to write code for MIPS or M88K
 
  o)  hobby operating system development; the emulator can be used as a
      complement to testing your code on real hardware
@@ -66,7 +62,7 @@ GXemul's limitations
      function well enough for the guest operating systems to use them.
 
      (A consequence of this is that a machine mode may be implemented well
-     enough to run NetBSD for that machine mode, but other guest operating
+     enough to run e.g. NetBSD for that machine mode, but other guest operating
      systems may not run at all, or behave strangely.)
 
 
@@ -92,4 +88,5 @@ Feedback
 
 If you have found GXemul useful in some way, or feel like sending me
 comments or feedback in general, then mail me at gavare@gmail.com.
+
 

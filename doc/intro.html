@@ -145,10 +145,14 @@ expected when running on Cygwin.
 <b><tt>-h</tt></b> command line option, will display a short or long
 help message, respectively.
 
-<p>The most straight forward complete guest operating system to 
-install is <a href="http://www.netbsd.org/ports/pmax/">NetBSD/pmax</a>; the
-instructions provided <a href="machine_decstation.html#netbsdpmaxinstall">here</a> should let you install 
-NetBSD/pmax in a way very similar to how it is done on a real DECstation.
+<p>If you want to experiment with running a complete guest operating system
+in the emulator, some of the best working ones are:
+<ul>
+	<li><a href="machine_decstation.html#netbsdpmaxinstall">NetBSD/pmax</a>
+		on an emulated DECstation 5000/200 (MIPS)
+	<li><a href="machine_luna88k.html#openbsdluna88klive">OpenBSD/luna88k</a>
+		on an emulated LUNA-88K (Motorola 88000)
+</ul>
 
 <p>If you want to inspect or debug arbitrary binaries, you should read
 the section about <a href="debugging.html">debugging</a>.
@@ -189,10 +193,13 @@ in those xterm windows.
 <a name="emulmodes"></a>
 <h3>Which CPUs and machines does GXemul emulate?</h3>
 
-<p>This list contains some of the emulation modes in GXemul, and the guest operating systems
-that have been verified to work in those modes. Some operating systems or
-other pieces of software or firmware that are not really working yet are also
-included, listed with a <small><font color="red">small RED</font></small> font.
+<p>This list contains some of the emulation modes in GXemul, and a list of
+guest operating systems where at least one version has been verified to work.
+(Sometimes newer versions work fine too, sometimes not.)
+
+<p>Some operating systems or other pieces of software or firmware that are <i>not</i>
+working yet are also included, listed with a <small><font color="red">small
+RED</font></small> font.
 
 <p>
 <ul>
