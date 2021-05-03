@@ -58,7 +58,7 @@
 
 const int MB89352_REGISTERS_LENGTH = MB89352_NREGS * 4;
 
-const bool mb89352_abort_on_unimplemented_stuff = false;
+const bool mb89352_abort_on_unimplemented_stuff = true;
 
 static char *regname[16] = {
 	"BDID", "SCTL", "SCMD", "TMOD", "INTS", "PSNS", "SSTS", "SERR",
@@ -104,7 +104,8 @@ static void reassert_interrupts(struct mb89352_data *d)
 {
 	bool assert = d->reg[INTS] != 0;
 
-	// TODO: BUS FREE interrupt enable: PCTL_BFINT_ENAB
+	if (d->reg[PCTL] & PCTL_BFINT_ENAB && d->phase == PH_BUS_FREE)
+		assert = true;
 
 	if (!(d->reg[SCTL] & SCTL_INTR_ENAB))
 		assert = false;
@@ -143,7 +144,6 @@ int mb89352_dreg_read(struct cpu* cpu, struct mb89352_data *d, int writeflag)
 	if (d->xferp == NULL) {
 		debugmsg_cpu(cpu, d->subsys, "", VERBOSITY_ERROR,
 	    	    "DREG: no ongoing transfer to read from?");
-	    	cpu->running = 0;
 	    	return 0;
 	}
 	
@@ -166,14 +166,12 @@ int mb89352_dreg_read(struct cpu* cpu, struct mb89352_data *d, int writeflag)
 	default:
 		debugmsg_cpu(cpu, d->subsys, "", VERBOSITY_ERROR,
 	    	    "DREG: read in unimplemented phase %i", d->phase);
-	    	cpu->running = 0;
 	    	return 0;
 	}
 
 	if (d->transfer_bufpos >= len) {
 		debugmsg_cpu(cpu, d->subsys, "", VERBOSITY_ERROR,
 	    	    "DREG: read longer than buffer?");
-	    	cpu->running = 0;
 	    	return 0;
 	}
 
@@ -232,14 +230,12 @@ void mb89352_dreg_write(struct cpu* cpu, struct mb89352_data *d, int writeflag, 
 	default:
 		debugmsg_cpu(cpu, d->subsys, "", VERBOSITY_ERROR,
 	    	    "DREG: write in unimplemented phase %i", d->phase);
-	    	cpu->running = 0;
 	    	return;
 	}
 
 	if (d->transfer_bufpos >= len) {
 		debugmsg_cpu(cpu, d->subsys, "", VERBOSITY_ERROR,
 	    	    "DREG: write longer than buffer?");
-	    	cpu->running = 0;
 	    	return;
 	}
 
@@ -279,7 +275,6 @@ void mb89352_dreg_write(struct cpu* cpu, struct mb89352_data *d, int writeflag, 
 	default:
 		debugmsg_cpu(cpu, d->subsys, "", VERBOSITY_ERROR,
 	    	    "DREG write: UNIMPLEMENTED PHASE %i", d->phase);
-	    	cpu->running = 0;
 	}
 	
 	d->reg[PSNS] |= PSNS_REQ;
@@ -304,11 +299,6 @@ DEVICE_ACCESS(mb89352)
 	    	    "unimplemented LEN: %i-bit access, address 0x%x",
 	    	    len * 8,
 	    	    (int) relative_addr);
-
-		if (mb89352_abort_on_unimplemented_stuff) {
-			cpu->running = 0;
-			return 0;
-		}
 	}
 
 	int regnr = (relative_addr >> 2) & (MB89352_NREGS - 1);
@@ -327,7 +317,7 @@ DEVICE_ACCESS(mb89352)
 			d->reg[BDID] = idata;
 			if (idata != 7)
 				debugmsg_cpu(cpu, d->subsys, "",
-				    VERBOSITY_INFO, "unimplemented BDID value: 0x%x",
+				    VERBOSITY_WARNING, "unimplemented BDID value: 0x%x",
 			    	    (int) idata);
 		} else {
 			odata = (1 << d->reg[BDID]);
@@ -357,18 +347,18 @@ DEVICE_ACCESS(mb89352)
 			// RST = Reset ?
 			if (idata & SCMD_RST)
 				idata = SCMD_BUS_REL;
-			
-			switch (idata) {
+
+			// Command code is in upper 3 bits.
+			switch (idata & 0xe0) {
 
 			case SCMD_BUS_REL:	// 0x00
 				d->reg[SSTS] &= ~(SSTS_TARGET | SSTS_INITIATOR | SSTS_XFR);
+				d->reg[PSNS] = 0;
 				d->phase = PH_BUS_FREE;
-				// TODO: BUS FREE interrupt enable: PCTL_BFINT_ENAB?
 				break;
 
-			case SCMD_SELECT:
-			case SCMD_SELECT | SCMD_PROG_XFR:
-				// Select target in the temp register.
+			case SCMD_SELECT:	// 0x20
+				// Select target specified in the temp register.
 				{
 					int target = 0;
 					while (target < 8) {
@@ -389,7 +379,7 @@ DEVICE_ACCESS(mb89352)
 
 					d->target = target;
 					d->reg[INTS] |= INTS_CMD_DONE;
-					d->reg[PSNS] &= ~7;
+
 					d->phase = PH_CMD;
 					d->reg[PSNS] |= PSNS_REQ;
 
@@ -404,49 +394,55 @@ DEVICE_ACCESS(mb89352)
 				}
 				break;
 
-			case SCMD_XFR | SCMD_PROG_XFR:
-			case SCMD_XFR | SCMD_PROG_XFR | SCMD_ICPT_XFR:
-				{
-					d->reg[SSTS] |= SSTS_XFR;
-					d->phase = d->reg[PCTL] & 7;
-
-					d->transfer_bufpos = 0;
-
-					debugmsg_cpu(cpu, d->subsys, "",
-					    VERBOSITY_DEBUG,
-				    	    "Transfer command: phase %i, len %i",
-				    	    d->phase, d->transfer_count);
-
-					switch (d->phase) {
-					case PH_DATAOUT:
-						scsi_transfer_allocbuf(&d->xferp->data_out_len,
-						    &d->xferp->data_out, d->transfer_count, 0);
-						d->xferp->data_out_offset = d->transfer_count;
-						break;
-					case PH_DATAIN:
-						break;
-					case PH_CMD:
-						scsi_transfer_allocbuf(&d->xferp->cmd_len,
-						    &d->xferp->cmd, d->transfer_count, 0);
-						break;
-					case PH_STAT:
-						break;
-					case PH_MSGIN:
-						break;
-					default:
-						debugmsg_cpu(cpu, d->subsys, "",
-						    VERBOSITY_ERROR,
-					    	    "Transfer command: unimplemented phase %i",
-					    	    d->phase);
-				    		exit(1);
-					}
-
-					if (!(d->phase & 1))
-						d->reg[INTS] |= INTS_CMD_DONE;
-				}
+			case SCMD_RST_ATN:	// 0x40
+				d->reg[PSNS] &= ~PSNS_ATN;
 				break;
 
-			case SCMD_RST_ACK:
+			case SCMD_SET_ATN:	// 0x60
+				d->reg[PSNS] |= PSNS_ATN;
+				break;
+
+			case SCMD_XFR:	// 0x80
+				d->reg[SSTS] |= SSTS_XFR;
+				d->phase = d->reg[PCTL] & 7;
+
+				d->transfer_bufpos = 0;
+
+				debugmsg_cpu(cpu, d->subsys, "",
+				    VERBOSITY_DEBUG,
+			    	    "Transfer command: phase %i, len %i",
+			    	    d->phase, d->transfer_count);
+
+				switch (d->phase) {
+				case PH_DATAOUT:	// 0
+					scsi_transfer_allocbuf(&d->xferp->data_out_len,
+					    &d->xferp->data_out, d->transfer_count, 0);
+					d->xferp->data_out_offset = d->transfer_count;
+					break;
+				case PH_DATAIN:		// 1
+					break;
+				case PH_CMD:		// 2
+					scsi_transfer_allocbuf(&d->xferp->cmd_len,
+					    &d->xferp->cmd, d->transfer_count, 0);
+					break;
+				case PH_STAT:		// 3
+					break;
+				case PH_MSGIN:		// 7
+					break;
+				default:
+					debugmsg_cpu(cpu, d->subsys, "",
+					    VERBOSITY_ERROR,
+				    	    "Transfer command: unimplemented phase %i",
+				    	    d->phase);
+			    		exit(1);
+				}
+
+				if (!(d->phase & 1))
+					d->reg[INTS] |= INTS_CMD_DONE;
+
+				break;
+
+			case SCMD_RST_ACK:	// 0xc0
 				d->reg[SSTS] &= ~(SSTS_INITIATOR | SSTS_TARGET);
 				d->reg[PSNS] &= ~PSNS_REQ;
 				break;
@@ -455,11 +451,6 @@ DEVICE_ACCESS(mb89352)
 				debugmsg_cpu(cpu, d->subsys, "",
 				    mb89352_abort_on_unimplemented_stuff ? VERBOSITY_ERROR : VERBOSITY_WARNING,
 			    	    "unimplemented SCMD: 0x%x", (int) idata);
-
-				if (mb89352_abort_on_unimplemented_stuff) {
-					cpu->running = 0;
-					return 0;
-				}
 			}
 		}
 		break;
@@ -488,9 +479,9 @@ DEVICE_ACCESS(mb89352)
 
 	case PSNS:
 		if (writeflag == MEM_WRITE) {
-			d->reg[regnr] = idata;
+			// Write means "diagnostics register"?
 			debugmsg_cpu(cpu, d->subsys, "",
-			    VERBOSITY_WARNING,
+			    VERBOSITY_DEBUG,
 		    	    "unimplemented write to PSNS/SDGC: 0x%x",
 			    (int) idata);
 		}
@@ -612,11 +603,6 @@ DEVICE_ACCESS(mb89352)
 		    	    "unimplemented %i-bit READ from address 0x%x",
 		    	    len * 8,
 			    (int) relative_addr);
-
-		if (mb89352_abort_on_unimplemented_stuff) {
-			cpu->running = 0;
-			return 0;
-		}
 	}
 
 	reassert_interrupts(d);
@@ -640,6 +626,8 @@ DEVINIT(mb89352)
 	    DM_DEFAULT, NULL);
 
 	d->subsys = debugmsg_register_subsystem("mb89352");
+
+	// debugmsg_set_verbosity_level(d->subsys, VERBOSITY_DEBUG+1);
 
 	INTERRUPT_CONNECT(devinit->interrupt_path, d->irq);
 
