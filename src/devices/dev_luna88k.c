@@ -35,17 +35,19 @@
  *	Interrupt controller (hopefully working with all 4 CPUs)
  *	Time-of-day clock
  *	Serial I/O (including Keyboard and Mouse)
- *	Monochrome framebuffer
- *	Lance ethernet
+ *	Monochrome framebuffer (in dev_lunafb.c)
+ *	Lance ethernet (in dev_le.c)
  *	SCSI
  *
  *  Things that are NOT implemented yet:
  *	LUNA-88K2 specifics. (Some registers are at different addresses etc.)
  *	Parallel I/O
  *	Front LCD display (half-implemented but output not shown anywhere)
- *	Color framebuffer
+ *	HD647180X I/O processor
+ *	Color framebuffer (multiple bit planes)
  *
- *  TODO: Separate out some devices to their own files:
+ *
+ *  TODO: Separate out some more devices to their own files:
  *	x) so that they can potentially be reused for a luna68k mode
  *	x) sio seems similar to scc?
  *	x) the clock is similar to other clock chips?
@@ -88,7 +90,7 @@
 
 struct luna88k_data {
 	struct interrupt cpu_irq[MAX_CPUS];
-	int		irqActive[MAX_CPUS];
+	bool		irqActive[MAX_CPUS];
 	uint32_t	interrupt_enable[MAX_CPUS];
 	uint32_t	interrupt_status;
 	uint32_t	software_interrupt_status[MAX_CPUS];
@@ -156,14 +158,13 @@ static void add_to_sio_queue(struct luna88k_data* d, int n, uint8_t c)
 		d->sio_queue_tail[n] = 0;
 
 	if (d->sio_queue_tail[n] == d->sio_queue_head[n])
-		fatal("[ luna88k: add_to_sio_queue overrun; increase SIO_QUEUE_SIZE ]\n");
+		debugmsg(SUBSYS_DEVICE, "luna88k", VERBOSITY_WARNING,
+		    "add_to_sio_queue overrun; increase SIO_QUEUE_SIZE");
 }
 
 static void reassert_interrupts(struct luna88k_data *d)
 {
-	int cpu;
-
-	for (cpu = 0; cpu < MAX_CPUS; cpu++) {
+	for (size_t cpu = 0; cpu < MAX_CPUS; cpu++) {
 		// printf("cpu%i: status = 0x%08x, enable = 0x%08x\n",
 		//	cpu, d->interrupt_status, d->interrupt_enable[0]);
 
@@ -179,12 +180,12 @@ static void reassert_interrupts(struct luna88k_data *d)
 			if (!d->irqActive[cpu])
 		                INTERRUPT_ASSERT(d->cpu_irq[cpu]);
 
-			d->irqActive[cpu] = 1;
+			d->irqActive[cpu] = true;
 		} else {
 			if (d->irqActive[cpu])
 		                INTERRUPT_DEASSERT(d->cpu_irq[cpu]);
 
-			d->irqActive[cpu] = 0;
+			d->irqActive[cpu] = false;
 		}
 	}
 
@@ -215,19 +216,18 @@ static void reassert_timer_interrupt(struct luna88k_data* d)
 
 static void reassert_serial_interrupt(struct luna88k_data* d)
 {
-	int assertSerial = 0;
-	int port;
+	bool assertSerial = false;
 
-	for (port = 0; port <= 1; port++) {
+	for (size_t port = 0; port <= 1; port++) {
 		if ((d->obio_sio_wr[port][SCC_WR1] & SCC_WR1_RXI_ALL_CHAR) ||
 		    (d->obio_sio_wr[port][SCC_WR1] & SCC_WR1_RXI_FIRST_CHAR)) {
 			if (anything_in_sio_queue(d, port))
-				assertSerial = 1;
+				assertSerial = true;
 		}
 
 		if (d->obio_sio_wr[port][SCC_WR1] & SCC_WR1_TX_IE &&
 		    d->sio_tx_pending[port])
-			assertSerial = 1;
+			assertSerial = true;
 	}
 
 	if (assertSerial)
@@ -246,7 +246,7 @@ static void luna88k_timer_tick(struct timer *t, void *extra)
 {
 	struct luna88k_data* d = (struct luna88k_data*) extra;
 	d->pending_timer_interrupts ++;
-	
+
 	// More than a second lost? Then restart the nr of pending interrupts.
 	if (d->pending_timer_interrupts > (int)(LUNA88K_PSEUDO_TIMER_HZ)) {
 		d->pending_timer_interrupts = 1;
@@ -260,6 +260,8 @@ static void luna88k_timer_tick(struct timer *t, void *extra)
 int luna88k_lcd_access(struct luna88k_data *d, int writeflag, int idata)
 {
 	int odata = 0;
+
+	// See openbsd/sys/arch/luna88k/dev/lcd.c for more info.
 
 	switch (d->pio1c) {
 
@@ -314,7 +316,7 @@ int luna88k_lcd_access(struct luna88k_data *d, int writeflag, int idata)
 
 	case 0xd0:	// "data"
 		// I'm not sure if data can be _read_ like this, but at least
-		// writing works as intended.
+		// writing seems to work as intended.
 		if (writeflag)
 			d->lcd[d->lcd_x + 40 * d->lcd_y] = idata;
 		else
@@ -325,6 +327,8 @@ int luna88k_lcd_access(struct luna88k_data *d, int writeflag, int idata)
 			d->lcd_y ^= 1;
 		}
 
+		// TODO: Implement graphical output, which (in a tick function)
+		// renders the LCD content using an LCD font.
 		if (writeflag) {
 			char tmp[100];
 			snprintf(tmp, sizeof(tmp), "LCD: |");
@@ -570,7 +574,8 @@ DEVICE_ACCESS(luna88k)
 			odata >>= ((3 - (addr & 3)) * 8);
 			memory_writemax64(cpu, data, len, odata);
 		} else {
-			fatal("TODO: luna88k byte write to fuse\n");
+			debugmsg_cpu(cpu, SUBSYS_DEVICE, "luna88k", VERBOSITY_ERROR,
+		    	    "TODO: luna88k byte write to fuse");
 		}
 		return 1;
 	}
@@ -763,7 +768,8 @@ DEVICE_ACCESS(luna88k)
 						d->mouse_enable = 1;
 						break;
 					default:
-						fatal("[ luna88k: sio write to dev 1 (keyboard/mouse): 0x%02x ]\n", (int)idata);
+						debugmsg_cpu(cpu, SUBSYS_DEVICE, "luna88k", VERBOSITY_ERROR,
+					    	    "TODO: sio write to dev 1 (keyboard/mouse): 0x%02x", (int)idata);
 					}
 				}
 
@@ -807,8 +813,10 @@ DEVICE_ACCESS(luna88k)
 		cpunr = (addr - INT_ST_MASK0) / 4;
 		if (writeflag == MEM_WRITE) {
 			if ((idata & 0x03ffffff) != 0x00000000) {
-				fatal("[ TODO: luna88k interrupts, idata = 0x%08x, what to do with low bits? ]\n", (uint32_t)idata);
-				exit(1);
+				debugmsg_cpu(cpu, SUBSYS_DEVICE, "luna88k", VERBOSITY_ERROR,
+			    	    "TODO: luna88k interrupts, idata = 0x%08x, "
+			    	    "what to do with low bits?", (uint32_t)idata);
+				return 0;
 			}
 
 			d->interrupt_enable[cpunr] = idata;
@@ -848,9 +856,18 @@ DEVICE_ACCESS(luna88k)
 		reassert_interrupts(d);
 		break;
 
+	case RESET_CPU0:	/*  0x6d000000: Reset CPU0  */
+	case RESET_CPU1:	/*  0x6d000004: Reset CPU1  */
+	case RESET_CPU2:	/*  0x6d000008: Reset CPU2  */
+	case RESET_CPU3:	/*  0x6d00000c: Reset CPU3  */
+		cpunr = (addr - RESET_CPU0) / 4;
+		if (cpunr < cpu->machine->ncpus)
+			cpu->machine->cpus[cpunr]->running = false;
+		break;
+
 	case RESET_CPU_ALL:	/*  0x6d000010: Reset all CPUs  */
 		for (int i = 0; i < cpu->machine->ncpus; ++i)
-			cpu->machine->cpus[i]->running = 0;
+			cpu->machine->cpus[i]->running = false;
 		break;
 
 	default:
@@ -865,9 +882,6 @@ DEVICE_ACCESS(luna88k)
 		    	    "unimplemented %i-bit READ from address 0x%x",
 		    	    len * 8,
 			    (int) addr);
-
-		// Stop the emulation immediately.
-		cpu->running = 0;
 		return 0;
 	}
 
@@ -885,8 +899,7 @@ void add_cmmu_for_cpu(struct devinit* devinit, int cpunr, uint32_t iaddr, uint32
 
 	if (cpunr >= devinit->machine->ncpus) {
 		// Add dummy instruction and data devices, in order to get
-		// silent bootup of guest OSes that probe for all four
-		// possible CPUs.
+		// silent bootup of guest OSes that probe for CMMUs.
 		dev_ram_init(devinit->machine, iaddr, 0x1000, DEV_RAM_RAM, 0x0, "cmmu_i");
 		dev_ram_init(devinit->machine, daddr, 0x1000, DEV_RAM_RAM, 0x0, "cmmu_d");
 		return;
@@ -926,7 +939,8 @@ DEVINIT(luna88k)
 	CHECK_ALLOCATION(d = (struct luna88k_data *) malloc(sizeof(struct luna88k_data)));
 	memset(d, 0, sizeof(struct luna88k_data));
 
-	// TODO: Values should correspond to the bootable disk id!
+	// TODO: Values should correspond to the bootable disk id! boot unit
+	// 0 means SCSI id 6, boot unit 1 means SCSI id 5, and so on.
 	const int nsymbols = 2;
 	const char *s[2] = { "boot_unit", "boot_partition" };
 	const char *v[2] = { "0", "0" };
@@ -968,8 +982,6 @@ DEVINIT(luna88k)
                 templ.extra = d;
                 templ.interrupt_assert = luna88k_interrupt_assert;
                 templ.interrupt_deassert = luna88k_interrupt_deassert;
-
-		// debug("registering irq: %s\n", n);
 
                 interrupt_handler_register(&templ);
         }
