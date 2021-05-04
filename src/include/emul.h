@@ -60,8 +60,9 @@ void emul_destroy(struct emul *emul);
 struct machine *emul_add_machine(struct emul *e, char *name);
 bool emul_machine_setup(struct machine *machine, int n_load, char **load_names,
 	int n_devices, char **device_names);
-void emul_dumpinfo(struct emul *e);
+void emul_dumpinfo(struct emul *);
 void emul_print_info();
+void emul_show_info(struct machine *machine, uint64_t tv_diff_ms);
 bool emul_simple_init(struct emul *emul, char* tap_devname);
 struct emul *emul_create_from_configfile(char *fname);
 void emul_run(struct emul *emul);

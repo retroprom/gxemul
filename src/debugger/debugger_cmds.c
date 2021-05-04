@@ -45,9 +45,6 @@ static void debugger_cmd_allsettings(struct machine *m, char *args)
  */
 static void debugger_cmd_breakpoint(struct machine *m, char *args)
 {
-	size_t i;
-	int res;
-
 	while (args[0] != '\0' && args[0] == ' ')
 		args ++;
 
@@ -60,15 +57,11 @@ static void debugger_cmd_breakpoint(struct machine *m, char *args)
 		return;
 	}
 
-	/*
-	 *  TODO: Move implementation details to a separate breakpoint module.
-	 */
-
 	if (strcmp(args, "show") == 0) {
 		if (m->breakpoints.n_addr_bp == 0)
 			printf("No breakpoints set.\n");
-		for (i = 0; i < m->breakpoints.n_addr_bp; i++)
-			show_breakpoint(m, i);
+		else
+			breakpoints_show_all(m);
 		return;
 	}
 
@@ -86,51 +79,16 @@ static void debugger_cmd_breakpoint(struct machine *m, char *args)
 			return;
 		}
 
-		free(m->breakpoints.addr_bp[x].string);
-
-		for (i = x; i < m->breakpoints.n_addr_bp - 1; i++)
-			m->breakpoints.addr_bp[i] = m->breakpoints.addr_bp[i+1];
-
-		m->breakpoints.n_addr_bp --;
-
-		/*  Clear translations:  */
-		for (int j = 0; j < m->ncpus; j++)
-			if (m->cpus[j]->translation_cache != NULL)
-				cpu_create_or_reset_tc(m->cpus[j]);
+		breakpoints_delete(m, x);
 		return;
 	}
 
 	if (strncmp(args, "add ", 4) == 0) {
-		uint64_t tmp;
-		size_t breakpoint_buf_len;
-
-		i = m->breakpoints.n_addr_bp;
-
-		res = debugger_parse_expression(m, args + 4, 0, &tmp);
-		if (!res) {
-			printf("Couldn't parse '%s'\n", args + 4);
-			return;
+		if (breakpoints_add(m, args + 4)) {
+			// If successful, show the last added breakpoint.
+			breakpoints_show(m, m->breakpoints.n_addr_bp - 1);
 		}
 
-		CHECK_ALLOCATION(m->breakpoints.addr_bp = (struct address_breakpoint *) realloc(
-		    m->breakpoints.addr_bp, sizeof(struct address_breakpoint) *
-		   (m->breakpoints.n_addr_bp + 1)));
-
-		breakpoint_buf_len = strlen(args+4) + 1;
-
-		CHECK_ALLOCATION(m->breakpoints.addr_bp[i].string = (char *)
-		    malloc(breakpoint_buf_len));
-		strlcpy(m->breakpoints.addr_bp[i].string, args+4,
-		    breakpoint_buf_len);
-		m->breakpoints.addr_bp[i].addr = tmp;
-
-		m->breakpoints.n_addr_bp ++;
-		show_breakpoint(m, i);
-
-		/*  Clear translations:  */
-		for (int j = 0; j < m->ncpus; j++)
-			if (m->cpus[j]->translation_cache != NULL)
-				cpu_create_or_reset_tc(m->cpus[j]);
 		return;
 	}
 

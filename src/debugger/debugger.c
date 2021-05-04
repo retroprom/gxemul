@@ -163,24 +163,6 @@ void debugger_activate(int x)
 }
 
 
-/*
- *  show_breakpoint():
- */
-static void show_breakpoint(struct machine *m, int i)
-{
-	printf("%3i: 0x", i);
-	if (m->cpus[0]->is_32bit)
-		printf("%08" PRIx32, (uint32_t) m->breakpoints.addr_bp[i].addr);
-	else
-		printf("%016" PRIx64, (uint64_t) m->breakpoints.addr_bp[i].addr);
-
-	if (m->breakpoints.addr_bp[i].string != NULL)
-		printf(" (%s)", m->breakpoints.addr_bp[i].string);
-
-	printf("\n");
-}
-
-
 /****************************************************************************/
 
 
@@ -480,7 +462,7 @@ static char *debugger_readline(void)
 			color_normal();
 			printf("^T\n");
 
-			cpu_show_cycles(debugger_machine, 0);
+			emul_show_info(debugger_machine, 0);
 
 			color_prompt();
 			printf("GXemul> ");

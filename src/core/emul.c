@@ -779,6 +779,14 @@ void emul_print_info()
 }
 
 
+void emul_show_info(struct machine *machine, uint64_t tv_diff_ms)
+{
+	cpu_show_cycles(machine, tv_diff_ms);
+	breakpoints_show_all(machine);
+	emul_want_to_print_info = false;
+}
+
+
 /*
  *  emul_run():
  *
@@ -939,7 +947,7 @@ void emul_run(struct emul *emul)
 
 		if (emul_want_to_print_info) {
 			for (int i = 0; i < emul->n_machines; ++i)
-				cpu_show_cycles(emul->machines[i], tv_diff_ms);
+				emul_show_info(emul->machines[i], tv_diff_ms);
 
 			emul_want_to_print_info = false;
 		}

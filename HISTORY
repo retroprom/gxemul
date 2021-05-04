@@ -5061,3 +5061,7 @@ Changelog for GXemul:
 		OpenBSD/luna88k kernel and userland, respectively).
 20210429	Applying a patch from Kenji Aoyama for calculating LUNA-88K
 		FUSE ROM checksum.
+20210504	More refactoring of breakpoints: internal support for printing
+		instead of breaking, hits are now counted, CTRL-T prints
+		breakpoint status etc. (No way to interactively configure all
+		settings yet, though.)

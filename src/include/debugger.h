@@ -50,7 +50,7 @@ void debugger_init(struct emul *emul);
 #define	PARSE_NUMBER		3
 #define	PARSE_SYMBOL		4
 
-int debugger_parse_expression(struct machine *m, char *expr, int writeflag,
-	uint64_t *valuep);
+int debugger_parse_expression(struct machine *m, const char *expr,
+	int writeflag, uint64_t *valuep);
 
 #endif	/*  DEBUGGER_H  */

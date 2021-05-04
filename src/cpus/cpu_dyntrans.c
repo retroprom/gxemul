@@ -1771,39 +1771,53 @@ cpu->cd.DYNTRANS_ARCH.vph_tlb_entry[r].valid);
 
 
 #ifdef DYNTRANS_TO_BE_TRANSLATED_HEAD
+	bool breakpoint_hit = false;
+
 	/*
 	 *  Check for breakpoints.
 	 */
 	if (!single_step_breakpoint && !cpu->translation_readahead) {
 		MODE_uint_t curpc = cpu->pc;
-		for (size_t i=0; i<cpu->machine->breakpoints.n_addr_bp; i++)
-			if (curpc == (MODE_uint_t)
-			    cpu->machine->breakpoints.addr_bp[i].addr) {
-			    	bool was_already_singlestepping = single_step;
+		for (size_t i = 0; i < cpu->machine->breakpoints.n_addr_bp; i++) {
+			struct address_breakpoint *bp = &cpu->machine->breakpoints.addr_bp[i];
+			if (curpc == (MODE_uint_t) bp->addr) {
+				breakpoint_hit = true;
 
-				single_step_breakpoint = true;
-				single_step = true;
+				bp->total_hit_count ++;
+				bp->current_hit_count ++;
 
-				if (!cpu->machine->instruction_trace &&
-				    !was_already_singlestepping)
-					DISASSEMBLE(cpu, ib, true, cpu->pc);
+				if (bp->current_hit_count == bp->every_n_hits) {
+					bp->current_hit_count = 0;
 
-#ifdef MODE32
-				printf("BREAKPOINT: pc = 0x%" PRIx32"\n(The "
-				    "instruction has not yet executed.)\n",
-				    (uint32_t)cpu->pc);
-#else
-				printf("BREAKPOINT: pc = 0x%" PRIx64"\n(The "
-				    "instruction has not yet executed.)\n",
-				    (uint64_t)cpu->pc);
-#endif
+					color_normal();
+					printf("BREAKPOINT: %s%s%s (%lli hit%s)\n",
+					    color_symbol_ptr(), bp->string, color_normal_ptr(),
+					    (long long) bp->total_hit_count,
+					    bp->total_hit_count == 1 ? "" : "s");
+
+					if (bp->break_execution) {
+					    	bool was_already_singlestepping = single_step;
+
+						single_step_breakpoint = true;
+						single_step = true;
+
+						printf("(The instruction has not yet executed.)\n");
+
+						if (!cpu->machine->instruction_trace &&
+						    !was_already_singlestepping)
+							DISASSEMBLE(cpu, ib, true, cpu->pc);
+
 #ifdef DYNTRANS_DELAYSLOT
-				if (cpu->delay_slot != NOT_DELAYED)
-					fatal("ERROR! Breakpoint in a delay"
-					    " slot! Not yet supported.\n");
+						if (cpu->delay_slot != NOT_DELAYED)
+							fatal("INTERNAL ERROR! Breakpoint in a delay"
+							    " slot is NOT YET supported; results"
+							    " are unpredictable.\n");
 #endif
-				goto stop_running_translated;
+						goto stop_running_translated;
+					}
+				}
 			}
+		}
 	}
 #endif	/*  DYNTRANS_TO_BE_TRANSLATED_HEAD  */
 
@@ -1940,6 +1954,13 @@ cpu->cd.DYNTRANS_ARCH.vph_tlb_entry[r].valid);
 	 */
 
 	ic->f(cpu, ic);
+
+	// If a breakpoint was hit, but we still continued running (i.e. we
+	// are just counting hits, not breaking), we need to reset the
+	// instruction's function to to-be-translated so that we can hit it
+	// (and count it) next time it is executed too.
+	if (breakpoint_hit)
+		ic->f = TO_BE_TRANSLATED;
 
 	return;
 

@@ -33,10 +33,72 @@
 #include <string.h>
 
 #include "cpu.h"
+#include "debugger.h"
 #include "breakpoints.h"
 #include "machine.h"
 #include "misc.h"
 #include "symbol.h"
+
+
+static void breakpoint_init(struct address_breakpoint *bp, const char *string, uint64_t addr)
+{
+	memset(bp, 0, sizeof(struct address_breakpoint));
+
+	size_t breakpoint_buf_len = strlen(string) + 1;
+	CHECK_ALLOCATION(bp->string = (char *) malloc(breakpoint_buf_len));
+	strlcpy(bp->string, string, breakpoint_buf_len);
+
+	bp->addr = addr;
+	bp->every_n_hits = 1;
+	bp->total_hit_count = 0;
+	bp->current_hit_count = 0;
+	bp->break_execution = true;
+}
+
+
+/*
+ *  breakpoints_show():
+ */
+void breakpoints_show(struct machine *m, size_t i)
+{
+	struct address_breakpoint *bp = &m->breakpoints.addr_bp[i];
+
+	printf("  bp %zi: 0x", i);
+	if (m->cpus[0]->is_32bit)
+		printf("%08" PRIx32, (uint32_t) bp->addr);
+	else
+		printf("%016" PRIx64, (uint64_t) bp->addr);
+
+	if (bp->string != NULL)
+		printf(" (%s%s%s)", color_symbol_ptr(), bp->string, color_normal_ptr());
+
+	if (bp->total_hit_count > 0)
+		printf("\thits: %lli", (long long)bp->total_hit_count);
+
+	if (bp->every_n_hits == 0) {
+		printf("\t(just count)");
+	} else if (bp->every_n_hits != 1) {
+		printf("\t(current hits: %lli, %s every %lli hits)",
+		    (long long)bp->current_hit_count,
+		    bp->break_execution ? "break" : "print",
+		    (long long)bp->every_n_hits);
+	} else {
+		printf("\t(%s on each hit)",
+		    bp->break_execution ? "break" : "print");
+	}
+
+	printf("\n");
+}
+
+
+/*
+ *  breakpoints_show_all():
+ */
+void breakpoints_show_all(struct machine *m)
+{
+	for (size_t i = 0; i < m->breakpoints.n_addr_bp; i++)
+		breakpoints_show(m, i);
+}
 
 
 /*
@@ -87,6 +149,86 @@ void breakpoints_parse_all(struct machine *m)
 		    "%zi: 0x%" PRIx64 " (%s)", i, dp,
 		    string_flag ? m->breakpoints.addr_bp[i].string : "unknown");
 	}
+}
+
+
+/*
+ *  breakpoints_add_without_lookup():
+ *
+ *  Add a breakpoint string to the machine, without looking up address. Used
+ *  from main(). Later, breakpoints_parse_all will be called to convert these
+ *  to actual addresses.
+ */
+void breakpoints_add_without_lookup(struct machine *machine, const char *str)
+{
+	int n = machine->breakpoints.n_addr_bp + 1;
+
+	size_t newsize = sizeof(struct address_breakpoint) * n;
+
+	CHECK_ALLOCATION(machine->breakpoints.addr_bp = (struct address_breakpoint *)
+	    realloc(machine->breakpoints.addr_bp, newsize));
+
+	breakpoint_init(&machine->breakpoints.addr_bp[n-1], str, 0);
+
+	machine->breakpoints.n_addr_bp = n;
+}
+
+
+/*
+ *  breakpoints_add():
+ */
+bool breakpoints_add(struct machine *m, const char *string)
+{
+	size_t i = m->breakpoints.n_addr_bp;
+
+	uint64_t tmp;
+	int res = debugger_parse_expression(m, string, 0, &tmp);
+	if (!res) {
+		printf("Couldn't parse '%s'\n", string);
+		return false;
+	}
+
+	CHECK_ALLOCATION(m->breakpoints.addr_bp = (struct address_breakpoint *) realloc(
+	    m->breakpoints.addr_bp, sizeof(struct address_breakpoint) *
+	   (m->breakpoints.n_addr_bp + 1)));
+
+	struct address_breakpoint *bp = &m->breakpoints.addr_bp[i];
+
+	breakpoint_init(bp, string, tmp);
+
+	m->breakpoints.n_addr_bp ++;
+
+	/*  Clear translations:  */
+	for (int j = 0; j < m->ncpus; j++)
+		if (m->cpus[j]->translation_cache != NULL)
+			cpu_create_or_reset_tc(m->cpus[j]);
+
+	return true;
+}
+
+
+/*
+ *  breakpoints_delete():
+ */
+void breakpoints_delete(struct machine *m, size_t i)
+{
+	if (i >= m->breakpoints.n_addr_bp) {
+		printf("Invalid breakpoint nr %i. Use 'breakpoint "
+		    "show' to see the current breakpoints.\n", (int)i);
+		return;
+	}
+
+	free(m->breakpoints.addr_bp[i].string);
+
+	for (size_t j = i; j < m->breakpoints.n_addr_bp - 1; j++)
+		m->breakpoints.addr_bp[j] = m->breakpoints.addr_bp[j+1];
+
+	m->breakpoints.n_addr_bp --;
+
+	/*  Clear translations:  */
+	for (int j = 0; j < m->ncpus; j++)
+		if (m->cpus[j]->translation_cache != NULL)
+			cpu_create_or_reset_tc(m->cpus[j]);
 }
 
 

@@ -37,6 +37,12 @@
 struct address_breakpoint {
 	char		*string;
 	uint64_t	addr;
+
+	uint64_t	total_hit_count;
+	uint64_t	current_hit_count;
+
+	bool		break_execution;
+	uint64_t	every_n_hits;
 };
 
 struct breakpoints {
@@ -47,7 +53,12 @@ struct breakpoints {
 
 struct machine;
 
+void breakpoints_show(struct machine *, size_t i);
+void breakpoints_show_all(struct machine *);
 void breakpoints_parse_all(struct machine *);
+void breakpoints_add_without_lookup(struct machine *, const char *);
+bool breakpoints_add(struct machine *, const char *string);
+void breakpoints_delete(struct machine *machine, size_t i);
 
 
 #endif	/*  BREAKPOINTS_H  */

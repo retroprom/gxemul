@@ -243,28 +243,6 @@ int machine_name_to_type(char *stype, char *ssubtype,
 
 
 /*
- *  machine_add_breakpoint_string():
- *
- *  Add a breakpoint string to the machine. Later (in emul.c) these will be
- *  converted to addresses.
- */
-void machine_add_breakpoint_string(struct machine *machine, char *str)
-{
-	int n = machine->breakpoints.n_addr_bp + 1;
-
-	size_t newsize = sizeof(struct address_breakpoint) * n;
-
-	CHECK_ALLOCATION(machine->breakpoints.addr_bp = (struct address_breakpoint *)
-	    realloc(machine->breakpoints.addr_bp, newsize));
-
-	memset(&machine->breakpoints.addr_bp[n-1], 0, sizeof(struct address_breakpoint));
-	CHECK_ALLOCATION(machine->breakpoints.addr_bp[n-1].string = strdup(optarg));
-
-	machine->breakpoints.n_addr_bp = n;
-}
-
-
-/*
  *  machine_add_tickfunction():
  *
  *  Adds a tick function (a function called every now and then, depending on

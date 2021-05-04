@@ -368,7 +368,6 @@ void automachine_init(void);
 struct machine *machine_new(char *name, struct emul *emul, int id);
 void machine_destroy(struct machine *machine);
 int machine_name_to_type(char *stype, char *ssubtype, int *type, int *subtype);
-void machine_add_breakpoint_string(struct machine *machine, char *str);
 void machine_add_tickfunction(struct machine *machine,
 	void (*func)(struct cpu *, void *), void *extra, int clockshift);
 void machine_statistics_init(struct machine *, char *fname);

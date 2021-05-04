@@ -37,17 +37,13 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 	o) BREAK_DYNTRANS_CHECK(cpu); after all memory_rw calls!
 	o) BREAK_DYNTRANS_CHECK(cpu); after all debugmsg calls!
 	o) BREAK_DYNTRANS_CHECK(cpu); after all exception generating calls!
-	o) Move breakpoint helper functions to breakpoints.c.
-	o) Implement support for Counts for breakpoints:
-		uint64_t	total_hit_count;
-		uint64_t	current_hit_count;
-		uint64_t	break_after_n_hits;	// if 0, run forever and just count (never break)
-				break = 0 = never, 1 = Yes, >1 = Every n hits
-	o) Implement support for specifying subsystem breakpoints. A specially formatted "string"?
-	o) CTRL-T should print breakpoint counts.
-		Name:		Hits:
-		memset		42	(break every x)
-		strlen		118	(never break)
+
+	o) Implement support for configuring counts (0 = never break, 1 = break,
+		2+ = break every N) for breakpoints, and print/break.
+		Right now, 1 is assumed and always break.
+
+	o) Implement support for specifying subsystem breakpoint levels.
+		A specially formatted "string"?
 
 <font color="blue">debugmsg-related and non-exit(1) stuff (mostly):</font>
 	o) src/cpu/:

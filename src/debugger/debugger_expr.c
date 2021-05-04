@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2009  Anders Gavare.  All rights reserved.
+ *  Copyright (C) 2004-2021  Anders Gavare.  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -90,7 +90,7 @@ extern int debugger_cur_machine;
  *	PARSE_NUMBER		a hex number
  *	PARSE_SYMBOL		a symbol
  */
-int debugger_parse_name(struct machine *m, char *name, int writeflag,
+static int debugger_parse_name(struct machine *m, const char *name, int writeflag,
 	uint64_t *valuep)
 {
 	int match_settings = 0, match_symbol = 0, match_numeric = 0;
@@ -245,7 +245,7 @@ int debugger_parse_name(struct machine *m, char *name, int writeflag,
  *        be:   left  = a
  *              right = (b+c*d)/e
  */
-int debugger_parse_expression(struct machine *m, char *expr, int writeflag,
+int debugger_parse_expression(struct machine *m, const char *expr, int writeflag,
 	uint64_t *valuep)
 {
 	int prec, res, i, nest;
