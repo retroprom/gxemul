@@ -486,7 +486,8 @@ void cpu_show_cycles(struct machine *machine, uint64_t total_elapsed_ms)
 		symbol = NULL;
 
 	if (symbol != NULL)
-		snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), " <%s>", symbol);
+		snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),
+		    " %s<%s>", color_normal_ptr(), symbol);
 
 	if (!cpu->running)
 		snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),
