@@ -56,11 +56,11 @@ struct m8820x_data {
  */
 static void m8820x_command(struct cpu *cpu, struct m8820x_data *d)
 {
-	uint32_t *regs = cpu->cd.m88k.cmmu[d->cmmu_nr]->reg;
+	struct m8820x_cmmu *cmmu = cpu->cd.m88k.cmmu[d->cmmu_nr];
+	uint32_t *regs = cmmu->reg;
 	int cmd = regs[CMMU_SCR];
 	uint32_t sar = regs[CMMU_SAR];
-	size_t i;
-	uint32_t super, all;
+	uint32_t super;
 
 	switch (cmd) {
 
@@ -82,22 +82,15 @@ static void m8820x_command(struct cpu *cpu, struct m8820x_data *d)
 	case CMMU_FLUSH_SUPER_PAGE:
 		/*  TODO: Segment invalidation.  */
 
-		all = super = 0;
-		if (cmd == CMMU_FLUSH_USER_ALL ||
-		    cmd == CMMU_FLUSH_SUPER_ALL)
-			all = 1;
-		if (cmd == CMMU_FLUSH_SUPER_ALL ||
-		    cmd == CMMU_FLUSH_SUPER_PAGE)
+		super = 0;
+		bool all = cmd == CMMU_FLUSH_USER_ALL || cmd == CMMU_FLUSH_SUPER_ALL;
+
+		if (cmd == CMMU_FLUSH_SUPER_ALL || cmd == CMMU_FLUSH_SUPER_PAGE)
 			super = M8820X_PATC_SUPERVISOR_BIT;
 
-		/*  TODO: Don't invalidate EVERYTHING like this!  */
-		cpu->invalidate_translation_caches(cpu, 0, INVALIDATE_ALL);
-
-		for (i=0; i<N_M88200_PATC_ENTRIES; i++) {
-			uint32_t v = cpu->cd.m88k.cmmu[d->cmmu_nr]
-			    ->patc_v_and_control[i];
-			uint32_t p = cpu->cd.m88k.cmmu[d->cmmu_nr]
-			    ->patc_p_and_supervisorbit[i];
+		for (size_t i = 0; i < N_M88200_PATC_ENTRIES; i++) {
+			uint32_t v = cmmu->patc_v_and_control[i];
+			uint32_t p = cmmu->patc_p_and_supervisorbit[i];
 
 			/*  Already invalid? Then skip this entry.  */
 			if (!(v & PG_V))
@@ -113,9 +106,14 @@ static void m8820x_command(struct cpu *cpu, struct m8820x_data *d)
 				continue;
 
 			/*  Finally, invalidate the entry:  */
-			cpu->cd.m88k.cmmu[d->cmmu_nr]->patc_v_and_control[i]
-			    = v & ~PG_V;
+			cmmu->patc_v_and_control[i] = v & ~PG_V;
+
+			if (!all)
+				cpu->invalidate_translation_caches(cpu, v & ~0xfff, INVALIDATE_VADDR);
 		}
+
+		if (all)
+			cpu->invalidate_translation_caches(cpu, 0, INVALIDATE_ALL);
 
 		break;
 
@@ -174,12 +172,19 @@ DEVICE_ACCESS(m8820x)
 	case CMMU_PFAR:
 	case CMMU_SAR:
 	case CMMU_SCTR:
-	case CMMU_SAPR:		/*  TODO: Invalidate something for  */
-	case CMMU_UAPR:		/*  SAPR and UAPR writes?  */
-		/*  TODO: Don't invalidate everything.  */
-		c->invalidate_translation_caches(c, 0, INVALIDATE_ALL);
 		if (writeflag == MEM_WRITE)
 			regs[relative_addr / sizeof(uint32_t)] = idata;
+		break;
+
+	case CMMU_SAPR:
+	case CMMU_UAPR:
+		if (writeflag == MEM_WRITE) {
+			/*  TODO: When to invalidate, and when not to?  */
+			if (regs[relative_addr / sizeof(uint32_t)] != idata)
+				c->invalidate_translation_caches(c, 0, INVALIDATE_ALL);
+
+			regs[relative_addr / sizeof(uint32_t)] = idata;
+		}
 		break;
 
 	case CMMU_BWP0:
@@ -200,9 +205,8 @@ DEVICE_ACCESS(m8820x)
 			old = batc[i];
 			batc[i] = idata;
 			if (old != idata) {
-				/*  TODO: Don't invalidate everything?  */
-				c->invalidate_translation_caches(
-				    c, 0, INVALIDATE_ALL);
+				/*  TODO: Perhaps don't invalidate everything?  */
+				c->invalidate_translation_caches(c, 0, INVALIDATE_ALL);
 			}
 		}
 		break;
