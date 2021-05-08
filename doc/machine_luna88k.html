@@ -70,7 +70,7 @@ system for these machines is <a href="https://www.openbsd.org/luna88k.html">Open
 
 <p>GXemul emulates the following devices:
 <ul>
-	<li>88100 CPU  (Only a single CPU works well, up to 4 can be experimented with.)
+	<li>88100 CPU  (default is 1, but up to 4 CPUs can be experimented with.)
 	<li>Interrupt controller and parts of the system board
 	<li>Serial console
 	<li>Keyboard and mouse
@@ -91,7 +91,12 @@ bugs of various kinds in the device implementations.
 	<li><i>Color</i> framebuffers
 </ul>
 
-<!-- TODO: 64 MB luna88k, 112 MB luna88k2, max 256 MB in emulator  -->
+<p>When emulating the LUNA-88K machine, the default amount of memory is 64 MB
+which matches the maximum amount that could physically fit in a real LUNA-88K.
+However, it is possible to specify up to 256 MB (using <tt>-M 256</tt>) in
+the emulator.
+
+<!-- TODO: 64 MB luna88k, 112 MB luna88k2 -->
 
 <p><a href="openbsd-luna88k-20210130.png"><img src="openbsd-luna88k-20210130-small.png"></a>
 <a href="openbsd-luna88k-20210209.png"><img src="openbsd-luna88k-20210209-small.png"></a>
@@ -126,12 +131,24 @@ and start the emulator like this:
 
 <p>
 <pre>
-	<b>gxemul -e luna-88k -d liveimage-luna88k-raw-20201206.img boot</b>
+	<b>gxemul -e luna-88k -d liveimage-luna88k-raw-20210416.img.gz boot</b>
 </pre>
 
 <p>To run with a graphical framebuffer, add <tt>-X</tt> to the command line.
 
-<p>To shut down the machine gracefully, run <tt>reboot</tt> as root.
+<p>The live image was configured for the <a href="http://www.pastel-flower.jp/~isaki/nono/">nono
+LUNA emulator</a>, which uses a different IPv4 address range for its networking.
+To reconfigure for GXemul, run these commands after logging in as root:
+<pre>
+echo "inet 10.0.0.1 0xff000000" > /etc/hostname.le0
+echo "10.0.0.254" > /etc/mygate
+printf "lookup file bind\nnameserver 10.0.0.254\n" > /etc/resolv.conf
+printf "127.0.0.1 localhost\n::1 localhost\n10.0.0.1 luna88k.my.domain luna88k\n" > /etc/hosts
+echo "luna88k.my.domain" > /etc/myname
+reboot
+</pre>
+
+<p>In general, to shut down the machine gracefully, run <tt>reboot</tt> as root.
 
 
 
@@ -149,16 +166,28 @@ onto which the operating system will be installed:
 
 <p>Then download the ramdisk kernel, a regular kernel, and the boot program:
 <ul>
-	<li><a href="https://ftp.nluug.nl/OpenBSD/6.8/luna88k/bsd.rd">https://ftp.nluug.nl/OpenBSD/6.8/luna88k/bsd.rd</a>
-	<li><a href="https://ftp.nluug.nl/OpenBSD/6.8/luna88k/bsd">https://ftp.nluug.nl/OpenBSD/6.8/luna88k/bsd</a>
-	<li><a href="https://ftp.nluug.nl/OpenBSD/6.8/luna88k/boot">https://ftp.nluug.nl/OpenBSD/6.8/luna88k/boot</a>
+	<li><a href="https://ftp.nluug.nl/OpenBSD/6.9/luna88k/bsd.rd">https://ftp.nluug.nl/OpenBSD/6.9/luna88k/bsd.rd</a>
+	<li><a href="https://ftp.nluug.nl/OpenBSD/6.9/luna88k/bsd">https://ftp.nluug.nl/OpenBSD/6.9/luna88k/bsd</a>
+	<li><a href="https://ftp.nluug.nl/OpenBSD/6.9/luna88k/boot">https://ftp.nluug.nl/OpenBSD/6.9/luna88k/boot</a>
 </ul>
 
-<p>Start the emulator like this, and install as if you were doing a network
-(http) install on a real machine:
+<p>Start the emulator like this:
 <pre>
 	<b>gxemul -e luna-88k -d obsd_luna88k.img bsd.rd</b>
 </pre>
+
+<p>For OpenBSD 6.9, when asked to Install or enter a Shell, choose (S) for shell,
+and run these commands manually:
+
+<pre>
+rm -rf dev/*wd[1234]*
+install
+</pre>
+
+<p>(For OpenBSD 6.8, there were more available inodes in the ramdisk, but
+with 6.9 it seems that removing some files is a necessary step.)
+
+<p>Now, install as if you were doing a network (http) install on a real machine.
 
 <p>For networking configuration, enter IPv4 address 10.0.0.1, netmask 255.0.0.0,
 and skip IPv6 configuration. Default route and DNS nameserver should both be 10.0.0.254.
@@ -405,10 +434,12 @@ then start X by running <tt>startx</tt>.
 <h3>OpenBSD/luna88k MultiProcessor experiments:</h3>
 
 <p>You can experiment with the multiprocessor kernel (bsd.mp), with up to
-4 emulated CPUs. It is not as stable as running single-processor, though.
-Also, the emulator itself is not multithreaded, so all CPUs are emulated
-using a single host processor, so a higher number of emulated CPUs means
-a slower total emulation speed.
+4 emulated CPUs. As the emulator itself is not multithreaded, all CPUs are
+emulated using a single host processor, so a higher number of emulated CPUs means
+a slower total emulation speed. The slowdown is worse than linear, since
+some actions performed by a CPU requires invalidation of translation buffers
+etc in all other CPUs. Also, there are probably subtle bugs within the emulator
+framework that are triggered when running with multiple CPUs.
 
 <p><a href="20210222-openbsd-luna88k-mp-1.png"><img src="20210222-openbsd-luna88k-mp-1-small.png"></a>
 <a href="20210222-openbsd-luna88k-mp-2.png"><img src="20210222-openbsd-luna88k-mp-2-small.png"></a>
