@@ -376,13 +376,17 @@ not just the device in question.
 
 	/*
 	 *  If writing, or if mapping a page where writing is ok later on,
-	 *  then invalidate code translations for the (physical) page address:
+	 *  then invalidate code translations for the (physical) page address
+	 *  for all CPUs:
 	 */
 
 	if ((writeflag == MEM_WRITE
 	    || (ok == 2 && cache == CACHE_DATA)
-	    ) && cpu->invalidate_code_translation != NULL)
-		cpu->invalidate_code_translation(cpu, paddr, INVALIDATE_PADDR);
+	    ) && cpu->invalidate_code_translation != NULL) {
+		for (int ci = 0; ci < cpu->machine->ncpus; ++ci)
+			cpu->machine->cpus[ci]->invalidate_code_translation(
+			    cpu->machine->cpus[ci], paddr, INVALIDATE_PADDR);
+	}
 
 	if ((paddr&((1<<BITS_PER_MEMBLOCK)-1)) + len > (1<<BITS_PER_MEMBLOCK)) {
 		printf("Write over memblock boundary?\n");

@@ -5065,3 +5065,6 @@ Changelog for GXemul:
 		instead of breaking, hits are now counted, CTRL-T prints
 		breakpoint status etc. (No way to interactively configure all
 		settings yet, though.)
+20210506	Improved SMP stability by making sure to invalidate code
+		translations for _all_ CPUs on memory writes, not just for the
+		CPU doing the write.
