@@ -267,10 +267,7 @@ if [ z"$CC" = z ]; then
 	CC=cc
 fi
 
-printf "#!/bin/sh\n$CC $CFLAGS _testprog.c -o _testprog >" > _test.sh
-printf " /dev/null 2> /dev/null\n" >> _test.sh
-chmod 755 _test.sh
-./_test.sh > /dev/null 2> /dev/null
+$CC $CFLAGS _testprog.c -o _testprog > /dev/null 2> /dev/null
 OK=0
 if [ -x _testprog ]; then
 	OK=1
@@ -280,10 +277,22 @@ if [ -x _testprog ]; then
 fi
 
 if [ z$OK = z0 ]; then
-	printf "broken cc detected: $CC $CFLAGS\n"
-	printf "The test program:\n\n"
-	cat _testprog.c
-	printf "could not be compiled at all.\n"
+	# Make one more attempt, with -std=c99
+	$CC $CFLAGS -std=c99 _testprog.c -o _testprog > /dev/null 2> /dev/null
+	if [ -x _testprog ]; then
+		OK=1
+		if [ z`./_testprog` = z0,1,1,1,2 ]; then
+			OK=2
+			CFLAGS="$CFLAGS -std=c99"
+		fi
+	fi
+
+	if [ z$OK = z0 ]; then
+		printf "broken cc detected: $CC $CFLAGS\n"
+		printf "The test program:\n\n"
+		cat _testprog.c
+		printf "could not be compiled at all.\n"
+	fi
 fi
 
 if [ z$OK = z1 ]; then
@@ -303,7 +312,6 @@ if [ z$OK != z2 ]; then
 fi
 
 rm -f _testprog
-rm -f _test.sh
 
 
 echo "$CC $CFLAGS"
