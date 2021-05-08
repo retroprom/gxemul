@@ -687,7 +687,7 @@ rm -f _testr.c _testr.o _testr
 
 
 #  -lm?
-printf "checking for math libs... "
+printf "checking for math libs..."
 printf "#include <math.h>\nint main(int argc, char *argv[]) { " > _testr.c
 printf "double x = sqrt(sin((double)argc)); return (int)x; }\n" >> _testr.c
 $CC $CFLAGS _testr.c -o _testr 2> /dev/null
@@ -701,15 +701,15 @@ if [ ! -x _testr ]; then
 		else
 			#  -lm AND -lcpml
 			OTHERLIBS="-lm -lcpml $OTHERLIBS"
-			printf "-lm -lcpml\n"
+			printf " -lm -lcpml\n"
 		fi
 	else
 		#  Normal -lm
 		OTHERLIBS="-lm $OTHERLIBS"
-		printf "-lm\n"
+		printf " -lm\n"
 	fi
 else
-	printf "none needed\n"
+	printf " none needed\n"
 fi
 rm -f _testr.c _testr.o _testr
 
