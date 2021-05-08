@@ -513,7 +513,7 @@ static void m88k_rot(struct cpu *cpu, struct m88k_instr_call *ic, int n)
 }
 X(rot_imm)
 {
-	m88k_rot(cpu, ic, ic->arg[2] & 0x1f);
+	m88k_rot(cpu, ic, ic->arg[2]);
 }
 X(rot)
 {
@@ -2842,32 +2842,30 @@ X(to_be_translated)
 			ic->arg[0] = (size_t) &cpu->cd.m88k.r[d];
 			ic->arg[1] = (size_t) &cpu->cd.m88k.r[s1];
 			ic->arg[2] = iword & 0x3ff;
+			int w, o;
+			uint32_t x;
 
 			switch (op10) {
 			case 0x20: ic->f = instr(mask_imm);
-				   {
-					int w = ic->arg[2] >> 5;
-					int o = ic->arg[2] & 0x1f;
-					uint32_t x = w == 0? 0xffffffff
-					    : ((uint32_t)1 << w) - 1;
-					x <<= o;
-					ic->arg[2] = ~x;
-				   }
+				   w = ic->arg[2] >> 5;
+				   o = ic->arg[2] & 0x1f;
+				   x = w == 0? 0xffffffff : ((uint32_t)1 << w) - 1;
+				   x <<= o;
+				   ic->arg[2] = ~x;
 				   break;
 			case 0x22: ic->f = instr(or_imm);
-				   {
-					int w = ic->arg[2] >> 5;
-					int o = ic->arg[2] & 0x1f;
-					uint32_t x = w == 0? 0xffffffff
-					    : ((uint32_t)1 << w) - 1;
-					x <<= o;
-					ic->arg[2] = x;
-				   }
+				   w = ic->arg[2] >> 5;
+				   o = ic->arg[2] & 0x1f;
+				   x = w == 0? 0xffffffff : ((uint32_t)1 << w) - 1;
+				    x <<= o;
+				   ic->arg[2] = x;
+				   if (s1 == M88K_ZERO_REG)
+				   	ic->f = instr(or_r0_imm);
 				   break;
 			case 0x24: ic->f = instr(ext_imm); break;
 			case 0x26: ic->f = instr(extu_imm); break;
 			case 0x28: ic->f = instr(mak_imm); break;
-			case 0x2a: ic->f = instr(rot_imm); break;
+			case 0x2a: ic->f = instr(rot_imm); ic->arg[2] = iword & 0x1f; break;
 			}
 
 			if (d == M88K_ZERO_REG)
