@@ -380,12 +380,12 @@ not just the device in question.
 	 *  for all CPUs:
 	 */
 
-	if ((writeflag == MEM_WRITE
-	    || (ok == 2 && cache == CACHE_DATA)
-	    ) && cpu->invalidate_code_translation != NULL) {
-		for (int ci = 0; ci < cpu->machine->ncpus; ++ci)
-			cpu->machine->cpus[ci]->invalidate_code_translation(
-			    cpu->machine->cpus[ci], paddr, INVALIDATE_PADDR);
+	if (writeflag == MEM_WRITE || (ok == 2 && cache == CACHE_DATA)) {
+		for (int ci = 0; ci < cpu->machine->ncpus; ++ci) {
+			struct cpu *c = cpu->machine->cpus[ci];
+			if (c->invalidate_code_translation != NULL)
+				c->invalidate_code_translation(c, paddr, INVALIDATE_PADDR);
+		}
 	}
 
 	if ((paddr&((1<<BITS_PER_MEMBLOCK)-1)) + len > (1<<BITS_PER_MEMBLOCK)) {
