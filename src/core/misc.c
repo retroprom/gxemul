@@ -130,6 +130,23 @@ const char* color_normal_ptr()
 }
 
 
+// https://en.wikipedia.org/wiki/Xorshift#xorshift*
+// "A xorshift* generator takes a xorshift generator and applies an invertible
+//  multiplication (modulo the word size) to its output as a non-linear
+//  transformation, as suggested by Marsaglia.[1] The following 64-bit
+//  generator with 64 bits of state has a maximal period of 2^64-1 [7] and
+//  fails only the MatrixRank test of BigCrush."
+uint64_t xorshift64star(uint64_t *state)
+{
+	uint64_t x = *state;	/* The state must be seeded with a nonzero value. */
+	x ^= x >> 12; // a
+	x ^= x << 25; // b
+	x ^= x >> 27; // c
+	*state = x;
+	return x * 0x2545F4914F6CDD1D;
+}
+
+
 /*
  *  mystrtoull():
  *

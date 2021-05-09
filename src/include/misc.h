@@ -277,6 +277,7 @@ void color_banner();
 void color_pc_indicator();
 const char* color_symbol_ptr();
 const char* color_normal_ptr();
+uint64_t xorshift64star(uint64_t *state);
 unsigned long long mystrtoull(const char *s, char **endp, int base);
 int mymkstemp(char *templ);
 #ifdef USE_STRLCPY_REPLACEMENTS

@@ -49,6 +49,8 @@
 static const char *cop0_names[] = COP0_NAMES;
 static const char *regnames[] = MIPS_REGISTER_NAMES;
 
+uint64_t random_state = 0xf99cf0b1e64f133c;
+
 
 /*
  *  initialize_cop0_config():
@@ -1644,7 +1646,8 @@ void coproc_tlbwri(struct cpu *cpu, int randomflag)
 				index = cp->nr_of_tlbs - 1;
 			cp->reg[COP0_RANDOM] = index << R2K3K_RANDOM_SHIFT;
 		} else {
-			cp->reg[COP0_RANDOM] = cp->reg[COP0_WIRED] + (random()
+			uint64_t randomnr = xorshift64star(&random_state);
+			cp->reg[COP0_RANDOM] = cp->reg[COP0_WIRED] + (randomnr
 			    % (cp->nr_of_tlbs - cp->reg[COP0_WIRED]));
 			index = cp->reg[COP0_RANDOM] & RANDOM_MASK;
 		}
