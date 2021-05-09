@@ -120,17 +120,13 @@ int mips_cpu_new(struct cpu *cpu, struct memory *mem, struct machine *machine,
 	if (cpu->is_32bit) {
 		cpu->run_instr = mips32_run_instr;
 		cpu->update_translation_table = mips32_update_translation_table;
-		cpu->invalidate_translation_caches =
-		    mips32_invalidate_translation_caches;
-		cpu->invalidate_code_translation =
-		    mips32_invalidate_code_translation;
+		cpu->invalidate_translation_caches = mips32_invalidate_translation_caches;
+		cpu->invalidate_code_translation = mips32_invalidate_code_translation;
 	} else {
 		cpu->run_instr = mips_run_instr;
 		cpu->update_translation_table = mips_update_translation_table;
-		cpu->invalidate_translation_caches =
-		    mips_invalidate_translation_caches;
-		cpu->invalidate_code_translation =
-		    mips_invalidate_code_translation;
+		cpu->invalidate_translation_caches = mips_invalidate_translation_caches;
+		cpu->invalidate_code_translation = mips_invalidate_code_translation;
 	}
 
 	cpu->instruction_has_delayslot = mips_cpu_instruction_has_delayslot;
@@ -290,18 +286,6 @@ int mips_cpu_new(struct cpu *cpu, struct memory *mem, struct machine *machine,
 	// This is only here to make the floating point tests work out-of-the-box.
 	if (!cpu->is_32bit)
 		cpu->cd.mips.coproc[0]->reg[COP0_STATUS] |= STATUS_FR;
-
-	if (cpu->machine->prom_emulation) {
-		/*
-		 *  Default behaviour of jumping to 0xbfc00000 should be
-		 *  a reboot, unless machine-specific initialization code
-		 *  overrides this.
-		 *
-		 *  Note: Specifically big-endian machines should override
-		 *  this, since the default MIPS CPU is little-endian!
-		 */
-		store_32bit_word(cpu, 0xffffffff9fc00000ULL, 0x00c0de0d);
-	}
 
 	/*  Add all register names to the settings:  */
 	CPU_SETTINGS_ADD_REGISTER64("pc", cpu->pc);

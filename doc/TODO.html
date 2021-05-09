@@ -198,6 +198,18 @@ M88K:
 		memcpy, memmove, strlen, bcopy, bzero?
 
 MIPS:
+	o)  This was removed from mips_cpu_new, may need to be put in some machine init instead?
+		if (cpu->machine->prom_emulation) {
+			/*
+			 *  Default behaviour of jumping to 0xbfc00000 should be
+			 *  a reboot, unless machine-specific initialization code
+			 *  overrides this.
+			 *
+			 *  Note: Specifically big-endian machines should override
+			 *  this, since the default MIPS CPU is little-endian!
+			 */
+			store_32bit_word(cpu, 0xffffffff9fc00000ULL, 0x00c0de0d);
+		}
 	o) Double-check R10000 vs R4400 TLB specifics:
  	   https://techpubs.jurassic.nl/manuals/hdwr/developer/R10K_UM/sgi_html/t5.Ver.2.0.book_347.html
 	o)  MIPS: ehb detection, cop0 write -> tlb instructions.
