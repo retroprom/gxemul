@@ -254,12 +254,8 @@ the following values:<pre>
 <a name="openbsdsgiinstall"></a>
 <h3>OpenBSD/sgi:</h3>
 
-<p><a href="http://www.openbsd.org/sgi.html">OpenBSD/sgi</a>
+<p><a href="http://www.openbsd.org/sgi.html">OpenBSD/sgi</a> 6.9
 can run in GXemul on an emulated O2 (SGI-IP32), with root on NFS.
-
-<p><a href="https://www.openbsd.org/sgi.html">https://www.openbsd.org/sgi.html</a>
-says <i>"The OpenBSD/sgi port was discontinued after the 6.7 release"</i>, but
-it seems that 6.8 is available from the official FTP site anyway.
 
 <p>
 <a href="20050617-openbsd-sgi.png"><img src="20050617-openbsd-sgi_small.png"></a>
@@ -281,15 +277,15 @@ client. Performing this setup is quite time consuming, but necessary:
 	configuring the disk!
   <p>
   <li>On the host, download the OpenBSD distribution:
-<p><table border="0"><tr><td><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td><pre>wget http://ftp.eu.openbsd.org/pub/OpenBSD/6.8/sgi/base68.tgz
-wget http://ftp.eu.openbsd.org/pub/OpenBSD/6.8/sgi/comp68.tgz
-wget http://ftp.eu.openbsd.org/pub/OpenBSD/6.8/sgi/xbase68.tgz
-wget http://ftp.eu.openbsd.org/pub/OpenBSD/6.8/sgi/xfont68.tgz
-wget http://ftp.eu.openbsd.org/pub/OpenBSD/6.8/sgi/xserv68.tgz
-wget http://ftp.eu.openbsd.org/pub/OpenBSD/6.8/sgi/xshare68.tgz
+<p><table border="0"><tr><td><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td><pre>wget http://ftp.eu.openbsd.org/pub/OpenBSD/6.9/sgi/base69.tgz
+wget http://ftp.eu.openbsd.org/pub/OpenBSD/6.9/sgi/comp69.tgz
+wget http://ftp.eu.openbsd.org/pub/OpenBSD/6.9/sgi/xbase69.tgz
+wget http://ftp.eu.openbsd.org/pub/OpenBSD/6.9/sgi/xfont69.tgz
+wget http://ftp.eu.openbsd.org/pub/OpenBSD/6.9/sgi/xserv69.tgz
+wget http://ftp.eu.openbsd.org/pub/OpenBSD/6.9/sgi/xshare69.tgz
 </pre></td></tr></table>
   <li>Start the emulation of the DECstation NFS server using this command line:
-<p><table border="0"><tr><td><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td><pre>gxemul -xe 3max -d nbsd_pmax.img -d base68.tgz -d comp68.tgz -d xbase68.tgz -d xfont68.tgz -d xserv68.tgz -d xshare68.tgz
+<p><table border="0"><tr><td><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td><pre>gxemul -xe 3max -d nbsd_pmax.img -d base69.tgz -d comp69.tgz -d xbase69.tgz -d xfont69.tgz -d xserv69.tgz -d xshare69.tgz
 </pre></td></tr></table>
 and enter the following commands to configure the server for NFS serving and
 extract the OpenBSD distribution:
@@ -332,8 +328,8 @@ echo 10.0.0.2:/tftpboot/swap none swap sw,nfsmntpt=/swap >> /tftpboot/etc/fstab
 halt</b>
 </pre></td></tr></table>
   <li>Download the OpenBSD/sgi GENERIC and RAMDISK kernels:<pre>
-	<a href="http://ftp.eu.openbsd.org/pub/OpenBSD/6.8/sgi/bsd.IP32">http://ftp.eu.openbsd.org/pub/OpenBSD/6.8/sgi/bsd.IP32</a>
-	<a href="http://ftp.eu.openbsd.org/pub/OpenBSD/6.8/sgi/bsd.rd.IP32">http://ftp.eu.openbsd.org/pub/OpenBSD/6.8/sgi/bsd.rd.IP32</a>
+	<a href="http://ftp.eu.openbsd.org/pub/OpenBSD/6.9/sgi/bsd.IP32">http://ftp.eu.openbsd.org/pub/OpenBSD/6.9/sgi/bsd.IP32</a>
+	<a href="http://ftp.eu.openbsd.org/pub/OpenBSD/6.9/sgi/bsd.rd.IP32">http://ftp.eu.openbsd.org/pub/OpenBSD/6.9/sgi/bsd.rd.IP32</a>
 
 </pre>
   <li>Create a configuration file called <tt>config_client</tt>:
