@@ -61,13 +61,13 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 		     breakpoint subsystem disk warn	<-- break only for warn and error.
 
 <font color="blue">Misc.:</font>
-	o) Check if -std=c99 is needed in the configure script.
 	o) OpenBSD/luna88k bootup: why is it idling so much? Waiting for disk?
-	o) 88K dev_m8820x: see if invalidation occurs often, and whether it is
-		possible to change to invalidation of specific regions only...
 	o) Try X11 grabbing with multiple host displays? ssh with X11 forwarding from laptop?
 		with multiple mouse pointers, _which_ mouse pointer is grabbed?
-	o) Try all guest OSes in the documentation, cleaning up debugmsg related stuff as I go along.
+	o) Try all guest OSes in the documentation:
+		[ ] Clean up debugmsg related stuff as I go along.
+		[ ] Update OS versions, if newer ones work.
+		[ ] Debug in case newer OS versions trigger bugs or problems.
 	o) Instead of doing !cpu->running in some places, and foreach cpu in the machine
 		in some other places, then the main emul loop should check if ANY
 		cpu goes from running to non-running, and treat that as a reason to
@@ -80,7 +80,8 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 		Performance better than when using simulated NAT?
 	o) When using e.g. "-E alpha" and there was more than one subtype, then _list_
    	   them instead of just complaining "Maybe you forgot the -e command line option".
-	o) Try using profil() for very basic runtime profiling?
+	o) Try using profil() for very basic runtime profiling? Maybe include -g
+		even when optimizing (non-debug builds)?
 	o) GXsatellite -- Gavare's eXperimental Stand-Alone Test Environment
 	   for Low-Level Interactive Testing of Emulators. base on YCX5; start with testmips.
 </pre></p>
@@ -751,10 +752,15 @@ PCI:
 	x)  generalize the interrupt routing stuff (lines etc)
 
 X-windows and Framebuffer functionality in general:
+	o)  Match framebuffer refresh/redraw rate with that of the screen which
+		it is on?
 	o)  Icon for X11 framebuffer windows?
-	o)  Change window title in X11 windows for machines that have all cpus halted?
+	o)  Change window title in X11 windows for:
+		a) machines that have all cpus halted?
+		b) when single-stepping in the debugger?
 	o)  Do a complete rewrite of the framebuffer/console stuff, so that:
 		1)  It does not rely on X11 specifically.
+			(Separate out X11 as just one of several posibilities?)
 		2)  It is possible to interact with emulated framebuffers
 		    and consoles "remotely", e.g. via a web page which
 		    controls multiple virtualized machines.
@@ -783,8 +789,6 @@ X-windows and Framebuffer functionality in general:
 		    by themselves (these are necessary for example
 		    to change the font of an xterm in X in the
 		    emulator)
-	o)  Generalize the framebuffer stuff by moving _ALL_ X11
-		specific code to a separate module.
 	o)  Wayland? -W ?
 </pre>
 
