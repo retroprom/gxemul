@@ -5068,3 +5068,5 @@ Changelog for GXemul:
 20210506	Improved SMP stability by making sure to invalidate code
 		translations for _all_ CPUs on memory writes, not just for the
 		CPU doing the write.
+20210523	Unimplemented MIPS regimm instructions now cause a Reserved
+		Instruction exception.

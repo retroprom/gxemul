@@ -4534,7 +4534,7 @@ X(to_be_translated)
 			ic->arg[2] = (int64_t)(int16_t)imm;
 
 			if (cpu->cd.mips.cpu_type.isa_level < 32) {
-				static int warning = 0;
+				static bool warning = false;
 				if (!warning && !cpu->translation_readahead) {
 					debugmsg_cpu(cpu, SUBSYS_CPU, "opcode", VERBOSITY_WARNING,
 					    "WARNING! Trap opcode used, but"
@@ -4542,14 +4542,26 @@ X(to_be_translated)
 					    "such instructions. Only printing this "
 					    "warning once.",
 					    cpu->cd.mips.cpu_type.name);
-					warning = 1;
+					warning = true;
 				}
 				ic->f = instr(reserved);
 			}
 			break;
 
-		default:if (!cpu->translation_readahead)
-				fatal("UNIMPLEMENTED regimm rt=%i\n", rt);
+		default:if (!cpu->translation_readahead) {
+				static bool warning_unimplemented_regimm = false;
+				if (!warning_unimplemented_regimm &&
+				    !cpu->translation_readahead) {
+					debugmsg_cpu(cpu, SUBSYS_CPU, "opcode", VERBOSITY_WARNING,
+					    "WARNING! Unimplemented regimm (rt=%i). Only "
+					    "printing this warning once.",
+					    rt);
+					warning_unimplemented_regimm = true;
+				}
+				ic->f = instr(reserved);
+				break;
+			}
+
 			goto bad;
 		}
 		break;
