@@ -396,7 +396,9 @@ int get_cmd_args(int argc, char *argv[], struct emul *emul,
 			// Add a breakpoint, but defer the actual lookup of
 			// the address until all binaries have been loaded (with
 			// symbols etc).
-			breakpoints_add_without_lookup(m, optarg);
+			if (!breakpoints_add_without_lookup(m, optarg))
+				exit(1);
+
 			machine_specific_options_used = true;
 			break;
 		case 'Q':

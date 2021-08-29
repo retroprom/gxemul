@@ -56,7 +56,7 @@ struct machine;
 void breakpoints_show(struct machine *, size_t i);
 void breakpoints_show_all(struct machine *);
 void breakpoints_parse_all(struct machine *);
-void breakpoints_add_without_lookup(struct machine *, const char *);
+bool breakpoints_add_without_lookup(struct machine *, const char *);
 bool breakpoints_add(struct machine *, const char *string);
 void breakpoints_delete(struct machine *machine, size_t i);
 

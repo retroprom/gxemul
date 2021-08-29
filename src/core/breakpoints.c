@@ -40,19 +40,23 @@
 #include "symbol.h"
 
 
-static void breakpoint_init(struct address_breakpoint *bp, const char *string, uint64_t addr)
+static bool breakpoint_init(struct address_breakpoint *bp, const char *string, uint64_t addr)
 {
 	memset(bp, 0, sizeof(struct address_breakpoint));
 
-	size_t breakpoint_buf_len = strlen(string) + 1;
-	CHECK_ALLOCATION(bp->string = (char *) malloc(breakpoint_buf_len));
-	strlcpy(bp->string, string, breakpoint_buf_len);
+	bp->string = strdup(string);
+	if (bp->string == NULL) {
+		printf("Unable to allocate memory.\n");
+		return false;
+	}
 
 	bp->addr = addr;
 	bp->every_n_hits = 1;
 	bp->total_hit_count = 0;
 	bp->current_hit_count = 0;
 	bp->break_execution = true;
+
+	return true;
 }
 
 
@@ -159,7 +163,7 @@ void breakpoints_parse_all(struct machine *m)
  *  from main(). Later, breakpoints_parse_all will be called to convert these
  *  to actual addresses.
  */
-void breakpoints_add_without_lookup(struct machine *machine, const char *str)
+bool breakpoints_add_without_lookup(struct machine *machine, const char *str)
 {
 	int n = machine->breakpoints.n_addr_bp + 1;
 
@@ -168,9 +172,14 @@ void breakpoints_add_without_lookup(struct machine *machine, const char *str)
 	CHECK_ALLOCATION(machine->breakpoints.addr_bp = (struct address_breakpoint *)
 	    realloc(machine->breakpoints.addr_bp, newsize));
 
-	breakpoint_init(&machine->breakpoints.addr_bp[n-1], str, 0);
+	if (!breakpoint_init(&machine->breakpoints.addr_bp[n-1], str, 0)) {
+		printf("Unable to add breakpoint.\n");
+		return false;
+	}
 
 	machine->breakpoints.n_addr_bp = n;
+
+	return true;
 }
 
 
@@ -194,7 +203,10 @@ bool breakpoints_add(struct machine *m, const char *string)
 
 	struct address_breakpoint *bp = &m->breakpoints.addr_bp[i];
 
-	breakpoint_init(bp, string, tmp);
+	if (!breakpoint_init(bp, string, tmp)) {
+		printf("Could not initialize breakpoint.\n");
+		return false;
+	}
 
 	m->breakpoints.n_addr_bp ++;
 
