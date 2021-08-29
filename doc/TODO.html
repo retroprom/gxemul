@@ -61,6 +61,11 @@ implement in GXemul. Some items in this list are perhaps already fixed.
 		     breakpoint subsystem disk warn	<-- break only for warn and error.
 
 <font color="blue">Misc.:</font>
+	o) Use misc's pseudo-random function in more places instead of random(),
+		with a common (static) state
+		a) to get rid of some linker warnings on OpenBSD,
+		b) possibly a tiny bit of performance improvement?
+		c) double-check that the -D command line option works!
 	o) OpenBSD/luna88k bootup: why is it idling so much? Waiting for disk?
 	o) Try X11 grabbing with multiple host displays? ssh with X11 forwarding from laptop?
 		with multiple mouse pointers, _which_ mouse pointer is grabbed?
@@ -120,8 +125,8 @@ Dyntrans / general:
 	x)  superh -- no hostpage for e.g. 0x8c000000. devices as ram!
 	x)  Think about how to do both SHmedia and SHcompact in a reasonable
 	    way! (Or AMD64 long/protected/real, for that matter.)
-	x)  68K emulation; think about how to do variable instruction
-	    lengths across page boundaries.
+	x)  Variable instruction lengths across page boundaries.
+		x)  68K, i960, RISC-V, ...
 	x)  Dyntrans with valgrind-inspired memory checker. (In memory_rw,
 	    it would be reasonably simple to add; in each individual fast
 	    load/store routine = a lot more work, and it would become
@@ -134,21 +139,36 @@ Dyntrans / general:
 			A load from a place on the stack which has not previously
 			been stored to => warning. Increasing the stack pointer using
 			any available means should reset the memory to uninitialized.
-		o)  If calls to malloc() and free() can be intercepted:
+		o)  Calls to malloc() and free():
+			o)  If enabled, try to look up symbols malloc/free or
+			    equivalent (kernel equivalent) before starting.
+			    	o) A _list_ of functions that allocate uninitialized
+			    	   memory.
+			    	o) A _list_ of functions that return memory (marking
+			    	   it as released / uninitialized).
+			    	o) NOTE: If an allocator returns memory that is
+			    	   guaranteed to be e.g. zero-filled already,
+			    	   then that function should of course _not_ be
+			    	   included in the list of allocators.
 			o)  Access to a memory area after free() => warning.
 			o)  Memory returned by malloc() is marked as not-initialized.
-			o)  Non-passive, but good to have: Change the argument
+			o)  Non-passive, but could be interesting to experiment
+			    with: Change the argument
 			    given to malloc, to return a slightly larger memory
 			    area, i.e.  margin_before + size + margin_after,
 			    and return the pointer  + margin_before.
 			    Any access to the margin_before or _after space results
 			    in warnings. (free() must be modified to free the
 			    actually allocated address.)
-	x)  Dyntrans with SMP... lots of work to be done here.
-	x)  Dyntrans with cache emulation... lots of work here as well.
+	x)  Dyntrans with cache emulation.
+	x)  Store queue / memory barrier correctness checks:
+		x) Load/stores could perhaps be recorded and
+		   if a load/store is done from a different CPU without the
+		   correct flush or memory barrier instruction in between,
+		   a warning could be printed.
 	x)  Remove the concept of base RAM completely; it would be more
 	    generic to allow RAM devices to be used "anywhere".
-	o)  dev_mp doesn't work well with dyntrans yet
+	o)  dev_mp doesn't work well with dyntrans yet (is this still true?)
 	o)  In general, IPIs, CAS, LL/SC etc must be made to work with dyntrans
 	x)  Redesign/rethink the delay slot mechanism used for e.g. MIPS,
 		so that it caches a translation (that is, an instruction
