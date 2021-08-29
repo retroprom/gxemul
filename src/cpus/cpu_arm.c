@@ -158,13 +158,17 @@ int arm_cpu_new(struct cpu *cpu, struct memory *mem,
 		cpu->cd.arm.coproc[14] = arm_coproc_xscale_14;
 
 	/*
-	 *  NOTE/TODO: Ugly hack for OpenFirmware emulation:
+	 *  OLD: Ugly hack for OpenFirmware emulation:
+	 *
+	 *  Move this to the end of corresponding machine initialization
+	 *  code.
+	 *
+	 *	if (cpu->machine->prom_emulation) {
+	 *		cpu->cd.arm.of_emul_addr = cpu->machine->physical_ram_in_mb
+	 *		    * 1048576 - 8;
+	 *		store_32bit_word(cpu, cpu->cd.arm.of_emul_addr, 0xef8c64be);
+	 *	}
 	 */
-	if (cpu->machine->prom_emulation) {
-		cpu->cd.arm.of_emul_addr = cpu->machine->physical_ram_in_mb
-		    * 1048576 - 8;
-		store_32bit_word(cpu, cpu->cd.arm.of_emul_addr, 0xef8c64be);
-	}
 
 	cpu->cd.arm.flags = cpu->cd.arm.cpsr >> 28;
 
