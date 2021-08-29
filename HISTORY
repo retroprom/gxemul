@@ -5070,3 +5070,5 @@ Changelog for GXemul:
 		CPU doing the write.
 20210523	Unimplemented MIPS regimm instructions now cause a Reserved
 		Instruction exception.
+20210829	The ARM "permanently undefined" instructions now result in an
+		und exception (patch from Nick Hudson).

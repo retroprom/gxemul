@@ -2135,6 +2135,13 @@ int arm_cpu_disassemble_instr(struct cpu *cpu, unsigned char *ib,
 	case 0x6:
 	case 0x7:
 		/*  Special cases first:  */
+
+		if ((iw & 0xf7f000f0) == 0xe7f000f0) {
+			/*  udf (Permanently Undefined)  */
+			debug("udf\t#%#x\n", ((iw & 0xfff00) >> 4) | (iw & 0xf));
+			break;
+		}
+
 		if ((iw & 0xfc70f000) == 0xf450f000) {
 			/*  Preload:  */
 			debug("pld\t[%s]\n", arm_regname[r16]);
