@@ -255,7 +255,7 @@ void A__NAME(struct cpu *cpu, struct arm_instr_call *ic)
 
 #if defined(A__CMP) || defined(A__RSB) || defined(A__SUB) || \
     defined(A__RSC) || defined(A__SBC)
-	if ((uint32_t)a >= (uint32_t)b)
+	if (c32 == c64)
 		cpu->cd.arm.flags |= ARM_F_C;
 #else
 #if defined(A__ADC) || defined(A__ADD) || defined(A__CMN)

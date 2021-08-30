@@ -5072,3 +5072,6 @@ Changelog for GXemul:
 		Instruction exception.
 20210829	The ARM "permanently undefined" instructions now result in an
 		und exception (patch from Nick Hudson).
+20210830	Fix for ARM carry flag update for some instructions (patch
+		from Nick Hudson). Also updating the NetBSD/cats installation
+		instructions to 9.2.
