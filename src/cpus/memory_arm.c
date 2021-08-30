@@ -256,11 +256,17 @@ exception_return:
 	if (no_exceptions)
 		return 0;
 
-	if (!quiet_mode) {
-		fatal("{ arm memory fault: vaddr=0x%08x domain=%i dav=%i ap=%i "
-		    "access=%i user=%i", (int)vaddr, domain, dav, ap,
-		    access, user);
-		fatal(" d=0x%08x d2=0x%08x pc=0x%08x }\n", d, d2, (int)cpu->pc);
+	int verbosity = VERBOSITY_DEBUG;
+	if (ENOUGH_VERBOSITY(SUBSYS_MEMORY, verbosity)) {
+		char s[400];
+
+		snprintf(s, sizeof(s), "arm memory fault: vaddr=0x%08x "
+		    "domain=%i dav=%i ap=%i access=%i user=%i"
+		    " d=0x%08x d2=0x%08x pc=0x%08x",
+		    (int)vaddr, domain, dav, ap, access, user,
+		    d, d2, (int)cpu->pc);
+
+		debugmsg_cpu(cpu, SUBSYS_MEMORY, "", verbosity, s);
 	}
 
 	if (instr)
