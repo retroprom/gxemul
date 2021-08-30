@@ -572,24 +572,26 @@ void memory_warn_about_unimplemented_addr(struct cpu *cpu, struct memory *mem,
 		debugmsg_cpu(cpu, SUBSYS_MEMORY,
 		    writeflag ? "WRITE" : "READ",
 		    verbosity, "%s non-existant "
-			"paddr=0x%08" PRIx32 " len=%i pc=0x%08" PRIx32 "%s%s%s",
+			"paddr=0x%08" PRIx32 " len=%i pc=0x%08" PRIx32 " %s%s%s%s",
 		    writeflag ? "to" : "from",
 		    (uint32_t) paddr,
 		    len,
 		    (uint32_t) cpu->pc,
-		    symbol ? " <" : "",
+		    color_normal_ptr(),
+		    symbol ? "<" : "",
 		    symbol ? symbol : "",
 		    symbol ? ">" : "");
 	else
 		debugmsg_cpu(cpu, SUBSYS_MEMORY,
 		    writeflag ? "WRITE" : "READ",
 		    verbosity, "%s non-existant "
-			"paddr=0x%016" PRIx64 " len=%i pc=0x%016" PRIx64 "%s%s%s",
+			"paddr=0x%016" PRIx64 " len=%i pc=0x%016" PRIx64 " %s%s%s",
 		    writeflag ? "to" : "from",
 		    (uint64_t) paddr,
 		    len,
 		    (uint64_t) cpu->pc,
-		    symbol ? " <" : "",
+		    color_normal_ptr(),
+		    symbol ? "<" : "",
 		    symbol ? symbol : "",
 		    symbol ? ">" : "");
 }
